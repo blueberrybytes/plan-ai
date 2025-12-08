@@ -11,7 +11,7 @@ export class HealthckeckController extends Controller {
   @Get("status")
   @Response<ApiResponse<string>>(200, "Successfully retrieved")
   @Response<GenericResponse>(500, "Internal Server Error")
-  protected getStatusPayload(): ApiResponse<string> {
+  public getStatusPayload(): ApiResponse<string> {
     return {
       status: 200,
       data: "ok",
