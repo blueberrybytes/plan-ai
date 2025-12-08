@@ -1,0 +1,5 @@
+build
+node_modules
+public
+prisma/schema.prisma
+storybook-static

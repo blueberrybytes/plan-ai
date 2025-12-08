@@ -1,0 +1,500 @@
+{
+  "login": {
+    "title": "Inicia sesión en {{productName}}",
+    "subtitle": "Revisa tareas generadas por IA, repasa resúmenes de actas y mantén tus tableros sincronizados.",
+    "form": {
+      "emailLabel": "Correo electrónico",
+      "passwordLabel": "Contraseña",
+      "signIn": "Iniciar sesión",
+      "signingIn": "Iniciando sesión..."
+    },
+    "errors": {
+      "emailRequired": "El correo electrónico es obligatorio",
+      "emailInvalid": "Introduce una dirección de correo válida",
+      "passwordRequired": "La contraseña es obligatoria",
+      "passwordLength": "La contraseña debe tener al menos 6 caracteres"
+    },
+    "alerts": {
+      "verificationTitle": "Verificación de correo requerida",
+      "verificationBody": "Enviamos un correo de verificación a {{email}}. Verifica tu correo y vuelve a iniciar sesión.",
+      "defaultEmailPlaceholder": "tu correo"
+    },
+    "oauth": {
+      "divider": "O",
+      "google": "Continuar con Google",
+      "microsoft": "Continuar con Microsoft"
+    },
+    "links": {
+      "forgotPassword": "¿Olvidaste tu contraseña?",
+      "signup": "¿No tienes cuenta? Regístrate"
+    },
+    "legal": {
+      "agreePrefix": "Al iniciar sesión aceptas nuestros",
+      "terms": "Términos de servicio",
+      "privacy": "Política de privacidad",
+      "dataDeletion": "Eliminación de datos",
+      "and": "y"
+    }
+  },
+  "confirmDeletionDialog": {
+    "title": "Confirmar eliminación",
+    "descriptionFallback": "Esta acción no se puede deshacer.",
+    "emailFallback": "Valor desconocido",
+    "buttons": {
+      "cancel": "Cancelar",
+      "confirm": "Eliminar",
+      "processing": "Eliminando..."
+    }
+  },
+  "signUp": {
+    "title": "Crea tu espacio de trabajo en {{productName}}",
+    "subtitle": "Deja que la IA convierta cada conversación en tareas, prioridades y tableros que tu equipo confía.",
+    "divider": "O",
+    "form": {
+      "confirmPasswordLabel": "Confirmar contraseña",
+      "showPasswordAria": "mostrar u ocultar contraseña"
+    },
+    "errors": {
+      "confirmRequired": "Confirma tu contraseña",
+      "confirmMismatch": "Las contraseñas no coinciden"
+    },
+    "buttons": {
+      "submit": "Registrarse",
+      "creating": "Creando cuenta..."
+    },
+    "links": {
+      "loginPrompt": "¿Ya tienes cuenta? Inicia sesión"
+    }
+  },
+  "home": {
+    "heading": "Bienvenido de nuevo 👋",
+    "subheading": "Supervisa tus sesiones, transcripciones y tareas en un solo lugar. Retoma donde lo dejaste o empieza algo nuevo.",
+    "fallbackSessionTitle": "tus sesiones",
+    "stats": {
+      "activeSessions": {
+        "label": "Sesiones activas",
+        "cta": "Ver sesiones"
+      },
+      "transcriptsProcessed": {
+        "label": "Transcripciones procesadas",
+        "cta": "Transcripciones recientes"
+      },
+      "openTasks": {
+        "label": "Tareas abiertas",
+        "cta": "Ver tablero"
+      }
+    },
+    "emptyState": {
+      "title": "Activa tu espacio de trabajo",
+      "description": "Crea una sesión para talleres, revisiones de sprint o llamadas con clientes. Sube la transcripción para generar tareas automáticamente.",
+      "newSession": "Nueva sesión",
+      "browseSessions": "Explorar sesiones"
+    },
+    "transcripts": {
+      "title": "Transcripciones recientes",
+      "subtitle": "Subidas recientes de {{session}}",
+      "viewAll": "Ver todas",
+      "loading": "Cargando transcripciones…",
+      "error": "No se pudieron cargar las transcripciones.",
+      "empty": "Aún no hay transcripciones. Sube la primera conversación para generar tareas.",
+      "recorded": "Grabado",
+      "summaryChip": "Resumen"
+    },
+    "tasks": {
+      "title": "Tareas prioritarias",
+      "subtitle": "Obtenidas de {{session}}",
+      "openBoard": "Abrir tablero",
+      "loading": "Cargando tareas…",
+      "error": "No se pudieron cargar las tareas.",
+      "empty": "Aún no hay tareas. Sube o crea una transcripción para generar pendientes.",
+      "updated": "Actualizado {{timestamp}}"
+    }
+  },
+  "profile": {
+    "heading": "Perfil",
+    "description": "Gestiona tu cuenta de Plan AI y el historial de tu espacio de trabajo.",
+    "role": {
+      "loading": "Cargando...",
+      "error": "No se pudo cargar el rol",
+      "retry": "Reintentar",
+      "notAvailable": "No disponible"
+    },
+    "alerts": {
+      "loading": "Cargando la información de tu perfil…",
+      "refreshError": "No pudimos actualizar los datos. Se muestra la información en caché."
+    },
+    "sections": {
+      "info": "Información del perfil",
+      "workspaceFootprint": "Huella del espacio de trabajo",
+      "workspaceDescription": "La ingesta de transcripciones, las sugerencias de tareas y los temas personalizados dependen de este perfil. El borrado total elimina todos los tableros y artefactos asociados.",
+      "integrations": "Integraciones conectadas"
+    },
+    "info": {
+      "email": "Correo electrónico",
+      "userId": "ID de usuario",
+      "accountCreated": "Cuenta creada",
+      "lastSignIn": "Último acceso",
+      "role": "Rol"
+    },
+    "language": {
+      "label": "Idioma",
+      "options": {
+        "en": "Inglés",
+        "es": "Español"
+      }
+    },
+    "buttons": {
+      "logout": "Cerrar sesión",
+      "deleteAccount": "Eliminar cuenta"
+    },
+    "integrations": {
+      "loading": "Cargando integraciones…",
+      "error": "No se pueden cargar las integraciones ahora mismo.",
+      "retry": "Reintentar",
+      "notLinked": "Sin enlace",
+      "empty": "Aún no hay integraciones conectadas."
+    },
+    "errors": {
+      "deleteAccount": "No se pudo eliminar tu cuenta. Inténtalo de nuevo."
+    }
+  },
+  "contexts": {
+    "heading": "Contextos",
+    "description": "Gestiona espacios de conocimiento que potencian tu planificación asistida por IA. Mantén todo organizado con archivos, metadatos y colores.",
+    "buttons": {
+      "create": "Crear contexto",
+      "creating": "Creando...",
+      "edit": "Editar contexto",
+      "saving": "Guardando...",
+      "upload": "Subir archivo",
+      "uploading": "Subiendo...",
+      "view": "Ver",
+      "back": "Volver a contextos",
+      "cancel": "Cancelar"
+    },
+    "list": {
+      "label": "TUS CONTEXTOS",
+      "emptyTitle": "Aún no hay contextos",
+      "selectPrompt": "Selecciona un contexto",
+      "count": "{{count}} contexto",
+      "count_plural": "{{count}} contextos",
+      "emptyDescription": "Todavía no has creado contextos. Usa el botón de arriba para agregar uno.",
+      "error": "No se pudieron cargar los contextos. Actualiza la página."
+    },
+    "placeholders": {
+      "selectContext": "Selecciona un contexto de la lista para ver sus detalles.",
+      "missingDescription": "No se proporcionó una descripción para este contexto.",
+      "noFiles": "Todavía no hay archivos subidos. Sube documentos, hojas de cálculo u otros recursos a este contexto.",
+      "supportedTypes": "Tipos compatibles: {{types}}"
+    },
+    "info": {
+      "updated": "Actualizado {{timestamp}}",
+      "untitled": "Contexto sin nombre"
+    },
+    "files": {
+      "title": "Archivos",
+      "count": "{{count}} archivo",
+      "count_plural": "{{count}} archivos",
+      "uploaded": "Subido {{timestamp}}",
+      "renameAria": "Renombrar archivo",
+      "deleteAria": "Eliminar archivo"
+    },
+    "dialog": {
+      "title": {
+        "create": "Crear contexto",
+        "edit": "Editar contexto"
+      },
+      "primary": {
+        "create": "Crear",
+        "save": "Guardar",
+        "creating": "Creando...",
+        "saving": "Guardando..."
+      },
+      "fields": {
+        "name": "Nombre",
+        "description": "Descripción",
+        "color": "Color"
+      }
+    },
+    "messages": {
+      "nameRequired": "El nombre es obligatorio",
+      "createSuccess": "Contexto creado con éxito",
+      "createError": "No se pudo crear el contexto. Inténtalo de nuevo.",
+      "updateSuccess": "Contexto actualizado con éxito",
+      "updateError": "No se pudo actualizar el contexto. Inténtalo de nuevo.",
+      "unsupportedFile": "Tipo de archivo no compatible. Tipos permitidos: {{types}}.",
+      "uploadSuccess": "Archivo subido",
+      "uploadError": "No se pudo subir el archivo. Inténtalo de nuevo.",
+      "deleteSuccess": "Archivo eliminado",
+      "deleteError": "No se pudo eliminar el archivo. Inténtalo de nuevo.",
+      "contextError": "No se pudo cargar el contexto. Prueba a actualizar la página."
+    }
+  },
+  "integrationsPage": {
+    "heading": "Integraciones",
+    "description": "Conecta herramientas externas para sincronizar tareas y actualizaciones de proyectos en Plan AI.",
+    "notSignedIn": "Debes iniciar sesión para administrar integraciones.",
+    "genericNotConnected": "{{provider}} todavía no está conectado.",
+    "statusAlert": {
+      "success": "La integración se completó correctamente.",
+      "error": "No se pudo completar la integración. Inténtalo de nuevo."
+    },
+    "loading": "Cargando integraciones…",
+    "buttons": {
+      "retry": "Reintentar"
+    },
+    "errors": {
+      "cannotLoad": "No se puede cargar el estado de las integraciones.",
+      "jiraAuthStart": "No se pudo iniciar la autorización con Jira. Inténtalo de nuevo.",
+      "jiraAuthFlow": "No se pudo iniciar el flujo OAuth de Jira. Vuelve a intentarlo."
+    },
+    "connect": {
+      "redirecting": "Redirigiendo…"
+    },
+    "comingSoonFallback": "La integración de {{provider}} llegará pronto. ¡Mantente al tanto!",
+    "providers": {
+      "jira": {
+        "label": "Jira",
+        "description": "Conecta tu cuenta de Atlassian Jira Cloud para sincronizar proyectos y enviar tareas directamente a tableros de Jira.",
+        "connectCta": "Conectar Jira",
+        "comingSoonMessage": "La integración con Jira llegará pronto. ¡Mantente al tanto!",
+        "notConnected": "Jira aún no está conectado."
+      },
+      "linear": {
+        "label": "Linear",
+        "description": "Conecta tu espacio de trabajo de Linear para gestionar issues y tareas junto a las sesiones de Plan AI.",
+        "connectCta": "Conectar Linear",
+        "comingSoonMessage": "La integración con Linear llegará pronto. ¡Mantente al tanto!",
+        "notConnected": "Linear aún no está conectado."
+      }
+    },
+    "connectedDetails": {
+      "linkedAccount": "ID de cuenta vinculada: {{accountId}}",
+      "connectedOn": "Conectado el {{timestamp}}",
+      "expiresOn": "El token expira el {{timestamp}}",
+      "refreshToken": "Token de actualización: {{status}}",
+      "refreshAvailable": "Disponible",
+      "refreshUnavailable": "No disponible",
+      "unknownAccount": "Desconocido"
+    }
+  },
+  "landingPage": {
+    "header": {
+      "signIn": "Iniciar sesión",
+      "signUp": "Registrarse"
+    },
+    "hero": {
+      "title": "Convierte transcripciones en planes de proyecto",
+      "subtitle": "Plan AI transforma cada reunión en trabajo accionable: sin limpiar notas manualmente, solo tableros, resúmenes y dependencias listos para tu equipo.",
+      "cta": "Comenzar"
+    },
+    "features": {
+      "heading": "Impulsa el ritmo con entrega asistida por IA",
+      "items": {
+        "transcript": {
+          "title": "Ingesta de transcripciones",
+          "description": "Sube notas de audio o transcripciones en bruto. Detectamos oradores y decisiones en segundos."
+        },
+        "tasks": {
+          "title": "Redacción de tareas con IA",
+          "description": "Genera tareas priorizadas con responsables, fechas límite y contexto que enlaza con la reunión."
+        },
+        "boards": {
+          "title": "Tableros y cronogramas",
+          "description": "Alterna entre kanban, swimlanes y vistas de roadmap para mantener cada proyecto alineado."
+        },
+        "insights": {
+          "title": "Insights de entrega",
+          "description": "Detecta bloqueos temprano con seguimiento de dependencias, burn-up reports y resúmenes para stakeholders."
+        }
+      }
+    },
+    "footer": {
+      "copyright": "© {{year}} BlueberryBytes {{productName}}. Todos los derechos reservados.",
+      "privacy": "Política de privacidad",
+      "dataDeletion": "Eliminación de datos",
+      "terms": "Términos de servicio"
+    }
+  },
+  "sessionDetails": {
+    "breadcrumbs": {
+      "aria": "Navegación de migas de pan",
+      "home": "Inicio",
+      "sessions": "Sesiones",
+      "fallback": "Sesión"
+    },
+    "subtitle": "Revisa los metadatos de la sesión y supervisa su estado.",
+    "buttons": {
+      "refresh": "Actualizar",
+      "moreInfo": "Más información",
+      "addTranscript": "Agregar transcripción",
+      "export": "Exportar",
+      "refreshTasks": "Actualizar tareas",
+      "createTask": "Crear tarea"
+    },
+    "sections": {
+      "actions": "Acciones de la sesión",
+      "tasksOverviewTitle": "Resumen de tareas",
+      "tasksOverviewDescription": "Visualiza el trabajo con un tablero kanban o un diagrama de dependencias. Los detalles y transcripciones viven en la página de información."
+    },
+    "tabs": {
+      "aria": "Vista de tareas de la sesión",
+      "board": "Tablero",
+      "diagram": "Diagrama de dependencias",
+      "timeline": "Cronograma"
+    },
+    "messages": {
+      "noTasks": "Aún no hay tareas. Crea tareas para poblar el tablero.",
+      "sessionNotFound": "Sesión no encontrada.",
+      "deleteSuccess": "Tarea eliminada",
+      "deleteError": "No se pudo eliminar la tarea. Inténtalo de nuevo.",
+      "tasksErrorFallback": "No se pudieron cargar las tareas.",
+      "tasksErrorStatus": "Error de tareas {{status}}",
+      "unexpectedError": "Ocurrió un error inesperado."
+    },
+    "dialogs": {
+      "deleteTask": {
+        "title": "Eliminar tarea",
+        "entityFallback": "Tarea seleccionada",
+        "description": "Eliminar esta tarea la quitará de la sesión y desvinculará cualquier dependencia.",
+        "additionalWarning": "Esta acción no se puede deshacer.",
+        "confirm": "Eliminar tarea"
+      }
+    }
+  },
+  "sessionInfo": {
+    "breadcrumbs": {
+      "aria": "Navegación de migas de pan",
+      "sessions": "Sesiones",
+      "workspace": "Espacio de trabajo de la sesión",
+      "info": "Información"
+    },
+    "buttons": {
+      "backToWorkspace": "Volver al espacio de trabajo",
+      "refresh": "Actualizar",
+      "refreshTranscripts": "Actualizar lista"
+    },
+    "sections": {
+      "transcriptsTitle": "Transcripciones",
+      "transcriptsDescription": "Revisa las transcripciones capturadas y su metadata.",
+      "metadataLabel": "Metadatos"
+    },
+    "meta": {
+      "created": "Creado",
+      "updated": "Actualizado",
+      "started": "Iniciado",
+      "ended": "Finalizado"
+    },
+    "table": {
+      "title": "Título",
+      "source": "Fuente",
+      "recorded": "Grabado",
+      "created": "Creado",
+      "summary": "Resumen",
+      "untitled": "Transcripción sin título",
+      "noSummary": "Sin resumen",
+      "missing": "—"
+    },
+    "messages": {
+      "sessionErrorFallback": "No se pudo cargar la sesión.",
+      "sessionErrorStatus": "Error de sesión {{status}}",
+      "transcriptsErrorFallback": "No se pudieron cargar las transcripciones.",
+      "transcriptsErrorStatus": "Error de transcripciones {{status}}",
+      "sessionNotFound": "Sesión no encontrada.",
+      "noTranscripts": "Aún no se han capturado transcripciones para esta sesión.",
+      "noMetadata": "No se proporcionaron metadatos."
+    }
+  },
+  "sessionTranscriptDetail": {
+    "breadcrumbs": {
+      "aria": "Navegación de migas de pan",
+      "sessions": "Sesiones",
+      "workspace": "Espacio de trabajo de la sesión",
+      "info": "Información",
+      "transcript": "Transcripción"
+    },
+    "buttons": {
+      "backToInfo": "Volver a información",
+      "refresh": "Actualizar"
+    },
+    "meta": {
+      "recorded": "Grabado",
+      "created": "Creado",
+      "updated": "Actualizado"
+    },
+    "sections": {
+      "summary": "Resumen",
+      "transcript": "Transcripción",
+      "metadata": "Metadatos"
+    },
+    "table": {
+      "missing": "—",
+      "noSummary": "Sin resumen"
+    },
+    "messages": {
+      "sessionErrorFallback": "No se pudo cargar la sesión.",
+      "sessionErrorStatus": "Error de sesión {{status}}",
+      "transcriptErrorFallback": "No se pudo cargar la transcripción.",
+      "transcriptErrorStatus": "Error de transcripción {{status}}",
+      "transcriptNotFound": "Transcripción no encontrada.",
+      "untitled": "Transcripción sin título",
+      "noText": "No hay texto de transcripción disponible.",
+      "noMetadata": "No se proporcionaron metadatos.",
+      "metadataError": "No se pueden mostrar los metadatos."
+    }
+  },
+  "sidebarLayout": {
+    "nav": {
+      "home": "Inicio",
+      "sessions": "Sesiones",
+      "contexts": "Contextos",
+      "integrations": "Integraciones"
+    },
+    "tooltip": {
+      "expand": "Expandir barra lateral",
+      "collapse": "Contraer barra lateral"
+    },
+    "profile": {
+      "fallbackName": "Perfil",
+      "fallbackEmail": "Ver perfil"
+    }
+  },
+  "errorFallback": {
+    "title": "Algo salió mal.",
+    "reload": "Recargar página"
+  },
+  "deleteAccountDialog": {
+    "title": "Confirma la eliminación de la cuenta",
+    "description": "Esto eliminará permanentemente tu cuenta de Plan AI, incluyendo el historial de transcripciones, tareas generadas y temas personalizados. Esta acción no se puede deshacer.",
+    "confirmPrompt": "Para continuar, confirma que deseas eliminar la cuenta asociada con:",
+    "emailFallback": "Correo desconocido",
+    "buttons": {
+      "cancel": "Cancelar",
+      "confirm": "Eliminar cuenta",
+      "deleting": "Eliminando..."
+    }
+  },
+  "forgotPassword": {
+    "heading": "Restablece tu acceso a {{productName}}",
+    "description": "Introduce el correo asociado a tu espacio de trabajo y te enviaremos pasos para volver a tus tableros impulsados por transcripciones.",
+    "success": "Si existe una cuenta con este correo, recibirás instrucciones para restablecer la contraseña en breve.",
+    "buttons": {
+      "submit": "Restablecer contraseña",
+      "submitting": "Enviando..."
+    },
+    "links": {
+      "backToSignIn": "Volver a iniciar sesión"
+    }
+  },
+  "common": {
+    "buttons": {
+      "viewAll": "Ver todas",
+      "viewBoard": "Ver tablero"
+    },
+    "labels": {
+      "summary": "Resumen",
+      "recorded": "Grabado",
+      "updated": "Actualizado {{timestamp}}"
+    }
+  }
+}

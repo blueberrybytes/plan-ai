@@ -1,0 +1,11 @@
+# Excluded files from prettier formatting
+**/routes.ts
+**/swagger.json
+**/api.d.ts
+
+# Common exclusions
+node_modules
+build
+dist
+.next
+coverage

@@ -1,0 +1,18 @@
+export enum ErrorCause {
+  UNKNOWN = "UNKNOWN",
+  NO_CONNECTION = "NO_CONNECTION",
+  UNAUTHENTICATED = "UNAUTHENTICATED",
+  NO_PERMISSIONS = "NO_PERMISSIONS",
+  NO_USER_FOUND = "NO_USER_FOUND",
+  INVALID_CREDENTIALS = "INVALID_CREDENTIALS",
+  EMAIL_ALREADY_IN_USE = "EMAIL_ALREADY_IN_USE",
+  EMAIL_VERIFICATION_NEEDED = "EMAIL_VERIFICATION_NEEDED",
+  EMAIL_ADDRESS_NOT_VALID = "EMAIL_ADDRESS_NOT_VALID",
+}
+
+export type AppExceptionType = AppException | null;
+export interface AppException {
+  cause: ErrorCause;
+  error?: Error;
+  message?: string;
+}

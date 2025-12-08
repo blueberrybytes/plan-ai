@@ -1,0 +1,2914 @@
+{
+  "openapi": "3.0.0",
+  "components": {
+    "examples": {},
+    "headers": {},
+    "parameters": {},
+    "requestBodies": {},
+    "responses": {},
+    "schemas": {
+      "_36_Enums.SessionStatus": {
+        "type": "string",
+        "enum": ["ACTIVE", "COMPLETED", "ARCHIVED"]
+      },
+      "SessionStatus": {
+        "$ref": "#/components/schemas/_36_Enums.SessionStatus"
+      },
+      "JsonValue": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "number",
+            "format": "double"
+          },
+          {
+            "type": "boolean"
+          },
+          {
+            "$ref": "#/components/schemas/JsonObject"
+          },
+          {
+            "$ref": "#/components/schemas/JsonArray"
+          }
+        ],
+        "nullable": true,
+        "description": "From https://github.com/sindresorhus/type-fest/\r\nMatches any valid JSON value."
+      },
+      "JsonObject": {
+        "properties": {},
+        "additionalProperties": {
+          "$ref": "#/components/schemas/JsonValue"
+        },
+        "type": "object",
+        "description": "From https://github.com/sindresorhus/type-fest/\r\nMatches a JSON object.\r\nThis type can be useful to enforce some input to be JSON-compatible or as a super-type to be extended from."
+      },
+      "JsonArray": {
+        "description": "From https://github.com/sindresorhus/type-fest/\r\nMatches a JSON array.",
+        "properties": {},
+        "type": "object",
+        "additionalProperties": false
+      },
+      "SessionResponse": {
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "status": {
+            "$ref": "#/components/schemas/SessionStatus"
+          },
+          "startedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "endedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "metadata": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonValue"
+              }
+            ],
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "description",
+          "status",
+          "startedAt",
+          "endedAt",
+          "metadata",
+          "createdAt",
+          "updatedAt"
+        ],
+        "type": "object",
+        "additionalProperties": false
+      },
+      "SessionListResponse": {
+        "properties": {
+          "sessions": {
+            "items": {
+              "$ref": "#/components/schemas/SessionResponse"
+            },
+            "type": "array"
+          },
+          "total": {
+            "type": "number",
+            "format": "double"
+          }
+        },
+        "required": ["sessions", "total"],
+        "type": "object",
+        "additionalProperties": false
+      },
+      "ApiResponse_SessionListResponse_": {
+        "properties": {
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SessionListResponse"
+              }
+            ],
+            "nullable": true
+          },
+          "status": {
+            "type": "number",
+            "format": "double"
+          }
+        },
+        "required": ["data", "status"],
+        "type": "object"
+      },
+      "_36_Enums.TranscriptSource": {
+        "type": "string",
+        "enum": ["MANUAL", "RECORDING", "UPLOAD", "IMPORTED"]
+      },
+      "TranscriptSource": {
+        "$ref": "#/components/schemas/_36_Enums.TranscriptSource"
+      },
+      "TranscriptResponse": {
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "sessionId": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string",
+            "nullable": true
+          },
+          "source": {
+            "$ref": "#/components/schemas/TranscriptSource"
+          },
+          "language": {
+            "type": "string",
+            "nullable": true
+          },
+          "summary": {
+            "type": "string",
+            "nullable": true
+          },
+          "transcript": {
+            "type": "string",
+            "nullable": true
+          },
+          "recordedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "metadata": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonValue"
+              }
+            ],
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "sessionId",
+          "title",
+          "source",
+          "language",
+          "summary",
+          "transcript",
+          "recordedAt",
+          "metadata",
+          "createdAt",
+          "updatedAt"
+        ],
+        "type": "object",
+        "additionalProperties": false
+      },
+      "ApiResponse_TranscriptResponse_": {
+        "properties": {
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TranscriptResponse"
+              }
+            ],
+            "nullable": true
+          },
+          "status": {
+            "type": "number",
+            "format": "double"
+          }
+        },
+        "required": ["data", "status"],
+        "type": "object"
+      },
+      "TranscriptListResponse": {
+        "properties": {
+          "transcripts": {
+            "items": {
+              "$ref": "#/components/schemas/TranscriptResponse"
+            },
+            "type": "array"
+          },
+          "total": {
+            "type": "number",
+            "format": "double"
+          }
+        },
+        "required": ["transcripts", "total"],
+        "type": "object",
+        "additionalProperties": false
+      },
+      "ApiResponse_TranscriptListResponse_": {
+        "properties": {
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TranscriptListResponse"
+              }
+            ],
+            "nullable": true
+          },
+          "status": {
+            "type": "number",
+            "format": "double"
+          }
+        },
+        "required": ["data", "status"],
+        "type": "object"
+      },
+      "InputJsonValue": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "number",
+            "format": "double"
+          },
+          {
+            "type": "boolean"
+          },
+          {
+            "$ref": "#/components/schemas/InputJsonObject"
+          },
+          {
+            "$ref": "#/components/schemas/InputJsonArray"
+          },
+          {
+            "properties": {},
+            "type": "object"
+          }
+        ],
+        "description": "Matches any valid value that can be used as an input for operations like\r\ncreate and update as the value of a JSON field. Unlike \\`JsonValue\\`, this\r\ntype allows read-only arrays and read-only object properties and disallows\r\n\\`null\\` at the top level.\r\n\r\n\\`null\\` cannot be used as the value of a JSON field because its meaning\r\nwould be ambiguous. Use \\`Prisma.JsonNull\\` to store the JSON null value or\r\n\\`Prisma.DbNull\\` to clear the JSON value and set the field to the database\r\nNULL value instead."
+      },
+      "InputJsonObject": {
+        "properties": {},
+        "additionalProperties": {
+          "$ref": "#/components/schemas/InputJsonValue"
+        },
+        "type": "object",
+        "description": "Matches a JSON object.\r\nUnlike \\`JsonObject\\`, this type allows undefined and read-only properties."
+      },
+      "InputJsonArray": {
+        "description": "Matches a JSON array.\r\nUnlike \\`JsonArray\\`, readonly arrays are assignable to this type.",
+        "properties": {},
+        "type": "object",
+        "additionalProperties": false
+      },
+      "ManualTranscriptRequest": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "nullable": true
+          },
+          "source": {
+            "$ref": "#/components/schemas/TranscriptSource"
+          },
+          "language": {
+            "type": "string",
+            "nullable": true
+          },
+          "summary": {
+            "type": "string",
+            "nullable": true
+          },
+          "content": {
+            "type": "string",
+            "nullable": true
+          },
+          "recordedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "metadata": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/InputJsonValue"
+              }
+            ],
+            "nullable": true
+          }
+        },
+        "type": "object",
+        "additionalProperties": false
+      },
+      "UpdateTranscriptRequest": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "nullable": true
+          },
+          "source": {
+            "$ref": "#/components/schemas/TranscriptSource"
+          },
+          "language": {
+            "type": "string",
+            "nullable": true
+          },
+          "summary": {
+            "type": "string",
+            "nullable": true
+          },
+          "transcript": {
+            "type": "string",
+            "nullable": true
+          },
+          "recordedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "metadata": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/InputJsonValue"
+              }
+            ],
+            "nullable": true
+          }
+        },
+        "type": "object",
+        "additionalProperties": false
+      },
+      "ApiResponse_null_": {
+        "properties": {
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "anyOf": [],
+            "nullable": true
+          },
+          "status": {
+            "type": "number",
+            "format": "double"
+          }
+        },
+        "required": ["data", "status"],
+        "type": "object"
+      },
+      "_36_Enums.TaskStatus": {
+        "type": "string",
+        "enum": ["COMPLETED", "ARCHIVED", "BACKLOG", "IN_PROGRESS", "BLOCKED"]
+      },
+      "TaskStatus": {
+        "$ref": "#/components/schemas/_36_Enums.TaskStatus"
+      },
+      "_36_Enums.TaskPriority": {
+        "type": "string",
+        "enum": ["LOW", "MEDIUM", "HIGH", "URGENT"]
+      },
+      "TaskPriority": {
+        "$ref": "#/components/schemas/_36_Enums.TaskPriority"
+      },
+      "TaskResponse": {
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "sessionId": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "summary": {
+            "type": "string",
+            "nullable": true
+          },
+          "acceptanceCriteria": {
+            "type": "string",
+            "nullable": true
+          },
+          "status": {
+            "$ref": "#/components/schemas/TaskStatus"
+          },
+          "priority": {
+            "$ref": "#/components/schemas/TaskPriority"
+          },
+          "dueDate": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "dependencies": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "sessionId",
+          "title",
+          "description",
+          "summary",
+          "acceptanceCriteria",
+          "status",
+          "priority",
+          "dueDate",
+          "dependencies",
+          "createdAt",
+          "updatedAt"
+        ],
+        "type": "object",
+        "additionalProperties": false
+      },
+      "TaskListResponse": {
+        "properties": {
+          "tasks": {
+            "items": {
+              "$ref": "#/components/schemas/TaskResponse"
+            },
+            "type": "array"
+          },
+          "total": {
+            "type": "number",
+            "format": "double"
+          }
+        },
+        "required": ["tasks", "total"],
+        "type": "object",
+        "additionalProperties": false
+      },
+      "ApiResponse_TaskListResponse_": {
+        "properties": {
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TaskListResponse"
+              }
+            ],
+            "nullable": true
+          },
+          "status": {
+            "type": "number",
+            "format": "double"
+          }
+        },
+        "required": ["data", "status"],
+        "type": "object"
+      },
+      "ApiResponse_TaskResponse_": {
+        "properties": {
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TaskResponse"
+              }
+            ],
+            "nullable": true
+          },
+          "status": {
+            "type": "number",
+            "format": "double"
+          }
+        },
+        "required": ["data", "status"],
+        "type": "object"
+      },
+      "CreateTaskRequest": {
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "summary": {
+            "type": "string",
+            "nullable": true
+          },
+          "acceptanceCriteria": {
+            "type": "string",
+            "nullable": true
+          },
+          "status": {
+            "$ref": "#/components/schemas/TaskStatus"
+          },
+          "priority": {
+            "$ref": "#/components/schemas/TaskPriority"
+          },
+          "dueDate": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "Format: date-time"
+          },
+          "metadata": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/InputJsonValue"
+              }
+            ],
+            "nullable": true
+          },
+          "dependencyTaskIds": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": ["title"],
+        "type": "object",
+        "additionalProperties": false
+      },
+      "UpdateTaskRequest": {
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "summary": {
+            "type": "string",
+            "nullable": true
+          },
+          "acceptanceCriteria": {
+            "type": "string",
+            "nullable": true
+          },
+          "status": {
+            "$ref": "#/components/schemas/TaskStatus"
+          },
+          "priority": {
+            "$ref": "#/components/schemas/TaskPriority"
+          },
+          "dueDate": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "Format: date-time"
+          },
+          "metadata": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/InputJsonValue"
+              }
+            ],
+            "nullable": true
+          },
+          "dependencyTaskIds": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "type": "object",
+        "additionalProperties": false
+      },
+      "ApiResponse_SessionResponse_": {
+        "properties": {
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SessionResponse"
+              }
+            ],
+            "nullable": true
+          },
+          "status": {
+            "type": "number",
+            "format": "double"
+          }
+        },
+        "required": ["data", "status"],
+        "type": "object"
+      },
+      "CreateSessionRequest": {
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/SessionStatus"
+          },
+          "startedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "metadata": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/InputJsonValue"
+              }
+            ],
+            "nullable": true
+          }
+        },
+        "required": ["title"],
+        "type": "object",
+        "additionalProperties": false
+      },
+      "UpdateSessionRequest": {
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "status": {
+            "$ref": "#/components/schemas/SessionStatus"
+          },
+          "startedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "endedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "metadata": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/InputJsonValue"
+              }
+            ],
+            "nullable": true
+          }
+        },
+        "type": "object",
+        "additionalProperties": false
+      },
+      "TranscriptTaskInsight": {
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "priority": {
+            "$ref": "#/components/schemas/TaskPriority"
+          },
+          "status": {
+            "$ref": "#/components/schemas/TaskStatus"
+          },
+          "dueDate": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": ["title"],
+        "type": "object",
+        "additionalProperties": false
+      },
+      "TranscriptAnalysisResponse": {
+        "properties": {
+          "language": {
+            "type": "string"
+          },
+          "summary": {
+            "type": "string",
+            "nullable": true
+          },
+          "tasks": {
+            "items": {
+              "$ref": "#/components/schemas/TranscriptTaskInsight"
+            },
+            "type": "array"
+          }
+        },
+        "required": ["language", "summary", "tasks"],
+        "type": "object",
+        "additionalProperties": false
+      },
+      "CreateTranscriptResponse": {
+        "properties": {
+          "transcript": {
+            "$ref": "#/components/schemas/TranscriptResponse"
+          },
+          "tasks": {
+            "items": {
+              "$ref": "#/components/schemas/TaskResponse"
+            },
+            "type": "array"
+          },
+          "analysis": {
+            "$ref": "#/components/schemas/TranscriptAnalysisResponse"
+          }
+        },
+        "required": ["transcript", "tasks", "analysis"],
+        "type": "object",
+        "additionalProperties": false
+      },
+      "ApiResponse_CreateTranscriptResponse_": {
+        "properties": {
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CreateTranscriptResponse"
+              }
+            ],
+            "nullable": true
+          },
+          "status": {
+            "type": "number",
+            "format": "double"
+          }
+        },
+        "required": ["data", "status"],
+        "type": "object"
+      },
+      "CreateTranscriptRequest": {
+        "properties": {
+          "content": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "source": {
+            "$ref": "#/components/schemas/TranscriptSource"
+          },
+          "recordedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "metadata": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/InputJsonValue"
+              }
+            ],
+            "nullable": true
+          },
+          "contextIds": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": ["content"],
+        "type": "object",
+        "additionalProperties": false
+      },
+      "_36_Enums.Role": {
+        "type": "string",
+        "enum": ["ADMIN", "CLIENT"]
+      },
+      "Role": {
+        "$ref": "#/components/schemas/_36_Enums.Role"
+      },
+      "UserResponse": {
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "firebaseUid": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string",
+            "nullable": true
+          },
+          "avatarUrl": {
+            "type": "string",
+            "nullable": true
+          },
+          "googleId": {
+            "type": "string",
+            "nullable": true
+          },
+          "isGoogleAccount": {
+            "type": "boolean"
+          },
+          "role": {
+            "$ref": "#/components/schemas/Role"
+          }
+        },
+        "required": [
+          "id",
+          "firebaseUid",
+          "email",
+          "name",
+          "avatarUrl",
+          "googleId",
+          "isGoogleAccount",
+          "role"
+        ],
+        "type": "object",
+        "additionalProperties": false
+      },
+      "ApiResponse_UserResponse_": {
+        "properties": {
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/UserResponse"
+              }
+            ],
+            "nullable": true
+          },
+          "status": {
+            "type": "number",
+            "format": "double"
+          }
+        },
+        "required": ["data", "status"],
+        "type": "object"
+      },
+      "GenericResponse": {
+        "properties": {
+          "message": {
+            "type": "string"
+          },
+          "status": {
+            "type": "number",
+            "format": "double"
+          }
+        },
+        "required": ["message", "status"],
+        "type": "object"
+      },
+      "JiraAuthorizationResponse": {
+        "properties": {
+          "authorizationUrl": {
+            "type": "string"
+          }
+        },
+        "required": ["authorizationUrl"],
+        "type": "object",
+        "additionalProperties": false
+      },
+      "ApiResponse_JiraAuthorizationResponse_": {
+        "properties": {
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JiraAuthorizationResponse"
+              }
+            ],
+            "nullable": true
+          },
+          "status": {
+            "type": "number",
+            "format": "double"
+          }
+        },
+        "required": ["data", "status"],
+        "type": "object"
+      },
+      "_36_Enums.IntegrationProvider": {
+        "type": "string",
+        "enum": ["JIRA", "LINEAR"]
+      },
+      "IntegrationProvider": {
+        "$ref": "#/components/schemas/_36_Enums.IntegrationProvider"
+      },
+      "_36_Enums.IntegrationStatus": {
+        "type": "string",
+        "enum": ["CONNECTED", "DISCONNECTED", "ERROR"]
+      },
+      "IntegrationStatus": {
+        "$ref": "#/components/schemas/_36_Enums.IntegrationStatus"
+      },
+      "UserIntegrationSummary": {
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "provider": {
+            "$ref": "#/components/schemas/IntegrationProvider"
+          },
+          "status": {
+            "$ref": "#/components/schemas/IntegrationStatus"
+          },
+          "accountId": {
+            "type": "string",
+            "nullable": true
+          },
+          "accountName": {
+            "type": "string",
+            "nullable": true
+          },
+          "metadata": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonValue"
+              }
+            ],
+            "nullable": true
+          },
+          "scope": {
+            "type": "string",
+            "nullable": true
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "hasRefreshToken": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "provider",
+          "status",
+          "accountId",
+          "accountName",
+          "metadata",
+          "scope",
+          "expiresAt",
+          "createdAt",
+          "updatedAt",
+          "hasRefreshToken"
+        ],
+        "type": "object",
+        "additionalProperties": false
+      },
+      "ApiResponse_UserIntegrationSummary-Array_": {
+        "properties": {
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/UserIntegrationSummary"
+            },
+            "type": "array",
+            "nullable": true
+          },
+          "status": {
+            "type": "number",
+            "format": "double"
+          }
+        },
+        "required": ["data", "status"],
+        "type": "object"
+      },
+      "ApiResponse_UserIntegrationSummary-or-null_": {
+        "properties": {
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/UserIntegrationSummary"
+              }
+            ],
+            "nullable": true
+          },
+          "status": {
+            "type": "number",
+            "format": "double"
+          }
+        },
+        "required": ["data", "status"],
+        "type": "object"
+      },
+      "ApiResponse_string_": {
+        "properties": {
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "type": "string",
+            "nullable": true
+          },
+          "status": {
+            "type": "number",
+            "format": "double"
+          }
+        },
+        "required": ["data", "status"],
+        "type": "object"
+      },
+      "ContextFileResponse": {
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "fileName": {
+            "type": "string"
+          },
+          "mimeType": {
+            "type": "string"
+          },
+          "sizeBytes": {
+            "type": "number",
+            "format": "double"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "bucketPath": {
+            "type": "string"
+          },
+          "publicUrl": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "fileName",
+          "mimeType",
+          "sizeBytes",
+          "createdAt",
+          "bucketPath",
+          "publicUrl"
+        ],
+        "type": "object",
+        "additionalProperties": false
+      },
+      "ContextResponse": {
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "color": {
+            "type": "string",
+            "nullable": true
+          },
+          "metadata": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonValue"
+              }
+            ],
+            "nullable": true
+          },
+          "files": {
+            "items": {
+              "$ref": "#/components/schemas/ContextFileResponse"
+            },
+            "type": "array"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "description",
+          "color",
+          "metadata",
+          "files",
+          "createdAt",
+          "updatedAt"
+        ],
+        "type": "object",
+        "additionalProperties": false
+      },
+      "ContextListResponse": {
+        "properties": {
+          "contexts": {
+            "items": {
+              "$ref": "#/components/schemas/ContextResponse"
+            },
+            "type": "array"
+          }
+        },
+        "required": ["contexts"],
+        "type": "object",
+        "additionalProperties": false
+      },
+      "ApiResponse_ContextListResponse_": {
+        "properties": {
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ContextListResponse"
+              }
+            ],
+            "nullable": true
+          },
+          "status": {
+            "type": "number",
+            "format": "double"
+          }
+        },
+        "required": ["data", "status"],
+        "type": "object"
+      },
+      "ApiResponse_ContextResponse_": {
+        "properties": {
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ContextResponse"
+              }
+            ],
+            "nullable": true
+          },
+          "status": {
+            "type": "number",
+            "format": "double"
+          }
+        },
+        "required": ["data", "status"],
+        "type": "object"
+      },
+      "CreateContextRequest": {
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "color": {
+            "type": "string",
+            "nullable": true
+          },
+          "metadata": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/InputJsonValue"
+              }
+            ],
+            "nullable": true
+          }
+        },
+        "required": ["name"],
+        "type": "object",
+        "additionalProperties": false
+      },
+      "UpdateContextRequest": {
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "color": {
+            "type": "string",
+            "nullable": true
+          },
+          "metadata": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/InputJsonValue"
+              }
+            ],
+            "nullable": true
+          }
+        },
+        "type": "object",
+        "additionalProperties": false
+      },
+      "DefaultSelection_Prisma._36_CustomThemePayload_": {
+        "properties": {
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "configJson": {
+            "$ref": "#/components/schemas/JsonValue"
+          },
+          "density": {
+            "type": "number",
+            "format": "double"
+          },
+          "borderRadius": {
+            "type": "number",
+            "format": "double"
+          },
+          "headingFontFamily": {
+            "type": "string"
+          },
+          "fontFamily": {
+            "type": "string"
+          },
+          "textSecondaryColor": {
+            "type": "string"
+          },
+          "textPrimaryColor": {
+            "type": "string"
+          },
+          "surfaceColor": {
+            "type": "string"
+          },
+          "backgroundColor": {
+            "type": "string"
+          },
+          "secondaryColor": {
+            "type": "string"
+          },
+          "primaryColor": {
+            "type": "string"
+          },
+          "userId": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "updatedAt",
+          "createdAt",
+          "configJson",
+          "density",
+          "borderRadius",
+          "headingFontFamily",
+          "fontFamily",
+          "textSecondaryColor",
+          "textPrimaryColor",
+          "surfaceColor",
+          "backgroundColor",
+          "secondaryColor",
+          "primaryColor",
+          "userId",
+          "id"
+        ],
+        "type": "object"
+      },
+      "CustomTheme": {
+        "$ref": "#/components/schemas/DefaultSelection_Prisma._36_CustomThemePayload_",
+        "description": "Model CustomTheme"
+      },
+      "ApiResponse_CustomTheme-or-null_": {
+        "properties": {
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CustomTheme"
+              }
+            ],
+            "nullable": true
+          },
+          "status": {
+            "type": "number",
+            "format": "double"
+          }
+        },
+        "required": ["data", "status"],
+        "type": "object"
+      },
+      "ApiResponse_CustomTheme_": {
+        "properties": {
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CustomTheme"
+              }
+            ],
+            "nullable": true
+          },
+          "status": {
+            "type": "number",
+            "format": "double"
+          }
+        },
+        "required": ["data", "status"],
+        "type": "object"
+      },
+      "UpdateCustomThemeRequest": {
+        "properties": {
+          "primaryColor": {
+            "type": "string",
+            "nullable": true
+          },
+          "secondaryColor": {
+            "type": "string",
+            "nullable": true
+          },
+          "backgroundColor": {
+            "type": "string",
+            "nullable": true
+          },
+          "surfaceColor": {
+            "type": "string",
+            "nullable": true
+          },
+          "textPrimaryColor": {
+            "type": "string",
+            "nullable": true
+          },
+          "textSecondaryColor": {
+            "type": "string",
+            "nullable": true
+          },
+          "fontFamily": {
+            "type": "string",
+            "nullable": true
+          },
+          "headingFontFamily": {
+            "type": "string",
+            "nullable": true
+          },
+          "borderRadius": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "density": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "configJson": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonValue"
+              }
+            ],
+            "nullable": true
+          }
+        },
+        "type": "object",
+        "additionalProperties": false
+      },
+      "ApiResponse_boolean_": {
+        "properties": {
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "status": {
+            "type": "number",
+            "format": "double"
+          }
+        },
+        "required": ["data", "status"],
+        "type": "object"
+      }
+    },
+    "securitySchemes": {}
+  },
+  "info": {
+    "title": "backend",
+    "version": "1.0.0",
+    "license": {
+      "name": "ISC"
+    },
+    "contact": {}
+  },
+  "paths": {
+    "/api/sessions": {
+      "get": {
+        "operationId": "ListSessions",
+        "responses": {
+          "200": {
+            "description": "Ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_SessionListResponse_"
+                }
+              }
+            }
+          }
+        },
+        "tags": ["Sessions"],
+        "security": [
+          {
+            "ClientLevel": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "format": "double",
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "pageSize",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "format": "double",
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/SessionStatus"
+            }
+          }
+        ]
+      },
+      "post": {
+        "operationId": "CreateSession",
+        "responses": {
+          "200": {
+            "description": "Ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_SessionResponse_"
+                }
+              }
+            }
+          }
+        },
+        "tags": ["Sessions"],
+        "security": [
+          {
+            "ClientLevel": []
+          }
+        ],
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateSessionRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/sessions/{sessionId}/transcripts/upload": {
+      "post": {
+        "operationId": "UploadTranscript",
+        "responses": {
+          "200": {
+            "description": "Ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_TranscriptResponse_"
+                }
+              }
+            }
+          }
+        },
+        "tags": ["Sessions"],
+        "security": [
+          {
+            "ClientLevel": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "sessionId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "files": {
+                    "items": {
+                      "type": "string",
+                      "format": "binary"
+                    },
+                    "type": "array"
+                  },
+                  "title": {
+                    "type": "string"
+                  },
+                  "recordedAt": {
+                    "type": "string"
+                  },
+                  "metadata": {
+                    "type": "string"
+                  },
+                  "language": {
+                    "type": "string"
+                  },
+                  "summary": {
+                    "type": "string"
+                  }
+                },
+                "required": ["files"]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/sessions/{sessionId}/transcripts": {
+      "get": {
+        "operationId": "ListTranscripts",
+        "responses": {
+          "200": {
+            "description": "Ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_TranscriptListResponse_"
+                }
+              }
+            }
+          }
+        },
+        "tags": ["Sessions"],
+        "security": [
+          {
+            "ClientLevel": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "sessionId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "format": "double",
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "pageSize",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "format": "double",
+              "type": "number"
+            }
+          }
+        ]
+      },
+      "post": {
+        "operationId": "CreateTranscript",
+        "responses": {
+          "200": {
+            "description": "Ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_CreateTranscriptResponse_"
+                }
+              }
+            }
+          }
+        },
+        "tags": ["Sessions"],
+        "security": [
+          {
+            "ClientLevel": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "sessionId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateTranscriptRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/sessions/{sessionId}/transcripts/{transcriptId}": {
+      "get": {
+        "operationId": "GetTranscript",
+        "responses": {
+          "200": {
+            "description": "Ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_TranscriptResponse_"
+                }
+              }
+            }
+          }
+        },
+        "tags": ["Sessions"],
+        "security": [
+          {
+            "ClientLevel": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "sessionId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "transcriptId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      },
+      "put": {
+        "operationId": "UpdateTranscript",
+        "responses": {
+          "200": {
+            "description": "Ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_TranscriptResponse_"
+                }
+              }
+            }
+          }
+        },
+        "tags": ["Sessions"],
+        "security": [
+          {
+            "ClientLevel": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "sessionId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "transcriptId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateTranscriptRequest"
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "DeleteTranscript",
+        "responses": {
+          "200": {
+            "description": "Ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_null_"
+                }
+              }
+            }
+          }
+        },
+        "tags": ["Sessions"],
+        "security": [
+          {
+            "ClientLevel": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "sessionId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "transcriptId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      }
+    },
+    "/api/sessions/{sessionId}/transcripts/manual": {
+      "post": {
+        "operationId": "CreateManualTranscript",
+        "responses": {
+          "200": {
+            "description": "Ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_TranscriptResponse_"
+                }
+              }
+            }
+          }
+        },
+        "tags": ["Sessions"],
+        "security": [
+          {
+            "ClientLevel": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "sessionId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ManualTranscriptRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/sessions/{sessionId}/tasks": {
+      "get": {
+        "operationId": "ListTasks",
+        "responses": {
+          "200": {
+            "description": "Ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_TaskListResponse_"
+                }
+              }
+            }
+          }
+        },
+        "tags": ["Sessions"],
+        "security": [
+          {
+            "ClientLevel": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "sessionId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/TaskStatus"
+            }
+          },
+          {
+            "in": "query",
+            "name": "priority",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/TaskPriority"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "format": "double",
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "pageSize",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "format": "double",
+              "type": "number"
+            }
+          }
+        ]
+      },
+      "post": {
+        "operationId": "CreateTask",
+        "responses": {
+          "200": {
+            "description": "Ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_TaskResponse_"
+                }
+              }
+            }
+          }
+        },
+        "tags": ["Sessions"],
+        "security": [
+          {
+            "ClientLevel": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "sessionId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateTaskRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/sessions/{sessionId}/tasks/{taskId}": {
+      "get": {
+        "operationId": "GetTask",
+        "responses": {
+          "200": {
+            "description": "Ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_TaskResponse_"
+                }
+              }
+            }
+          }
+        },
+        "tags": ["Sessions"],
+        "security": [
+          {
+            "ClientLevel": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "sessionId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "taskId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      },
+      "put": {
+        "operationId": "UpdateTask",
+        "responses": {
+          "200": {
+            "description": "Ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_TaskResponse_"
+                }
+              }
+            }
+          }
+        },
+        "tags": ["Sessions"],
+        "security": [
+          {
+            "ClientLevel": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "sessionId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "taskId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateTaskRequest"
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "DeleteTask",
+        "responses": {
+          "200": {
+            "description": "Ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_null_"
+                }
+              }
+            }
+          }
+        },
+        "tags": ["Sessions"],
+        "security": [
+          {
+            "ClientLevel": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "sessionId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "taskId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      }
+    },
+    "/api/sessions/{sessionId}": {
+      "get": {
+        "operationId": "GetSession",
+        "responses": {
+          "200": {
+            "description": "Ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_SessionResponse_"
+                }
+              }
+            }
+          }
+        },
+        "tags": ["Sessions"],
+        "security": [
+          {
+            "ClientLevel": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "sessionId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      },
+      "put": {
+        "operationId": "UpdateSession",
+        "responses": {
+          "200": {
+            "description": "Ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_SessionResponse_"
+                }
+              }
+            }
+          }
+        },
+        "tags": ["Sessions"],
+        "security": [
+          {
+            "ClientLevel": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "sessionId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateSessionRequest"
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "DeleteSession",
+        "responses": {
+          "200": {
+            "description": "Ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_null_"
+                }
+              }
+            }
+          }
+        },
+        "tags": ["Sessions"],
+        "security": [
+          {
+            "ClientLevel": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "sessionId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      }
+    },
+    "/api/session/login": {
+      "post": {
+        "operationId": "Login",
+        "responses": {
+          "200": {
+            "description": "Ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_UserResponse_"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenericResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenericResponse"
+                }
+              }
+            }
+          }
+        },
+        "description": "Login with Firebase token.\nVerifies the token and returns user information.\nCreates a new user if one doesn't exist with the given Firebase UID.",
+        "tags": ["Session"],
+        "security": [],
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "token": {
+                    "type": "string"
+                  },
+                  "uuid": {
+                    "type": "string"
+                  }
+                },
+                "required": ["token", "uuid"],
+                "type": "object"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/session/me": {
+      "get": {
+        "operationId": "GetCurrentUser",
+        "responses": {
+          "200": {
+            "description": "Ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_UserResponse_"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenericResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenericResponse"
+                }
+              }
+            }
+          }
+        },
+        "description": "Get current user information.\nRequires authentication.",
+        "tags": ["Session"],
+        "security": [
+          {
+            "ClientLevel": []
+          }
+        ],
+        "parameters": []
+      }
+    },
+    "/api/jira/auth": {
+      "get": {
+        "operationId": "GetAuthorizationUrl",
+        "responses": {
+          "200": {
+            "description": "Ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_JiraAuthorizationResponse_"
+                }
+              }
+            }
+          }
+        },
+        "tags": ["Integrations"],
+        "security": [
+          {
+            "ClientLevel": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "state",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      }
+    },
+    "/api/jira/callback": {
+      "get": {
+        "operationId": "HandleCallback",
+        "responses": {
+          "204": {
+            "description": "No content"
+          }
+        },
+        "tags": ["Integrations"],
+        "security": [],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "code",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "state",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "error",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "error_description",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      }
+    },
+    "/api/integrations": {
+      "get": {
+        "operationId": "ListIntegrations",
+        "responses": {
+          "200": {
+            "description": "Ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_UserIntegrationSummary-Array_"
+                }
+              }
+            }
+          }
+        },
+        "tags": ["Integrations"],
+        "security": [
+          {
+            "ClientLevel": []
+          }
+        ],
+        "parameters": []
+      }
+    },
+    "/api/integrations/{provider}": {
+      "get": {
+        "operationId": "GetIntegration",
+        "responses": {
+          "200": {
+            "description": "Ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_UserIntegrationSummary-or-null_"
+                }
+              }
+            }
+          }
+        },
+        "tags": ["Integrations"],
+        "security": [
+          {
+            "ClientLevel": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "provider",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      }
+    },
+    "/api/healthcheck/status": {
+      "get": {
+        "operationId": "GetHealthStatus",
+        "responses": {
+          "200": {
+            "description": "Ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_string_"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenericResponse"
+                }
+              }
+            }
+          }
+        },
+        "description": "Get Status.",
+        "tags": ["Healthcheck"],
+        "security": [],
+        "parameters": []
+      }
+    },
+    "/api/contexts": {
+      "get": {
+        "operationId": "ListContexts",
+        "responses": {
+          "200": {
+            "description": "Ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_ContextListResponse_"
+                }
+              }
+            }
+          }
+        },
+        "tags": ["Contexts"],
+        "security": [
+          {
+            "ClientLevel": []
+          }
+        ],
+        "parameters": []
+      },
+      "post": {
+        "operationId": "CreateContext",
+        "responses": {
+          "200": {
+            "description": "Ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_ContextResponse_"
+                }
+              }
+            }
+          }
+        },
+        "tags": ["Contexts"],
+        "security": [
+          {
+            "ClientLevel": []
+          }
+        ],
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateContextRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/contexts/{contextId}": {
+      "get": {
+        "operationId": "GetContext",
+        "responses": {
+          "200": {
+            "description": "Ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_ContextResponse_"
+                }
+              }
+            }
+          }
+        },
+        "tags": ["Contexts"],
+        "security": [
+          {
+            "ClientLevel": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "contextId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      },
+      "put": {
+        "operationId": "UpdateContext",
+        "responses": {
+          "200": {
+            "description": "Ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_ContextResponse_"
+                }
+              }
+            }
+          }
+        },
+        "tags": ["Contexts"],
+        "security": [
+          {
+            "ClientLevel": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "contextId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateContextRequest"
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "DeleteContext",
+        "responses": {
+          "200": {
+            "description": "Ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_null_"
+                }
+              }
+            }
+          }
+        },
+        "tags": ["Contexts"],
+        "security": [
+          {
+            "ClientLevel": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "contextId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      }
+    },
+    "/api/contexts/{contextId}/files": {
+      "post": {
+        "operationId": "UploadContextFile",
+        "responses": {
+          "200": {
+            "description": "Ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_ContextResponse_"
+                }
+              }
+            }
+          }
+        },
+        "tags": ["Contexts"],
+        "security": [
+          {
+            "ClientLevel": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "contextId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "metadata",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "files": {
+                    "items": {
+                      "type": "string",
+                      "format": "binary"
+                    },
+                    "type": "array"
+                  }
+                },
+                "required": ["files"]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/contexts/{contextId}/files/{fileId}": {
+      "delete": {
+        "operationId": "DeleteContextFile",
+        "responses": {
+          "200": {
+            "description": "Ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_ContextResponse_"
+                }
+              }
+            }
+          }
+        },
+        "tags": ["Contexts"],
+        "security": [
+          {
+            "ClientLevel": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "contextId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "fileId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      }
+    },
+    "/account/theme": {
+      "get": {
+        "operationId": "GetCustomTheme",
+        "responses": {
+          "200": {
+            "description": "Ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_CustomTheme-or-null_"
+                }
+              }
+            }
+          }
+        },
+        "tags": ["Account"],
+        "security": [
+          {
+            "ClientLevel": []
+          }
+        ],
+        "parameters": []
+      },
+      "put": {
+        "operationId": "UpsertCustomTheme",
+        "responses": {
+          "200": {
+            "description": "Ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_CustomTheme_"
+                }
+              }
+            }
+          }
+        },
+        "tags": ["Account"],
+        "security": [
+          {
+            "ClientLevel": []
+          }
+        ],
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateCustomThemeRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/account/user/{userId}": {
+      "delete": {
+        "operationId": "DeleteUser",
+        "responses": {
+          "200": {
+            "description": "Ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_boolean_"
+                }
+              }
+            }
+          }
+        },
+        "description": "Delete a user account and all associated data (Admin only)\nThis is a careful operation that deletes all related records to avoid foreign key constraint errors\nOnly admins can delete other users",
+        "tags": ["Account"],
+        "security": [
+          {
+            "AdminOnly": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "userId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      }
+    },
+    "/account/self": {
+      "delete": {
+        "operationId": "DeleteMyAccount",
+        "responses": {
+          "200": {
+            "description": "Ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_boolean_"
+                }
+              }
+            }
+          }
+        },
+        "description": "Delete your own user account and all associated data\nThis endpoint allows users to delete their own account without specifying a userId\nThe user ID is extracted from the authentication token",
+        "tags": ["Account"],
+        "security": [
+          {
+            "ClientLevel": []
+          }
+        ],
+        "parameters": []
+      }
+    }
+  },
+  "servers": [
+    {
+      "url": "/"
+    }
+  ]
+}

@@ -1,0 +1,246 @@
+generator client {
+    provider = "prisma-client-js"
+}
+
+datasource db {
+    provider = "postgresql"
+    url      = env("DATABASE_URL")
+}
+
+enum Role {
+    ADMIN
+    CLIENT
+}
+
+enum SessionStatus {
+    ACTIVE
+    COMPLETED
+    ARCHIVED
+}
+
+enum TranscriptSource {
+    MANUAL
+    RECORDING
+    UPLOAD
+    IMPORTED
+}
+
+enum TaskStatus {
+    BACKLOG
+    IN_PROGRESS
+    BLOCKED
+    COMPLETED
+    ARCHIVED
+}
+
+enum TaskPriority {
+    LOW
+    MEDIUM
+    HIGH
+    URGENT
+}
+
+enum DependencyType {
+    BLOCKS
+    RELATES_TO
+    DUPLICATES
+}
+
+model User {
+    id              String   @id @default(cuid())
+    firebaseUid     String   @unique
+    email           String   @unique
+    name            String?
+    avatarUrl       String?
+    googleId        String?  @unique
+    createdAt       DateTime @default(now())
+    updatedAt       DateTime @updatedAt
+    role            Role     @default(CLIENT)
+    isGoogleAccount Boolean  @default(false)
+
+    customTheme   CustomTheme?
+    sessions      Session[]
+    assignedTasks Task[]       @relation("TaskAssignee")
+    contexts      Context[]
+
+    integrations UserIntegration[]
+}
+
+model UserIntegration {
+    id           String              @id @default(cuid())
+    userId       String
+    provider     IntegrationProvider
+    status       IntegrationStatus   @default(CONNECTED)
+    accessToken  String // encrypted/hashed at rest
+    refreshToken String? // optional, also secured
+    expiresAt    DateTime? // access token expiry when known
+    scope        String? // raw scope string from provider
+    accountId    String? // Jira cloud ID or Linear org ID
+    accountName  String? // friendly display name
+    metadata     Json? // extra provider data
+    createdAt    DateTime            @default(now())
+    updatedAt    DateTime            @updatedAt
+
+    user User @relation(fields: [userId], references: [id])
+
+    @@unique([userId, provider])
+}
+
+enum IntegrationProvider {
+    JIRA
+    LINEAR
+}
+
+enum IntegrationStatus {
+    CONNECTED
+    DISCONNECTED
+    ERROR
+}
+
+model CustomTheme {
+    id                 String   @id @default(cuid())
+    user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+    userId             String   @unique
+    primaryColor       String?
+    secondaryColor     String?
+    backgroundColor    String?
+    surfaceColor       String?
+    textPrimaryColor   String?
+    textSecondaryColor String?
+    fontFamily         String?
+    headingFontFamily  String?
+    borderRadius       Float?
+    density            Int?
+    configJson         Json?
+    createdAt          DateTime @default(now())
+    updatedAt          DateTime @updatedAt
+}
+
+model Session {
+    id          String        @id @default(cuid())
+    user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+    userId      String
+    title       String
+    description String?
+    status      SessionStatus @default(ACTIVE)
+    startedAt   DateTime?
+    endedAt     DateTime?
+    metadata    Json?
+    createdAt   DateTime      @default(now())
+    updatedAt   DateTime      @updatedAt
+
+    transcripts Transcript[]
+    tasks       Task[]
+
+    @@index([userId])
+    @@index([status])
+}
+
+model Transcript {
+    id         String           @id @default(cuid())
+    session    Session          @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+    sessionId  String
+    title      String?
+    source     TranscriptSource @default(MANUAL)
+    language   String?
+    summary    String?
+    transcript String?
+    rawUrl     String?
+    metadata   Json?
+    recordedAt DateTime?
+    createdAt  DateTime         @default(now())
+    updatedAt  DateTime         @updatedAt
+
+    taskLinks TaskTranscriptLink[]
+
+    @@index([sessionId])
+    @@index([source])
+}
+
+model Task {
+    id                 String       @id @default(cuid())
+    session            Session      @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+    sessionId          String
+    title              String
+    description        String?
+    summary            String?
+    acceptanceCriteria String?
+    status             TaskStatus   @default(BACKLOG)
+    priority           TaskPriority @default(MEDIUM)
+    lane               String?      @db.VarChar(64)
+    position           Int          @default(0)
+    canvasX            Float?       @map("canvas_x")
+    canvasY            Float?       @map("canvas_y")
+    canvasWidth        Float?       @map("canvas_width")
+    canvasHeight       Float?       @map("canvas_height")
+    startDate          DateTime?
+    dueDate            DateTime?
+    completedAt        DateTime?
+    estimatedMinutes   Int?
+    actualMinutes      Int?
+    metadata           Json?
+    assignee           User?        @relation("TaskAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+    assigneeId         String?
+    createdAt          DateTime     @default(now())
+    updatedAt          DateTime     @updatedAt
+
+    dependencies    TaskDependency[]     @relation("TaskDependencyDependants")
+    dependants      TaskDependency[]     @relation("TaskDependencyDependencies")
+    transcriptLinks TaskTranscriptLink[]
+
+    @@index([sessionId])
+    @@index([status])
+    @@index([lane, position])
+    @@index([assigneeId])
+}
+
+model TaskDependency {
+    id              String         @id @default(cuid())
+    task            Task           @relation("TaskDependencyDependencies", fields: [taskId], references: [id], onDelete: Cascade)
+    taskId          String
+    dependsOn       Task           @relation("TaskDependencyDependants", fields: [dependsOnTaskId], references: [id], onDelete: Cascade)
+    dependsOnTaskId String
+    type            DependencyType @default(BLOCKS)
+    createdAt       DateTime       @default(now())
+
+    @@unique([taskId, dependsOnTaskId])
+}
+
+model TaskTranscriptLink {
+    task         Task       @relation(fields: [taskId], references: [id], onDelete: Cascade)
+    taskId       String
+    transcript   Transcript @relation(fields: [transcriptId], references: [id], onDelete: Cascade)
+    transcriptId String
+    relevance    Float?
+
+    @@id([taskId, transcriptId])
+}
+
+model Context {
+    id          String        @id @default(cuid())
+    user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+    userId      String
+    name        String        @db.VarChar(120)
+    description String?       @db.Text
+    color       String?       @db.VarChar(24)
+    metadata    Json?
+    files       ContextFile[]
+    createdAt   DateTime      @default(now())
+    updatedAt   DateTime      @updatedAt
+
+    @@index([userId, name])
+}
+
+model ContextFile {
+    id         String   @id @default(cuid())
+    context    Context  @relation(fields: [contextId], references: [id], onDelete: Cascade)
+    contextId  String
+    bucketPath String   @db.VarChar(255)
+    fileName   String   @db.VarChar(180)
+    mimeType   String   @db.VarChar(128)
+    sizeBytes  Int      @default(0)
+    metadata   Json?
+    createdAt  DateTime @default(now())
+
+    @@index([contextId])
+}

@@ -1,0 +1,34 @@
+{
+  "entryFile": "src/server.ts",
+  "noImplicitAdditionalProperties": "throw-on-extras",
+  "validationMode": "strict",
+  "controllerPathGlobs": ["src/controller/**/*.ts"],
+  "spec": {
+    "outputDirectory": "src/swagger",
+    "specVersion": 3
+  },
+  "securityDefinitions": {
+    "BearerAuth": {
+      "type": "http",
+      "scheme": "bearer",
+      "bearerFormat": "JWT",
+      "description": "JWT authorization using the Bearer scheme (any authenticated user)"
+    },
+    "AdminOnly": {
+      "type": "http",
+      "scheme": "bearer",
+      "bearerFormat": "JWT",
+      "description": "Admin role required"
+    },
+    "ClientLevel": {
+      "type": "http",
+      "scheme": "bearer",
+      "bearerFormat": "JWT",
+      "description": "Client, Account, or Admin role required"
+    }
+  },
+  "routes": {
+    "routesDir": "src/routes",
+    "authenticationModule": "src/middleware/authMiddleware.ts"
+  }
+}
