@@ -13,7 +13,7 @@ Plan AI is an AI-assisted planning and execution platform that ingests meeting t
 - **Action management** – Kanban-inspired task boards with Jira integration hooks.
 - **Full-stack TypeScript** – React + RTK Query frontend, Express + TSOA backend, Prisma ORM, Firebase auth, and OpenAI embeddings.
 
-> ✨ **Looking for a managed version or consulting?** Reach out via [hello@blueberrybytes.com](mailto:hello@blueberrybytes.com).
+> ✨ **Looking for a managed version or consulting?** Reach out via [projects@blueberrybytes.com](mailto:projects@blueberrybytes.com).
 
 ## Architecture at a glance
 
@@ -153,7 +153,7 @@ We welcome pull requests of any size:
 
 - **GitHub Issues** – bugs, feature requests, docs gaps
 - **Discussions (coming soon)** – share ideas & integrations
-- **Direct contact** – [hello@blueberrybytes.com](mailto:hello@blueberrybytes.com)
+- **Direct contact** – [projects@blueberrybytes.com](mailto:projects@blueberrybytes.com)
 
 ## License
 
@@ -162,3 +162,13 @@ Plan AI is released under the [MIT License](LICENSE). Commercial support and cus
 ## Built by Blueberry Bytes
 
 Plan AI is crafted by [Blueberry Bytes](https://www.blueberrybytes.com), a consultancy focused on intelligent productivity tooling. If your team needs bespoke AI workflows, we’d love to collaborate.
+
+## About Blueberry Bytes
+
+[Blueberry Bytes](https://www.blueberrybytes.com) is a product consultancy dedicated to intelligent productivity tooling. Beyond Plan AI, the studio helps teams ship custom AI workflows, thoughtfully designed developer experiences, and scalable delivery pipelines. Visit the website to explore case studies, service offerings, and ways to partner with us on transcript-driven operations or other automation-heavy projects.
+
+Looking for automated content ops? Check out the [Blueberry Bytes Content Generator](https://content-generator.blueberrybytes.com/), a companion product that helps marketing and product teams publish consistent release notes, blog posts, and social updates with reusable AI templates.
+
+## About the Developer – Xavier Mas Leszkiewicz
+
+Plan AI is led by [Xavier Mas Leszkiewicz](https://xaviermasle.com), founder of Blueberry Bytes and long-time champion of TypeScript-first AI systems. On his site he shares essays about building durable software companies, experiments with meeting intelligence, and behind-the-scenes notes on how Plan AI is evolving. If you want to follow the technical roadmap or collaborate directly, Xavier’s personal blog is the best place to start.
