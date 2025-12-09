@@ -154,7 +154,7 @@ We welcome pull requests of any size:
 ### Quality gates
 
 - **Formatting**: `yarn format` runs Prettier in both packages. Pre-commit hook enforces formatting + lint via `lint-staged`.
-- **Linting**: `yarn lint` runs backend ESLint (strict TypeScript rules, no `any`) and frontend ESLint (CRA + Storybook). Use `yarn lint:fix` for autofixes.
+- **Linting**: `yarn lint` runs backend ESLint (strict TypeScript rules, no `any`) and frontend ESLint. Use `yarn lint:fix` for autofixes.
 - **Tests**: `yarn test:coverage` executes backend Vitest (coverage thresholds configured in `backend/vitest.config.ts`) and frontend Jest (thresholds in `frontend/package.json`).
 - **Pre-push hook**: automatically triggers `yarn lint` and `yarn test:coverage` to block regressions. Disable only when pairing with CI failures to investigate.
 
