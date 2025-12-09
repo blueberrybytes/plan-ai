@@ -26,7 +26,7 @@ Follow this checklist every time you cut a new release/tag. Adjust commands if y
 - [ ] Draft a release on GitHub using the tag.
 - [ ] Copy the changelog section into the release notes.
 - [ ] Attach screenshots/GIFs that showcase marquee changes.
-- [ ] Highlight Blueberry Bytes services + roadmap links for marketing.
+- [ ] Highlight Blueberrybytes services + roadmap links for marketing.
 
 ## 5. Repository metadata
 
