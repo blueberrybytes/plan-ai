@@ -23,6 +23,7 @@ Plan AI is an AI-assisted planning and execution platform that ingests meeting t
 graph TD
   FE[React Frontend] -->|RTK Query| BE[Express API]
   FE --> FirebaseAuth[Firebase Auth]
+  FE --> Clarity[Microsoft Clarity Analytics]
   BE --> Postgres[(PostgreSQL)]
   BE --> FirebaseStorage[(Firebase Storage)]
   BE --> Qdrant[(Qdrant Vector DB)]
@@ -38,6 +39,12 @@ graph TD
 | Backend           | Node.js, Express, TSOA, Prisma, Zod, Vitest             |
 | Data & Storage    | PostgreSQL, Qdrant Vector DB, Firebase Storage          |
 | AI & Integrations | OpenAI (embeddings + GPT), Jira OAuth2, Atlassian Cloud |
+
+## Product preview
+
+![Plan AI dashboard](./images/img1.png)
+
+![Plan AI contexts view](./images/img2.png)
 
 ## Quick start
 
