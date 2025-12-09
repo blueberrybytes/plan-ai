@@ -6,6 +6,8 @@
 
 Plan AI is an AI-assisted planning and execution platform that ingests meeting transcripts, surfaces context-aware insights, and keeps teams aligned through smart task boards. By open-sourcing the stack we invite the community to co-build the future of meeting intelligence while highlighting Blueberry Bytes’ expertise in TypeScript-first AI systems.
 
+[![Deploy on Railway](https://railway.app/button.svg)](https://railway.com/deploy/plan-ai)
+
 ## Why teams adopt Plan AI
 
 - **Transcript ingestion & enrichment** – upload recordings or notes and get language detection, summaries, and action items.
