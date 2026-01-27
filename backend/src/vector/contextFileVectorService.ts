@@ -119,7 +119,8 @@ export const indexContextFileVectors = async (args: IndexContextFileVectorsArgs)
     }
 
     const normalizedText = rawText.trim();
-    const chunks = normalizeChunks(await textSplitter.splitText(normalizedText));
+    const rawChunks = await textSplitter.splitText(normalizedText);
+    const chunks = normalizeChunks(rawChunks).map((chunk) => `[File: ${fileName}]\n${chunk}`);
 
     if (chunks.length === 0) {
       logger.info(
@@ -176,14 +177,18 @@ export const removeContextVectors = async (contextId: string): Promise<void> => 
   }
 };
 
-export const queryContexts = async (contextIds: string[], queryText: string): Promise<string[]> => {
+export const queryContexts = async (
+  contextIds: string[],
+  queryText: string,
+  limit = 10,
+): Promise<string[]> => {
   if (contextIds.length === 0 || !queryText.trim()) {
     return [];
   }
 
   try {
     const vector = await embeddings.embedQuery(queryText);
-    const points = await queryVectors(contextIds, vector, 10);
+    const points = await queryVectors(contextIds, vector, limit);
 
     return points
       .map((p: ContextVectorPoint) => p.payload.text)

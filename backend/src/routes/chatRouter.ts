@@ -51,7 +51,7 @@ router.post(
       // 2. Retrieve Context (RAG)
       let contextText = "";
       if (thread.contextIds.length > 0) {
-        const contexts = await queryContexts(thread.contextIds, content);
+        const contexts = await queryContexts(thread.contextIds, content, 30);
         if (contexts && contexts.length > 0) {
           contextText = contexts.join("\n---\n");
         }
