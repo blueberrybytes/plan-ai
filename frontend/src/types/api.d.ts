@@ -318,7 +318,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/chat/threads": {
+    "/api/chat/threads": {
         parameters: {
             query?: never;
             header?: never;
@@ -334,7 +334,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/chat/threads/{threadId}": {
+    "/api/chat/threads/{threadId}": {
         parameters: {
             query?: never;
             header?: never;
@@ -350,7 +350,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/chat/threads/{threadId}/messages": {
+    "/api/chat/threads/{threadId}/messages": {
         parameters: {
             query?: never;
             header?: never;

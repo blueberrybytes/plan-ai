@@ -39,9 +39,9 @@ interface SendMessageResponse {
   response: ChatMessage;
 }
 
-@Route("chat")
+@Route("api/chat")
 @Tags("Chat")
-@Security("jwt")
+@Security("ClientLevel")
 export class ChatController extends Controller {
   @Get("threads")
   public async listThreads(@Request() request: AuthenticatedRequest): Promise<ChatThread[]> {

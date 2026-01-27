@@ -1677,8 +1677,8 @@ export function RegisterRoutes(app: Router,opts?:{multer?:ReturnType<typeof mult
         const argsChatController_listThreads: Record<string, TsoaRoute.ParameterSchema> = {
                 request: {"in":"request","name":"request","required":true,"dataType":"object"},
         };
-        app.get('/chat/threads',
-            authenticateMiddleware([{"jwt":[]}]),
+        app.get('/api/chat/threads',
+            authenticateMiddleware([{"ClientLevel":[]}]),
             ...(fetchMiddlewares<RequestHandler>(ChatController)),
             ...(fetchMiddlewares<RequestHandler>(ChatController.prototype.listThreads)),
 
@@ -1709,8 +1709,8 @@ export function RegisterRoutes(app: Router,opts?:{multer?:ReturnType<typeof mult
                 threadId: {"in":"path","name":"threadId","required":true,"dataType":"string"},
                 request: {"in":"request","name":"request","required":true,"dataType":"object"},
         };
-        app.get('/chat/threads/:threadId',
-            authenticateMiddleware([{"jwt":[]}]),
+        app.get('/api/chat/threads/:threadId',
+            authenticateMiddleware([{"ClientLevel":[]}]),
             ...(fetchMiddlewares<RequestHandler>(ChatController)),
             ...(fetchMiddlewares<RequestHandler>(ChatController.prototype.getThread)),
 
@@ -1741,8 +1741,8 @@ export function RegisterRoutes(app: Router,opts?:{multer?:ReturnType<typeof mult
                 body: {"in":"body","name":"body","required":true,"ref":"CreateThreadRequest"},
                 request: {"in":"request","name":"request","required":true,"dataType":"object"},
         };
-        app.post('/chat/threads',
-            authenticateMiddleware([{"jwt":[]}]),
+        app.post('/api/chat/threads',
+            authenticateMiddleware([{"ClientLevel":[]}]),
             ...(fetchMiddlewares<RequestHandler>(ChatController)),
             ...(fetchMiddlewares<RequestHandler>(ChatController.prototype.createThread)),
 
@@ -1774,8 +1774,8 @@ export function RegisterRoutes(app: Router,opts?:{multer?:ReturnType<typeof mult
                 body: {"in":"body","name":"body","required":true,"ref":"SendMessageRequest"},
                 request: {"in":"request","name":"request","required":true,"dataType":"object"},
         };
-        app.post('/chat/threads/:threadId/messages',
-            authenticateMiddleware([{"jwt":[]}]),
+        app.post('/api/chat/threads/:threadId/messages',
+            authenticateMiddleware([{"ClientLevel":[]}]),
             ...(fetchMiddlewares<RequestHandler>(ChatController)),
             ...(fetchMiddlewares<RequestHandler>(ChatController.prototype.sendMessage)),
 
