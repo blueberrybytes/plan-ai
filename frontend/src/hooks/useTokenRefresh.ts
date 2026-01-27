@@ -18,7 +18,7 @@ import { TokenService } from "../services/tokenService";
 // Single refresh flag to prevent multiple simultaneous refresh attempts across components
 let isRefreshInProgress = false;
 
-export const useTokenRefresh = () => {
+export const useTokenRefresh = (): void => {
   const dispatch = useDispatch();
   const user = useSelector(selectUser);
   const refreshTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -29,7 +29,7 @@ export const useTokenRefresh = () => {
 
   useEffect(() => {
     // Immediately return if no user - prevents any token refresh attempts after logout
-    if (!user) return () => {};
+    if (!user) return;
 
     // Function to refresh the token
     const refreshToken = async () => {

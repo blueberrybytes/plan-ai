@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-function-type */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React from "react";
 import { render, screen, fireEvent } from "@testing-library/react";
@@ -18,7 +17,7 @@ jest.mock("../../hooks/useBrandIdentity", () => ({
 }));
 
 const mockDispatch = jest.fn();
-const mockSelectorResponses = new Map<Function, unknown>();
+const mockSelectorResponses = new Map<any, unknown>();
 
 jest.mock("react-redux", () => ({
   useDispatch: () => mockDispatch,
