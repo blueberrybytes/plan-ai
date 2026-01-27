@@ -20,6 +20,7 @@ import {
   useUpdateSessionTaskMutation,
 } from "../../store/apis/sessionApi";
 import { setToastMessage } from "../../store/slices/app/appSlice";
+import MarkdownRenderer from "../common/MarkdownRenderer";
 
 interface TaskBoardColumn {
   status: TaskStatusSchema;
@@ -171,15 +172,17 @@ const DraggableTaskCard: React.FC<{
           </Stack>
 
           {task.summary ? (
-            <Typography variant="body2" color="text.primary" sx={{ whiteSpace: "pre-wrap" }}>
-              {task.summary}
-            </Typography>
+            <MarkdownRenderer
+              content={task.summary}
+              sx={{ "& p": { variant: "body2", color: "text.primary" } }}
+            />
           ) : null}
 
           {task.description ? (
-            <Typography variant="body2" color="text.secondary" sx={{ whiteSpace: "pre-wrap" }}>
-              {task.description}
-            </Typography>
+            <MarkdownRenderer
+              content={task.description}
+              sx={{ "& p": { variant: "body2", color: "text.secondary" } }}
+            />
           ) : null}
 
           {task.acceptanceCriteria ? (

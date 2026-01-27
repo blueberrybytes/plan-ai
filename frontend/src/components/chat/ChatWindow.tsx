@@ -20,11 +20,8 @@ import {
   Download as DownloadIcon,
 } from "@mui/icons-material";
 import { useTranslation } from "react-i18next";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
-import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
-import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
 import { ChatMessage, ChatThread } from "../../store/apis/chatApi";
+import MarkdownRenderer from "../common/MarkdownRenderer";
 import { useListContextsQuery } from "../../store/apis/contextApi";
 import { useSelector } from "react-redux";
 import { RootState } from "../../store/store";
@@ -247,52 +244,9 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
                 bgcolor: msg.role === "USER" ? "primary.main" : "background.paper",
                 color: msg.role === "USER" ? "primary.contrastText" : "text.primary",
                 opacity: msg.id.startsWith("temp-") ? 0.7 : 1,
-                "& table": {
-                  borderCollapse: "collapse",
-                  width: "100%",
-                  my: 2,
-                },
-                "& th, & td": {
-                  border: 1,
-                  borderColor: "divider",
-                  p: 1,
-                },
-                "& pre": {
-                  m: 0,
-                  p: 0,
-                  bgcolor: "transparent !important",
-                },
               }}
             >
-              <ReactMarkdown
-                remarkPlugins={[remarkGfm]}
-                components={{
-                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                  code({ className, children, ...props }: any) {
-                    const match = /language-(\w+)/.exec(className || "");
-                    const isInline = !match;
-                    const language = match ? match[1] : "";
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    const Component = SyntaxHighlighter as any;
-                    return !isInline ? (
-                      <Component style={vscDarkPlus} language={language} PreTag="div" {...props}>
-                        {String(children).replace(/\n$/, "")}
-                      </Component>
-                    ) : (
-                      <code className={className} {...props}>
-                        {children}
-                      </code>
-                    );
-                  },
-                  p: ({ children }) => (
-                    <Typography variant="body1" sx={{ mb: 1, lastChild: { mb: 0 } }}>
-                      {children}
-                    </Typography>
-                  ),
-                }}
-              >
-                {msg.content}
-              </ReactMarkdown>
+              <MarkdownRenderer content={msg.content} />
             </Paper>
           </Box>
         ))}

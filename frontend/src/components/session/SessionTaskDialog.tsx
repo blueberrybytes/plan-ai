@@ -14,6 +14,7 @@ import {
 import CloseIcon from "@mui/icons-material/Close";
 import type { TaskResponse, TaskPrioritySchema } from "../../store/apis/sessionApi";
 import type { components } from "../../types/api";
+import MarkdownRenderer from "../common/MarkdownRenderer";
 
 interface SessionTaskDialogProps {
   open: boolean;
@@ -123,9 +124,7 @@ const SessionTaskDialog: React.FC<SessionTaskDialogProps> = ({
               <Typography variant="subtitle2" color="text.secondary">
                 Summary
               </Typography>
-              <Typography variant="body1" sx={{ whiteSpace: "pre-wrap" }}>
-                {task.summary}
-              </Typography>
+              <MarkdownRenderer content={task.summary} />
             </Stack>
           ) : null}
 
@@ -134,9 +133,7 @@ const SessionTaskDialog: React.FC<SessionTaskDialogProps> = ({
               Description
             </Typography>
             {task.description ? (
-              <Typography variant="body1" sx={{ whiteSpace: "pre-wrap" }}>
-                {task.description}
-              </Typography>
+              <MarkdownRenderer content={task.description} />
             ) : (
               <Typography variant="body2" color="text.secondary">
                 No description provided.
@@ -172,9 +169,7 @@ const SessionTaskDialog: React.FC<SessionTaskDialogProps> = ({
                 <Typography variant="subtitle2" color="text.secondary">
                   Acceptance criteria
                 </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ whiteSpace: "pre-wrap" }}>
-                  {task.acceptanceCriteria}
-                </Typography>
+                <MarkdownRenderer content={task.acceptanceCriteria} />
               </Stack>
             ) : null}
             <Stack spacing={0.5}>
