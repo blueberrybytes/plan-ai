@@ -880,6 +880,9 @@
 					"content": {
 						"type": "string"
 					},
+					"objective": {
+						"type": "string"
+					},
 					"title": {
 						"type": "string"
 					},
@@ -915,9 +918,6 @@
 						]
 					}
 				},
-				"required": [
-					"content"
-				],
 				"type": "object",
 				"additionalProperties": false
 			},
@@ -1893,6 +1893,9 @@
 										"type": "string"
 									},
 									"persona": {
+										"type": "string"
+									},
+									"objective": {
 										"type": "string"
 									},
 									"contextIds": {

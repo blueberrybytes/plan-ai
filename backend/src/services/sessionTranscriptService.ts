@@ -25,7 +25,9 @@ const TASK_PRIORITY_SET = new Set<string>(TASK_PRIORITY_VALUES);
 
 const TranscriptTaskRawSchema = z.object({
   title: z.string().min(1),
+  summary: z.string().min(1),
   description: z.string().optional(),
+  acceptanceCriteria: z.string().min(1),
   priority: z.string().optional(),
   status: z.string().optional(),
   dueDate: z.string().optional(),
@@ -47,7 +49,9 @@ export interface TranscriptAnalysis {
 
 export interface TranscriptTask {
   title: string;
+  summary?: string;
   description?: string;
+  acceptanceCriteria?: string;
   priority?: TaskPriority;
   status?: TaskStatus;
   dueDate?: string;
@@ -70,6 +74,7 @@ export interface CreateTranscriptInput {
   contextPrompt?: string | null;
   contextIds?: string[];
   persona?: "SECRETARY" | "ARCHITECT" | "PRODUCT_MANAGER" | "DEVELOPER";
+  objective?: string | null;
 }
 
 export interface CreateTranscriptResult {
@@ -93,6 +98,7 @@ export class SessionTranscriptService {
       input.contextPrompt ?? null,
       input.contextIds,
       input.persona ?? "ARCHITECT",
+      input.objective ?? null,
     );
 
     const result = await prisma.$transaction(async (tx) => {
@@ -127,8 +133,8 @@ export class SessionTranscriptService {
             sessionId: input.sessionId,
             title: taskCandidate.title,
             description: taskCandidate.description ?? null,
-            summary: taskCandidate.description ?? null,
-            acceptanceCriteria: null,
+            summary: taskCandidate.summary ?? null,
+            acceptanceCriteria: taskCandidate.acceptanceCriteria ?? null,
             priority: this.resolveTaskPriority(taskCandidate.priority),
             status: this.resolveTaskStatus(taskCandidate.status),
             position: index,
@@ -136,7 +142,7 @@ export class SessionTranscriptService {
             dueDate,
             metadata: {
               generatedFromTranscriptId: transcript.id,
-              generatorVersion: "session-transcript-service@1",
+              generatorVersion: "session-transcript-service@2",
             } satisfies Prisma.JsonObject,
           },
         });
@@ -167,6 +173,7 @@ export class SessionTranscriptService {
     contextPrompt: string | null,
     contextIds: string[] | undefined,
     persona: "SECRETARY" | "ARCHITECT" | "PRODUCT_MANAGER" | "DEVELOPER",
+    objective: string | null,
   ): Promise<TranscriptAnalysis> {
     const model = this.openAI(this.modelName);
     const todayIso = new Date().toISOString().split("T")[0];
@@ -213,6 +220,10 @@ Break down goals into specific coding tasks, PRs, and technical improvements.`;
         break;
     }
 
+    const objectiveSection = objective
+      ? `\nPRIMARY OBJECTIVE / MAIN PROMPT:\n"${objective}"\n\nIMPORTANT: The user has provided the above objective. This is the MOST IMPORTANT instruction. Prioritize this objective over the transcript content. If the transcript implies 3 tasks but the objective says "create one task", you MUST follow the objective.`
+      : "";
+
     const prompt = `Today is ${todayIso}. ${personaInstructions}
 
 Analyze the following transcript/request and the provided codebase context.
@@ -220,9 +231,16 @@ Analyze the following transcript/request and the provided codebase context.
 1. Detect the predominant human language (ISO name, e.g. "english").
 2. Provide a succinct summary (max 80 words).
 3. Extract or GENERATE actionable tasks:
-   - Each task must have a clear title, technical description, status (${TASK_STATUS_LIST}), and priority (${TASK_PRIORITY_LIST}).
+   - Each task MUST have a clear title.
+   - **summary**: REQUIRED. A concise, 1-sentence overview of the task (max 20 words).
+   - **description**: Detailed technical steps or context.
+   - **acceptanceCriteria**: REQUIRED. A markdown list of verifiable conditions for success.
+   - status (${TASK_STATUS_LIST}) and priority (${TASK_PRIORITY_LIST}).
+
 
 Do NOT guess due dates. Only populate dueDate if explicitly mentioned.
+
+${objectiveSection}
 
 ${contextSection}
 
@@ -243,7 +261,9 @@ ${content}`;
         summary: parsed.summary,
         tasks: parsed.tasks.map((task) => ({
           title: task.title,
+          summary: task.summary,
           description: task.description,
+          acceptanceCriteria: task.acceptanceCriteria,
           priority: this.normalizeTaskPriority(task.priority),
           status: this.normalizeTaskStatus(task.status),
           dueDate: task.dueDate,

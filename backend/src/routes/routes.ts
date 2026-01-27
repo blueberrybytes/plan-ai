@@ -345,7 +345,8 @@ const models: TsoaRoute.Models = {
     "CreateTranscriptRequest": {
         "dataType": "refObject",
         "properties": {
-            "content": {"dataType":"string","required":true},
+            "content": {"dataType":"string"},
+            "objective": {"dataType":"string"},
             "title": {"dataType":"string"},
             "source": {"ref":"TranscriptSource"},
             "recordedAt": {"dataType":"union","subSchemas":[{"dataType":"datetime"},{"dataType":"enum","enums":[null]}]},
@@ -691,6 +692,7 @@ export function RegisterRoutes(app: Router,opts?:{multer?:ReturnType<typeof mult
                 recordedAt: {"in":"formData","name":"recordedAt","dataType":"string"},
                 metadata: {"in":"formData","name":"metadata","dataType":"string"},
                 persona: {"in":"formData","name":"persona","dataType":"string"},
+                objective: {"in":"formData","name":"objective","dataType":"string"},
                 contextIds: {"in":"formData","name":"contextIds","dataType":"string"},
         };
         app.post('/api/sessions/:sessionId/transcripts/upload',

@@ -70,7 +70,8 @@ interface UpdateSessionRequest {
 }
 
 interface CreateTranscriptRequest {
-  content: string;
+  content?: string;
+  objective?: string;
   title?: string;
   source?: TranscriptSource;
   recordedAt?: Date | null;
@@ -293,6 +294,7 @@ export class SessionsModelController extends Controller {
     @FormField() recordedAt?: string,
     @FormField() metadata?: string,
     @FormField() persona?: "SECRETARY" | "ARCHITECT" | "PRODUCT_MANAGER" | "DEVELOPER",
+    @FormField() objective?: string,
     @FormField() contextIds?: string[],
   ): Promise<ApiResponse<CreateTranscriptResponse>> {
     const user = await this.getAuthorizedUser(request);
@@ -377,6 +379,7 @@ export class SessionsModelController extends Controller {
       contextPrompt,
       contextIds: contextIds,
       persona: persona,
+      objective: objective,
     });
 
     const tasksWithRelations = await Promise.all(
@@ -736,9 +739,17 @@ export class SessionsModelController extends Controller {
 
     const contextPrompt = await this.buildContextPrompt(user.id, body.contextIds ?? []);
 
+    if (!body.content && !body.objective) {
+      this.setStatus(400);
+      throw {
+        status: 400,
+        message: "You must provide either transcript content or an objective.",
+      };
+    }
+
     const result = await sessionTranscriptService.createTranscriptForSession({
       sessionId,
-      content: body.content,
+      content: body.content ?? "",
       title: body.title,
       source: body.source,
       recordedAt: body.recordedAt ?? null,
@@ -746,6 +757,7 @@ export class SessionsModelController extends Controller {
       contextPrompt,
       contextIds: body.contextIds,
       persona: body.persona,
+      objective: body.objective,
     });
 
     const tasksWithRelations = await Promise.all(

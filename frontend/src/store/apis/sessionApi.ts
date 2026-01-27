@@ -44,6 +44,7 @@ export interface UploadSessionTranscriptArgs {
   metadataJson?: string;
   persona?: components["schemas"]["CreateTranscriptRequest"]["persona"];
   contextIds?: string[];
+  objective?: string;
 }
 
 export type ListTasksParams = operations["ListTasks"]["parameters"]["query"];
@@ -174,7 +175,16 @@ export const sessionApi = createApi({
       UploadSessionTranscriptArgs
     >({
       query: (arg: UploadSessionTranscriptArgs) => {
-        const { sessionId, files, title, recordedAt, metadataJson, persona, contextIds } = arg;
+        const {
+          sessionId,
+          files,
+          title,
+          recordedAt,
+          metadataJson,
+          persona,
+          contextIds,
+          objective,
+        } = arg;
         const formData = new FormData();
         files.forEach((file) => {
           formData.append("files", file);
@@ -184,6 +194,7 @@ export const sessionApi = createApi({
         if (recordedAt) formData.append("recordedAt", recordedAt);
         if (metadataJson) formData.append("metadata", metadataJson);
         if (persona) formData.append("persona", persona);
+        if (objective) formData.append("objective", objective);
         if (contextIds && contextIds.length > 0) {
           contextIds.forEach((id: string) => formData.append("contextIds", id));
         }

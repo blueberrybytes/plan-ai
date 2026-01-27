@@ -73,6 +73,7 @@ const SessionTranscriptDialog: React.FC<SessionTranscriptDialogProps> = ({
   const dispatch = useDispatch();
   const [mode, setMode] = useState<TranscriptInputMode>(DEFAULT_MODE);
   const [title, setTitle] = useState<string>("");
+  const [objective, setObjective] = useState<string>("");
   const [recordedAt, setRecordedAt] = useState<string>(() => getDefaultRecordedAt());
   const [metadataJson, setMetadataJson] = useState<string>("");
   const [persona, setPersona] =
@@ -104,6 +105,7 @@ const SessionTranscriptDialog: React.FC<SessionTranscriptDialogProps> = ({
   const resetState = () => {
     setMode(DEFAULT_MODE);
     setTitle("");
+    setObjective("");
     setRecordedAt(getDefaultRecordedAt());
     setMetadataJson("");
     setPersona("ARCHITECT");
@@ -178,22 +180,26 @@ const SessionTranscriptDialog: React.FC<SessionTranscriptDialogProps> = ({
           metadataJson: metadataJson.trim() || undefined,
           persona,
           contextIds: selectedContextIds.length > 0 ? selectedContextIds : undefined,
+          objective: objective.trim() || undefined,
         }).unwrap();
       } else {
         const content = manualContent.trim();
-        if (!content) {
+        const obj = objective.trim();
+
+        if (!content && !obj) {
           setErrorMessage(t("sessionTranscriptDialog.messages.contentError"));
           return;
         }
 
         const requestBody: CreateTranscriptRequest = {
-          content,
+          content: content || undefined,
           title: title.trim() || undefined,
           recordedAt: recordedAt ? new Date(recordedAt).toISOString() : undefined,
           metadata: metadataPayload || null,
           source: "MANUAL",
           contextIds: selectedContextIds.length > 0 ? selectedContextIds : undefined,
           persona,
+          objective: obj || undefined,
         };
 
         await createTranscript({
@@ -269,6 +275,18 @@ const SessionTranscriptDialog: React.FC<SessionTranscriptDialogProps> = ({
                   }
                 />
               </RadioGroup>
+            </Box>
+
+            <Box>
+              <TextField
+                label={t("sessionTranscriptDialog.fields.objective")}
+                value={objective}
+                onChange={(event) => setObjective(event.target.value)}
+                placeholder={t("sessionTranscriptDialog.fields.objectivePlaceholder")}
+                multiline
+                minRows={2}
+                fullWidth
+              />
             </Box>
 
             <Divider />

@@ -370,7 +370,7 @@
     "buttons": {
       "refresh": "Actualizar",
       "moreInfo": "Más información",
-      "addTranscript": "Agregar transcripción",
+      "addTranscript": "Generar tareas",
       "export": "Exportar",
       "refreshTasks": "Actualizar tareas",
       "createTask": "Crear tarea"
@@ -544,7 +544,7 @@
     }
   },
   "sessionTranscriptDialog": {
-    "title": "Añadir transcripción",
+    "title": "Generar tareas",
     "modeLabel": "Seleccionar método de entrada",
     "uploadLabel": "Subir archivos (PDF / DOCX)",
     "manualLabel": "Pegar texto de transcripción",
@@ -577,6 +577,8 @@
       "contexts": "Contextos relacionados",
       "contextsPlaceholder": "Selecciona contextos para enriquecer el análisis",
       "noContexts": "No hay contextos disponibles",
+      "objective": "Objetivo Principal (Prompt)",
+      "objectivePlaceholder": "ej. Crear 3 tareas críticas para los cambios en el flujo de inicio de sesión...",
       "content": "Contenido de la transcripción",
       "contentPlaceholder": "Pega o escribe el texto de la transcripción aquí"
     },
@@ -591,7 +593,7 @@
       "formats": "Formatos aceptados: PDF, DOCX",
       "selectFileError": "Por favor, selecciona al menos un archivo PDF o DOCX para subir.",
       "unsupportedError": "Solo se admiten archivos PDF y DOCX.",
-      "contentError": "Por favor, proporciona el contenido de la transcripción.",
+      "contentError": "Por favor, proporciona el contenido de la transcripción o un objetivo.",
       "metadataError": "Los metadatos deben ser un JSON válido.",
       "success": "Transcripción creada con éxito.",
       "processing": "Analizando transcripción, por favor espera...",

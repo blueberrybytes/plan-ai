@@ -56,7 +56,7 @@ This command:
 1.  **Translations**:
     - NEVER hardcode text.
     - Use `t("key")` from `useTranslation()`.
-    - Update `frontend/src/i18n/locales/en.json` immediately when adding new text.
+    - Update `frontend/src/i18n/locales/en.json` and `frontend/src/i18n/locales/es.json` immediately when adding new text.
 2.  **Layouts**:
     - Ensure pages that require navigation are wrapped in `SidebarLayout`.
 3.  **RTK Query**:

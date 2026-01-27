@@ -679,7 +679,8 @@ export interface components {
             metadata?: components["schemas"]["InputJsonValue"] | null;
         };
         CreateTranscriptRequest: {
-            content: string;
+            content?: string;
+            objective?: string;
             title?: string;
             source?: components["schemas"]["TranscriptSource"];
             /** Format: date-time */
@@ -975,6 +976,7 @@ export interface operations {
                     recordedAt?: string;
                     metadata?: string;
                     persona?: string;
+                    objective?: string;
                     contextIds?: string;
                 };
             };

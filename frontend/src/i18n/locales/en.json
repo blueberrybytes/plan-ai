@@ -370,7 +370,7 @@
     "buttons": {
       "refresh": "Refresh",
       "moreInfo": "More info",
-      "addTranscript": "Add transcript",
+      "addTranscript": "Generate tasks",
       "export": "Export",
       "refreshTasks": "Refresh tasks",
       "createTask": "Create task"
@@ -544,7 +544,7 @@
     }
   },
   "sessionTranscriptDialog": {
-    "title": "Add transcript",
+    "title": "Generate tasks",
     "modeLabel": "Select input method",
     "uploadLabel": "Upload files (PDF / DOCX)",
     "manualLabel": "Paste transcript text",
@@ -577,6 +577,8 @@
       "contexts": "Related contexts",
       "contextsPlaceholder": "Select contexts to enrich analysis",
       "noContexts": "No contexts available",
+      "objective": "Main Objective (Prompt)",
+      "objectivePlaceholder": "e.g. Create 3 critical tasks for the login flow changes...",
       "content": "Transcript content",
       "contentPlaceholder": "Paste or type transcript text here"
     },
@@ -591,7 +593,7 @@
       "formats": "Accepted formats: PDF, DOCX",
       "selectFileError": "Please select at least one PDF or DOCX file to upload.",
       "unsupportedError": "Only PDF and DOCX files are supported.",
-      "contentError": "Please provide transcript content.",
+      "contentError": "Please provide either transcript content or an objective.",
       "metadataError": "Metadata must be valid JSON.",
       "success": "Transcript created successfully.",
       "processing": "Analyzing transcript, please wait...",
