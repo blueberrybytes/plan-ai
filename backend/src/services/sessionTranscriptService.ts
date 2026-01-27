@@ -83,7 +83,7 @@ export class SessionTranscriptService {
     apiKey: EnvUtils.get("OPENAI_API_KEY"),
   });
 
-  private readonly modelName = "gpt-o5";
+  private readonly modelName = "gpt-5.2-2025-12-11";
 
   public async createTranscriptForSession(
     input: CreateTranscriptInput,

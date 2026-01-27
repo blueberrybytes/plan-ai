@@ -39,12 +39,12 @@ export const chatApi = createApi({
       providesTags: (result, error, id) => [{ type: "ChatThread", id }],
     }),
     createThread: builder.mutation<ChatThread, { title?: string; contextIds: string[] }>({
-      query: (body: { title?: string; contextIds: string[] }) => ({
+      query: (body) => ({
         url: "/api/chat/threads",
         method: "POST",
         body,
       }),
-      invalidatesTags: [{ type: "ChatThread", id: "LIST" }],
+      invalidatesTags: ["ChatThread"],
     }),
     sendMessage: builder.mutation<
       { message: ChatMessage; response: ChatMessage },
@@ -67,7 +67,7 @@ export const chatApi = createApi({
         body,
       }),
       invalidatesTags: (result, error, { threadId }) => [
-        { type: "ChatThread", id: "LIST" },
+        "ChatThread",
         { type: "ChatThread", id: threadId },
       ],
     }),
@@ -77,7 +77,7 @@ export const chatApi = createApi({
         method: "DELETE",
       }),
       invalidatesTags: (result, error, threadId) => [
-        { type: "ChatThread", id: "LIST" },
+        "ChatThread",
         { type: "ChatThread", id: threadId },
       ],
     }),

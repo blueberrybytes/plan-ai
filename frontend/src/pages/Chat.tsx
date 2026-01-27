@@ -51,7 +51,7 @@ const Chat: React.FC = () => {
 
   // Queries
   const { data: threads, isLoading: isLoadingThreads } = useListThreadsQuery();
-  const { data: threadData } = useGetThreadQuery(selectedThreadId ?? "", {
+  const { data: threadData, refetch: refetchThread } = useGetThreadQuery(selectedThreadId ?? "", {
     skip: !selectedThreadId,
   });
 
@@ -190,6 +190,7 @@ const Chat: React.FC = () => {
           messages={messages}
           isSending={isSending}
           onNewChat={handleNewChat}
+          onRefetch={refetchThread}
         />
 
         <ChatContextDialog

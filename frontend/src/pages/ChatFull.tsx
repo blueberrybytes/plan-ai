@@ -19,7 +19,7 @@ const ChatFull: React.FC = () => {
 
   // Queries
   const { data: threads } = useListThreadsQuery();
-  const { data: threadData } = useGetThreadQuery(selectedThreadId ?? "", {
+  const { data: threadData, refetch: refetchThread } = useGetThreadQuery(selectedThreadId ?? "", {
     skip: !selectedThreadId,
   });
 
@@ -75,6 +75,7 @@ const ChatFull: React.FC = () => {
         messages={messages}
         isSending={false}
         onNewChat={handleNewChat}
+        onRefetch={refetchThread}
         isFullScreen={true}
       />
 

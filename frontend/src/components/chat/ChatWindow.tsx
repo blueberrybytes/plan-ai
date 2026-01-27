@@ -20,6 +20,10 @@ import {
   Download as DownloadIcon,
 } from "@mui/icons-material";
 import { useTranslation } from "react-i18next";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
+import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
 import { ChatMessage, ChatThread } from "../../store/apis/chatApi";
 import { useListContextsQuery } from "../../store/apis/contextApi";
 import { useSelector } from "react-redux";
@@ -31,6 +35,7 @@ interface ChatWindowProps {
   messages: ChatMessage[];
   isSending: boolean;
   onNewChat: () => void;
+  onRefetch?: () => void;
   isFullScreen?: boolean;
 }
 
@@ -39,12 +44,14 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
   messages,
   isSending,
   onNewChat,
+  onRefetch,
   isFullScreen = false,
 }) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [input, setInput] = useState("");
   const [optimisticMessages, setOptimisticMessages] = useState<ChatMessage[]>([]);
+  const [isStreaming, setIsStreaming] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const token = useSelector((state: RootState) => state.session.user?.token);
 
@@ -54,8 +61,10 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
 
   // Reset optimistic messages when the thread changes or new real messages arrive
   useEffect(() => {
-    setOptimisticMessages([]);
-  }, [activeThread?.id, messages.length]);
+    if (!isStreaming) {
+      setOptimisticMessages([]);
+    }
+  }, [activeThread?.id, messages.length, isStreaming]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -89,6 +98,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
 
     setOptimisticMessages((prev) => [...prev, userMsg, aiMsg]);
     setInput("");
+    setIsStreaming(true);
 
     try {
       const baseUrl = process.env.REACT_APP_API_BACKEND_URL || "";
@@ -124,6 +134,9 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
       console.error("Streaming error", error);
       // Clean up optimistic messages on error
       setOptimisticMessages((prev) => prev.filter((m) => m.id !== userTempId && m.id !== aiTempId));
+    } finally {
+      setIsStreaming(false);
+      if (onRefetch) onRefetch();
     }
   };
 
@@ -230,15 +243,56 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
             <Paper
               sx={{
                 p: 2,
-                maxWidth: "70%",
+                maxWidth: "85%",
                 bgcolor: msg.role === "USER" ? "primary.main" : "background.paper",
                 color: msg.role === "USER" ? "primary.contrastText" : "text.primary",
                 opacity: msg.id.startsWith("temp-") ? 0.7 : 1,
+                "& table": {
+                  borderCollapse: "collapse",
+                  width: "100%",
+                  my: 2,
+                },
+                "& th, & td": {
+                  border: 1,
+                  borderColor: "divider",
+                  p: 1,
+                },
+                "& pre": {
+                  m: 0,
+                  p: 0,
+                  bgcolor: "transparent !important",
+                },
               }}
             >
-              <Typography variant="body1" sx={{ whiteSpace: "pre-wrap" }}>
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm]}
+                components={{
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  code({ className, children, ...props }: any) {
+                    const match = /language-(\w+)/.exec(className || "");
+                    const isInline = !match;
+                    const language = match ? match[1] : "";
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    const Component = SyntaxHighlighter as any;
+                    return !isInline ? (
+                      <Component style={vscDarkPlus} language={language} PreTag="div" {...props}>
+                        {String(children).replace(/\n$/, "")}
+                      </Component>
+                    ) : (
+                      <code className={className} {...props}>
+                        {children}
+                      </code>
+                    );
+                  },
+                  p: ({ children }) => (
+                    <Typography variant="body1" sx={{ mb: 1, lastChild: { mb: 0 } }}>
+                      {children}
+                    </Typography>
+                  ),
+                }}
+              >
                 {msg.content}
-              </Typography>
+              </ReactMarkdown>
             </Paper>
           </Box>
         ))}

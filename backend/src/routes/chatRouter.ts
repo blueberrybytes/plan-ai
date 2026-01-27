@@ -77,7 +77,7 @@ ${contextText}
 
       // 3. Stream Text
       const result = await streamText({
-        model: openai("gpt-5.2-latest"),
+        model: openai("gpt-5.2-2025-12-11"),
         messages,
         onFinish: async ({ text }) => {
           try {
