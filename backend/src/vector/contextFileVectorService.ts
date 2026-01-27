@@ -131,14 +131,25 @@ export const indexContextFileVectors = async (args: IndexContextFileVectorsArgs)
 
     await ensureCollectionIfNeeded();
 
-    const vectors = await embeddings.embedDocuments(chunks);
+    // Batching logic for OpenAI Embeddings
+    const BATCH_SIZE = 100;
+    const allVectors: number[][] = [];
 
-    if (vectors.length === 0) {
+    for (let i = 0; i < chunks.length; i += BATCH_SIZE) {
+      const batch = chunks.slice(i, i + BATCH_SIZE);
+      const batchVectors = await embeddings.embedDocuments(batch);
+      allVectors.push(...batchVectors);
+      logger.info(
+        `Indexed batch ${Math.floor(i / BATCH_SIZE) + 1}/${Math.ceil(chunks.length / BATCH_SIZE)} for file ${fileId}`,
+      );
+    }
+
+    if (allVectors.length === 0) {
       logger.warn(`OpenAI embedding returned 0 vectors for context file ${fileId}.`);
       return;
     }
 
-    const points = buildPoints(contextId, fileId, fileName, mimeType, vectors, chunks);
+    const points = buildPoints(contextId, fileId, fileName, mimeType, allVectors, chunks);
 
     if (points.length === 0) {
       logger.warn(`No valid points generated for context file ${fileId}.`);
