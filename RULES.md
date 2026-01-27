@@ -1,7 +1,3 @@
----
-trigger: always_on
----
-
 # Project Rules & Guidelines
 
 ## Core Principles

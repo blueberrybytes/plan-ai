@@ -126,3 +126,44 @@ export const deleteVectorsByContext = async (contextId: string): Promise<void> =
     filter: toFilterByContext(contextId),
   });
 };
+
+export interface QdrantScoredPoint {
+  id: string | number;
+  version: number;
+  score: number;
+  payload?: Record<string, unknown> | null;
+  vector?: number[] | Record<string, number[]> | null;
+}
+
+export const queryVectors = async (
+  contextIds: string[],
+  vector: number[],
+  limit = 5,
+): Promise<ContextVectorPoint[]> => {
+  if (!contextIds || contextIds.length === 0) {
+    return [];
+  }
+
+  // Filter to include any of the provided contextIds
+  const filter: QdrantFilter = {
+    should: contextIds.map((cid) => ({
+      key: "contextId",
+      match: { value: cid },
+    })),
+  };
+
+  const name = getContextCollectionName();
+  const results = await qdrantClient.search(name, {
+    vector,
+    filter,
+    limit,
+    with_payload: true,
+  });
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return results.map((res: any) => ({
+    id: String(res.id),
+    vector: [], // We don't need the vector back usually
+    payload: res.payload as unknown as ContextVectorPayload,
+  }));
+};

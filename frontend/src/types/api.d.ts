@@ -4,1706 +4,1893 @@
  */
 
 export interface paths {
-    "/api/sessions": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["ListSessions"];
-        put?: never;
-        post: operations["CreateSession"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+  "/api/sessions": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/sessions/{sessionId}/transcripts/upload": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["UploadTranscript"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    get: operations["ListSessions"];
+    put?: never;
+    post: operations["CreateSession"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/sessions/{sessionId}/transcripts/upload": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/sessions/{sessionId}/transcripts": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["ListTranscripts"];
-        put?: never;
-        post: operations["CreateTranscript"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    get?: never;
+    put?: never;
+    post: operations["UploadTranscript"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/sessions/{sessionId}/transcripts": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/sessions/{sessionId}/transcripts/{transcriptId}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["GetTranscript"];
-        put: operations["UpdateTranscript"];
-        post?: never;
-        delete: operations["DeleteTranscript"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    get: operations["ListTranscripts"];
+    put?: never;
+    post: operations["CreateTranscript"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/sessions/{sessionId}/transcripts/{transcriptId}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/sessions/{sessionId}/transcripts/manual": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["CreateManualTranscript"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    get: operations["GetTranscript"];
+    put: operations["UpdateTranscript"];
+    post?: never;
+    delete: operations["DeleteTranscript"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/sessions/{sessionId}/transcripts/manual": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/sessions/{sessionId}/tasks": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["ListTasks"];
-        put?: never;
-        post: operations["CreateTask"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    get?: never;
+    put?: never;
+    post: operations["CreateManualTranscript"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/sessions/{sessionId}/tasks": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/sessions/{sessionId}/tasks/{taskId}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["GetTask"];
-        put: operations["UpdateTask"];
-        post?: never;
-        delete: operations["DeleteTask"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    get: operations["ListTasks"];
+    put?: never;
+    post: operations["CreateTask"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/sessions/{sessionId}/tasks/{taskId}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/sessions/{sessionId}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["GetSession"];
-        put: operations["UpdateSession"];
-        post?: never;
-        delete: operations["DeleteSession"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    get: operations["GetTask"];
+    put: operations["UpdateTask"];
+    post?: never;
+    delete: operations["DeleteTask"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/sessions/{sessionId}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/session/login": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * @description Login with Firebase token.
-         *     Verifies the token and returns user information.
-         *     Creates a new user if one doesn't exist with the given Firebase UID.
-         */
-        post: operations["Login"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    get: operations["GetSession"];
+    put: operations["UpdateSession"];
+    post?: never;
+    delete: operations["DeleteSession"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/session/login": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/session/me": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * @description Get current user information.
-         *     Requires authentication.
-         */
-        get: operations["GetCurrentUser"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    get?: never;
+    put?: never;
+    /**
+     * @description Login with Firebase token.
+     *     Verifies the token and returns user information.
+     *     Creates a new user if one doesn't exist with the given Firebase UID.
+     */
+    post: operations["Login"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/session/me": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/jira/auth": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["GetAuthorizationUrl"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    /**
+     * @description Get current user information.
+     *     Requires authentication.
+     */
+    get: operations["GetCurrentUser"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/jira/auth": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/jira/callback": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["HandleCallback"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    get: operations["GetAuthorizationUrl"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/jira/callback": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/integrations": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["ListIntegrations"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    get: operations["HandleCallback"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/integrations": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/integrations/{provider}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["GetIntegration"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    get: operations["ListIntegrations"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/integrations/{provider}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/healthcheck/status": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** @description Get Status. */
-        get: operations["GetStatusPayload"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    get: operations["GetIntegration"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/healthcheck/status": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/contexts": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["ListContexts"];
-        put?: never;
-        post: operations["CreateContext"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    /** @description Get Status. */
+    get: operations["GetStatusPayload"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/contexts": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/contexts/{contextId}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["GetContext"];
-        put: operations["UpdateContext"];
-        post?: never;
-        delete: operations["DeleteContext"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    get: operations["ListContexts"];
+    put?: never;
+    post: operations["CreateContext"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/contexts/{contextId}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/contexts/{contextId}/files": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["UploadContextFile"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    get: operations["GetContext"];
+    put: operations["UpdateContext"];
+    post?: never;
+    delete: operations["DeleteContext"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/contexts/{contextId}/files": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/contexts/{contextId}/files/{fileId}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        delete: operations["DeleteContextFile"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    get?: never;
+    put?: never;
+    post: operations["UploadContextFile"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/contexts/{contextId}/files/{fileId}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/account/theme": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["GetCustomTheme"];
-        put: operations["UpsertCustomTheme"];
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    get?: never;
+    put?: never;
+    post?: never;
+    delete: operations["DeleteContextFile"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/chat/threads": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/account/user/{userId}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        /**
-         * @description Delete a user account and all associated data (Admin only)
-         *     This is a careful operation that deletes all related records to avoid foreign key constraint errors
-         *     Only admins can delete other users
-         */
-        delete: operations["DeleteUser"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    get: operations["ListThreads"];
+    put?: never;
+    post: operations["CreateThread"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/chat/threads/{threadId}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/account/self": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        /**
-         * @description Delete your own user account and all associated data
-         *     This endpoint allows users to delete their own account without specifying a userId
-         *     The user ID is extracted from the authentication token
-         */
-        delete: operations["DeleteMyAccount"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    get: operations["GetThread"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/chat/threads/{threadId}/messages": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
+    get?: never;
+    put?: never;
+    post: operations["SendMessage"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/account/theme": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations["GetCustomTheme"];
+    put: operations["UpsertCustomTheme"];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/account/user/{userId}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    /**
+     * @description Delete a user account and all associated data (Admin only)
+     *     This is a careful operation that deletes all related records to avoid foreign key constraint errors
+     *     Only admins can delete other users
+     */
+    delete: operations["DeleteUser"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/account/self": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    /**
+     * @description Delete your own user account and all associated data
+     *     This endpoint allows users to delete their own account without specifying a userId
+     *     The user ID is extracted from the authentication token
+     */
+    delete: operations["DeleteMyAccount"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
-    schemas: {
-        /** @enum {string} */
-        "_36_Enums.SessionStatus": "ACTIVE" | "COMPLETED" | "ARCHIVED";
-        SessionStatus: components["schemas"]["_36_Enums.SessionStatus"];
-        /**
-         * @description From https://github.com/sindresorhus/type-fest/
-         *     Matches any valid JSON value.
-         */
-        JsonValue: (string | number | boolean | components["schemas"]["JsonObject"] | components["schemas"]["JsonArray"]) | null;
-        /**
-         * @description From https://github.com/sindresorhus/type-fest/
-         *     Matches a JSON object.
-         *     This type can be useful to enforce some input to be JSON-compatible or as a super-type to be extended from.
-         */
-        JsonObject: {
-            [key: string]: components["schemas"]["JsonValue"];
-        };
-        /**
-         * @description From https://github.com/sindresorhus/type-fest/
-         *     Matches a JSON array.
-         */
-        JsonArray: Record<string, never>;
-        SessionResponse: {
-            id: string;
-            title: string;
-            description: string | null;
-            status: components["schemas"]["SessionStatus"];
-            /** Format: date-time */
-            startedAt: string | null;
-            /** Format: date-time */
-            endedAt: string | null;
-            metadata: components["schemas"]["JsonValue"] | null;
-            /** Format: date-time */
-            createdAt: string;
-            /** Format: date-time */
-            updatedAt: string;
-        };
-        SessionListResponse: {
-            sessions: components["schemas"]["SessionResponse"][];
-            /** Format: double */
-            total: number;
-        };
-        ApiResponse_SessionListResponse_: {
-            message?: string;
-            data: components["schemas"]["SessionListResponse"] | null;
-            /** Format: double */
-            status: number;
-        };
-        /** @enum {string} */
-        "_36_Enums.TranscriptSource": "MANUAL" | "RECORDING" | "UPLOAD" | "IMPORTED";
-        TranscriptSource: components["schemas"]["_36_Enums.TranscriptSource"];
-        TranscriptResponse: {
-            id: string;
-            sessionId: string;
-            title: string | null;
-            source: components["schemas"]["TranscriptSource"];
-            language: string | null;
-            summary: string | null;
-            transcript: string | null;
-            /** Format: date-time */
-            recordedAt: string | null;
-            metadata: components["schemas"]["JsonValue"] | null;
-            /** Format: date-time */
-            createdAt: string;
-            /** Format: date-time */
-            updatedAt: string;
-        };
-        ApiResponse_TranscriptResponse_: {
-            message?: string;
-            data: components["schemas"]["TranscriptResponse"] | null;
-            /** Format: double */
-            status: number;
-        };
-        TranscriptListResponse: {
-            transcripts: components["schemas"]["TranscriptResponse"][];
-            /** Format: double */
-            total: number;
-        };
-        ApiResponse_TranscriptListResponse_: {
-            message?: string;
-            data: components["schemas"]["TranscriptListResponse"] | null;
-            /** Format: double */
-            status: number;
-        };
-        /**
-         * @description Matches any valid value that can be used as an input for operations like
-         *     create and update as the value of a JSON field. Unlike \`JsonValue\`, this
-         *     type allows read-only arrays and read-only object properties and disallows
-         *     \`null\` at the top level.
-         *
-         *     \`null\` cannot be used as the value of a JSON field because its meaning
-         *     would be ambiguous. Use \`Prisma.JsonNull\` to store the JSON null value or
-         *     \`Prisma.DbNull\` to clear the JSON value and set the field to the database
-         *     NULL value instead.
-         */
-        InputJsonValue: string | number | boolean | components["schemas"]["InputJsonObject"] | components["schemas"]["InputJsonArray"] | Record<string, never>;
-        /**
-         * @description Matches a JSON object.
-         *     Unlike \`JsonObject\`, this type allows undefined and read-only properties.
-         */
-        InputJsonObject: {
-            [key: string]: components["schemas"]["InputJsonValue"];
-        };
-        /**
-         * @description Matches a JSON array.
-         *     Unlike \`JsonArray\`, readonly arrays are assignable to this type.
-         */
-        InputJsonArray: Record<string, never>;
-        ManualTranscriptRequest: {
-            title?: string | null;
-            source?: components["schemas"]["TranscriptSource"];
-            language?: string | null;
-            summary?: string | null;
-            content?: string | null;
-            /** Format: date-time */
-            recordedAt?: string | null;
-            metadata?: components["schemas"]["InputJsonValue"] | null;
-        };
-        UpdateTranscriptRequest: {
-            title?: string | null;
-            source?: components["schemas"]["TranscriptSource"];
-            language?: string | null;
-            summary?: string | null;
-            transcript?: string | null;
-            /** Format: date-time */
-            recordedAt?: string | null;
-            metadata?: components["schemas"]["InputJsonValue"] | null;
-        };
-        ApiResponse_null_: {
-            message?: string;
-            data: unknown;
-            /** Format: double */
-            status: number;
-        };
-        /** @enum {string} */
-        "_36_Enums.TaskStatus": "COMPLETED" | "ARCHIVED" | "BACKLOG" | "IN_PROGRESS" | "BLOCKED";
-        TaskStatus: components["schemas"]["_36_Enums.TaskStatus"];
-        /** @enum {string} */
-        "_36_Enums.TaskPriority": "LOW" | "MEDIUM" | "HIGH" | "URGENT";
-        TaskPriority: components["schemas"]["_36_Enums.TaskPriority"];
-        TaskResponse: {
-            id: string;
-            sessionId: string;
-            title: string;
-            description: string | null;
-            summary: string | null;
-            acceptanceCriteria: string | null;
-            status: components["schemas"]["TaskStatus"];
-            priority: components["schemas"]["TaskPriority"];
-            /** Format: date-time */
-            dueDate: string | null;
-            dependencies: string[];
-            /** Format: date-time */
-            createdAt: string;
-            /** Format: date-time */
-            updatedAt: string;
-        };
-        TaskListResponse: {
-            tasks: components["schemas"]["TaskResponse"][];
-            /** Format: double */
-            total: number;
-        };
-        ApiResponse_TaskListResponse_: {
-            message?: string;
-            data: components["schemas"]["TaskListResponse"] | null;
-            /** Format: double */
-            status: number;
-        };
-        ApiResponse_TaskResponse_: {
-            message?: string;
-            data: components["schemas"]["TaskResponse"] | null;
-            /** Format: double */
-            status: number;
-        };
-        CreateTaskRequest: {
-            title: string;
-            description?: string | null;
-            summary?: string | null;
-            acceptanceCriteria?: string | null;
-            status?: components["schemas"]["TaskStatus"];
-            priority?: components["schemas"]["TaskPriority"];
-            /**
-             * Format: date-time
-             * @description Format: date-time
-             */
-            dueDate?: string | null;
-            metadata?: components["schemas"]["InputJsonValue"] | null;
-            dependencyTaskIds?: string[];
-        };
-        UpdateTaskRequest: {
-            title?: string;
-            description?: string | null;
-            summary?: string | null;
-            acceptanceCriteria?: string | null;
-            status?: components["schemas"]["TaskStatus"];
-            priority?: components["schemas"]["TaskPriority"];
-            /**
-             * Format: date-time
-             * @description Format: date-time
-             */
-            dueDate?: string | null;
-            metadata?: components["schemas"]["InputJsonValue"] | null;
-            dependencyTaskIds?: string[];
-        };
-        ApiResponse_SessionResponse_: {
-            message?: string;
-            data: components["schemas"]["SessionResponse"] | null;
-            /** Format: double */
-            status: number;
-        };
-        CreateSessionRequest: {
-            title: string;
-            description?: string;
-            status?: components["schemas"]["SessionStatus"];
-            /** Format: date-time */
-            startedAt?: string | null;
-            metadata?: components["schemas"]["InputJsonValue"] | null;
-        };
-        UpdateSessionRequest: {
-            title?: string;
-            description?: string | null;
-            status?: components["schemas"]["SessionStatus"];
-            /** Format: date-time */
-            startedAt?: string | null;
-            /** Format: date-time */
-            endedAt?: string | null;
-            metadata?: components["schemas"]["InputJsonValue"] | null;
-        };
-        TranscriptTaskInsight: {
-            title: string;
-            description?: string;
-            priority?: components["schemas"]["TaskPriority"];
-            status?: components["schemas"]["TaskStatus"];
-            dueDate?: string | null;
-        };
-        TranscriptAnalysisResponse: {
-            language: string;
-            summary: string | null;
-            tasks: components["schemas"]["TranscriptTaskInsight"][];
-        };
-        CreateTranscriptResponse: {
-            transcript: components["schemas"]["TranscriptResponse"];
-            tasks: components["schemas"]["TaskResponse"][];
-            analysis: components["schemas"]["TranscriptAnalysisResponse"];
-        };
-        ApiResponse_CreateTranscriptResponse_: {
-            message?: string;
-            data: components["schemas"]["CreateTranscriptResponse"] | null;
-            /** Format: double */
-            status: number;
-        };
-        CreateTranscriptRequest: {
-            content: string;
-            title?: string;
-            source?: components["schemas"]["TranscriptSource"];
-            /** Format: date-time */
-            recordedAt?: string | null;
-            metadata?: components["schemas"]["InputJsonValue"] | null;
-            contextIds?: string[];
-        };
-        /** @enum {string} */
-        "_36_Enums.Role": "ADMIN" | "CLIENT";
-        Role: components["schemas"]["_36_Enums.Role"];
-        UserResponse: {
-            id: string;
-            firebaseUid: string;
-            email: string;
-            name: string | null;
-            avatarUrl: string | null;
-            googleId: string | null;
-            isGoogleAccount: boolean;
-            role: components["schemas"]["Role"];
-        };
-        ApiResponse_UserResponse_: {
-            message?: string;
-            data: components["schemas"]["UserResponse"] | null;
-            /** Format: double */
-            status: number;
-        };
-        GenericResponse: {
-            message: string;
-            /** Format: double */
-            status: number;
-        };
-        JiraAuthorizationResponse: {
-            authorizationUrl: string;
-        };
-        ApiResponse_JiraAuthorizationResponse_: {
-            message?: string;
-            data: components["schemas"]["JiraAuthorizationResponse"] | null;
-            /** Format: double */
-            status: number;
-        };
-        /** @enum {string} */
-        "_36_Enums.IntegrationProvider": "JIRA" | "LINEAR";
-        IntegrationProvider: components["schemas"]["_36_Enums.IntegrationProvider"];
-        /** @enum {string} */
-        "_36_Enums.IntegrationStatus": "CONNECTED" | "DISCONNECTED" | "ERROR";
-        IntegrationStatus: components["schemas"]["_36_Enums.IntegrationStatus"];
-        UserIntegrationSummary: {
-            id: string;
-            provider: components["schemas"]["IntegrationProvider"];
-            status: components["schemas"]["IntegrationStatus"];
-            accountId: string | null;
-            accountName: string | null;
-            metadata: components["schemas"]["JsonValue"] | null;
-            scope: string | null;
-            /** Format: date-time */
-            expiresAt: string | null;
-            /** Format: date-time */
-            createdAt: string;
-            /** Format: date-time */
-            updatedAt: string;
-            hasRefreshToken: boolean;
-        };
-        "ApiResponse_UserIntegrationSummary-Array_": {
-            message?: string;
-            data: components["schemas"]["UserIntegrationSummary"][] | null;
-            /** Format: double */
-            status: number;
-        };
-        "ApiResponse_UserIntegrationSummary-or-null_": {
-            message?: string;
-            data: components["schemas"]["UserIntegrationSummary"] | null;
-            /** Format: double */
-            status: number;
-        };
-        ApiResponse_string_: {
-            message?: string;
-            data: string | null;
-            /** Format: double */
-            status: number;
-        };
-        ContextFileResponse: {
-            id: string;
-            fileName: string;
-            mimeType: string;
-            /** Format: double */
-            sizeBytes: number;
-            /** Format: date-time */
-            createdAt: string;
-            bucketPath: string;
-            publicUrl: string;
-        };
-        ContextResponse: {
-            id: string;
-            name: string;
-            description: string | null;
-            color: string | null;
-            metadata: components["schemas"]["JsonValue"] | null;
-            files: components["schemas"]["ContextFileResponse"][];
-            /** Format: date-time */
-            createdAt: string;
-            /** Format: date-time */
-            updatedAt: string;
-        };
-        ContextListResponse: {
-            contexts: components["schemas"]["ContextResponse"][];
-        };
-        ApiResponse_ContextListResponse_: {
-            message?: string;
-            data: components["schemas"]["ContextListResponse"] | null;
-            /** Format: double */
-            status: number;
-        };
-        ApiResponse_ContextResponse_: {
-            message?: string;
-            data: components["schemas"]["ContextResponse"] | null;
-            /** Format: double */
-            status: number;
-        };
-        CreateContextRequest: {
-            name: string;
-            description?: string | null;
-            color?: string | null;
-            metadata?: components["schemas"]["InputJsonValue"] | null;
-        };
-        UpdateContextRequest: {
-            name?: string;
-            description?: string | null;
-            color?: string | null;
-            metadata?: components["schemas"]["InputJsonValue"] | null;
-        };
-        "DefaultSelection_Prisma._36_CustomThemePayload_": {
-            /** Format: date-time */
-            updatedAt: string;
-            /** Format: date-time */
-            createdAt: string;
-            configJson: components["schemas"]["JsonValue"];
-            /** Format: double */
-            density: number;
-            /** Format: double */
-            borderRadius: number;
-            headingFontFamily: string;
-            fontFamily: string;
-            textSecondaryColor: string;
-            textPrimaryColor: string;
-            surfaceColor: string;
-            backgroundColor: string;
-            secondaryColor: string;
-            primaryColor: string;
-            userId: string;
-            id: string;
-        };
-        /** @description Model CustomTheme */
-        CustomTheme: components["schemas"]["DefaultSelection_Prisma._36_CustomThemePayload_"];
-        "ApiResponse_CustomTheme-or-null_": {
-            message?: string;
-            data: components["schemas"]["CustomTheme"] | null;
-            /** Format: double */
-            status: number;
-        };
-        ApiResponse_CustomTheme_: {
-            message?: string;
-            data: components["schemas"]["CustomTheme"] | null;
-            /** Format: double */
-            status: number;
-        };
-        UpdateCustomThemeRequest: {
-            primaryColor?: string | null;
-            secondaryColor?: string | null;
-            backgroundColor?: string | null;
-            surfaceColor?: string | null;
-            textPrimaryColor?: string | null;
-            textSecondaryColor?: string | null;
-            fontFamily?: string | null;
-            headingFontFamily?: string | null;
-            /** Format: double */
-            borderRadius?: number | null;
-            /** Format: double */
-            density?: number | null;
-            configJson?: components["schemas"]["JsonValue"] | null;
-        };
-        ApiResponse_boolean_: {
-            message?: string;
-            data: boolean | null;
-            /** Format: double */
-            status: number;
-        };
+  schemas: {
+    /** @enum {string} */
+    "_36_Enums.SessionStatus": "ACTIVE" | "COMPLETED" | "ARCHIVED";
+    SessionStatus: components["schemas"]["_36_Enums.SessionStatus"];
+    /**
+     * @description From https://github.com/sindresorhus/type-fest/
+     *     Matches any valid JSON value.
+     */
+    JsonValue:
+      | (
+          | string
+          | number
+          | boolean
+          | components["schemas"]["JsonObject"]
+          | components["schemas"]["JsonArray"]
+        )
+      | null;
+    /**
+     * @description From https://github.com/sindresorhus/type-fest/
+     *     Matches a JSON object.
+     *     This type can be useful to enforce some input to be JSON-compatible or as a super-type to be extended from.
+     */
+    JsonObject: {
+      [key: string]: components["schemas"]["JsonValue"];
     };
-    responses: never;
-    parameters: never;
-    requestBodies: never;
-    headers: never;
-    pathItems: never;
+    /**
+     * @description From https://github.com/sindresorhus/type-fest/
+     *     Matches a JSON array.
+     */
+    JsonArray: Record<string, never>;
+    SessionResponse: {
+      id: string;
+      title: string;
+      description: string | null;
+      status: components["schemas"]["SessionStatus"];
+      /** Format: date-time */
+      startedAt: string | null;
+      /** Format: date-time */
+      endedAt: string | null;
+      metadata: components["schemas"]["JsonValue"] | null;
+      /** Format: date-time */
+      createdAt: string;
+      /** Format: date-time */
+      updatedAt: string;
+    };
+    SessionListResponse: {
+      sessions: components["schemas"]["SessionResponse"][];
+      /** Format: double */
+      total: number;
+    };
+    ApiResponse_SessionListResponse_: {
+      message?: string;
+      data: components["schemas"]["SessionListResponse"] | null;
+      /** Format: double */
+      status: number;
+    };
+    /** @enum {string} */
+    "_36_Enums.TranscriptSource": "MANUAL" | "RECORDING" | "UPLOAD" | "IMPORTED";
+    TranscriptSource: components["schemas"]["_36_Enums.TranscriptSource"];
+    TranscriptResponse: {
+      id: string;
+      sessionId: string;
+      title: string | null;
+      source: components["schemas"]["TranscriptSource"];
+      language: string | null;
+      summary: string | null;
+      transcript: string | null;
+      /** Format: date-time */
+      recordedAt: string | null;
+      metadata: components["schemas"]["JsonValue"] | null;
+      /** Format: date-time */
+      createdAt: string;
+      /** Format: date-time */
+      updatedAt: string;
+    };
+    ApiResponse_TranscriptResponse_: {
+      message?: string;
+      data: components["schemas"]["TranscriptResponse"] | null;
+      /** Format: double */
+      status: number;
+    };
+    TranscriptListResponse: {
+      transcripts: components["schemas"]["TranscriptResponse"][];
+      /** Format: double */
+      total: number;
+    };
+    ApiResponse_TranscriptListResponse_: {
+      message?: string;
+      data: components["schemas"]["TranscriptListResponse"] | null;
+      /** Format: double */
+      status: number;
+    };
+    /**
+     * @description Matches any valid value that can be used as an input for operations like
+     *     create and update as the value of a JSON field. Unlike \`JsonValue\`, this
+     *     type allows read-only arrays and read-only object properties and disallows
+     *     \`null\` at the top level.
+     *
+     *     \`null\` cannot be used as the value of a JSON field because its meaning
+     *     would be ambiguous. Use \`Prisma.JsonNull\` to store the JSON null value or
+     *     \`Prisma.DbNull\` to clear the JSON value and set the field to the database
+     *     NULL value instead.
+     */
+    InputJsonValue:
+      | string
+      | number
+      | boolean
+      | components["schemas"]["InputJsonObject"]
+      | components["schemas"]["InputJsonArray"]
+      | Record<string, never>;
+    /**
+     * @description Matches a JSON object.
+     *     Unlike \`JsonObject\`, this type allows undefined and read-only properties.
+     */
+    InputJsonObject: {
+      [key: string]: components["schemas"]["InputJsonValue"];
+    };
+    /**
+     * @description Matches a JSON array.
+     *     Unlike \`JsonArray\`, readonly arrays are assignable to this type.
+     */
+    InputJsonArray: Record<string, never>;
+    ManualTranscriptRequest: {
+      title?: string | null;
+      source?: components["schemas"]["TranscriptSource"];
+      language?: string | null;
+      summary?: string | null;
+      content?: string | null;
+      /** Format: date-time */
+      recordedAt?: string | null;
+      metadata?: components["schemas"]["InputJsonValue"] | null;
+    };
+    UpdateTranscriptRequest: {
+      title?: string | null;
+      source?: components["schemas"]["TranscriptSource"];
+      language?: string | null;
+      summary?: string | null;
+      transcript?: string | null;
+      /** Format: date-time */
+      recordedAt?: string | null;
+      metadata?: components["schemas"]["InputJsonValue"] | null;
+    };
+    ApiResponse_null_: {
+      message?: string;
+      data: unknown;
+      /** Format: double */
+      status: number;
+    };
+    /** @enum {string} */
+    "_36_Enums.TaskStatus": "COMPLETED" | "ARCHIVED" | "BACKLOG" | "IN_PROGRESS" | "BLOCKED";
+    TaskStatus: components["schemas"]["_36_Enums.TaskStatus"];
+    /** @enum {string} */
+    "_36_Enums.TaskPriority": "LOW" | "MEDIUM" | "HIGH" | "URGENT";
+    TaskPriority: components["schemas"]["_36_Enums.TaskPriority"];
+    TaskResponse: {
+      id: string;
+      sessionId: string;
+      title: string;
+      description: string | null;
+      summary: string | null;
+      acceptanceCriteria: string | null;
+      status: components["schemas"]["TaskStatus"];
+      priority: components["schemas"]["TaskPriority"];
+      /** Format: date-time */
+      dueDate: string | null;
+      dependencies: string[];
+      /** Format: date-time */
+      createdAt: string;
+      /** Format: date-time */
+      updatedAt: string;
+    };
+    TaskListResponse: {
+      tasks: components["schemas"]["TaskResponse"][];
+      /** Format: double */
+      total: number;
+    };
+    ApiResponse_TaskListResponse_: {
+      message?: string;
+      data: components["schemas"]["TaskListResponse"] | null;
+      /** Format: double */
+      status: number;
+    };
+    ApiResponse_TaskResponse_: {
+      message?: string;
+      data: components["schemas"]["TaskResponse"] | null;
+      /** Format: double */
+      status: number;
+    };
+    CreateTaskRequest: {
+      title: string;
+      description?: string | null;
+      summary?: string | null;
+      acceptanceCriteria?: string | null;
+      status?: components["schemas"]["TaskStatus"];
+      priority?: components["schemas"]["TaskPriority"];
+      /**
+       * Format: date-time
+       * @description Format: date-time
+       */
+      dueDate?: string | null;
+      metadata?: components["schemas"]["InputJsonValue"] | null;
+      dependencyTaskIds?: string[];
+    };
+    UpdateTaskRequest: {
+      title?: string;
+      description?: string | null;
+      summary?: string | null;
+      acceptanceCriteria?: string | null;
+      status?: components["schemas"]["TaskStatus"];
+      priority?: components["schemas"]["TaskPriority"];
+      /**
+       * Format: date-time
+       * @description Format: date-time
+       */
+      dueDate?: string | null;
+      metadata?: components["schemas"]["InputJsonValue"] | null;
+      dependencyTaskIds?: string[];
+    };
+    ApiResponse_SessionResponse_: {
+      message?: string;
+      data: components["schemas"]["SessionResponse"] | null;
+      /** Format: double */
+      status: number;
+    };
+    CreateSessionRequest: {
+      title: string;
+      description?: string;
+      status?: components["schemas"]["SessionStatus"];
+      /** Format: date-time */
+      startedAt?: string | null;
+      metadata?: components["schemas"]["InputJsonValue"] | null;
+    };
+    UpdateSessionRequest: {
+      title?: string;
+      description?: string | null;
+      status?: components["schemas"]["SessionStatus"];
+      /** Format: date-time */
+      startedAt?: string | null;
+      /** Format: date-time */
+      endedAt?: string | null;
+      metadata?: components["schemas"]["InputJsonValue"] | null;
+    };
+    TranscriptTaskInsight: {
+      title: string;
+      description?: string;
+      priority?: components["schemas"]["TaskPriority"];
+      status?: components["schemas"]["TaskStatus"];
+      dueDate?: string | null;
+    };
+    TranscriptAnalysisResponse: {
+      language: string;
+      summary: string | null;
+      tasks: components["schemas"]["TranscriptTaskInsight"][];
+    };
+    CreateTranscriptResponse: {
+      transcript: components["schemas"]["TranscriptResponse"];
+      tasks: components["schemas"]["TaskResponse"][];
+      analysis: components["schemas"]["TranscriptAnalysisResponse"];
+    };
+    ApiResponse_CreateTranscriptResponse_: {
+      message?: string;
+      data: components["schemas"]["CreateTranscriptResponse"] | null;
+      /** Format: double */
+      status: number;
+    };
+    CreateTranscriptRequest: {
+      content: string;
+      title?: string;
+      source?: components["schemas"]["TranscriptSource"];
+      /** Format: date-time */
+      recordedAt?: string | null;
+      metadata?: components["schemas"]["InputJsonValue"] | null;
+      contextIds?: string[];
+    };
+    /** @enum {string} */
+    "_36_Enums.Role": "ADMIN" | "CLIENT";
+    Role: components["schemas"]["_36_Enums.Role"];
+    UserResponse: {
+      id: string;
+      firebaseUid: string;
+      email: string;
+      name: string | null;
+      avatarUrl: string | null;
+      googleId: string | null;
+      isGoogleAccount: boolean;
+      role: components["schemas"]["Role"];
+    };
+    ApiResponse_UserResponse_: {
+      message?: string;
+      data: components["schemas"]["UserResponse"] | null;
+      /** Format: double */
+      status: number;
+    };
+    GenericResponse: {
+      message: string;
+      /** Format: double */
+      status: number;
+    };
+    JiraAuthorizationResponse: {
+      authorizationUrl: string;
+    };
+    ApiResponse_JiraAuthorizationResponse_: {
+      message?: string;
+      data: components["schemas"]["JiraAuthorizationResponse"] | null;
+      /** Format: double */
+      status: number;
+    };
+    /** @enum {string} */
+    "_36_Enums.IntegrationProvider": "JIRA" | "LINEAR";
+    IntegrationProvider: components["schemas"]["_36_Enums.IntegrationProvider"];
+    /** @enum {string} */
+    "_36_Enums.IntegrationStatus": "CONNECTED" | "DISCONNECTED" | "ERROR";
+    IntegrationStatus: components["schemas"]["_36_Enums.IntegrationStatus"];
+    UserIntegrationSummary: {
+      id: string;
+      provider: components["schemas"]["IntegrationProvider"];
+      status: components["schemas"]["IntegrationStatus"];
+      accountId: string | null;
+      accountName: string | null;
+      metadata: components["schemas"]["JsonValue"] | null;
+      scope: string | null;
+      /** Format: date-time */
+      expiresAt: string | null;
+      /** Format: date-time */
+      createdAt: string;
+      /** Format: date-time */
+      updatedAt: string;
+      hasRefreshToken: boolean;
+    };
+    "ApiResponse_UserIntegrationSummary-Array_": {
+      message?: string;
+      data: components["schemas"]["UserIntegrationSummary"][] | null;
+      /** Format: double */
+      status: number;
+    };
+    "ApiResponse_UserIntegrationSummary-or-null_": {
+      message?: string;
+      data: components["schemas"]["UserIntegrationSummary"] | null;
+      /** Format: double */
+      status: number;
+    };
+    ApiResponse_string_: {
+      message?: string;
+      data: string | null;
+      /** Format: double */
+      status: number;
+    };
+    ContextFileResponse: {
+      id: string;
+      fileName: string;
+      mimeType: string;
+      /** Format: double */
+      sizeBytes: number;
+      /** Format: date-time */
+      createdAt: string;
+      bucketPath: string;
+      publicUrl: string;
+    };
+    ContextResponse: {
+      id: string;
+      name: string;
+      description: string | null;
+      color: string | null;
+      metadata: components["schemas"]["JsonValue"] | null;
+      files: components["schemas"]["ContextFileResponse"][];
+      /** Format: date-time */
+      createdAt: string;
+      /** Format: date-time */
+      updatedAt: string;
+    };
+    ContextListResponse: {
+      contexts: components["schemas"]["ContextResponse"][];
+    };
+    ApiResponse_ContextListResponse_: {
+      message?: string;
+      data: components["schemas"]["ContextListResponse"] | null;
+      /** Format: double */
+      status: number;
+    };
+    ApiResponse_ContextResponse_: {
+      message?: string;
+      data: components["schemas"]["ContextResponse"] | null;
+      /** Format: double */
+      status: number;
+    };
+    CreateContextRequest: {
+      name: string;
+      description?: string | null;
+      color?: string | null;
+      metadata?: components["schemas"]["InputJsonValue"] | null;
+    };
+    UpdateContextRequest: {
+      name?: string;
+      description?: string | null;
+      color?: string | null;
+      metadata?: components["schemas"]["InputJsonValue"] | null;
+    };
+    /** @enum {string} */
+    "_36_Enums.ChatRole": "USER" | "ASSISTANT";
+    ChatRole: components["schemas"]["_36_Enums.ChatRole"];
+    ChatMessage: {
+      id: string;
+      threadId: string;
+      role: components["schemas"]["ChatRole"];
+      content: string;
+      /** Format: date-time */
+      createdAt: string;
+    };
+    ChatThread: {
+      id: string;
+      userId: string;
+      title: string;
+      contextIds: string[];
+      /** Format: date-time */
+      createdAt: string;
+      /** Format: date-time */
+      updatedAt: string;
+      messages?: components["schemas"]["ChatMessage"][];
+    };
+    CreateThreadRequest: {
+      title?: string;
+      contextIds: string[];
+    };
+    SendMessageResponse: {
+      message: components["schemas"]["ChatMessage"];
+      response: components["schemas"]["ChatMessage"];
+    };
+    SendMessageRequest: {
+      content: string;
+    };
+    "DefaultSelection_Prisma._36_CustomThemePayload_": {
+      /** Format: date-time */
+      updatedAt: string;
+      /** Format: date-time */
+      createdAt: string;
+      configJson: components["schemas"]["JsonValue"];
+      /** Format: double */
+      density: number;
+      /** Format: double */
+      borderRadius: number;
+      headingFontFamily: string;
+      fontFamily: string;
+      textSecondaryColor: string;
+      textPrimaryColor: string;
+      surfaceColor: string;
+      backgroundColor: string;
+      secondaryColor: string;
+      primaryColor: string;
+      userId: string;
+      id: string;
+    };
+    /** @description Model CustomTheme */
+    CustomTheme: components["schemas"]["DefaultSelection_Prisma._36_CustomThemePayload_"];
+    "ApiResponse_CustomTheme-or-null_": {
+      message?: string;
+      data: components["schemas"]["CustomTheme"] | null;
+      /** Format: double */
+      status: number;
+    };
+    ApiResponse_CustomTheme_: {
+      message?: string;
+      data: components["schemas"]["CustomTheme"] | null;
+      /** Format: double */
+      status: number;
+    };
+    UpdateCustomThemeRequest: {
+      primaryColor?: string | null;
+      secondaryColor?: string | null;
+      backgroundColor?: string | null;
+      surfaceColor?: string | null;
+      textPrimaryColor?: string | null;
+      textSecondaryColor?: string | null;
+      fontFamily?: string | null;
+      headingFontFamily?: string | null;
+      /** Format: double */
+      borderRadius?: number | null;
+      /** Format: double */
+      density?: number | null;
+      configJson?: components["schemas"]["JsonValue"] | null;
+    };
+    ApiResponse_boolean_: {
+      message?: string;
+      data: boolean | null;
+      /** Format: double */
+      status: number;
+    };
+  };
+  responses: never;
+  parameters: never;
+  requestBodies: never;
+  headers: never;
+  pathItems: never;
 }
 export type $defs = Record<string, never>;
 export interface operations {
-    ListSessions: {
-        parameters: {
-            query?: {
-                page?: number;
-                pageSize?: number;
-                status?: components["schemas"]["SessionStatus"];
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Ok */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiResponse_SessionListResponse_"];
-                };
-            };
-        };
+  ListSessions: {
+    parameters: {
+      query?: {
+        page?: number;
+        pageSize?: number;
+        status?: components["schemas"]["SessionStatus"];
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    CreateSession: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
+    requestBody?: never;
+    responses: {
+      /** @description Ok */
+      200: {
+        headers: {
+          [name: string]: unknown;
         };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CreateSessionRequest"];
-            };
+        content: {
+          "application/json": components["schemas"]["ApiResponse_SessionListResponse_"];
         };
-        responses: {
-            /** @description Ok */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiResponse_SessionResponse_"];
-                };
-            };
-        };
+      };
     };
-    UploadTranscript: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                sessionId: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "multipart/form-data": {
-                    files: string[];
-                    title?: string;
-                    recordedAt?: string;
-                    metadata?: string;
-                    language?: string;
-                    summary?: string;
-                };
-            };
-        };
-        responses: {
-            /** @description Ok */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiResponse_TranscriptResponse_"];
-                };
-            };
-        };
+  };
+  CreateSession: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    ListTranscripts: {
-        parameters: {
-            query?: {
-                page?: number;
-                pageSize?: number;
-            };
-            header?: never;
-            path: {
-                sessionId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Ok */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiResponse_TranscriptListResponse_"];
-                };
-            };
-        };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CreateSessionRequest"];
+      };
     };
-    CreateTranscript: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                sessionId: string;
-            };
-            cookie?: never;
+    responses: {
+      /** @description Ok */
+      200: {
+        headers: {
+          [name: string]: unknown;
         };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CreateTranscriptRequest"];
-            };
+        content: {
+          "application/json": components["schemas"]["ApiResponse_SessionResponse_"];
         };
-        responses: {
-            /** @description Ok */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiResponse_CreateTranscriptResponse_"];
-                };
-            };
-        };
+      };
     };
-    GetTranscript: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                sessionId: string;
-                transcriptId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Ok */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiResponse_TranscriptResponse_"];
-                };
-            };
-        };
+  };
+  UploadTranscript: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        sessionId: string;
+      };
+      cookie?: never;
     };
-    UpdateTranscript: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                sessionId: string;
-                transcriptId: string;
-            };
-            cookie?: never;
+    requestBody: {
+      content: {
+        "multipart/form-data": {
+          files: string[];
+          title?: string;
+          recordedAt?: string;
+          metadata?: string;
+          language?: string;
+          summary?: string;
         };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["UpdateTranscriptRequest"];
-            };
-        };
-        responses: {
-            /** @description Ok */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiResponse_TranscriptResponse_"];
-                };
-            };
-        };
+      };
     };
-    DeleteTranscript: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                sessionId: string;
-                transcriptId: string;
-            };
-            cookie?: never;
+    responses: {
+      /** @description Ok */
+      200: {
+        headers: {
+          [name: string]: unknown;
         };
-        requestBody?: never;
-        responses: {
-            /** @description Ok */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiResponse_null_"];
-                };
-            };
+        content: {
+          "application/json": components["schemas"]["ApiResponse_TranscriptResponse_"];
         };
+      };
     };
-    CreateManualTranscript: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                sessionId: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ManualTranscriptRequest"];
-            };
-        };
-        responses: {
-            /** @description Ok */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiResponse_TranscriptResponse_"];
-                };
-            };
-        };
+  };
+  ListTranscripts: {
+    parameters: {
+      query?: {
+        page?: number;
+        pageSize?: number;
+      };
+      header?: never;
+      path: {
+        sessionId: string;
+      };
+      cookie?: never;
     };
-    ListTasks: {
-        parameters: {
-            query?: {
-                status?: components["schemas"]["TaskStatus"];
-                priority?: components["schemas"]["TaskPriority"];
-                page?: number;
-                pageSize?: number;
-            };
-            header?: never;
-            path: {
-                sessionId: string;
-            };
-            cookie?: never;
+    requestBody?: never;
+    responses: {
+      /** @description Ok */
+      200: {
+        headers: {
+          [name: string]: unknown;
         };
-        requestBody?: never;
-        responses: {
-            /** @description Ok */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiResponse_TaskListResponse_"];
-                };
-            };
+        content: {
+          "application/json": components["schemas"]["ApiResponse_TranscriptListResponse_"];
         };
+      };
     };
-    CreateTask: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                sessionId: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CreateTaskRequest"];
-            };
-        };
-        responses: {
-            /** @description Ok */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiResponse_TaskResponse_"];
-                };
-            };
-        };
+  };
+  CreateTranscript: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        sessionId: string;
+      };
+      cookie?: never;
     };
-    GetTask: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                sessionId: string;
-                taskId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Ok */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiResponse_TaskResponse_"];
-                };
-            };
-        };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CreateTranscriptRequest"];
+      };
     };
-    UpdateTask: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                sessionId: string;
-                taskId: string;
-            };
-            cookie?: never;
+    responses: {
+      /** @description Ok */
+      200: {
+        headers: {
+          [name: string]: unknown;
         };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["UpdateTaskRequest"];
-            };
+        content: {
+          "application/json": components["schemas"]["ApiResponse_CreateTranscriptResponse_"];
         };
-        responses: {
-            /** @description Ok */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiResponse_TaskResponse_"];
-                };
-            };
-        };
+      };
     };
-    DeleteTask: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                sessionId: string;
-                taskId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Ok */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiResponse_null_"];
-                };
-            };
-        };
+  };
+  GetTranscript: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        sessionId: string;
+        transcriptId: string;
+      };
+      cookie?: never;
     };
-    GetSession: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                sessionId: string;
-            };
-            cookie?: never;
+    requestBody?: never;
+    responses: {
+      /** @description Ok */
+      200: {
+        headers: {
+          [name: string]: unknown;
         };
-        requestBody?: never;
-        responses: {
-            /** @description Ok */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiResponse_SessionResponse_"];
-                };
-            };
+        content: {
+          "application/json": components["schemas"]["ApiResponse_TranscriptResponse_"];
         };
+      };
     };
-    UpdateSession: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                sessionId: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["UpdateSessionRequest"];
-            };
-        };
-        responses: {
-            /** @description Ok */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiResponse_SessionResponse_"];
-                };
-            };
-        };
+  };
+  UpdateTranscript: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        sessionId: string;
+        transcriptId: string;
+      };
+      cookie?: never;
     };
-    DeleteSession: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                sessionId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Ok */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiResponse_null_"];
-                };
-            };
-        };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["UpdateTranscriptRequest"];
+      };
     };
-    Login: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
+    responses: {
+      /** @description Ok */
+      200: {
+        headers: {
+          [name: string]: unknown;
         };
-        requestBody: {
-            content: {
-                "application/json": {
-                    token: string;
-                    uuid: string;
-                };
-            };
+        content: {
+          "application/json": components["schemas"]["ApiResponse_TranscriptResponse_"];
         };
-        responses: {
-            /** @description Ok */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiResponse_UserResponse_"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["GenericResponse"];
-                };
-            };
-            /** @description Internal Server Error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["GenericResponse"];
-                };
-            };
-        };
+      };
     };
-    GetCurrentUser: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Ok */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiResponse_UserResponse_"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["GenericResponse"];
-                };
-            };
-            /** @description Internal Server Error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["GenericResponse"];
-                };
-            };
-        };
+  };
+  DeleteTranscript: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        sessionId: string;
+        transcriptId: string;
+      };
+      cookie?: never;
     };
-    GetAuthorizationUrl: {
-        parameters: {
-            query?: {
-                state?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
+    requestBody?: never;
+    responses: {
+      /** @description Ok */
+      200: {
+        headers: {
+          [name: string]: unknown;
         };
-        requestBody?: never;
-        responses: {
-            /** @description Ok */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiResponse_JiraAuthorizationResponse_"];
-                };
-            };
+        content: {
+          "application/json": components["schemas"]["ApiResponse_null_"];
         };
+      };
     };
-    HandleCallback: {
-        parameters: {
-            query?: {
-                code?: string;
-                state?: string;
-                error?: string;
-                error_description?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description No content */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
+  };
+  CreateManualTranscript: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        sessionId: string;
+      };
+      cookie?: never;
     };
-    ListIntegrations: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Ok */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiResponse_UserIntegrationSummary-Array_"];
-                };
-            };
-        };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ManualTranscriptRequest"];
+      };
     };
-    GetIntegration: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                provider: string;
-            };
-            cookie?: never;
+    responses: {
+      /** @description Ok */
+      200: {
+        headers: {
+          [name: string]: unknown;
         };
-        requestBody?: never;
-        responses: {
-            /** @description Ok */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiResponse_UserIntegrationSummary-or-null_"];
-                };
-            };
+        content: {
+          "application/json": components["schemas"]["ApiResponse_TranscriptResponse_"];
         };
+      };
     };
-    GetStatusPayload: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Ok */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiResponse_string_"];
-                };
-            };
-            /** @description Internal Server Error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["GenericResponse"];
-                };
-            };
-        };
+  };
+  ListTasks: {
+    parameters: {
+      query?: {
+        status?: components["schemas"]["TaskStatus"];
+        priority?: components["schemas"]["TaskPriority"];
+        page?: number;
+        pageSize?: number;
+      };
+      header?: never;
+      path: {
+        sessionId: string;
+      };
+      cookie?: never;
     };
-    ListContexts: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
+    requestBody?: never;
+    responses: {
+      /** @description Ok */
+      200: {
+        headers: {
+          [name: string]: unknown;
         };
-        requestBody?: never;
-        responses: {
-            /** @description Ok */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiResponse_ContextListResponse_"];
-                };
-            };
+        content: {
+          "application/json": components["schemas"]["ApiResponse_TaskListResponse_"];
         };
+      };
     };
-    CreateContext: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CreateContextRequest"];
-            };
-        };
-        responses: {
-            /** @description Ok */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiResponse_ContextResponse_"];
-                };
-            };
-        };
+  };
+  CreateTask: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        sessionId: string;
+      };
+      cookie?: never;
     };
-    GetContext: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                contextId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Ok */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiResponse_ContextResponse_"];
-                };
-            };
-        };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CreateTaskRequest"];
+      };
     };
-    UpdateContext: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                contextId: string;
-            };
-            cookie?: never;
+    responses: {
+      /** @description Ok */
+      200: {
+        headers: {
+          [name: string]: unknown;
         };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["UpdateContextRequest"];
-            };
+        content: {
+          "application/json": components["schemas"]["ApiResponse_TaskResponse_"];
         };
-        responses: {
-            /** @description Ok */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiResponse_ContextResponse_"];
-                };
-            };
-        };
+      };
     };
-    DeleteContext: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                contextId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Ok */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiResponse_null_"];
-                };
-            };
-        };
+  };
+  GetTask: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        sessionId: string;
+        taskId: string;
+      };
+      cookie?: never;
     };
-    UploadContextFile: {
-        parameters: {
-            query?: {
-                metadata?: string;
-            };
-            header?: never;
-            path: {
-                contextId: string;
-            };
-            cookie?: never;
+    requestBody?: never;
+    responses: {
+      /** @description Ok */
+      200: {
+        headers: {
+          [name: string]: unknown;
         };
-        requestBody: {
-            content: {
-                "multipart/form-data": {
-                    files: string[];
-                };
-            };
+        content: {
+          "application/json": components["schemas"]["ApiResponse_TaskResponse_"];
         };
-        responses: {
-            /** @description Ok */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiResponse_ContextResponse_"];
-                };
-            };
-        };
+      };
     };
-    DeleteContextFile: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                contextId: string;
-                fileId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Ok */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiResponse_ContextResponse_"];
-                };
-            };
-        };
+  };
+  UpdateTask: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        sessionId: string;
+        taskId: string;
+      };
+      cookie?: never;
     };
-    GetCustomTheme: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Ok */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiResponse_CustomTheme-or-null_"];
-                };
-            };
-        };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["UpdateTaskRequest"];
+      };
     };
-    UpsertCustomTheme: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
+    responses: {
+      /** @description Ok */
+      200: {
+        headers: {
+          [name: string]: unknown;
         };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["UpdateCustomThemeRequest"];
-            };
+        content: {
+          "application/json": components["schemas"]["ApiResponse_TaskResponse_"];
         };
-        responses: {
-            /** @description Ok */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiResponse_CustomTheme_"];
-                };
-            };
-        };
+      };
     };
-    DeleteUser: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                userId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Ok */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiResponse_boolean_"];
-                };
-            };
-        };
+  };
+  DeleteTask: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        sessionId: string;
+        taskId: string;
+      };
+      cookie?: never;
     };
-    DeleteMyAccount: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
+    requestBody?: never;
+    responses: {
+      /** @description Ok */
+      200: {
+        headers: {
+          [name: string]: unknown;
         };
-        requestBody?: never;
-        responses: {
-            /** @description Ok */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiResponse_boolean_"];
-                };
-            };
+        content: {
+          "application/json": components["schemas"]["ApiResponse_null_"];
         };
+      };
     };
+  };
+  GetSession: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        sessionId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Ok */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ApiResponse_SessionResponse_"];
+        };
+      };
+    };
+  };
+  UpdateSession: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        sessionId: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["UpdateSessionRequest"];
+      };
+    };
+    responses: {
+      /** @description Ok */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ApiResponse_SessionResponse_"];
+        };
+      };
+    };
+  };
+  DeleteSession: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        sessionId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Ok */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ApiResponse_null_"];
+        };
+      };
+    };
+  };
+  Login: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": {
+          token: string;
+          uuid: string;
+        };
+      };
+    };
+    responses: {
+      /** @description Ok */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ApiResponse_UserResponse_"];
+        };
+      };
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["GenericResponse"];
+        };
+      };
+      /** @description Internal Server Error */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["GenericResponse"];
+        };
+      };
+    };
+  };
+  GetCurrentUser: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Ok */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ApiResponse_UserResponse_"];
+        };
+      };
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["GenericResponse"];
+        };
+      };
+      /** @description Internal Server Error */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["GenericResponse"];
+        };
+      };
+    };
+  };
+  GetAuthorizationUrl: {
+    parameters: {
+      query?: {
+        state?: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Ok */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ApiResponse_JiraAuthorizationResponse_"];
+        };
+      };
+    };
+  };
+  HandleCallback: {
+    parameters: {
+      query?: {
+        code?: string;
+        state?: string;
+        error?: string;
+        error_description?: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description No content */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  ListIntegrations: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Ok */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ApiResponse_UserIntegrationSummary-Array_"];
+        };
+      };
+    };
+  };
+  GetIntegration: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        provider: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Ok */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ApiResponse_UserIntegrationSummary-or-null_"];
+        };
+      };
+    };
+  };
+  GetStatusPayload: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Ok */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ApiResponse_string_"];
+        };
+      };
+      /** @description Internal Server Error */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["GenericResponse"];
+        };
+      };
+    };
+  };
+  ListContexts: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Ok */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ApiResponse_ContextListResponse_"];
+        };
+      };
+    };
+  };
+  CreateContext: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CreateContextRequest"];
+      };
+    };
+    responses: {
+      /** @description Ok */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ApiResponse_ContextResponse_"];
+        };
+      };
+    };
+  };
+  GetContext: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        contextId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Ok */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ApiResponse_ContextResponse_"];
+        };
+      };
+    };
+  };
+  UpdateContext: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        contextId: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["UpdateContextRequest"];
+      };
+    };
+    responses: {
+      /** @description Ok */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ApiResponse_ContextResponse_"];
+        };
+      };
+    };
+  };
+  DeleteContext: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        contextId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Ok */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ApiResponse_null_"];
+        };
+      };
+    };
+  };
+  UploadContextFile: {
+    parameters: {
+      query?: {
+        metadata?: string;
+      };
+      header?: never;
+      path: {
+        contextId: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "multipart/form-data": {
+          files: string[];
+        };
+      };
+    };
+    responses: {
+      /** @description Ok */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ApiResponse_ContextResponse_"];
+        };
+      };
+    };
+  };
+  DeleteContextFile: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        contextId: string;
+        fileId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Ok */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ApiResponse_ContextResponse_"];
+        };
+      };
+    };
+  };
+  ListThreads: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Ok */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ChatThread"][];
+        };
+      };
+    };
+  };
+  CreateThread: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CreateThreadRequest"];
+      };
+    };
+    responses: {
+      /** @description Ok */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ChatThread"];
+        };
+      };
+    };
+  };
+  GetThread: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        threadId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Ok */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ChatThread"];
+        };
+      };
+    };
+  };
+  SendMessage: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        threadId: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["SendMessageRequest"];
+      };
+    };
+    responses: {
+      /** @description Ok */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["SendMessageResponse"];
+        };
+      };
+    };
+  };
+  GetCustomTheme: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Ok */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ApiResponse_CustomTheme-or-null_"];
+        };
+      };
+    };
+  };
+  UpsertCustomTheme: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["UpdateCustomThemeRequest"];
+      };
+    };
+    responses: {
+      /** @description Ok */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ApiResponse_CustomTheme_"];
+        };
+      };
+    };
+  };
+  DeleteUser: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        userId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Ok */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ApiResponse_boolean_"];
+        };
+      };
+    };
+  };
+  DeleteMyAccount: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Ok */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ApiResponse_boolean_"];
+        };
+      };
+    };
+  };
 }

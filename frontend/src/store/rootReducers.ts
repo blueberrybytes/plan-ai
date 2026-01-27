@@ -8,6 +8,7 @@ import { accountApi } from "./apis/accountApi";
 import { contextApi } from "./apis/contextApi";
 import { jiraApi } from "./apis/jiraApi";
 import { integrationApi } from "./apis/integrationApi";
+import { chatApi } from "./apis/chatApi";
 
 // Define the combined reducers
 const appReducers = combineReducers({
@@ -18,6 +19,7 @@ const appReducers = combineReducers({
   [contextApi.reducerPath]: contextApi.reducer,
   [jiraApi.reducerPath]: jiraApi.reducer,
   [integrationApi.reducerPath]: integrationApi.reducer,
+  [chatApi.reducerPath]: chatApi.reducer,
 });
 
 // Create a root reducer that can handle the reset action

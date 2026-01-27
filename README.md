@@ -46,6 +46,14 @@ graph TD
 
 ![Plan AI contexts view](./images/img2.png)
 
+## Chat with Context
+
+Plan AI features a RAG (Retrieval-Augmented Generation) chat interface that allows you to converse with your uploaded data.
+
+1.  **Create a Context**: Upload PDFs, DOCX, or text files to a "Context" in the `/contexts` page.
+2.  **Start a Chat**: Go to `/chat`, create a new thread, and select one or more Contexts.
+3.  **Ask Questions**: The AI will retrieve relevant chunks from your documents and use them to answer your questions accurately.
+
 ## Quick start
 
 ### Prerequisites

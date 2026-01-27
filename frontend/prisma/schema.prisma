@@ -64,6 +64,7 @@ model User {
     contexts      Context[]
 
     integrations UserIntegration[]
+    threads      ChatThread[]
 }
 
 model UserIntegration {
@@ -243,4 +244,34 @@ model ContextFile {
     createdAt  DateTime @default(now())
 
     @@index([contextId])
+}
+
+enum ChatRole {
+    USER
+    ASSISTANT
+}
+
+model ChatThread {
+    id         String   @id @default(cuid())
+    user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+    userId     String
+    title      String   @default("New Chat")
+    contextIds String[] // IDs of Contexts active for this thread
+    createdAt  DateTime @default(now())
+    updatedAt  DateTime @updatedAt
+
+    messages ChatMessage[]
+
+    @@index([userId])
+}
+
+model ChatMessage {
+    id        String     @id @default(cuid())
+    thread    ChatThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+    threadId  String
+    role      ChatRole
+    content   String     @db.Text
+    createdAt DateTime   @default(now())
+
+    @@index([threadId])
 }

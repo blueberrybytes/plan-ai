@@ -8,6 +8,7 @@ import {
   deleteVectorsByFile,
   ensureContextCollection,
   upsertContextVectors,
+  queryVectors,
   type ContextVectorPoint,
 } from "./contextVectorStore";
 import { v4 as uuidv4 } from "uuid";
@@ -172,5 +173,23 @@ export const removeContextVectors = async (contextId: string): Promise<void> => 
     await deleteVectorsByContext(contextId);
   } catch (error) {
     logger.error(`Failed to delete vectors for context ${contextId}`, error);
+  }
+};
+
+export const queryContexts = async (contextIds: string[], queryText: string): Promise<string[]> => {
+  if (contextIds.length === 0 || !queryText.trim()) {
+    return [];
+  }
+
+  try {
+    const vector = await embeddings.embedQuery(queryText);
+    const points = await queryVectors(contextIds, vector, 10);
+
+    return points
+      .map((p: ContextVectorPoint) => p.payload.text)
+      .filter((t: unknown): t is string => typeof t === "string" && t.length > 0);
+  } catch (error) {
+    logger.error("Failed to query context vectors", error);
+    return [];
   }
 };

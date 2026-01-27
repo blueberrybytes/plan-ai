@@ -332,14 +332,18 @@ const Contexts: React.FC = () => {
                     <Box
                       sx={{
                         px: 2,
-                        py: 6,
+                        py: 8,
                         textAlign: "center",
                         color: "text.secondary",
                         borderRadius: 1,
                         border: (theme) => `1px dashed ${theme.palette.divider}`,
+                        display: "flex",
+                        justifyContent: "center",
                       }}
                     >
-                      <Typography variant="body2">{t("contexts.list.emptyDescription")}</Typography>
+                      <Typography variant="body1" sx={{ maxWidth: 500 }}>
+                        {t("contexts.list.emptyDescription")}
+                      </Typography>
                     </Box>
                   ) : (
                     <Box

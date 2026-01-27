@@ -12,6 +12,7 @@ import { z, type ZodTypeAny } from "zod";
 import EnvUtils from "../utils/EnvUtils";
 import { logger } from "../utils/logger";
 import prisma from "../prisma/prismaClient";
+import { queryContexts } from "../vector/contextFileVectorService";
 
 const TASK_STATUS_VALUES = ["BACKLOG", "IN_PROGRESS", "BLOCKED", "COMPLETED", "ARCHIVED"] as const;
 const TASK_PRIORITY_VALUES = ["LOW", "MEDIUM", "HIGH", "URGENT"] as const;
@@ -67,6 +68,7 @@ export interface CreateTranscriptInput {
   recordedAt?: Date | null;
   metadata?: Prisma.InputJsonValue | null;
   contextPrompt?: string | null;
+  contextIds?: string[];
 }
 
 export interface CreateTranscriptResult {
@@ -80,12 +82,16 @@ export class SessionTranscriptService {
     apiKey: EnvUtils.get("OPENAI_API_KEY"),
   });
 
-  private readonly modelName = "gpt-5";
+  private readonly modelName = "gpt-5.2-2025-12-11";
 
   public async createTranscriptForSession(
     input: CreateTranscriptInput,
   ): Promise<CreateTranscriptResult> {
-    const analysis = await this.analyzeTranscript(input.content, input.contextPrompt ?? null);
+    const analysis = await this.analyzeTranscript(
+      input.content,
+      input.contextPrompt ?? null,
+      input.contextIds,
+    );
 
     const result = await prisma.$transaction(async (tx) => {
       const transcript = await tx.transcript.create({
@@ -157,11 +163,29 @@ export class SessionTranscriptService {
   private async analyzeTranscript(
     content: string,
     contextPrompt: string | null,
+    contextIds: string[] | undefined,
   ): Promise<TranscriptAnalysis> {
     const model = this.openAI(this.modelName);
     const todayIso = new Date().toISOString().split("T")[0];
-    const contextSection = contextPrompt ? `Relevant context:\n${contextPrompt}\n\n` : "";
-    const prompt = `Today is ${todayIso}. You are an AI assistant that reads call transcripts and extracts useful metadata. Analyse the following transcript. Detect the predominant human language of the text (use lowercase ISO language name, e.g. "english", "spanish"). Provide a succinct summary (max 80 words). Identify actionable tasks mentioned and return them with clear titles, optional descriptions, optional status (${TASK_STATUS_LIST}) and priority (${TASK_PRIORITY_LIST}). If you cannot find explicit due dates, suggest reasonable deadlines relative to today (e.g. urgent tasks within 2 days, high priority within 4 days, others within a week).
+
+    // RAG: Query context vectors if contextIds are provided
+    let dynamicContext = "";
+    if (contextIds && contextIds.length > 0) {
+      try {
+        // Use the first 500 characters of the transcript as the query
+        const query = content.slice(0, 500);
+        const chunks = await queryContexts(contextIds, query);
+        if (chunks.length > 0) {
+          dynamicContext = `\nRetrieved context from knowledge base:\n${chunks.join("\n\n")}\n`;
+        }
+      } catch (error) {
+        logger.warn("Failed to retrieve dynamic context for transcript", error);
+      }
+    }
+
+    const contextSection =
+      (contextPrompt ? `Relevant context:\n${contextPrompt}\n\n` : "") + dynamicContext;
+    const prompt = `Today is ${todayIso}. You are an AI assistant that reads call transcripts and extracts useful metadata. Analyse the following transcript. Detect the predominant human language of the text (use lowercase ISO language name, e.g. "english", "spanish"). Provide a succinct summary (max 80 words). Identify actionable tasks mentioned and return them with clear titles, optional descriptions, optional status (${TASK_STATUS_LIST}) and priority (${TASK_PRIORITY_LIST}). Do NOT guess due dates. Only populate dueDate if explicitly mentioned in the text.
 
 ${contextSection}Transcript:
 ${content}`;
@@ -230,31 +254,17 @@ ${content}`;
 
   private resolveDueDate(
     rawDueDate: string | undefined,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     priority: TaskPriority | undefined,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     startDate: Date,
-  ): Date {
+  ): Date | null {
     const parsedDueDate = this.parseDueDate(rawDueDate);
     if (parsedDueDate) {
       return parsedDueDate;
     }
 
-    const due = new Date(startDate);
-    due.setDate(due.getDate() + this.defaultDueOffset(priority));
-    return due;
-  }
-
-  private defaultDueOffset(priority: TaskPriority | undefined): number {
-    switch (priority) {
-      case TaskPriority.URGENT:
-        return 2;
-      case TaskPriority.HIGH:
-        return 4;
-      case TaskPriority.MEDIUM:
-        return 7;
-      case TaskPriority.LOW:
-      default:
-        return 10;
-    }
+    return null;
   }
 
   private normalizeTaskPriority(priority?: string): TaskPriority | undefined {

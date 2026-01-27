@@ -158,6 +158,31 @@
       "deleteAccount": "Unable to delete your account. Please try again."
     }
   },
+  "chat": {
+    "heading": "Chat with Context",
+    "sidebar": {
+      "newChat": "New Chat",
+      "emptyList": "No chats yet"
+    },
+    "placeholders": {
+      "typeMessage": "Type a message...",
+      "selectChat": "Select a chat from the sidebar or start a new one",
+      "emptyStateTitle": "Start a new conversation",
+      "emptyStateSubtitle": "Chat with your codebase or documentation using Plan AI."
+    },
+    "buttons": {
+      "send": "Send",
+      "start": "Start Chat",
+      "cancel": "Cancel"
+    },
+    "dialog": {
+      "title": "Select Contexts",
+      "description": "Choose which contexts the AI should reference for this chat.",
+      "placeholder": "Select contexts",
+      "noContexts": "You haven't created any contexts yet. Contexts allow the AI to answer based on your documents.",
+      "createContext": "Create your first Context"
+    }
+  },
   "contexts": {
     "heading": "Contexts",
     "description": "Manage knowledge spaces that power your AI-assisted planning. Keep them organized with files, metadata, and colors.",
@@ -178,7 +203,7 @@
       "selectPrompt": "Select a context",
       "count": "{{count}} context",
       "count_plural": "{{count}} contexts",
-      "emptyDescription": "You haven't created any contexts yet. Use the button above to add one.",
+      "emptyDescription": "Contexts serve as knowledge bases for your AI. By uploading documents (PDFs, text files, etc.) to a Context, you enable the AI to provide answers grounded in your specific data. Create one above to get started.",
       "error": "Failed to load contexts. Please refresh the page."
     },
     "placeholders": {
@@ -446,6 +471,7 @@
   "sidebarLayout": {
     "nav": {
       "home": "Home",
+      "chat": "Chat",
       "sessions": "Sessions",
       "contexts": "Contexts",
       "integrations": "Integrations"

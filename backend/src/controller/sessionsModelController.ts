@@ -732,6 +732,7 @@ export class SessionsModelController extends Controller {
       recordedAt: body.recordedAt ?? null,
       metadata: body.metadata,
       contextPrompt,
+      contextIds: body.contextIds,
     });
 
     const tasksWithRelations = await Promise.all(

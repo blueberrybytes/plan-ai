@@ -21,6 +21,7 @@ import SessionInfo from "./pages/SessionInfo";
 import SessionTranscriptDetail from "./pages/SessionTranscriptDetail";
 import Contexts from "./pages/Contexts";
 import SessionDetails from "./pages/SessionDetails";
+import Chat from "./pages/Chat";
 import "./App.css";
 import "./i18n";
 import { useGetCurrentUserQuery } from "./store/apis/sessionApi";
@@ -83,6 +84,8 @@ const AppContent: React.FC = () => {
           <Route path="/profile" element={<Profile />} />
           <Route path="/integrations" element={<Integrations />} />
           <Route path="/integrations/:provider" element={<Integrations />} />
+          <Route path="/chat" element={<Chat />} />
+          <Route path="/chat/:threadId" element={<Chat />} />
         </Route>
       </Routes>
     </>
