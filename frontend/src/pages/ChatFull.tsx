@@ -59,11 +59,12 @@ const ChatFull: React.FC = () => {
     ? (threads?.find((t) => t.id === selectedThreadId) ?? null)
     : null;
 
-  const activeThreadWithDetails = threadData
-    ? { ...threadData }
-    : activeThread
-      ? { ...activeThread, messages: [], contextIds: activeThread.contextIds || [] }
-      : null;
+  const activeThreadWithDetails =
+    selectedThreadId && threadData
+      ? { ...threadData }
+      : activeThread
+        ? { ...activeThread, messages: [], contextIds: activeThread.contextIds || [] }
+        : null;
 
   const messages = threadData?.messages ?? [];
 

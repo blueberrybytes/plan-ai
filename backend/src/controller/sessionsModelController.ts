@@ -76,6 +76,7 @@ interface CreateTranscriptRequest {
   recordedAt?: Date | null;
   metadata?: Prisma.InputJsonValue | null;
   contextIds?: string[];
+  persona?: "SECRETARY" | "ARCHITECT" | "PRODUCT_MANAGER" | "DEVELOPER";
 }
 
 interface TranscriptResponse {
@@ -291,9 +292,9 @@ export class SessionsModelController extends Controller {
     @FormField() title?: string,
     @FormField() recordedAt?: string,
     @FormField() metadata?: string,
-    @FormField() language?: string,
-    @FormField() summary?: string,
-  ): Promise<ApiResponse<TranscriptResponse>> {
+    @FormField() persona?: "SECRETARY" | "ARCHITECT" | "PRODUCT_MANAGER" | "DEVELOPER",
+    @FormField() contextIds?: string[],
+  ): Promise<ApiResponse<CreateTranscriptResponse>> {
     const user = await this.getAuthorizedUser(request);
     await this.getSessionForUser(request, sessionId);
 
@@ -364,21 +365,32 @@ export class SessionsModelController extends Controller {
       }
     }
 
-    const transcript = await transcriptCrudService.createTranscriptForUser(user.id, {
+    const contextPrompt = await this.buildContextPrompt(user.id, contextIds ?? []);
+
+    const result = await sessionTranscriptService.createTranscriptForSession({
       sessionId,
-      title: title ?? supportedFiles[0]?.originalname ?? null,
-      source: TranscriptSource.UPLOAD,
       content,
-      summary: summary ?? null,
-      language: language ?? null,
+      title: title || supportedFiles[0]?.originalname || undefined,
+      source: TranscriptSource.UPLOAD,
       recordedAt: recordedAtDate ?? null,
-      metadata: metadataValue ?? null,
+      metadata: metadataValue,
+      contextPrompt,
+      contextIds: contextIds,
+      persona: persona,
     });
+
+    const tasksWithRelations = await Promise.all(
+      result.tasks.map((task) => taskCrudService.getTaskForUser(user.id, task.id)),
+    );
 
     return {
       status: 201,
       message: "Transcript uploaded",
-      data: this.mapTranscriptResponse(transcript),
+      data: {
+        transcript: this.mapTranscriptResponse(result.transcript),
+        tasks: tasksWithRelations.map((task) => this.mapTaskResponse(task)),
+        analysis: this.mapTranscriptAnalysis(result.analysis),
+      },
     };
   }
 
@@ -733,6 +745,7 @@ export class SessionsModelController extends Controller {
       metadata: body.metadata,
       contextPrompt,
       contextIds: body.contextIds,
+      persona: body.persona,
     });
 
     const tasksWithRelations = await Promise.all(

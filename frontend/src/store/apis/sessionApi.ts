@@ -42,8 +42,8 @@ export interface UploadSessionTranscriptArgs {
   title?: string;
   recordedAt?: string;
   metadataJson?: string;
-  language?: string;
-  summary?: string;
+  persona?: components["schemas"]["CreateTranscriptRequest"]["persona"];
+  contextIds?: string[];
 }
 
 export type ListTasksParams = operations["ListTasks"]["parameters"]["query"];
@@ -159,40 +159,33 @@ export const sessionApi = createApi({
       ApiResponseCreateTranscriptResponse,
       { sessionId: string; body: CreateTranscriptRequest }
     >({
-      query: ({ sessionId, body }) => ({
-        url: `/api/sessions/${sessionId}/transcripts`,
+      query: (arg: { sessionId: string; body: CreateTranscriptRequest }) => ({
+        url: `/api/sessions/${arg.sessionId}/transcripts`,
         method: "POST",
-        body,
+        body: arg.body,
       }),
-      invalidatesTags: (result, error, { sessionId }) => [
-        { type: "Session" as const, id: sessionId },
-        { type: "Transcript" as const, id: `${sessionId}-LIST` },
+      invalidatesTags: (result, error, arg) => [
+        { type: "Session" as const, id: arg.sessionId },
+        { type: "Transcript" as const, id: `${arg.sessionId}-LIST` },
       ],
     }),
     uploadSessionTranscript: builder.mutation<
-      ApiResponseTranscriptResponse,
+      ApiResponseCreateTranscriptResponse,
       UploadSessionTranscriptArgs
     >({
-      query: ({ sessionId, files, title, recordedAt, metadataJson, language, summary }) => {
+      query: (arg: UploadSessionTranscriptArgs) => {
+        const { sessionId, files, title, recordedAt, metadataJson, persona, contextIds } = arg;
         const formData = new FormData();
         files.forEach((file) => {
           formData.append("files", file);
         });
 
-        if (title) {
-          formData.append("title", title);
-        }
-        if (recordedAt) {
-          formData.append("recordedAt", recordedAt);
-        }
-        if (metadataJson) {
-          formData.append("metadata", metadataJson);
-        }
-        if (language) {
-          formData.append("language", language);
-        }
-        if (summary) {
-          formData.append("summary", summary);
+        if (title) formData.append("title", title);
+        if (recordedAt) formData.append("recordedAt", recordedAt);
+        if (metadataJson) formData.append("metadata", metadataJson);
+        if (persona) formData.append("persona", persona);
+        if (contextIds && contextIds.length > 0) {
+          contextIds.forEach((id: string) => formData.append("contextIds", id));
         }
 
         return {
@@ -201,9 +194,9 @@ export const sessionApi = createApi({
           body: formData,
         };
       },
-      invalidatesTags: (result, error, { sessionId }) => [
-        { type: "Session" as const, id: sessionId },
-        { type: "Transcript" as const, id: `${sessionId}-LIST` },
+      invalidatesTags: (result, error, arg) => [
+        { type: "Session" as const, id: arg.sessionId },
+        { type: "Transcript" as const, id: `${arg.sessionId}-LIST` },
       ],
     }),
     createManualTranscript: builder.mutation<

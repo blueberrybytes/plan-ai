@@ -68,35 +68,6 @@ const extractTextForContextFile = async (file: Express.Multer.File): Promise<str
   }
 };
 
-const buildPoints = (
-  contextId: string,
-  fileId: string,
-  fileName: string,
-  mimeType: string,
-  vectors: number[][],
-  chunks: string[],
-): ContextVectorPoint[] => {
-  const safetyLength = Math.min(vectors.length, chunks.length);
-  const points: ContextVectorPoint[] = [];
-
-  for (let index = 0; index < safetyLength; index += 1) {
-    points.push({
-      id: uuidv4(),
-      vector: vectors[index],
-      payload: {
-        contextId,
-        fileId,
-        chunkIndex: index,
-        text: chunks[index],
-        sourceFileName: fileName,
-        mimeType,
-      },
-    });
-  }
-
-  return points;
-};
-
 export interface IndexContextFileVectorsArgs {
   contextId: string;
   fileId: string;
@@ -131,37 +102,50 @@ export const indexContextFileVectors = async (args: IndexContextFileVectorsArgs)
 
     await ensureCollectionIfNeeded();
 
-    // Batching logic for OpenAI Embeddings
-    const BATCH_SIZE = 100;
-    const allVectors: number[][] = [];
-
-    for (let i = 0; i < chunks.length; i += BATCH_SIZE) {
-      const batch = chunks.slice(i, i + BATCH_SIZE);
-      const batchVectors = await embeddings.embedDocuments(batch);
-      allVectors.push(...batchVectors);
-      logger.info(
-        `Indexed batch ${Math.floor(i / BATCH_SIZE) + 1}/${Math.ceil(chunks.length / BATCH_SIZE)} for file ${fileId}`,
-      );
-    }
-
-    if (allVectors.length === 0) {
-      logger.warn(`OpenAI embedding returned 0 vectors for context file ${fileId}.`);
-      return;
-    }
-
-    const points = buildPoints(contextId, fileId, fileName, mimeType, allVectors, chunks);
-
-    if (points.length === 0) {
-      logger.warn(`No valid points generated for context file ${fileId}.`);
-      return;
-    }
-
+    // 1. Delete previous vectors for this file
     await deleteVectorsByFile(contextId, fileId).catch((error) => {
       logger.warn(`Failed to delete previous vectors for context file ${fileId}`, error);
     });
 
-    await upsertContextVectors(points);
-    logger.info(`Indexed ${points.length} vector chunks for context ${contextId} file ${fileId}.`);
+    // 2. Double-Batching logic (OpenAI Embeddings + Qdrant Upsert)
+    // We batch both to stay under OpenAI limits and Qdrant payload limits.
+    const BATCH_SIZE = 100;
+    let totalIndexed = 0;
+
+    for (let i = 0; i < chunks.length; i += BATCH_SIZE) {
+      const batchChunks = chunks.slice(i, i + BATCH_SIZE);
+
+      // OpenAI Batch
+      const batchVectors = await embeddings.embedDocuments(batchChunks);
+
+      // Build Points for this batch
+      const points: ContextVectorPoint[] = batchChunks.map((chunk, index) => ({
+        id: uuidv4(),
+        vector: batchVectors[index],
+        payload: {
+          contextId,
+          fileId,
+          chunkIndex: i + index,
+          text: chunk,
+          sourceFileName: fileName,
+          mimeType,
+        },
+      }));
+
+      // Qdrant Batch Upload
+      if (points.length > 0) {
+        await upsertContextVectors(points);
+        totalIndexed += points.length;
+      }
+
+      logger.info(
+        `Indexed batch ${Math.floor(i / BATCH_SIZE) + 1}/${Math.ceil(chunks.length / BATCH_SIZE)} for file ${fileId} (${totalIndexed} total chunks)`,
+      );
+    }
+
+    logger.info(
+      `Successfully indexed ${totalIndexed} vector chunks for context ${contextId} file ${fileId}.`,
+    );
   } catch (error) {
     logger.error(`Failed to index context file ${fileId} for context ${contextId}`, error);
   }

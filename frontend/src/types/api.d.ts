@@ -342,9 +342,9 @@ export interface paths {
             cookie?: never;
         };
         get: operations["GetThread"];
-        put?: never;
+        put: operations["UpdateThread"];
         post?: never;
-        delete?: never;
+        delete: operations["DeleteThread"];
         options?: never;
         head?: never;
         patch?: never;
@@ -494,9 +494,49 @@ export interface components {
             /** Format: date-time */
             updatedAt: string;
         };
-        ApiResponse_TranscriptResponse_: {
+        /** @enum {string} */
+        "_36_Enums.TaskStatus": "COMPLETED" | "ARCHIVED" | "BACKLOG" | "IN_PROGRESS" | "BLOCKED";
+        TaskStatus: components["schemas"]["_36_Enums.TaskStatus"];
+        /** @enum {string} */
+        "_36_Enums.TaskPriority": "LOW" | "MEDIUM" | "HIGH" | "URGENT";
+        TaskPriority: components["schemas"]["_36_Enums.TaskPriority"];
+        TaskResponse: {
+            id: string;
+            sessionId: string;
+            title: string;
+            description: string | null;
+            summary: string | null;
+            acceptanceCriteria: string | null;
+            status: components["schemas"]["TaskStatus"];
+            priority: components["schemas"]["TaskPriority"];
+            /** Format: date-time */
+            dueDate: string | null;
+            dependencies: string[];
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        TranscriptTaskInsight: {
+            title: string;
+            description?: string;
+            priority?: components["schemas"]["TaskPriority"];
+            status?: components["schemas"]["TaskStatus"];
+            dueDate?: string | null;
+        };
+        TranscriptAnalysisResponse: {
+            language: string;
+            summary: string | null;
+            tasks: components["schemas"]["TranscriptTaskInsight"][];
+        };
+        CreateTranscriptResponse: {
+            transcript: components["schemas"]["TranscriptResponse"];
+            tasks: components["schemas"]["TaskResponse"][];
+            analysis: components["schemas"]["TranscriptAnalysisResponse"];
+        };
+        ApiResponse_CreateTranscriptResponse_: {
             message?: string;
-            data: components["schemas"]["TranscriptResponse"] | null;
+            data: components["schemas"]["CreateTranscriptResponse"] | null;
             /** Format: double */
             status: number;
         };
@@ -508,6 +548,12 @@ export interface components {
         ApiResponse_TranscriptListResponse_: {
             message?: string;
             data: components["schemas"]["TranscriptListResponse"] | null;
+            /** Format: double */
+            status: number;
+        };
+        ApiResponse_TranscriptResponse_: {
+            message?: string;
+            data: components["schemas"]["TranscriptResponse"] | null;
             /** Format: double */
             status: number;
         };
@@ -560,29 +606,6 @@ export interface components {
             data: unknown;
             /** Format: double */
             status: number;
-        };
-        /** @enum {string} */
-        "_36_Enums.TaskStatus": "COMPLETED" | "ARCHIVED" | "BACKLOG" | "IN_PROGRESS" | "BLOCKED";
-        TaskStatus: components["schemas"]["_36_Enums.TaskStatus"];
-        /** @enum {string} */
-        "_36_Enums.TaskPriority": "LOW" | "MEDIUM" | "HIGH" | "URGENT";
-        TaskPriority: components["schemas"]["_36_Enums.TaskPriority"];
-        TaskResponse: {
-            id: string;
-            sessionId: string;
-            title: string;
-            description: string | null;
-            summary: string | null;
-            acceptanceCriteria: string | null;
-            status: components["schemas"]["TaskStatus"];
-            priority: components["schemas"]["TaskPriority"];
-            /** Format: date-time */
-            dueDate: string | null;
-            dependencies: string[];
-            /** Format: date-time */
-            createdAt: string;
-            /** Format: date-time */
-            updatedAt: string;
         };
         TaskListResponse: {
             tasks: components["schemas"]["TaskResponse"][];
@@ -655,29 +678,6 @@ export interface components {
             endedAt?: string | null;
             metadata?: components["schemas"]["InputJsonValue"] | null;
         };
-        TranscriptTaskInsight: {
-            title: string;
-            description?: string;
-            priority?: components["schemas"]["TaskPriority"];
-            status?: components["schemas"]["TaskStatus"];
-            dueDate?: string | null;
-        };
-        TranscriptAnalysisResponse: {
-            language: string;
-            summary: string | null;
-            tasks: components["schemas"]["TranscriptTaskInsight"][];
-        };
-        CreateTranscriptResponse: {
-            transcript: components["schemas"]["TranscriptResponse"];
-            tasks: components["schemas"]["TaskResponse"][];
-            analysis: components["schemas"]["TranscriptAnalysisResponse"];
-        };
-        ApiResponse_CreateTranscriptResponse_: {
-            message?: string;
-            data: components["schemas"]["CreateTranscriptResponse"] | null;
-            /** Format: double */
-            status: number;
-        };
         CreateTranscriptRequest: {
             content: string;
             title?: string;
@@ -686,6 +686,8 @@ export interface components {
             recordedAt?: string | null;
             metadata?: components["schemas"]["InputJsonValue"] | null;
             contextIds?: string[];
+            /** @enum {string} */
+            persona?: "SECRETARY" | "ARCHITECT" | "PRODUCT_MANAGER" | "DEVELOPER";
         };
         /** @enum {string} */
         "_36_Enums.Role": "ADMIN" | "CLIENT";
@@ -972,8 +974,8 @@ export interface operations {
                     title?: string;
                     recordedAt?: string;
                     metadata?: string;
-                    language?: string;
-                    summary?: string;
+                    persona?: string;
+                    contextIds?: string;
                 };
             };
         };
@@ -984,7 +986,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ApiResponse_TranscriptResponse_"];
+                    "application/json": components["schemas"]["ApiResponse_CreateTranscriptResponse_"];
                 };
             };
         };
@@ -1763,6 +1765,59 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ChatThread"];
+                };
+            };
+        };
+    };
+    UpdateThread: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                threadId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    contextIds?: string[];
+                    title?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChatThread"];
+                };
+            };
+        };
+    };
+    DeleteThread: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                threadId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        success: boolean;
+                    };
                 };
             };
         };

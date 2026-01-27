@@ -5,20 +5,26 @@ import {
   Box,
   Button,
   Chip,
+  CircularProgress,
   Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
   Divider,
+  FormControl,
   FormControlLabel,
+  InputLabel,
+  MenuItem,
   Radio,
   RadioGroup,
+  Select,
   Stack,
   TextField,
   Typography,
 } from "@mui/material";
 import { UploadFile as UploadFileIcon, Article as ArticleIcon } from "@mui/icons-material";
 import { useDispatch } from "react-redux";
+import { useTranslation } from "react-i18next";
 import type { components } from "../../types/api";
 import {
   useCreateSessionTranscriptMutation,
@@ -30,9 +36,6 @@ import { useListContextsQuery } from "../../store/apis/contextApi";
 
 type InputJsonValue = components["schemas"]["InputJsonValue"];
 type ContextResponse = components["schemas"]["ContextResponse"];
-
-const isJsonObject = (value: InputJsonValue): value is Record<string, InputJsonValue> =>
-  typeof value === "object" && value !== null && !Array.isArray(value);
 
 const formatDateForDateTimeInput = (date: Date) => {
   const pad = (value: number) => value.toString().padStart(2, "0");
@@ -66,13 +69,14 @@ const SessionTranscriptDialog: React.FC<SessionTranscriptDialogProps> = ({
   onClose,
   sessionId,
 }) => {
+  const { t } = useTranslation();
   const dispatch = useDispatch();
   const [mode, setMode] = useState<TranscriptInputMode>(DEFAULT_MODE);
   const [title, setTitle] = useState<string>("");
   const [recordedAt, setRecordedAt] = useState<string>(() => getDefaultRecordedAt());
-  const [language, setLanguage] = useState<string>("");
-  const [summary, setSummary] = useState<string>("");
   const [metadataJson, setMetadataJson] = useState<string>("");
+  const [persona, setPersona] =
+    useState<NonNullable<CreateTranscriptRequest["persona"]>>("ARCHITECT");
   const [manualContent, setManualContent] = useState<string>("");
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [selectedContextIds, setSelectedContextIds] = useState<string[]>([]);
@@ -101,9 +105,8 @@ const SessionTranscriptDialog: React.FC<SessionTranscriptDialogProps> = ({
     setMode(DEFAULT_MODE);
     setTitle("");
     setRecordedAt(getDefaultRecordedAt());
-    setLanguage("");
-    setSummary("");
     setMetadataJson("");
+    setPersona("ARCHITECT");
     setManualContent("");
     setSelectedFiles([]);
     setSelectedContextIds([]);
@@ -141,41 +144,21 @@ const SessionTranscriptDialog: React.FC<SessionTranscriptDialogProps> = ({
       return;
     }
 
-    const trimmedSummary = summary.trim();
-    const trimmedLanguage = language.trim();
-
-    let parsedMetadata: InputJsonValue | undefined;
+    let metadataPayload: InputJsonValue | undefined;
     if (metadataJson.trim()) {
       try {
-        parsedMetadata = JSON.parse(metadataJson) as InputJsonValue;
+        metadataPayload = JSON.parse(metadataJson) as InputJsonValue;
       } catch (parseError) {
         console.error(parseError);
-        setErrorMessage("Metadata must be valid JSON.");
+        setErrorMessage(t("sessionTranscriptDialog.messages.metadataError"));
         return;
-      }
-    }
-
-    const extraMetadata: Record<string, InputJsonValue> = {};
-    if (trimmedSummary) {
-      extraMetadata.summary = trimmedSummary;
-    }
-    if (trimmedLanguage) {
-      extraMetadata.language = trimmedLanguage;
-    }
-
-    let metadataPayload: InputJsonValue | undefined = parsedMetadata;
-    if (Object.keys(extraMetadata).length > 0) {
-      if (metadataPayload === undefined) {
-        metadataPayload = extraMetadata;
-      } else if (isJsonObject(metadataPayload)) {
-        metadataPayload = { ...metadataPayload, ...extraMetadata };
       }
     }
 
     try {
       if (mode === "upload") {
         if (selectedFiles.length === 0) {
-          setErrorMessage("Please select at least one PDF or DOCX file to upload.");
+          setErrorMessage(t("sessionTranscriptDialog.messages.selectFileError"));
           return;
         }
 
@@ -183,7 +166,7 @@ const SessionTranscriptDialog: React.FC<SessionTranscriptDialogProps> = ({
           (file) => !ACCEPTED_MIME_TYPES.includes(file.type),
         );
         if (unsupported.length > 0) {
-          setErrorMessage("Only PDF and DOCX files are supported.");
+          setErrorMessage(t("sessionTranscriptDialog.messages.unsupportedError"));
           return;
         }
 
@@ -193,25 +176,24 @@ const SessionTranscriptDialog: React.FC<SessionTranscriptDialogProps> = ({
           title: title.trim() || undefined,
           recordedAt: recordedAt || undefined,
           metadataJson: metadataJson.trim() || undefined,
-          language: language.trim() || undefined,
-          summary: summary.trim() || undefined,
+          persona,
+          contextIds: selectedContextIds.length > 0 ? selectedContextIds : undefined,
         }).unwrap();
       } else {
         const content = manualContent.trim();
         if (!content) {
-          setErrorMessage("Please provide transcript content.");
+          setErrorMessage(t("sessionTranscriptDialog.messages.contentError"));
           return;
         }
 
-        const requestBody: CreateTranscriptRequest & {
-          contextIds?: string[];
-        } = {
+        const requestBody: CreateTranscriptRequest = {
           content,
           title: title.trim() || undefined,
           recordedAt: recordedAt ? new Date(recordedAt).toISOString() : undefined,
-          metadata: metadataPayload,
+          metadata: metadataPayload || null,
           source: "MANUAL",
           contextIds: selectedContextIds.length > 0 ? selectedContextIds : undefined,
+          persona,
         };
 
         await createTranscript({
@@ -222,7 +204,7 @@ const SessionTranscriptDialog: React.FC<SessionTranscriptDialogProps> = ({
 
       dispatch(
         setToastMessage({
-          message: "Transcript created successfully.",
+          message: t("sessionTranscriptDialog.messages.success"),
           severity: "success",
         }),
       );
@@ -236,7 +218,14 @@ const SessionTranscriptDialog: React.FC<SessionTranscriptDialogProps> = ({
         (error as { data?: { message?: string }; message?: string })?.data?.message ??
         (error as { message?: string }).message ??
         fallbackMessage;
+
       setErrorMessage(derivedMessage);
+      dispatch(
+        setToastMessage({
+          message: derivedMessage,
+          severity: "error",
+        }),
+      );
     }
   };
 
@@ -249,12 +238,14 @@ const SessionTranscriptDialog: React.FC<SessionTranscriptDialogProps> = ({
       aria-labelledby="session-transcript-dialog-title"
     >
       <form onSubmit={handleSubmit}>
-        <DialogTitle id="session-transcript-dialog-title">Add transcript</DialogTitle>
+        <DialogTitle id="session-transcript-dialog-title">
+          {t("sessionTranscriptDialog.title")}
+        </DialogTitle>
         <DialogContent>
           <Stack spacing={3} sx={{ mt: 1 }}>
             <Box>
               <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                Select input method
+                {t("sessionTranscriptDialog.modeLabel")}
               </Typography>
               <RadioGroup row value={mode} onChange={handleModeChange}>
                 <FormControlLabel
@@ -263,7 +254,7 @@ const SessionTranscriptDialog: React.FC<SessionTranscriptDialogProps> = ({
                   label={
                     <Stack direction="row" spacing={1} alignItems="center">
                       <UploadFileIcon fontSize="small" />
-                      <Typography>Upload files (PDF / DOCX)</Typography>
+                      <Typography>{t("sessionTranscriptDialog.uploadLabel")}</Typography>
                     </Stack>
                   }
                 />
@@ -273,43 +264,91 @@ const SessionTranscriptDialog: React.FC<SessionTranscriptDialogProps> = ({
                   label={
                     <Stack direction="row" spacing={1} alignItems="center">
                       <ArticleIcon fontSize="small" />
-                      <Typography>Paste transcript text</Typography>
+                      <Typography>{t("sessionTranscriptDialog.manualLabel")}</Typography>
                     </Stack>
                   }
                 />
               </RadioGroup>
             </Box>
 
+            <Divider />
+
+            <Box>
+              <FormControl fullWidth>
+                <InputLabel id="persona-select-label">
+                  {t("sessionTranscriptDialog.personaLabel")}
+                </InputLabel>
+                <Select
+                  labelId="persona-select-label"
+                  id="persona-select"
+                  value={persona}
+                  label={t("sessionTranscriptDialog.personaLabel")}
+                  onChange={(e) =>
+                    setPersona(
+                      e.target.value as "SECRETARY" | "ARCHITECT" | "PRODUCT_MANAGER" | "DEVELOPER",
+                    )
+                  }
+                >
+                  <MenuItem value="SECRETARY">
+                    <Box>
+                      <Typography variant="body1">
+                        {t("sessionTranscriptDialog.personas.SECRETARY.name")}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {t("sessionTranscriptDialog.personas.SECRETARY.description")}
+                      </Typography>
+                    </Box>
+                  </MenuItem>
+                  <MenuItem value="ARCHITECT">
+                    <Box>
+                      <Typography variant="body1">
+                        {t("sessionTranscriptDialog.personas.ARCHITECT.name")}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {t("sessionTranscriptDialog.personas.ARCHITECT.description")}
+                      </Typography>
+                    </Box>
+                  </MenuItem>
+                  <MenuItem value="PRODUCT_MANAGER">
+                    <Box>
+                      <Typography variant="body1">
+                        {t("sessionTranscriptDialog.personas.PRODUCT_MANAGER.name")}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {t("sessionTranscriptDialog.personas.PRODUCT_MANAGER.description")}
+                      </Typography>
+                    </Box>
+                  </MenuItem>
+                  <MenuItem value="DEVELOPER">
+                    <Box>
+                      <Typography variant="body1">
+                        {t("sessionTranscriptDialog.personas.DEVELOPER.name")}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {t("sessionTranscriptDialog.personas.DEVELOPER.description")}
+                      </Typography>
+                    </Box>
+                  </MenuItem>
+                </Select>
+              </FormControl>
+            </Box>
+
             <Stack spacing={2}>
               <TextField
-                label="Title"
+                label={t("sessionTranscriptDialog.fields.title")}
                 value={title}
                 onChange={(event) => setTitle(event.target.value)}
                 fullWidth
               />
               <TextField
-                label="Recorded at"
+                label={t("sessionTranscriptDialog.fields.recordedAt")}
                 type="datetime-local"
                 value={recordedAt}
                 onChange={(event) => setRecordedAt(event.target.value)}
                 InputLabelProps={{ shrink: true }}
               />
-              <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
-                <TextField
-                  label="Language"
-                  value={language}
-                  onChange={(event) => setLanguage(event.target.value)}
-                  fullWidth
-                />
-                <TextField
-                  label="Summary"
-                  value={summary}
-                  onChange={(event) => setSummary(event.target.value)}
-                  fullWidth
-                />
-              </Stack>
               <TextField
-                label="Metadata (JSON)"
+                label={t("sessionTranscriptDialog.fields.metadata")}
                 value={metadataJson}
                 onChange={(event) => setMetadataJson(event.target.value)}
                 placeholder='{"key":"value"}'
@@ -333,11 +372,11 @@ const SessionTranscriptDialog: React.FC<SessionTranscriptDialogProps> = ({
                 renderInput={(params) => (
                   <TextField
                     {...params}
-                    label="Related contexts"
+                    label={t("sessionTranscriptDialog.fields.contexts")}
                     placeholder={
                       contextOptions.length > 0
-                        ? "Select contexts to enrich analysis"
-                        : "No contexts available"
+                        ? t("sessionTranscriptDialog.fields.contextsPlaceholder")
+                        : t("sessionTranscriptDialog.fields.noContexts")
                     }
                   />
                 )}
@@ -352,7 +391,7 @@ const SessionTranscriptDialog: React.FC<SessionTranscriptDialogProps> = ({
             {mode === "upload" ? (
               <Stack spacing={2}>
                 <Button variant="outlined" component="label" startIcon={<UploadFileIcon />}>
-                  Select files
+                  {t("sessionTranscriptDialog.buttons.selectFiles")}
                   <input
                     hidden
                     type="file"
@@ -364,7 +403,7 @@ const SessionTranscriptDialog: React.FC<SessionTranscriptDialogProps> = ({
                 <Stack spacing={0.5}>
                   {selectedFiles.length === 0 ? (
                     <Typography variant="body2" color="text.secondary">
-                      No files selected yet.
+                      {t("sessionTranscriptDialog.messages.noFiles")}
                     </Typography>
                   ) : (
                     selectedFiles.map((file) => (
@@ -374,18 +413,18 @@ const SessionTranscriptDialog: React.FC<SessionTranscriptDialogProps> = ({
                     ))
                   )}
                   <Typography variant="caption" color="text.secondary">
-                    Accepted formats: PDF, DOCX
+                    {t("sessionTranscriptDialog.messages.formats")}
                   </Typography>
                 </Stack>
               </Stack>
             ) : (
               <TextField
-                label="Transcript content"
+                label={t("sessionTranscriptDialog.fields.content")}
                 value={manualContent}
                 onChange={(event) => setManualContent(event.target.value)}
                 multiline
                 minRows={8}
-                placeholder="Paste or type transcript text here"
+                placeholder={t("sessionTranscriptDialog.fields.contentPlaceholder")}
                 fullWidth
               />
             )}
@@ -395,13 +434,28 @@ const SessionTranscriptDialog: React.FC<SessionTranscriptDialogProps> = ({
         </DialogContent>
         <DialogActions>
           <Button onClick={handleClose} disabled={isSubmitting}>
-            Cancel
+            {t("sessionTranscriptDialog.buttons.cancel")}
           </Button>
           <Button type="submit" variant="contained" disabled={isSubmitting}>
-            {isSubmitting ? "Saving..." : "Save transcript"}
+            {isSubmitting
+              ? t("sessionTranscriptDialog.buttons.saving")
+              : t("sessionTranscriptDialog.buttons.save")}
           </Button>
         </DialogActions>
       </form>
+      <Dialog open={isSubmitting} disableEscapeKeyDown maxWidth="xs" fullWidth>
+        <DialogContent
+          sx={{ display: "flex", flexDirection: "column", alignItems: "center", py: 4 }}
+        >
+          <CircularProgress size={60} thickness={4} sx={{ mb: 3 }} />
+          <Typography variant="h6" gutterBottom align="center">
+            {t("sessionTranscriptDialog.messages.processing")}
+          </Typography>
+          <Typography variant="body2" color="text.secondary" align="center">
+            {t("sessionTranscriptDialog.messages.processingWait")}
+          </Typography>
+        </DialogContent>
+      </Dialog>
     </Dialog>
   );
 };

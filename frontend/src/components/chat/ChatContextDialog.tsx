@@ -11,6 +11,7 @@ import {
   FormControlLabel,
   Checkbox,
   Box,
+  TextField,
 } from "@mui/material";
 import { Link as RouterLink } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -19,8 +20,11 @@ import { useListContextsQuery } from "../../store/apis/contextApi";
 interface ChatContextDialogProps {
   open: boolean;
   onClose: () => void;
-  onStartChat: (selectedContextIds: string[]) => void;
+  onStartChat: (selectedContextIds: string[], title?: string) => void;
   isLoading?: boolean;
+  mode?: "create" | "edit";
+  initialTitle?: string;
+  initialSelectedContextIds?: string[];
 }
 
 const ChatContextDialog: React.FC<ChatContextDialogProps> = ({
@@ -28,18 +32,23 @@ const ChatContextDialog: React.FC<ChatContextDialogProps> = ({
   onClose,
   onStartChat,
   isLoading = false,
+  mode = "create",
+  initialTitle = "",
+  initialSelectedContextIds = [],
 }) => {
   const { t } = useTranslation();
-  const [selectedContextIds, setSelectedContextIds] = useState<string[]>([]);
+  const [title, setTitle] = useState(initialTitle);
+  const [selectedContextIds, setSelectedContextIds] = useState<string[]>(initialSelectedContextIds);
   const { data: contextResponse } = useListContextsQuery();
   const contexts = contextResponse?.data?.contexts ?? [];
 
   // Reset selection when dialog opens
   useEffect(() => {
     if (open) {
-      setSelectedContextIds([]);
+      setTitle(initialTitle);
+      setSelectedContextIds(initialSelectedContextIds);
     }
-  }, [open]);
+  }, [open, initialTitle, initialSelectedContextIds]);
 
   const handleToggleContext = (id: string) => {
     const newSelection = selectedContextIds.includes(id)
@@ -50,8 +59,20 @@ const ChatContextDialog: React.FC<ChatContextDialogProps> = ({
 
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
-      <DialogTitle>{t("chat.dialog.title")}</DialogTitle>
+      <DialogTitle>
+        {mode === "create" ? t("chat.dialog.title") : t("chat.sidebar.edit")}
+      </DialogTitle>
       <DialogContent>
+        <Box sx={{ mt: 1, mb: 3 }}>
+          <TextField
+            fullWidth
+            label={t("chat.fields.title") || "Title"}
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder={t("chat.sidebar.newChat") || "New Chat"}
+            variant="outlined"
+          />
+        </Box>
         <Typography variant="body2" color="text.secondary" paragraph>
           {t("chat.dialog.description")}
         </Typography>
@@ -95,11 +116,11 @@ const ChatContextDialog: React.FC<ChatContextDialogProps> = ({
         <Button onClick={onClose}>{t("chat.buttons.cancel")}</Button>
         {contexts.length > 0 && (
           <Button
-            onClick={() => onStartChat(selectedContextIds)}
+            onClick={() => onStartChat(selectedContextIds, title)}
             variant="contained"
             disabled={isLoading}
           >
-            {t("chat.buttons.start")}
+            {mode === "create" ? t("chat.buttons.start") : t("common.buttons.save") || "Save"}
           </Button>
         )}
       </DialogActions>

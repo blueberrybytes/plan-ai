@@ -1,4 +1,16 @@
-import { Controller, Get, Post, Route, Tags, Body, Path, Security, Request } from "tsoa";
+import {
+  Controller,
+  Get,
+  Post,
+  Put,
+  Delete,
+  Route,
+  Tags,
+  Body,
+  Path,
+  Security,
+  Request,
+} from "tsoa";
 import { ChatRole } from "@prisma/client";
 import prisma from "../prisma/prismaClient";
 import { logger } from "../utils/logger";
@@ -126,6 +138,63 @@ export class ChatController extends Controller {
       },
     });
     return thread;
+  }
+
+  @Put("threads/{threadId}")
+  public async updateThread(
+    @Path() threadId: string,
+    @Body() body: { title?: string; contextIds?: string[] },
+    @Request() request: AuthenticatedRequest,
+  ): Promise<ChatThread> {
+    if (!request.user) {
+      this.setStatus(401);
+      throw new Error("Unauthorized");
+    }
+
+    const { uid } = request.user;
+    const user = await prisma.user.findUnique({
+      where: { firebaseUid: uid },
+    });
+
+    if (!user) {
+      this.setStatus(404);
+      throw new Error("User not found");
+    }
+
+    const thread = await prisma.chatThread.update({
+      where: { id: threadId, userId: user.id },
+      data: {
+        title: body.title,
+        contextIds: body.contextIds,
+      },
+    });
+    return thread;
+  }
+
+  @Delete("threads/{threadId}")
+  public async deleteThread(
+    @Path() threadId: string,
+    @Request() request: AuthenticatedRequest,
+  ): Promise<{ success: boolean }> {
+    if (!request.user) {
+      this.setStatus(401);
+      throw new Error("Unauthorized");
+    }
+
+    const { uid } = request.user;
+    const user = await prisma.user.findUnique({
+      where: { firebaseUid: uid },
+    });
+
+    if (!user) {
+      this.setStatus(404);
+      throw new Error("User not found");
+    }
+
+    await prisma.chatThread.deleteMany({
+      where: { id: threadId, userId: user.id },
+    });
+    return { success: true };
   }
 
   @Post("threads/{threadId}/messages")

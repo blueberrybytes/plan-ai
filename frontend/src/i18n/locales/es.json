@@ -162,7 +162,10 @@
     "heading": "Chat con Contexto",
     "sidebar": {
       "newChat": "Nuevo Chat",
-      "emptyList": "Aún no hay chats"
+      "emptyList": "Aún no hay chats",
+      "edit": "Editar",
+      "delete": "Eliminar",
+      "confirmDelete": "¿Estás seguro de que deseas eliminar este chat? Esta acción no se puede deshacer."
     },
     "placeholders": {
       "typeMessage": "Escribe un mensaje...",
@@ -173,7 +176,8 @@
     "buttons": {
       "send": "Enviar",
       "start": "Iniciar Chat",
-      "cancel": "Cancelar"
+      "cancel": "Cancelar",
+      "delete": "Eliminar"
     },
     "dialog": {
       "title": "Seleccionar Contextos",
@@ -185,6 +189,16 @@
     "window": {
       "viewFullScreen": "Ver en pantalla completa",
       "exportChat": "Exportar historial de chat"
+    },
+    "messages": {
+      "chatCreated": "Chat creado con éxito",
+      "chatUpdated": "Chat actualizado con éxito",
+      "chatDeleted": "Chat eliminado con éxito",
+      "saveError": "Error al guardar el chat",
+      "deleteError": "Error al eliminar el chat"
+    },
+    "fields": {
+      "title": "Título del Chat"
     }
   },
   "contexts": {
@@ -519,12 +533,69 @@
   "common": {
     "buttons": {
       "viewAll": "Ver todas",
-      "viewBoard": "Ver tablero"
+      "viewBoard": "Ver tablero",
+      "save": "Guardar",
+      "cancel": "Cancelar"
     },
     "labels": {
       "summary": "Resumen",
       "recorded": "Grabado",
       "updated": "Actualizado {{timestamp}}"
+    }
+  },
+  "sessionTranscriptDialog": {
+    "title": "Añadir transcripción",
+    "modeLabel": "Seleccionar método de entrada",
+    "uploadLabel": "Subir archivos (PDF / DOCX)",
+    "manualLabel": "Pegar texto de transcripción",
+    "personaLabel": "Persona de Análisis con IA",
+    "personaPlaceholder": "Seleccionar persona",
+    "personas": {
+      "SECRETARY": {
+        "name": "Secretario",
+        "description": "Precisión extrema. Solo extrae tareas mencionadas explícitamente. Sin generación técnica."
+      },
+      "ARCHITECT": {
+        "name": "Arquitecto",
+        "description": "Descomposición técnica. Divide objetivos de alto nivel en tareas técnicas detalladas usando el contexto del código."
+      },
+      "PRODUCT_MANAGER": {
+        "name": "Gerente de Producto",
+        "description": "Lente de stakeholders. Convierte objetivos en historias de usuario y conjuntos de características."
+      },
+      "DEVELOPER": {
+        "name": "Desarrollador",
+        "description": "Enfoque en implementación. Crea tareas específicas de codificación, pruebas y refactorización."
+      }
+    },
+    "fields": {
+      "title": "Título",
+      "recordedAt": "Grabado el",
+      "language": "Idioma",
+      "summary": "Resumen",
+      "metadata": "Metadatos (JSON)",
+      "contexts": "Contextos relacionados",
+      "contextsPlaceholder": "Selecciona contextos para enriquecer el análisis",
+      "noContexts": "No hay contextos disponibles",
+      "content": "Contenido de la transcripción",
+      "contentPlaceholder": "Pega o escribe el texto de la transcripción aquí"
+    },
+    "buttons": {
+      "selectFiles": "Seleccionar archivos",
+      "cancel": "Cancelar",
+      "save": "Guardar transcripción",
+      "saving": "Guardando..."
+    },
+    "messages": {
+      "noFiles": "No hay archivos seleccionados aún.",
+      "formats": "Formatos aceptados: PDF, DOCX",
+      "selectFileError": "Por favor, selecciona al menos un archivo PDF o DOCX para subir.",
+      "unsupportedError": "Solo se admiten archivos PDF y DOCX.",
+      "contentError": "Por favor, proporciona el contenido de la transcripción.",
+      "metadataError": "Los metadatos deben ser un JSON válido.",
+      "success": "Transcripción creada con éxito.",
+      "processing": "Analizando transcripción, por favor espera...",
+      "processingWait": "Estamos extrayendo el texto y analizando tu transcripción con IA. Esto puede tardar un momento para archivos grandes."
     }
   }
 }

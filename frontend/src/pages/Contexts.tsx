@@ -180,11 +180,12 @@ const Contexts: React.FC = () => {
       "text/plain",
       "text/csv",
       "application/json",
+      "application/xml",
     ],
     [],
   );
 
-  const supportedContextLabels = "PDF, DOCX, TXT, CSV, JSON";
+  const supportedContextLabels = "PDF, DOCX, TXT, CSV, JSON, XML";
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     if (!contextId || !event.target.files || event.target.files.length === 0) {

@@ -26,15 +26,17 @@ export const chatApi = createApi({
   endpoints: (builder) => ({
     listThreads: builder.query<ChatThread[], void>({
       query: () => "/api/chat/threads",
-      providesTags: ["ChatThread"],
+      providesTags: (result) =>
+        result
+          ? [
+              ...result.map(({ id }) => ({ type: "ChatThread" as const, id })),
+              { type: "ChatThread", id: "LIST" },
+            ]
+          : [{ type: "ChatThread", id: "LIST" }],
     }),
     getThread: builder.query<ChatThread & { messages: ChatMessage[] }, string>({
       query: (threadId: string) => `/api/chat/threads/${threadId}`,
-      providesTags: (
-        _result: (ChatThread & { messages: ChatMessage[] }) | undefined,
-        _error: unknown,
-        id: string,
-      ) => [{ type: "ChatThread", id }],
+      providesTags: (result, error, id) => [{ type: "ChatThread", id }],
     }),
     createThread: builder.mutation<ChatThread, { title?: string; contextIds: string[] }>({
       query: (body: { title?: string; contextIds: string[] }) => ({
@@ -42,7 +44,7 @@ export const chatApi = createApi({
         method: "POST",
         body,
       }),
-      invalidatesTags: ["ChatThread"],
+      invalidatesTags: [{ type: "ChatThread", id: "LIST" }],
     }),
     sendMessage: builder.mutation<
       { message: ChatMessage; response: ChatMessage },
@@ -53,11 +55,31 @@ export const chatApi = createApi({
         method: "POST",
         body: { content },
       }),
-      invalidatesTags: (
-        _result: { message: ChatMessage; response: ChatMessage } | undefined,
-        _error: unknown,
-        { threadId }: { threadId: string },
-      ) => [{ type: "ChatThread", id: threadId }],
+      invalidatesTags: (result, error, { threadId }) => [{ type: "ChatThread", id: threadId }],
+    }),
+    updateThread: builder.mutation<
+      ChatThread,
+      { threadId: string; title?: string; contextIds?: string[] }
+    >({
+      query: ({ threadId, ...body }) => ({
+        url: `/api/chat/threads/${threadId}`,
+        method: "PUT",
+        body,
+      }),
+      invalidatesTags: (result, error, { threadId }) => [
+        { type: "ChatThread", id: "LIST" },
+        { type: "ChatThread", id: threadId },
+      ],
+    }),
+    deleteThread: builder.mutation<{ success: boolean }, string>({
+      query: (threadId) => ({
+        url: `/api/chat/threads/${threadId}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: (result, error, threadId) => [
+        { type: "ChatThread", id: "LIST" },
+        { type: "ChatThread", id: threadId },
+      ],
     }),
   }),
 });
@@ -67,4 +89,6 @@ export const {
   useGetThreadQuery,
   useCreateThreadMutation,
   useSendMessageMutation,
+  useUpdateThreadMutation,
+  useDeleteThreadMutation,
 } = chatApi;

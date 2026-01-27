@@ -162,7 +162,10 @@
     "heading": "Chat with Context",
     "sidebar": {
       "newChat": "New Chat",
-      "emptyList": "No chats yet"
+      "emptyList": "No chats yet",
+      "edit": "Edit",
+      "delete": "Delete",
+      "confirmDelete": "Are you sure you want to delete this chat? This action cannot be undone."
     },
     "placeholders": {
       "typeMessage": "Type a message...",
@@ -173,7 +176,8 @@
     "buttons": {
       "send": "Send",
       "start": "Start Chat",
-      "cancel": "Cancel"
+      "cancel": "Cancel",
+      "delete": "Delete"
     },
     "dialog": {
       "title": "Select Contexts",
@@ -185,6 +189,16 @@
     "window": {
       "viewFullScreen": "View full screen",
       "exportChat": "Export chat history"
+    },
+    "messages": {
+      "chatCreated": "Chat created successfully",
+      "chatUpdated": "Chat updated successfully",
+      "chatDeleted": "Chat deleted successfully",
+      "saveError": "Failed to save chat",
+      "deleteError": "Failed to delete chat"
+    },
+    "fields": {
+      "title": "Chat Title"
     }
   },
   "contexts": {
@@ -519,12 +533,69 @@
   "common": {
     "buttons": {
       "viewAll": "View all",
-      "viewBoard": "View board"
+      "viewBoard": "View board",
+      "save": "Save",
+      "cancel": "Cancel"
     },
     "labels": {
       "summary": "Summary",
       "recorded": "Recorded",
       "updated": "Updated {{timestamp}}"
+    }
+  },
+  "sessionTranscriptDialog": {
+    "title": "Add transcript",
+    "modeLabel": "Select input method",
+    "uploadLabel": "Upload files (PDF / DOCX)",
+    "manualLabel": "Paste transcript text",
+    "personaLabel": "AI Analysis Persona",
+    "personaPlaceholder": "Select persona",
+    "personas": {
+      "SECRETARY": {
+        "name": "Secretary",
+        "description": "Extreme precision. Only extract tasks explicitly mentioned. No technical generation."
+      },
+      "ARCHITECT": {
+        "name": "Architect",
+        "description": "Technical decomposition. Breakdown high-level goals into detailed technical tasks using codebase context."
+      },
+      "PRODUCT_MANAGER": {
+        "name": "Product Manager",
+        "description": "Stakeholder lens. Turn goals into user stories, roadmap items, and feature sets."
+      },
+      "DEVELOPER": {
+        "name": "Developer",
+        "description": "Implementation focused. Create specific coding, testing, and refactoring tasks."
+      }
+    },
+    "fields": {
+      "title": "Title",
+      "recordedAt": "Recorded at",
+      "language": "Language",
+      "summary": "Summary",
+      "metadata": "Metadata (JSON)",
+      "contexts": "Related contexts",
+      "contextsPlaceholder": "Select contexts to enrich analysis",
+      "noContexts": "No contexts available",
+      "content": "Transcript content",
+      "contentPlaceholder": "Paste or type transcript text here"
+    },
+    "buttons": {
+      "selectFiles": "Select files",
+      "cancel": "Cancel",
+      "save": "Save transcript",
+      "saving": "Saving..."
+    },
+    "messages": {
+      "noFiles": "No files selected yet.",
+      "formats": "Accepted formats: PDF, DOCX",
+      "selectFileError": "Please select at least one PDF or DOCX file to upload.",
+      "unsupportedError": "Only PDF and DOCX files are supported.",
+      "contentError": "Please provide transcript content.",
+      "metadataError": "Metadata must be valid JSON.",
+      "success": "Transcript created successfully.",
+      "processing": "Analyzing transcript, please wait...",
+      "processingWait": "We are extracting text and analyzing your transcript with AI. This may take a moment for larger files."
     }
   }
 }

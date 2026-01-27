@@ -69,6 +69,7 @@ export interface CreateTranscriptInput {
   metadata?: Prisma.InputJsonValue | null;
   contextPrompt?: string | null;
   contextIds?: string[];
+  persona?: "SECRETARY" | "ARCHITECT" | "PRODUCT_MANAGER" | "DEVELOPER";
 }
 
 export interface CreateTranscriptResult {
@@ -82,7 +83,7 @@ export class SessionTranscriptService {
     apiKey: EnvUtils.get("OPENAI_API_KEY"),
   });
 
-  private readonly modelName = "gpt-5.2-2025-12-11";
+  private readonly modelName = "gpt-o5";
 
   public async createTranscriptForSession(
     input: CreateTranscriptInput,
@@ -91,6 +92,7 @@ export class SessionTranscriptService {
       input.content,
       input.contextPrompt ?? null,
       input.contextIds,
+      input.persona ?? "ARCHITECT",
     );
 
     const result = await prisma.$transaction(async (tx) => {
@@ -164,6 +166,7 @@ export class SessionTranscriptService {
     content: string,
     contextPrompt: string | null,
     contextIds: string[] | undefined,
+    persona: "SECRETARY" | "ARCHITECT" | "PRODUCT_MANAGER" | "DEVELOPER",
   ): Promise<TranscriptAnalysis> {
     const model = this.openAI(this.modelName);
     const todayIso = new Date().toISOString().split("T")[0];
@@ -185,9 +188,45 @@ export class SessionTranscriptService {
 
     const contextSection =
       (contextPrompt ? `Relevant context:\n${contextPrompt}\n\n` : "") + dynamicContext;
-    const prompt = `Today is ${todayIso}. You are an AI assistant that reads call transcripts and extracts useful metadata. Analyse the following transcript. Detect the predominant human language of the text (use lowercase ISO language name, e.g. "english", "spanish"). Provide a succinct summary (max 80 words). Identify actionable tasks mentioned and return them with clear titles, optional descriptions, optional status (${TASK_STATUS_LIST}) and priority (${TASK_PRIORITY_LIST}). Do NOT guess due dates. Only populate dueDate if explicitly mentioned in the text.
 
-${contextSection}Transcript:
+    let personaInstructions = "";
+    switch (persona) {
+      case "SECRETARY":
+        personaInstructions = `You are a meticulous Secretary.
+Focus on extreme precision. Only extract tasks and requirements explicitly mentioned in the transcript.
+Do NOT guess technical details or generate new tasks. If the user hasn't explicitly said it, don't include it.`;
+        break;
+      case "ARCHITECT":
+        personaInstructions = `You are an AI Senior Architect.
+Use the provided codebase context to DECOMPOSE high-level goals into a detailed technical execution plan.
+Create specific tasks for different components, files, or database changes needed based on the actual code found in the context.`;
+        break;
+      case "PRODUCT_MANAGER":
+        personaInstructions = `You are a Product Manager.
+Focus on user value, feature scope, and roadmap. Turn goals into actionable user stories and milestones.
+Identify potential risks or dependencies from a product perspective.`;
+        break;
+      case "DEVELOPER":
+        personaInstructions = `You are a Senior Full-Stack Developer.
+Focus on implementation details, refactoring opportunities, and coding best practices.
+Break down goals into specific coding tasks, PRs, and technical improvements.`;
+        break;
+    }
+
+    const prompt = `Today is ${todayIso}. ${personaInstructions}
+
+Analyze the following transcript/request and the provided codebase context.
+
+1. Detect the predominant human language (ISO name, e.g. "english").
+2. Provide a succinct summary (max 80 words).
+3. Extract or GENERATE actionable tasks:
+   - Each task must have a clear title, technical description, status (${TASK_STATUS_LIST}), and priority (${TASK_PRIORITY_LIST}).
+
+Do NOT guess due dates. Only populate dueDate if explicitly mentioned.
+
+${contextSection}
+
+Transcript/Request:
 ${content}`;
 
     try {
