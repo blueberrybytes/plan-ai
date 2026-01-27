@@ -174,7 +174,7 @@ export class SessionTranscriptService {
       try {
         // Use the first 500 characters of the transcript as the query
         const query = content.slice(0, 500);
-        const chunks = await queryContexts(contextIds, query, 30);
+        const chunks = await queryContexts(contextIds, query, 100);
         if (chunks.length > 0) {
           dynamicContext = `\nRetrieved context from knowledge base:\n${chunks.join("\n\n")}\n`;
         }
