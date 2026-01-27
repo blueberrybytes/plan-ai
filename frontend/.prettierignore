@@ -2,3 +2,7 @@ build
 node_modules
 public
 prisma/schema.prisma
+
+**/routes.ts
+**/swagger.json
+**/api.d.ts
