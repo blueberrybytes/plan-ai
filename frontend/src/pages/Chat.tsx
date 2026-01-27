@@ -1,11 +1,11 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Box } from "@mui/material";
 import { useTranslation } from "react-i18next";
 import {
   useListThreadsQuery,
   useGetThreadQuery,
   useCreateThreadMutation,
-  useSendMessageMutation,
 } from "../store/apis/chatApi";
 import SidebarLayout from "../components/layout/SidebarLayout";
 import ChatSidebar from "../components/chat/ChatSidebar";
@@ -14,8 +14,29 @@ import ChatContextDialog from "../components/chat/ChatContextDialog";
 
 const Chat: React.FC = () => {
   const { t } = useTranslation();
-  const [selectedThreadId, setSelectedThreadId] = useState<string | null>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const threadIdFromUrl = searchParams.get("chat");
+  const [selectedThreadId, setSelectedThreadId] = useState<string | null>(threadIdFromUrl);
   const [isContextDialogOpen, setIsContextDialogOpen] = useState(false);
+
+  // Sync state to URL when selectedThreadId changes
+  const handleSelectThread = (id: string | null) => {
+    setSelectedThreadId(id);
+    if (id) {
+      setSearchParams({ chat: id });
+    } else {
+      const newParams = new URLSearchParams(searchParams);
+      newParams.delete("chat");
+      setSearchParams(newParams);
+    }
+  };
+
+  // Sync URL to state when URL changes (e.g. back button)
+  useEffect(() => {
+    if (threadIdFromUrl !== selectedThreadId) {
+      setSelectedThreadId(threadIdFromUrl);
+    }
+  }, [threadIdFromUrl, selectedThreadId]);
 
   // Queries
   const { data: threads, isLoading: isLoadingThreads } = useListThreadsQuery();
@@ -25,7 +46,8 @@ const Chat: React.FC = () => {
 
   // Mutations
   const [createThread, { isLoading: isCreating }] = useCreateThreadMutation();
-  const [sendMessage, { isLoading: isSending }] = useSendMessageMutation();
+  // const [sendMessage, { isLoading: isSending }] = useSendMessageMutation();
+  const isSending = false; // Placeholder for UI prop, though handleSend handles its own state now
 
   const handleNewChat = () => {
     setSelectedThreadId(null);
@@ -38,13 +60,14 @@ const Chat: React.FC = () => {
         title: t("chat.sidebar.newChat"),
         contextIds: selectedContextIds,
       }).unwrap();
-      setSelectedThreadId(newThread.id);
+      handleSelectThread(newThread.id);
       setIsContextDialogOpen(false);
     } catch (error) {
       console.error("Failed to create chat", error);
     }
   };
 
+  /*
   const handleSendMessage = async (content: string) => {
     if (!selectedThreadId) return;
     try {
@@ -54,6 +77,7 @@ const Chat: React.FC = () => {
       throw error;
     }
   };
+  */
 
   const activeThread = selectedThreadId
     ? (threads?.find((t) => t.id === selectedThreadId) ?? null)
@@ -76,7 +100,7 @@ const Chat: React.FC = () => {
         <ChatSidebar
           threads={threads ?? []}
           selectedThreadId={selectedThreadId}
-          onSelectThread={setSelectedThreadId}
+          onSelectThread={handleSelectThread}
           onNewChat={handleNewChat}
           isLoading={isLoadingThreads}
         />
@@ -85,7 +109,6 @@ const Chat: React.FC = () => {
           activeThread={activeThreadWithDetails}
           messages={messages}
           isSending={isSending}
-          onSendMessage={handleSendMessage}
           onNewChat={handleNewChat}
         />
 

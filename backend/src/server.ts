@@ -9,6 +9,7 @@ import path from "path";
 import EnvUtils from "./utils/EnvUtils";
 import { logger } from "./utils/logger";
 import { RegisterRoutes } from "./routes/routes";
+import chatRouter from "./routes/chatRouter";
 import { initializeContextVectorStore } from "./vector/contextFileVectorService";
 
 const app = express();
@@ -28,6 +29,9 @@ app.use((req, res, next) => {
 
 // Register TSOA routes (with role-based access control)
 RegisterRoutes(app);
+
+// Register manual routes
+app.use("/api/chat", chatRouter);
 
 // Add a catch-all route for debugging
 app.use((req, res, next) => {
