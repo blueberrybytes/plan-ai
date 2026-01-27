@@ -158,6 +158,35 @@
       "deleteAccount": "No se pudo eliminar tu cuenta. Inténtalo de nuevo."
     }
   },
+  "chat": {
+    "heading": "Chat con Contexto",
+    "sidebar": {
+      "newChat": "Nuevo Chat",
+      "emptyList": "Aún no hay chats"
+    },
+    "placeholders": {
+      "typeMessage": "Escribe un mensaje...",
+      "selectChat": "Selecciona un chat de la barra lateral o comienza uno nuevo",
+      "emptyStateTitle": "Comienza una nueva conversación",
+      "emptyStateSubtitle": "Chatea con tu código o documentación usando Plan AI."
+    },
+    "buttons": {
+      "send": "Enviar",
+      "start": "Iniciar Chat",
+      "cancel": "Cancelar"
+    },
+    "dialog": {
+      "title": "Seleccionar Contextos",
+      "description": "Elige qué contextos debe referenciar la IA para este chat.",
+      "placeholder": "Seleccionar contextos",
+      "noContexts": "Aún no has creado contextos. Los contextos permiten a la IA responder basándose en tus documentos.",
+      "createContext": "Crea tu primer Contexto"
+    },
+    "window": {
+      "viewFullScreen": "Ver en pantalla completa",
+      "exportChat": "Exportar historial de chat"
+    }
+  },
   "contexts": {
     "heading": "Contextos",
     "description": "Gestiona espacios de conocimiento que potencian tu planificación asistida por IA. Mantén todo organizado con archivos, metadatos y colores.",
@@ -446,6 +475,7 @@
   "sidebarLayout": {
     "nav": {
       "home": "Inicio",
+      "chat": "Chat",
       "sessions": "Sesiones",
       "contexts": "Contextos",
       "integrations": "Integraciones"

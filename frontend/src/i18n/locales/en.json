@@ -181,6 +181,10 @@
       "placeholder": "Select contexts",
       "noContexts": "You haven't created any contexts yet. Contexts allow the AI to answer based on your documents.",
       "createContext": "Create your first Context"
+    },
+    "window": {
+      "viewFullScreen": "View full screen",
+      "exportChat": "Export chat history"
     }
   },
   "contexts": {
