@@ -257,6 +257,7 @@ model ChatThread {
     userId     String
     title      String   @default("New Chat")
     contextIds String[] // IDs of Contexts active for this thread
+    englishLevel String? // Optional level of English for the assistant
     createdAt  DateTime @default(now())
     updatedAt  DateTime @updatedAt
 

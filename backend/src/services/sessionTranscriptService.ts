@@ -75,6 +75,7 @@ export interface CreateTranscriptInput {
   contextIds?: string[];
   persona?: "SECRETARY" | "ARCHITECT" | "PRODUCT_MANAGER" | "DEVELOPER";
   objective?: string | null;
+  englishLevel?: string;
 }
 
 export interface CreateTranscriptResult {
@@ -99,6 +100,7 @@ export class SessionTranscriptService {
       input.contextIds,
       input.persona ?? "ARCHITECT",
       input.objective ?? null,
+      input.englishLevel,
     );
 
     const result = await prisma.$transaction(async (tx) => {
@@ -174,6 +176,7 @@ export class SessionTranscriptService {
     contextIds: string[] | undefined,
     persona: "SECRETARY" | "ARCHITECT" | "PRODUCT_MANAGER" | "DEVELOPER",
     objective: string | null,
+    englishLevel?: string,
   ): Promise<TranscriptAnalysis> {
     const model = this.openAI(this.modelName);
     const todayIso = new Date().toISOString().split("T")[0];
@@ -224,6 +227,11 @@ Break down goals into specific coding tasks, PRs, and technical improvements.`;
       ? `\nPRIMARY OBJECTIVE / MAIN PROMPT:\n"${objective}"\n\nIMPORTANT: The user has provided the above objective. This is the MOST IMPORTANT instruction. Prioritize this objective over the transcript content. If the transcript implies 3 tasks but the objective says "create one task", you MUST follow the objective.`
       : "";
 
+    let englishLevelInstruction = "";
+    if (englishLevel) {
+      englishLevelInstruction = `\nIMPORTANT: Adjust the language complexity of the validation steps and descriptions to a "${englishLevel}" English level.`;
+    }
+
     const prompt = `Today is ${todayIso}. ${personaInstructions}
 
 Analyze the following transcript/request and the provided codebase context.
@@ -239,6 +247,7 @@ Analyze the following transcript/request and the provided codebase context.
 
 
 Do NOT guess due dates. Only populate dueDate if explicitly mentioned.
+${englishLevelInstruction}
 
 ${objectiveSection}
 

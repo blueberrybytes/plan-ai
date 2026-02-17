@@ -32,6 +32,7 @@ interface ChatThread {
   userId: string;
   title: string;
   contextIds: string[];
+  englishLevel?: string | null;
   createdAt: Date;
   updatedAt: Date;
   messages?: ChatMessage[];
@@ -40,6 +41,7 @@ interface ChatThread {
 interface CreateThreadRequest {
   title?: string;
   contextIds: string[];
+  englishLevel?: string;
 }
 
 interface SendMessageRequest {
@@ -135,6 +137,7 @@ export class ChatController extends Controller {
         userId: user.id,
         title: body.title || "New Chat",
         contextIds: body.contextIds,
+        englishLevel: body.englishLevel,
       },
     });
     return thread;
@@ -143,7 +146,7 @@ export class ChatController extends Controller {
   @Put("threads/{threadId}")
   public async updateThread(
     @Path() threadId: string,
-    @Body() body: { title?: string; contextIds?: string[] },
+    @Body() body: { title?: string; contextIds?: string[]; englishLevel?: string },
     @Request() request: AuthenticatedRequest,
   ): Promise<ChatThread> {
     if (!request.user) {
@@ -166,6 +169,7 @@ export class ChatController extends Controller {
       data: {
         title: body.title,
         contextIds: body.contextIds,
+        englishLevel: body.englishLevel,
       },
     });
     return thread;
@@ -248,10 +252,16 @@ export class ChatController extends Controller {
     }
 
     // 3. Call LLM using Vercel AI SDK
+    let englishLevelInstruction = "";
+    if (thread.englishLevel) {
+      englishLevelInstruction = `\nPlease adjust your language complexity to a "${thread.englishLevel}" English level.`;
+    }
+
     const systemPrompt = `You are a helpful AI coding assistant.
 You have access to the user's codebase context.
 Answer the user's question based on the provided context if applicable.
 If the context doesn't contain the answer, use your general knowledge but mention that you didn't find it in the context.
+${englishLevelInstruction}
 
 Context:
 ${contextText}

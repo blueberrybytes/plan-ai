@@ -14,6 +14,7 @@ export interface ChatThread {
   userId: string;
   title: string;
   contextIds: string[];
+  englishLevel?: string | null;
   createdAt: string;
   updatedAt: string;
   messages?: ChatMessage[];
@@ -38,7 +39,10 @@ export const chatApi = createApi({
       query: (threadId: string) => `/api/chat/threads/${threadId}`,
       providesTags: (result, error, id) => [{ type: "ChatThread", id }],
     }),
-    createThread: builder.mutation<ChatThread, { title?: string; contextIds: string[] }>({
+    createThread: builder.mutation<
+      ChatThread,
+      { title?: string; contextIds: string[]; englishLevel?: string }
+    >({
       query: (body) => ({
         url: "/api/chat/threads",
         method: "POST",
@@ -59,7 +63,7 @@ export const chatApi = createApi({
     }),
     updateThread: builder.mutation<
       ChatThread,
-      { threadId: string; title?: string; contextIds?: string[] }
+      { threadId: string; title?: string; contextIds?: string[]; englishLevel?: string }
     >({
       query: ({ threadId, ...body }) => ({
         url: `/api/chat/threads/${threadId}`,

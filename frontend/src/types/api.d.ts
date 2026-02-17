@@ -689,6 +689,7 @@ export interface components {
             contextIds?: string[];
             /** @enum {string} */
             persona?: "SECRETARY" | "ARCHITECT" | "PRODUCT_MANAGER" | "DEVELOPER";
+            englishLevel?: string;
         };
         /** @enum {string} */
         "_36_Enums.Role": "ADMIN" | "CLIENT";
@@ -829,6 +830,7 @@ export interface components {
             userId: string;
             title: string;
             contextIds: string[];
+            englishLevel?: string | null;
             /** Format: date-time */
             createdAt: string;
             /** Format: date-time */
@@ -838,6 +840,7 @@ export interface components {
         CreateThreadRequest: {
             title?: string;
             contextIds: string[];
+            englishLevel?: string;
         };
         SendMessageResponse: {
             message: components["schemas"]["ChatMessage"];
@@ -978,6 +981,7 @@ export interface operations {
                     persona?: string;
                     objective?: string;
                     contextIds?: string;
+                    englishLevel?: string;
                 };
             };
         };
@@ -1783,6 +1787,7 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": {
+                    englishLevel?: string;
                     contextIds?: string[];
                     title?: string;
                 };

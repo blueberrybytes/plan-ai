@@ -4,8 +4,10 @@ import type { BaseQueryFn, FetchArgs, FetchBaseQueryError } from "@reduxjs/toolk
 import { RootState } from "../store/store";
 import { selectUser } from "../store/slices/session/sessionSelector";
 import { TokenService } from "../services/tokenService";
+import { logout } from "../store/slices/session/sessionSlice";
 import { setToastMessage } from "../store/slices/app/appSlice";
 import { clientLogger } from "./clientLogger";
+import i18n from "../i18n";
 
 // Function to create a configured fetchBaseQuery with optional custom baseUrl
 const createBaseQuery = (customBaseUrl?: string) =>
@@ -215,6 +217,17 @@ const createBaseQueryWithReauth =
                     endpoint: typeof args === "string" ? args : args.url,
                   },
                 );
+
+                // Show session expired message and logout
+                api.dispatch(
+                  setToastMessage({
+                    message: i18n.t("login.errors.sessionExpired"),
+                    severity: "error",
+                    autoHideDuration: 6000,
+                  }),
+                );
+                api.dispatch(logout());
+
                 return result; // Return original error
               } else {
                 console.log("Final retry succeeded");
@@ -230,6 +243,16 @@ const createBaseQueryWithReauth =
             clientLogger.warn("Token refresh did not return a token after auth error", {
               endpoint: typeof args === "string" ? args : args.url,
             });
+
+            // Show session expired message and logout
+            api.dispatch(
+              setToastMessage({
+                message: i18n.t("login.errors.sessionExpired"),
+                severity: "error",
+                autoHideDuration: 6000,
+              }),
+            );
+            api.dispatch(logout());
           }
         } catch (error) {
           console.error("Error in token refresh process:", error);

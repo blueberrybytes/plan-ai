@@ -353,6 +353,7 @@ const models: TsoaRoute.Models = {
             "metadata": {"dataType":"union","subSchemas":[{"ref":"InputJsonValue"},{"dataType":"enum","enums":[null]}]},
             "contextIds": {"dataType":"array","array":{"dataType":"string"}},
             "persona": {"dataType":"union","subSchemas":[{"dataType":"enum","enums":["SECRETARY"]},{"dataType":"enum","enums":["ARCHITECT"]},{"dataType":"enum","enums":["PRODUCT_MANAGER"]},{"dataType":"enum","enums":["DEVELOPER"]}]},
+            "englishLevel": {"dataType":"string"},
         },
         "additionalProperties": false,
     },
@@ -556,6 +557,7 @@ const models: TsoaRoute.Models = {
             "userId": {"dataType":"string","required":true},
             "title": {"dataType":"string","required":true},
             "contextIds": {"dataType":"array","array":{"dataType":"string"},"required":true},
+            "englishLevel": {"dataType":"union","subSchemas":[{"dataType":"string"},{"dataType":"enum","enums":[null]}]},
             "createdAt": {"dataType":"datetime","required":true},
             "updatedAt": {"dataType":"datetime","required":true},
             "messages": {"dataType":"array","array":{"dataType":"refObject","ref":"ChatMessage"}},
@@ -568,6 +570,7 @@ const models: TsoaRoute.Models = {
         "properties": {
             "title": {"dataType":"string"},
             "contextIds": {"dataType":"array","array":{"dataType":"string"},"required":true},
+            "englishLevel": {"dataType":"string"},
         },
         "additionalProperties": false,
     },
@@ -694,6 +697,7 @@ export function RegisterRoutes(app: Router,opts?:{multer?:ReturnType<typeof mult
                 persona: {"in":"formData","name":"persona","dataType":"string"},
                 objective: {"in":"formData","name":"objective","dataType":"string"},
                 contextIds: {"in":"formData","name":"contextIds","dataType":"string"},
+                englishLevel: {"in":"formData","name":"englishLevel","dataType":"string"},
         };
         app.post('/api/sessions/:sessionId/transcripts/upload',
             authenticateMiddleware([{"ClientLevel":[]}]),
@@ -1774,7 +1778,7 @@ export function RegisterRoutes(app: Router,opts?:{multer?:ReturnType<typeof mult
         // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
         const argsChatController_updateThread: Record<string, TsoaRoute.ParameterSchema> = {
                 threadId: {"in":"path","name":"threadId","required":true,"dataType":"string"},
-                body: {"in":"body","name":"body","required":true,"dataType":"nestedObjectLiteral","nestedProperties":{"contextIds":{"dataType":"array","array":{"dataType":"string"}},"title":{"dataType":"string"}}},
+                body: {"in":"body","name":"body","required":true,"dataType":"nestedObjectLiteral","nestedProperties":{"englishLevel":{"dataType":"string"},"contextIds":{"dataType":"array","array":{"dataType":"string"}},"title":{"dataType":"string"}}},
                 request: {"in":"request","name":"request","required":true,"dataType":"object"},
         };
         app.put('/api/chat/threads/:threadId',

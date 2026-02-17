@@ -12,7 +12,8 @@
       "emailRequired": "El correo electrónico es obligatorio",
       "emailInvalid": "Introduce una dirección de correo válida",
       "passwordRequired": "La contraseña es obligatoria",
-      "passwordLength": "La contraseña debe tener al menos 6 caracteres"
+      "passwordLength": "La contraseña debe tener al menos 6 caracteres",
+      "sessionExpired": "Su sesión ha expirado. Por favor, inicie sesión de nuevo."
     },
     "alerts": {
       "verificationTitle": "Verificación de correo requerida",
@@ -141,6 +142,17 @@
       "options": {
         "en": "Inglés",
         "es": "Español"
+      }
+    },
+    "chat": {
+      "englishLevel": {
+        "label": "Nivel de Inglés",
+        "options": {
+          "beginner": "Principiante",
+          "intermediate": "Intermedio",
+          "advanced": "Avanzado",
+          "native": "Nativo"
+        }
       }
     },
     "buttons": {
@@ -598,6 +610,15 @@
       "success": "Transcripción creada con éxito.",
       "processing": "Analizando transcripción, por favor espera...",
       "processingWait": "Estamos extrayendo el texto y analizando tu transcripción con IA. Esto puede tardar un momento para archivos grandes."
+    }
+  },
+  "chatContextDialog": {
+    "englishLevelLabel": "Nivel de Inglés",
+    "englishLevels": {
+      "Beginner": "Principiante",
+      "Intermediate": "Intermedio",
+      "Advanced": "Avanzado",
+      "Native": "Nativo"
     }
   }
 }

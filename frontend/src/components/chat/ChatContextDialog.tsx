@@ -20,7 +20,7 @@ import { useListContextsQuery } from "../../store/apis/contextApi";
 interface ChatContextDialogProps {
   open: boolean;
   onClose: () => void;
-  onStartChat: (selectedContextIds: string[], title?: string) => void;
+  onStartChat: (selectedContextIds: string[], title?: string, englishLevel?: string) => void;
   isLoading?: boolean;
   mode?: "create" | "edit";
   initialTitle?: string;
@@ -39,6 +39,7 @@ const ChatContextDialog: React.FC<ChatContextDialogProps> = ({
   const { t } = useTranslation();
   const [title, setTitle] = useState(initialTitle);
   const [selectedContextIds, setSelectedContextIds] = useState<string[]>(initialSelectedContextIds);
+  const [englishLevel, setEnglishLevel] = useState<string>("");
   const { data: contextResponse } = useListContextsQuery();
   const contexts = contextResponse?.data?.contexts ?? [];
 
@@ -47,6 +48,7 @@ const ChatContextDialog: React.FC<ChatContextDialogProps> = ({
     if (open) {
       setTitle(initialTitle);
       setSelectedContextIds(initialSelectedContextIds);
+      setEnglishLevel("");
     }
   }, [open, initialTitle, initialSelectedContextIds]);
 
@@ -57,13 +59,19 @@ const ChatContextDialog: React.FC<ChatContextDialogProps> = ({
     setSelectedContextIds(newSelection);
   };
 
+  const handleStart = () => {
+    onStartChat(selectedContextIds, title, englishLevel);
+  };
+
+  const isStartDisabled = isLoading || selectedContextIds.length === 0;
+
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
       <DialogTitle>
         {mode === "create" ? t("chat.dialog.title") : t("chat.sidebar.edit")}
       </DialogTitle>
       <DialogContent>
-        <Box sx={{ mt: 1, mb: 3 }}>
+        <Box sx={{ mt: 1, mb: 3, display: "flex", flexDirection: "column", gap: 2 }}>
           <TextField
             fullWidth
             label={t("chat.fields.title") || "Title"}
@@ -72,6 +80,25 @@ const ChatContextDialog: React.FC<ChatContextDialogProps> = ({
             placeholder={t("chat.sidebar.newChat") || "New Chat"}
             variant="outlined"
           />
+          <TextField
+            select
+            fullWidth
+            label={t("chatContextDialog.englishLevelLabel")}
+            value={englishLevel}
+            onChange={(e) => setEnglishLevel(e.target.value)}
+            variant="outlined"
+            SelectProps={{
+              native: true,
+            }}
+          >
+            <option value=""></option>
+            <option value="Beginner">{t("chatContextDialog.englishLevels.Beginner")}</option>
+            <option value="Intermediate">
+              {t("chatContextDialog.englishLevels.Intermediate")}
+            </option>
+            <option value="Advanced">{t("chatContextDialog.englishLevels.Advanced")}</option>
+            <option value="Native">{t("chatContextDialog.englishLevels.Native")}</option>
+          </TextField>
         </Box>
         <Typography variant="body2" color="text.secondary" paragraph>
           {t("chat.dialog.description")}
@@ -115,11 +142,7 @@ const ChatContextDialog: React.FC<ChatContextDialogProps> = ({
       <DialogActions>
         <Button onClick={onClose}>{t("chat.buttons.cancel")}</Button>
         {contexts.length > 0 && (
-          <Button
-            onClick={() => onStartChat(selectedContextIds, title)}
-            variant="contained"
-            disabled={isLoading}
-          >
+          <Button onClick={handleStart} variant="contained" disabled={isStartDisabled}>
             {mode === "create" ? t("chat.buttons.start") : t("common.buttons.save") || "Save"}
           </Button>
         )}

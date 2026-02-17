@@ -79,12 +79,17 @@ const Chat: React.FC = () => {
     setIsDeleteDialogOpen(true);
   };
 
-  const handleSaveChat = async (selectedContextIds: string[], title?: string) => {
+  const handleSaveChat = async (
+    selectedContextIds: string[],
+    title?: string,
+    englishLevel?: string,
+  ) => {
     try {
       if (dialogMode === "create") {
         const newThread = await createThread({
           title: title || t("chat.sidebar.newChat"),
           contextIds: selectedContextIds,
+          englishLevel,
         }).unwrap();
         handleSelectThread(newThread.id);
         dispatch(
@@ -98,6 +103,7 @@ const Chat: React.FC = () => {
           threadId: editingThread.id,
           title: title || editingThread.title,
           contextIds: selectedContextIds,
+          englishLevel, // Assuming update support is added or kept optional
         }).unwrap();
         dispatch(
           setToastMessage({

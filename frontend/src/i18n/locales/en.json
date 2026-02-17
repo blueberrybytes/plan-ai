@@ -12,7 +12,8 @@
       "emailRequired": "Email is required",
       "emailInvalid": "Please enter a valid email address",
       "passwordRequired": "Password is required",
-      "passwordLength": "Password must be at least 6 characters"
+      "passwordLength": "Password must be at least 6 characters",
+      "sessionExpired": "Your session has expired. Please sign in again."
     },
     "alerts": {
       "verificationTitle": "Email verification required",
@@ -141,6 +142,17 @@
       "options": {
         "en": "English",
         "es": "Spanish"
+      }
+    },
+    "chat": {
+      "englishLevel": {
+        "label": "Level of English",
+        "options": {
+          "beginner": "Beginner",
+          "intermediate": "Intermediate",
+          "advanced": "Advanced",
+          "native": "Native"
+        }
       }
     },
     "buttons": {
@@ -598,6 +610,15 @@
       "success": "Transcript created successfully.",
       "processing": "Analyzing transcript, please wait...",
       "processingWait": "We are extracting text and analyzing your transcript with AI. This may take a moment for larger files."
+    }
+  },
+  "chatContextDialog": {
+    "englishLevelLabel": "Level of English",
+    "englishLevels": {
+      "Beginner": "Beginner",
+      "Intermediate": "Intermediate",
+      "Advanced": "Advanced",
+      "Native": "Native"
     }
   }
 }

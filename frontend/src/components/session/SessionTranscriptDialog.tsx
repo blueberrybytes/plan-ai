@@ -78,6 +78,7 @@ const SessionTranscriptDialog: React.FC<SessionTranscriptDialogProps> = ({
   const [metadataJson, setMetadataJson] = useState<string>("");
   const [persona, setPersona] =
     useState<NonNullable<CreateTranscriptRequest["persona"]>>("ARCHITECT");
+  const [englishLevel, setEnglishLevel] = useState<string>("Intermediate");
   const [manualContent, setManualContent] = useState<string>("");
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [selectedContextIds, setSelectedContextIds] = useState<string[]>([]);
@@ -109,6 +110,7 @@ const SessionTranscriptDialog: React.FC<SessionTranscriptDialogProps> = ({
     setRecordedAt(getDefaultRecordedAt());
     setMetadataJson("");
     setPersona("ARCHITECT");
+    setEnglishLevel("Intermediate");
     setManualContent("");
     setSelectedFiles([]);
     setSelectedContextIds([]);
@@ -179,6 +181,7 @@ const SessionTranscriptDialog: React.FC<SessionTranscriptDialogProps> = ({
           recordedAt: recordedAt || undefined,
           metadataJson: metadataJson.trim() || undefined,
           persona,
+          englishLevel,
           contextIds: selectedContextIds.length > 0 ? selectedContextIds : undefined,
           objective: objective.trim() || undefined,
         }).unwrap();
@@ -199,6 +202,7 @@ const SessionTranscriptDialog: React.FC<SessionTranscriptDialogProps> = ({
           source: "MANUAL",
           contextIds: selectedContextIds.length > 0 ? selectedContextIds : undefined,
           persona,
+          englishLevel,
           objective: obj || undefined,
         };
 
@@ -290,6 +294,32 @@ const SessionTranscriptDialog: React.FC<SessionTranscriptDialogProps> = ({
             </Box>
 
             <Divider />
+
+            <Box>
+              <FormControl fullWidth>
+                <InputLabel id="english-level-select-label">
+                  {t("chatContextDialog.englishLevelLabel")}
+                </InputLabel>
+                <Select
+                  labelId="english-level-select-label"
+                  id="english-level-select"
+                  value={englishLevel}
+                  label={t("chatContextDialog.englishLevelLabel")}
+                  onChange={(e) => setEnglishLevel(e.target.value)}
+                >
+                  <MenuItem value="Beginner">
+                    {t("chatContextDialog.englishLevels.Beginner")}
+                  </MenuItem>
+                  <MenuItem value="Intermediate">
+                    {t("chatContextDialog.englishLevels.Intermediate")}
+                  </MenuItem>
+                  <MenuItem value="Advanced">
+                    {t("chatContextDialog.englishLevels.Advanced")}
+                  </MenuItem>
+                  <MenuItem value="Native">{t("chatContextDialog.englishLevels.Native")}</MenuItem>
+                </Select>
+              </FormControl>
+            </Box>
 
             <Box>
               <FormControl fullWidth>

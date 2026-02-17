@@ -78,6 +78,7 @@ interface CreateTranscriptRequest {
   metadata?: Prisma.InputJsonValue | null;
   contextIds?: string[];
   persona?: "SECRETARY" | "ARCHITECT" | "PRODUCT_MANAGER" | "DEVELOPER";
+  englishLevel?: string;
 }
 
 interface TranscriptResponse {
@@ -93,7 +94,6 @@ interface TranscriptResponse {
   createdAt: Date;
   updatedAt: Date;
 }
-
 interface TaskResponse {
   id: string;
   sessionId: string;
@@ -296,6 +296,7 @@ export class SessionsModelController extends Controller {
     @FormField() persona?: "SECRETARY" | "ARCHITECT" | "PRODUCT_MANAGER" | "DEVELOPER",
     @FormField() objective?: string,
     @FormField() contextIds?: string[],
+    @FormField() englishLevel?: string,
   ): Promise<ApiResponse<CreateTranscriptResponse>> {
     const user = await this.getAuthorizedUser(request);
     await this.getSessionForUser(request, sessionId);
@@ -380,6 +381,7 @@ export class SessionsModelController extends Controller {
       contextIds: contextIds,
       persona: persona,
       objective: objective,
+      englishLevel,
     });
 
     const tasksWithRelations = await Promise.all(
@@ -758,6 +760,7 @@ export class SessionsModelController extends Controller {
       contextIds: body.contextIds,
       persona: body.persona,
       objective: body.objective,
+      englishLevel: body.englishLevel,
     });
 
     const tasksWithRelations = await Promise.all(

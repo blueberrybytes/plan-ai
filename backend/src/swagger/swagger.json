@@ -916,6 +916,9 @@
 							"PRODUCT_MANAGER",
 							"DEVELOPER"
 						]
+					},
+					"englishLevel": {
+						"type": "string"
 					}
 				},
 				"type": "object",
@@ -1464,6 +1467,10 @@
 						},
 						"type": "array"
 					},
+					"englishLevel": {
+						"type": "string",
+						"nullable": true
+					},
 					"createdAt": {
 						"type": "string",
 						"format": "date-time"
@@ -1500,6 +1507,9 @@
 							"type": "string"
 						},
 						"type": "array"
+					},
+					"englishLevel": {
+						"type": "string"
 					}
 				},
 				"required": [
@@ -1899,6 +1909,9 @@
 										"type": "string"
 									},
 									"contextIds": {
+										"type": "string"
+									},
+									"englishLevel": {
 										"type": "string"
 									}
 								},
@@ -3252,6 +3265,9 @@
 						"application/json": {
 							"schema": {
 								"properties": {
+									"englishLevel": {
+										"type": "string"
+									},
 									"contextIds": {
 										"items": {
 											"type": "string"
