@@ -29,6 +29,7 @@ import SlideThemes from "./pages/SlideThemes";
 import SlideThemeCreate from "./pages/SlideThemeCreate";
 import SlideCreate from "./pages/SlideCreate";
 import SlideView from "./pages/SlideView";
+import PublicSlideView from "./pages/PublicSlideView";
 import "./App.css";
 import "./i18n";
 import { useGetCurrentUserQuery } from "./store/apis/sessionApi";
@@ -136,6 +137,9 @@ const AppRoutes: React.FC = () => {
               <Route path="/signup" element={<SignUp />} />
               <Route path="/forgot-password" element={<ForgotPassword />} />
             </Route>
+
+            {/* Public Presentation View */}
+            <Route path="/p/:presentationId" element={<PublicSlideView />} />
 
             {/* All other routes rendered with TokenRefreshProvider */}
             <Route

@@ -61,7 +61,7 @@ const SlideCreate: React.FC = () => {
         prompt: enrichedPrompt,
         title: title || undefined,
       }).unwrap();
-      navigate(`/slides`);
+      navigate(`/slides/${result.id}?streaming=true`);
       void result;
     } catch {
       setError(t("slides.create.error"));

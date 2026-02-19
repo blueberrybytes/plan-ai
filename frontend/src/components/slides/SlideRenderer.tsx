@@ -1,6 +1,44 @@
 import React from "react";
 import { Box, Typography } from "@mui/material";
 
+const typingKeyframes = `
+  @keyframes slideInUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+`;
+
+const AnimatedText: React.FC<React.ComponentProps<typeof Typography> & { animate?: boolean }> = ({
+  animate,
+  children,
+  sx,
+  ...props
+}) => {
+  if (!animate) {
+    return (
+      <Typography sx={sx} {...props}>
+        {children}
+      </Typography>
+    );
+  }
+
+  return (
+    <Box sx={{ overflow: "hidden", display: "block" }}>
+      <style>{typingKeyframes}</style>
+      <Typography
+        sx={{
+          ...sx,
+          animation: "slideInUp 0.8s ease-out forwards",
+          opacity: 0, // Start invisible, animation handles fade in
+        }}
+        {...props}
+      >
+        {children}
+      </Typography>
+    </Box>
+  );
+};
+
 /**
  * Renders a 16:9 slide frame that looks like a real presentation slide.
  * All slide type renderers are composed inside this wrapper.
@@ -70,15 +108,24 @@ interface SlideProps {
     body?: string;
   };
   scale?: number;
+  animate?: boolean;
 }
 
 // Title Only
-export const TitleOnlySlide: React.FC<SlideProps> = ({ data, brandColors, fonts, scale }) => {
+// Title Only
+export const TitleOnlySlide: React.FC<SlideProps> = ({
+  data,
+  brandColors,
+  fonts,
+  scale,
+  animate,
+}) => {
   const primary = brandColors?.primary || "#6366f1";
   return (
     <SlideFrame brandColors={brandColors} fonts={fonts} scale={scale}>
       <Box sx={{ textAlign: "center" }}>
-        <Typography
+        <AnimatedText
+          animate={animate}
           sx={{
             fontSize: 48,
             fontWeight: 800,
@@ -92,11 +139,11 @@ export const TitleOnlySlide: React.FC<SlideProps> = ({ data, brandColors, fonts,
           }}
         >
           {data.title as string}
-        </Typography>
+        </AnimatedText>
         {data.subtitle ? (
-          <Typography sx={{ fontSize: 22, color: "#94a3b8", fontWeight: 400 }}>
+          <AnimatedText animate={animate} sx={{ fontSize: 22, color: "#94a3b8", fontWeight: 400 }}>
             {String(data.subtitle)}
-          </Typography>
+          </AnimatedText>
         ) : null}
       </Box>
     </SlideFrame>
@@ -104,28 +151,37 @@ export const TitleOnlySlide: React.FC<SlideProps> = ({ data, brandColors, fonts,
 };
 
 // Text Block
-export const TextBlockSlide: React.FC<SlideProps> = ({ data, brandColors, scale }) => {
+// Text Block
+export const TextBlockSlide: React.FC<SlideProps> = ({ data, brandColors, scale, animate }) => {
   const primary = brandColors?.primary || "#6366f1";
   return (
     <SlideFrame brandColors={brandColors} scale={scale}>
-      <Typography sx={{ fontSize: 36, fontWeight: 700, mb: 3, color: primary }}>
+      <AnimatedText animate={animate} sx={{ fontSize: 36, fontWeight: 700, mb: 3, color: primary }}>
         {data.title as string}
-      </Typography>
-      <Typography sx={{ fontSize: 18, lineHeight: 1.7, color: "#cbd5e1" }}>
+      </AnimatedText>
+      <AnimatedText animate={animate} sx={{ fontSize: 18, lineHeight: 1.7, color: "#cbd5e1" }}>
         {data.body as string}
-      </Typography>
+      </AnimatedText>
     </SlideFrame>
   );
 };
 
 // Text + Image
-export const TextImageSlide: React.FC<SlideProps> = ({ data, brandColors, fonts, scale }) => {
+// Text + Image
+export const TextImageSlide: React.FC<SlideProps> = ({
+  data,
+  brandColors,
+  fonts,
+  scale,
+  animate,
+}) => {
   const primary = brandColors?.primary || "#6366f1";
   return (
     <SlideFrame brandColors={brandColors} fonts={fonts} scale={scale}>
       <Box sx={{ display: "flex", gap: 5, alignItems: "center", height: "100%" }}>
         <Box sx={{ flex: 1 }}>
-          <Typography
+          <AnimatedText
+            animate={animate}
             sx={{
               fontSize: 32,
               fontWeight: 700,
@@ -135,10 +191,10 @@ export const TextImageSlide: React.FC<SlideProps> = ({ data, brandColors, fonts,
             }}
           >
             {data.title as string}
-          </Typography>
-          <Typography sx={{ fontSize: 16, lineHeight: 1.7, color: "#cbd5e1" }}>
+          </AnimatedText>
+          <AnimatedText animate={animate} sx={{ fontSize: 16, lineHeight: 1.7, color: "#cbd5e1" }}>
             {data.body as string}
-          </Typography>
+          </AnimatedText>
         </Box>
         <Box
           sx={{

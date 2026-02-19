@@ -8,6 +8,7 @@ import {
   Delete as DeleteIcon,
   Visibility as VisibilityIcon,
   Download as DownloadIcon,
+  Language as LanguageIcon,
 } from "@mui/icons-material";
 
 import { useNavigate } from "react-router-dom";
@@ -149,13 +150,27 @@ const Slides: React.FC = () => {
                       ? (pres.slidesJson as SlideData[])
                       : [];
                     const first = slides[0];
+                    const brandColors = pres.template
+                      ? {
+                          primary: pres.template.primaryColor || undefined,
+                          secondary: pres.template.secondaryColor || undefined,
+                          background: pres.template.backgroundColor || undefined,
+                        }
+                      : undefined;
+                    const fonts = pres.template
+                      ? {
+                          heading: pres.template.headingFont || undefined,
+                          body: pres.template.bodyFont || undefined,
+                        }
+                      : undefined;
+
                     return first ? (
                       <Box
                         sx={{
                           overflow: "hidden",
                           borderBottom: 1,
                           borderColor: "divider",
-                          bgcolor: "#0f172a",
+                          bgcolor: brandColors?.background || "#0f172a",
                           display: "flex",
                           justifyContent: "center",
                         }}
@@ -164,6 +179,8 @@ const Slides: React.FC = () => {
                           typeKey={first.slideTypeKey}
                           data={first.parameters}
                           scale={0.25}
+                          brandColors={brandColors}
+                          fonts={fonts}
                         />
                       </Box>
                     ) : null;
@@ -199,6 +216,16 @@ const Slides: React.FC = () => {
                       }}
                     >
                       <VisibilityIcon fontSize="small" />
+                    </IconButton>
+                    <IconButton
+                      size="small"
+                      title="Public Link"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        window.open(`/p/${pres.id}`, "_blank");
+                      }}
+                    >
+                      <LanguageIcon fontSize="small" />
                     </IconButton>
                     <IconButton
                       size="small"

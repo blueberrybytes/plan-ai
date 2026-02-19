@@ -5,7 +5,7 @@ import {
   ChevronLeft as ChevronLeftIcon,
   ChevronRight as ChevronRightIcon,
 } from "@mui/icons-material";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import SidebarLayout from "../components/layout/SidebarLayout";
 import SlideRenderer from "../components/slides/SlideRenderer";
@@ -20,6 +20,9 @@ interface SlideData {
 const SlideView: React.FC = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const isStreaming = searchParams.get("streaming") === "true";
+
   const { presentationId } = useParams<{ presentationId: string }>();
   const { data: presentation, isLoading } = useGetPresentationQuery(presentationId || "");
   const { data: template } = useGetTemplateQuery(presentation?.templateId || "", {
@@ -27,6 +30,23 @@ const SlideView: React.FC = () => {
   });
 
   const [currentSlide, setCurrentSlide] = useState(0);
+
+  // Keyboard navigation
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "ArrowRight") {
+        const slideCount = Array.isArray(presentation?.slidesJson)
+          ? presentation.slidesJson.length
+          : 1;
+        setCurrentSlide((prev) => Math.min(slideCount - 1, prev + 1));
+      } else if (e.key === "ArrowLeft") {
+        setCurrentSlide((prev) => Math.max(0, prev - 1));
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [presentation]);
 
   if (isLoading) {
     return (
@@ -159,6 +179,7 @@ const SlideView: React.FC = () => {
               brandColors={brandColors}
               fonts={fonts}
               scale={0.85}
+              animate={isStreaming}
             />
           )}
 

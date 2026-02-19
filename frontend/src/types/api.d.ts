@@ -205,6 +205,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/public/presentations/{presentationId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description Get a presentation for public viewing.
+         *     No authentication required.
+         */
+        get: operations["GetPublicPresentation"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/presentations/generate": {
         parameters: {
             query?: never;
@@ -870,6 +890,32 @@ export interface components {
             /** Format: double */
             status: number;
         };
+        "DefaultSelection_Prisma._36_PresentationPayload_": {
+            /** Format: date-time */
+            updatedAt: string;
+            /** Format: date-time */
+            createdAt: string;
+            status: string;
+            contextIds: string[];
+            slidesJson: components["schemas"]["JsonValue"];
+            title: string;
+            templateId: string;
+            userId: string;
+            id: string;
+        };
+        PublicPresentationResponse: {
+            /** Format: date-time */
+            updatedAt: string;
+            /** Format: date-time */
+            createdAt: string;
+            status: string;
+            contextIds: string[];
+            slidesJson: components["schemas"]["JsonValue"];
+            title: string;
+            templateId: string;
+            userId: string;
+            id: string;
+        };
         TemplateSubset: {
             name: string;
             description: string | null;
@@ -1042,10 +1088,6 @@ export interface components {
             content: string;
         };
         "DefaultSelection_Prisma._36_CustomThemePayload_": {
-            /** Format: date-time */
-            updatedAt: string;
-            /** Format: date-time */
-            createdAt: string;
             configJson: components["schemas"]["JsonValue"];
             /** Format: double */
             density: number;
@@ -1059,6 +1101,10 @@ export interface components {
             backgroundColor: string;
             secondaryColor: string;
             primaryColor: string;
+            /** Format: date-time */
+            updatedAt: string;
+            /** Format: date-time */
+            createdAt: string;
             userId: string;
             id: string;
         };
@@ -1730,6 +1776,28 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["GenericResponse"];
+                };
+            };
+        };
+    };
+    GetPublicPresentation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                presentationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicPresentationResponse"];
                 };
             };
         };

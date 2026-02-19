@@ -86,6 +86,11 @@ export const slideApi = createApi({
       providesTags: (_result, _error, id) => [{ type: "Presentation", id }],
     }),
 
+    getPublicPresentation: builder.query<PresentationResponse, string>({
+      query: (id) => `/api/public/presentations/${id}`,
+      providesTags: (_result, _error, id) => [{ type: "Presentation", id }],
+    }),
+
     generatePresentation: builder.mutation<PresentationResponse, GeneratePresentationRequest>({
       query: (body) => ({
         url: "/api/presentations/generate",
@@ -143,6 +148,7 @@ export const {
   useDeleteTemplateMutation,
   useGetPresentationsQuery,
   useGetPresentationQuery,
+  useGetPublicPresentationQuery,
   useGeneratePresentationMutation,
   useDeletePresentationMutation,
   useUpdatePresentationStatusMutation,

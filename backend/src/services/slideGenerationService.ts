@@ -129,6 +129,22 @@ export class SlideGenerationService {
   }
 
   /**
+   * Get a public presentation by ID (no user check).
+   */
+  public async getPublicPresentationById(presentationId: string): Promise<Presentation> {
+    const presentation = await prisma.presentation.findUnique({
+      where: { id: presentationId },
+      include: { template: true },
+    });
+
+    if (!presentation) {
+      throw { status: 404, message: "Presentation not found" };
+    }
+
+    return presentation;
+  }
+
+  /**
    * Delete a presentation.
    */
   public async deletePresentation(userId: string, presentationId: string): Promise<void> {

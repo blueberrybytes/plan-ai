@@ -1233,6 +1233,103 @@
 				],
 				"type": "object"
 			},
+			"DefaultSelection_Prisma._36_PresentationPayload_": {
+				"properties": {
+					"updatedAt": {
+						"type": "string",
+						"format": "date-time"
+					},
+					"createdAt": {
+						"type": "string",
+						"format": "date-time"
+					},
+					"status": {
+						"type": "string"
+					},
+					"contextIds": {
+						"items": {
+							"type": "string"
+						},
+						"type": "array"
+					},
+					"slidesJson": {
+						"$ref": "#/components/schemas/JsonValue"
+					},
+					"title": {
+						"type": "string"
+					},
+					"templateId": {
+						"type": "string"
+					},
+					"userId": {
+						"type": "string"
+					},
+					"id": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"updatedAt",
+					"createdAt",
+					"status",
+					"contextIds",
+					"slidesJson",
+					"title",
+					"templateId",
+					"userId",
+					"id"
+				],
+				"type": "object"
+			},
+			"PublicPresentationResponse": {
+				"properties": {
+					"updatedAt": {
+						"type": "string",
+						"format": "date-time"
+					},
+					"createdAt": {
+						"type": "string",
+						"format": "date-time"
+					},
+					"status": {
+						"type": "string"
+					},
+					"contextIds": {
+						"items": {
+							"type": "string"
+						},
+						"type": "array"
+					},
+					"slidesJson": {
+						"$ref": "#/components/schemas/JsonValue"
+					},
+					"title": {
+						"type": "string"
+					},
+					"templateId": {
+						"type": "string"
+					},
+					"userId": {
+						"type": "string"
+					},
+					"id": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"updatedAt",
+					"createdAt",
+					"status",
+					"contextIds",
+					"slidesJson",
+					"title",
+					"templateId",
+					"userId",
+					"id"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
 			"TemplateSubset": {
 				"properties": {
 					"name": {
@@ -1911,14 +2008,6 @@
 			},
 			"DefaultSelection_Prisma._36_CustomThemePayload_": {
 				"properties": {
-					"updatedAt": {
-						"type": "string",
-						"format": "date-time"
-					},
-					"createdAt": {
-						"type": "string",
-						"format": "date-time"
-					},
 					"configJson": {
 						"$ref": "#/components/schemas/JsonValue"
 					},
@@ -1954,6 +2043,14 @@
 					"primaryColor": {
 						"type": "string"
 					},
+					"updatedAt": {
+						"type": "string",
+						"format": "date-time"
+					},
+					"createdAt": {
+						"type": "string",
+						"format": "date-time"
+					},
 					"userId": {
 						"type": "string"
 					},
@@ -1962,8 +2059,6 @@
 					}
 				},
 				"required": [
-					"updatedAt",
-					"createdAt",
 					"configJson",
 					"density",
 					"borderRadius",
@@ -1975,6 +2070,8 @@
 					"backgroundColor",
 					"secondaryColor",
 					"primaryColor",
+					"updatedAt",
+					"createdAt",
 					"userId",
 					"id"
 				],
@@ -3217,6 +3314,38 @@
 					}
 				],
 				"parameters": []
+			}
+		},
+		"/api/public/presentations/{presentationId}": {
+			"get": {
+				"operationId": "GetPublicPresentation",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/PublicPresentationResponse"
+								}
+							}
+						}
+					}
+				},
+				"description": "Get a presentation for public viewing.\nNo authentication required.",
+				"tags": [
+					"Public Presentations"
+				],
+				"security": [],
+				"parameters": [
+					{
+						"in": "path",
+						"name": "presentationId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				]
 			}
 		},
 		"/api/presentations/generate": {
