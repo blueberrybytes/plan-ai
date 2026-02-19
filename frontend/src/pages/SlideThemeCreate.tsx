@@ -59,6 +59,7 @@ const SlideThemeCreate: React.FC = () => {
     }
   };
 
+  const fonts = { heading: headingFont, body: bodyFont };
   const brandColors = {
     primary: primaryColor,
     secondary: secondaryColor,
@@ -297,6 +298,7 @@ const SlideThemeCreate: React.FC = () => {
             typeKey={currentSlideType.key}
             data={currentSlideType.sampleData}
             brandColors={brandColors}
+            fonts={fonts}
             scale={0.75}
           />
 
