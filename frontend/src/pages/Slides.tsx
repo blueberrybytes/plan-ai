@@ -1,5 +1,14 @@
 import React from "react";
-import { Box, Typography, Button, Card, CardContent, Grid, IconButton } from "@mui/material";
+import {
+  Box,
+  Typography,
+  Button,
+  Card,
+  CardContent,
+  Grid,
+  IconButton,
+  Skeleton,
+} from "@mui/material";
 import {
   Add as AddIcon,
   Palette as PaletteIcon,
@@ -131,7 +140,19 @@ const Slides: React.FC = () => {
         </Typography>
 
         {isLoading ? (
-          <Typography color="text.secondary">{t("slides.presentations.loading")}</Typography>
+          <Grid container spacing={2}>
+            {[1, 2, 3].map((i) => (
+              <Grid item xs={12} sm={6} md={4} key={i}>
+                <Card variant="outlined">
+                  <Skeleton variant="rectangular" height={160} />
+                  <CardContent>
+                    <Skeleton variant="text" width="60%" height={24} />
+                    <Skeleton variant="text" width="40%" height={18} sx={{ mt: 0.5 }} />
+                  </CardContent>
+                </Card>
+              </Grid>
+            ))}
+          </Grid>
         ) : presentations.length === 0 ? (
           <Box
             sx={{
