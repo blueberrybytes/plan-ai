@@ -95,7 +95,7 @@ const Home: React.FC = () => {
       icon: <AddCircleOutlineIcon sx={{ fontSize: 28 }} />,
       title: t("home.quickActions.newSession.title"),
       description: t("home.quickActions.newSession.description"),
-      to: "/sessions/new",
+      to: "/sessions?create=true",
       color: "#4361EE",
     },
     {
@@ -545,7 +545,7 @@ const Home: React.FC = () => {
                 <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
                   <Button
                     component={RouterLink}
-                    to="/sessions/new"
+                    to="/sessions?create=true"
                     variant="contained"
                     startIcon={<AddCircleOutlineIcon />}
                   >

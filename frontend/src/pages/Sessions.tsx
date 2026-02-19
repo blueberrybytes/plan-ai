@@ -28,7 +28,7 @@ import {
 import type { CreateSessionRequest, ListSessionsParams } from "../store/apis/sessionApi";
 import type { FetchBaseQueryError } from "@reduxjs/toolkit/query";
 import type { SerializedError } from "@reduxjs/toolkit";
-import { Link as RouterLink } from "react-router-dom";
+import { Link as RouterLink, useLocation } from "react-router-dom";
 import ConfirmDeletionDialog from "../components/dialogs/ConfirmDeletionDialog";
 
 const defaultListParams: ListSessionsParams = {
@@ -88,9 +88,18 @@ const Sessions: React.FC = () => {
   } | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
 
+  const location = useLocation();
+
   const listErrorMessage = getErrorMessage(error);
 
   const isTitleValid = title.trim().length > 0;
+
+  React.useEffect(() => {
+    const queryParams = new URLSearchParams(location.search);
+    if (queryParams.get("create") === "true") {
+      setIsDialogOpen(true);
+    }
+  }, [location.search]);
 
   const resetDialogState = () => {
     setTitle("");
