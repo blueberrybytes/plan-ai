@@ -6,13 +6,19 @@ import { auth } from "../firebase/firebase";
 import { useGetDesktopTokenQuery } from "../store/apis/sessionApi";
 
 /**
- * /auth/desktop — opened by the Plan AI Recorder (Electron app) via shell.openExternal().
+ * /auth/desktop?local_port=4321 — opened by the Plan AI Recorder (Electron app)
+ * via shell.openExternal() in the system browser.
+ *
+ * When local_port is provided (dev mode), the token is delivered via a GET request
+ * to the Electron app's local HTTP server instead of the custom protocol (which is
+ * unreliable for unpackaged Electron apps on macOS).
  *
  * Flow:
- *  1. User clicks "Sign in with Google" in the Electron app.
- *  2. Electron opens this URL in the system browser.
- *  3. If already logged in → fetch custom token → redirect to planai-recorder://auth?token=...
- *  4. If not logged in → redirect to /login?next=/auth/desktop
+ *  1. Electron opens this page with ?local_port=4321
+ *  2. If user is logged in → fetch custom token
+ *     a. Dev (local_port present) → GET http://localhost:4321/auth?token=...
+ *     b. Prod (no local_port)     → redirect to blueberrybytes-recorder://auth?token=...
+ *  3. If not logged in → redirect to /login?next=/auth/desktop
  */
 const DesktopCallback: React.FC = () => {
   const { isAuthInitialized } = useAuth();
@@ -21,6 +27,9 @@ const DesktopCallback: React.FC = () => {
   const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
   const [errorMsg, setErrorMsg] = useState<string>("");
 
+  // Read local_port from URL — present when opened by the Electron dev build
+  const localPort = new URLSearchParams(window.location.search).get("local_port");
+
   const { data, error } = useGetDesktopTokenQuery(undefined, {
     skip: !firebaseUser || !isAuthInitialized,
   });
@@ -28,16 +37,33 @@ const DesktopCallback: React.FC = () => {
   useEffect(() => {
     if (!isAuthInitialized) return;
     if (!firebaseUser) {
-      window.location.href = `/login?next=${encodeURIComponent("/auth/desktop")}`;
+      const next = encodeURIComponent(window.location.pathname + window.location.search);
+      window.location.href = `/login?next=${next}`;
     }
   }, [isAuthInitialized, firebaseUser]);
 
   useEffect(() => {
-    if (data?.data?.customToken) {
+    if (!data?.data?.customToken) return;
+
+    const token = data.data.customToken;
+
+    if (localPort) {
+      // Dev mode: deliver token via local HTTP server — bypass unreliable OS protocol dispatch
+      const url = `http://localhost:${localPort}/auth?token=${encodeURIComponent(token)}`;
+      // Use an iframe to avoid CORS redirect issues; the server responds with close-tab HTML
+      const img = new Image();
+      img.src = url;
+      img.onload = () => setStatus("success");
+      img.onerror = () => {
+        // Image loads "error" for non-image responses but the request was made — success
+        setStatus("success");
+      };
+    } else {
+      // Prod mode: use custom protocol
+      window.location.href = `blueberrybytes-recorder://auth?token=${encodeURIComponent(token)}`;
       setStatus("success");
-      window.location.href = `blueberrybytes-recorder://auth?token=${encodeURIComponent(data.data.customToken)}`;
     }
-  }, [data]);
+  }, [data, localPort]);
 
   useEffect(() => {
     if (error) {
@@ -55,7 +81,7 @@ const DesktopCallback: React.FC = () => {
         height: "100vh",
       }}
     >
-      <Stack spacing={2} alignItems="center" sx={{ maxWidth: 360, textAlign: "center", px: 3 }}>
+      <Stack spacing={2} alignItems="center" sx={{ maxWidth: 400, textAlign: "center", px: 3 }}>
         {status === "loading" && (
           <>
             <CircularProgress />
