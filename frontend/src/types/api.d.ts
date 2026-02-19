@@ -253,6 +253,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/presentations/{presentationId}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["UpdatePresentationStatus"];
+        trace?: never;
+    };
     "/api/jira/auth": {
         parameters: {
             query?: never;
@@ -854,10 +870,21 @@ export interface components {
             /** Format: double */
             status: number;
         };
+        TemplateSubset: {
+            name: string;
+            description: string | null;
+            primaryColor: string | null;
+            secondaryColor: string | null;
+            backgroundColor: string | null;
+            headingFont: string | null;
+            bodyFont: string | null;
+            logoUrl: string | null;
+        };
         PresentationResponse: {
             id: string;
             userId: string;
             templateId: string;
+            template?: components["schemas"]["TemplateSubset"];
             title: string;
             slidesJson: unknown;
             contextIds: string[];
@@ -872,6 +899,9 @@ export interface components {
             contextIds: string[];
             prompt: string;
             title?: string;
+        };
+        UpdatePresentationStatusRequest: {
+            status: string;
         };
         JiraAuthorizationResponse: {
             authorizationUrl: string;
@@ -1786,6 +1816,32 @@ export interface operations {
                     "application/json": {
                         success: boolean;
                     };
+                };
+            };
+        };
+    };
+    UpdatePresentationStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                presentationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdatePresentationStatusRequest"];
+            };
+        };
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PresentationResponse"];
                 };
             };
         };

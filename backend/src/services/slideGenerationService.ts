@@ -95,6 +95,7 @@ export class SlideGenerationService {
   public async listPresentations(userId: string): Promise<Presentation[]> {
     return prisma.presentation.findMany({
       where: { userId },
+      include: { template: true },
       orderBy: { updatedAt: "desc" },
     });
   }
@@ -121,6 +122,20 @@ export class SlideGenerationService {
     await this.getPresentationById(userId, presentationId);
     await prisma.presentation.delete({ where: { id: presentationId } });
     logger.info(`Deleted presentation ${presentationId}`);
+  }
+
+  public async updateStatus(
+    userId: string,
+    presentationId: string,
+    status: string,
+  ): Promise<Presentation> {
+    await this.getPresentationById(userId, presentationId);
+    const updated = await prisma.presentation.update({
+      where: { id: presentationId },
+      data: { status },
+    });
+    logger.info(`Updated presentation ${presentationId} status to ${status}`);
+    return updated;
   }
 
   private buildPrompt(

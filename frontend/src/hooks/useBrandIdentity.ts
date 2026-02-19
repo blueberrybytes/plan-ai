@@ -16,9 +16,7 @@ const resolveBrand = (): BrandKey => {
 export const useBrandIdentity = () => {
   const brand = resolveBrand();
   const isHouseOfStories = brand === "hos";
-  const logoSrc = isHouseOfStories
-    ? "/logos/house-of-stories.svg"
-    : "/logos/bbb-content-generator.svg";
+  const logoSrc = isHouseOfStories ? "/logos/house-of-stories.svg" : "/logos/bbb.png";
   const logoAlt = "Plan AI";
 
   return {

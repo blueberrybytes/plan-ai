@@ -4,6 +4,10 @@ trigger: always_on
 
 # Project Rules & Guidelines
 
+## Browser
+
+Do not use your browser to check. Only do code
+
 ## Core Principles
 
 1.  **SOLID Principles**: Adhere to SOLID principles in both frontend and backend code.

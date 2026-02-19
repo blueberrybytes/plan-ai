@@ -145,16 +145,15 @@ export const TextImageSlide: React.FC<SlideProps> = ({ data, brandColors, fonts,
             flex: 1,
             height: "100%",
             borderRadius: 2,
+            overflow: "hidden",
             bgcolor: "rgba(99,102,241,0.1)",
-            border: "1px dashed rgba(99,102,241,0.3)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
           }}
         >
-          <Typography sx={{ color: "#64748b", fontSize: 14 }}>
-            📷 {(data.imageQuery as string) || "Image"}
-          </Typography>
+          <img
+            src={`https://image.pollinations.ai/prompt/${encodeURIComponent(String(data.imageQuery || "abstract background"))}?width=800&height=600&nologo=true`}
+            alt={String(data.imageQuery || "Image")}
+            style={{ width: "100%", height: "100%", objectFit: "cover" }}
+          />
         </Box>
       </Box>
     </SlideFrame>
@@ -164,7 +163,8 @@ export const TextImageSlide: React.FC<SlideProps> = ({ data, brandColors, fonts,
 // Bullet List
 export const BulletListSlide: React.FC<SlideProps> = ({ data, brandColors, fonts, scale }) => {
   const primary = brandColors?.primary || "#6366f1";
-  const bullets = (data.bullets as string[]) || [];
+  const rawBullets = data.bullets;
+  const bullets: string[] = Array.isArray(rawBullets) ? rawBullets.map(String) : [];
   return (
     <SlideFrame brandColors={brandColors} fonts={fonts} scale={scale}>
       <Typography
@@ -261,7 +261,17 @@ export const TwoColumnsSlide: React.FC<SlideProps> = ({ data, brandColors, fonts
 // Team Grid
 export const TeamGridSlide: React.FC<SlideProps> = ({ data, brandColors, fonts, scale }) => {
   const primary = brandColors?.primary || "#6366f1";
-  const members = (data.members as { name: string; role: string; bio: string }[]) || [];
+  const rawMembers = data.members;
+  const members: { name: string; role: string; bio: string }[] = Array.isArray(rawMembers)
+    ? rawMembers.map((m: unknown) => {
+        const obj = m as Record<string, unknown>;
+        return {
+          name: String(obj.name || ""),
+          role: String(obj.role || ""),
+          bio: String(obj.bio || ""),
+        };
+      })
+    : [];
   return (
     <SlideFrame brandColors={brandColors} fonts={fonts} scale={scale}>
       <Typography
@@ -345,18 +355,17 @@ export const ShowcaseSlide: React.FC<SlideProps> = ({ data, brandColors, fonts, 
         sx={{
           flex: 1,
           borderRadius: 2,
+          overflow: "hidden",
           bgcolor: "rgba(99,102,241,0.08)",
-          border: "1px dashed rgba(99,102,241,0.25)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
           mb: 2,
           minHeight: 240,
         }}
       >
-        <Typography sx={{ color: "#64748b", fontSize: 16 }}>
-          📷 {(data.imageQuery as string) || "Featured Image"}
-        </Typography>
+        <img
+          src={`https://image.pollinations.ai/prompt/${encodeURIComponent(String(data.imageQuery || "professional showcase image"))}?width=1200&height=600&nologo=true`}
+          alt={String(data.imageQuery || "Featured Image")}
+          style={{ width: "100%", height: "100%", objectFit: "cover" }}
+        />
       </Box>
       <Typography sx={{ fontSize: 16, color: "#94a3b8", textAlign: "center", lineHeight: 1.6 }}>
         {data.caption as string}
@@ -368,7 +377,13 @@ export const ShowcaseSlide: React.FC<SlideProps> = ({ data, brandColors, fonts, 
 // Stats
 export const StatsSlide: React.FC<SlideProps> = ({ data, brandColors, fonts, scale }) => {
   const primary = brandColors?.primary || "#6366f1";
-  const stats = (data.stats as { label: string; value: string }[]) || [];
+  const rawStats = data.stats;
+  const stats: { label: string; value: string }[] = Array.isArray(rawStats)
+    ? rawStats.map((s: unknown) => {
+        const obj = s as Record<string, unknown>;
+        return { label: String(obj.label || ""), value: String(obj.value || "") };
+      })
+    : [];
   return (
     <SlideFrame brandColors={brandColors} fonts={fonts} scale={scale}>
       <Typography

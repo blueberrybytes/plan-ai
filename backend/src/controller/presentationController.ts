@@ -1,4 +1,16 @@
-import { Controller, Get, Post, Delete, Route, Tags, Body, Path, Security, Request } from "tsoa";
+import {
+  Controller,
+  Get,
+  Post,
+  Delete,
+  Patch,
+  Route,
+  Tags,
+  Body,
+  Path,
+  Security,
+  Request,
+} from "tsoa";
 import prisma from "../prisma/prismaClient";
 import { type AuthenticatedRequest } from "../middleware/authMiddleware";
 import { slideGenerationService } from "../services/slideGenerationService";
@@ -10,10 +22,26 @@ interface GeneratePresentationRequest {
   title?: string;
 }
 
+interface UpdatePresentationStatusRequest {
+  status: string;
+}
+
+interface TemplateSubset {
+  name: string;
+  description: string | null;
+  primaryColor: string | null;
+  secondaryColor: string | null;
+  backgroundColor: string | null;
+  headingFont: string | null;
+  bodyFont: string | null;
+  logoUrl: string | null;
+}
+
 interface PresentationResponse {
   id: string;
   userId: string;
   templateId: string;
+  template?: TemplateSubset;
   title: string;
   slidesJson: unknown;
   contextIds: string[];
@@ -70,6 +98,16 @@ export class PresentationController extends Controller {
     const user = await this.resolveUser(request);
     await slideGenerationService.deletePresentation(user.id, presentationId);
     return { success: true };
+  }
+
+  @Patch("{presentationId}/status")
+  public async updatePresentationStatus(
+    @Path() presentationId: string,
+    @Body() body: UpdatePresentationStatusRequest,
+    @Request() request: AuthenticatedRequest,
+  ): Promise<PresentationResponse> {
+    const user = await this.resolveUser(request);
+    return slideGenerationService.updateStatus(user.id, presentationId, body.status);
   }
 
   private async resolveUser(request: AuthenticatedRequest) {

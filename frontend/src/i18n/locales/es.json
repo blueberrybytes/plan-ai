@@ -671,6 +671,26 @@
       "themePreview": "Vista previa — {{name}}",
       "previewTitle": "Tu Presentación",
       "previewSubtitle": "El contenido generado por IA aparecerá aquí",
+      "tone": "Tono",
+      "toneDefault": "Automático",
+      "tones": {
+        "professional": "Profesional",
+        "casual": "Casual",
+        "formal": "Formal",
+        "inspirational": "Inspirador",
+        "technical": "Técnico",
+        "persuasive": "Persuasivo"
+      },
+      "audience": "Audiencia",
+      "audienceDefault": "Automático",
+      "audiences": {
+        "executives": "Ejecutivos",
+        "team": "Equipo",
+        "clients": "Clientes",
+        "investors": "Inversores",
+        "students": "Estudiantes",
+        "general": "Público General"
+      },
       "selectThemePrompt": "Selecciona un tema para ver la vista previa"
     },
     "templates": {

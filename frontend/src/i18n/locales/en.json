@@ -671,6 +671,26 @@
       "themePreview": "Preview — {{name}}",
       "previewTitle": "Your Presentation",
       "previewSubtitle": "AI-generated content will appear here",
+      "tone": "Tone",
+      "toneDefault": "Auto",
+      "tones": {
+        "professional": "Professional",
+        "casual": "Casual",
+        "formal": "Formal",
+        "inspirational": "Inspirational",
+        "technical": "Technical",
+        "persuasive": "Persuasive"
+      },
+      "audience": "Audience",
+      "audienceDefault": "Auto",
+      "audiences": {
+        "executives": "Executives",
+        "team": "Team Members",
+        "clients": "Clients",
+        "investors": "Investors",
+        "students": "Students",
+        "general": "General Public"
+      },
       "selectThemePrompt": "Select a theme to see a preview"
     },
     "templates": {

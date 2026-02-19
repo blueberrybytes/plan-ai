@@ -316,7 +316,7 @@ model Presentation {
     id         String        @id @default(cuid())
     userId     String
     templateId String
-    template   SlideTemplate @relation(fields: [templateId], references: [id])
+    template   SlideTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
     title      String
     slidesJson Json
     contextIds String[]

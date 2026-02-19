@@ -28,6 +28,7 @@ import SlideTypes from "./pages/SlideTypes";
 import SlideThemes from "./pages/SlideThemes";
 import SlideThemeCreate from "./pages/SlideThemeCreate";
 import SlideCreate from "./pages/SlideCreate";
+import SlideView from "./pages/SlideView";
 import "./App.css";
 import "./i18n";
 import { useGetCurrentUserQuery } from "./store/apis/sessionApi";
@@ -98,6 +99,7 @@ const AppContent: React.FC = () => {
           <Route path="/slides/themes" element={<SlideThemes />} />
           <Route path="/slides/themes/create" element={<SlideThemeCreate />} />
           <Route path="/slides/create" element={<SlideCreate />} />
+          <Route path="/slides/view/:presentationId" element={<SlideView />} />
         </Route>
       </Routes>
     </>

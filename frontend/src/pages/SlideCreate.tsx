@@ -37,6 +37,8 @@ const SlideCreate: React.FC = () => {
   const [selectedContextIds, setSelectedContextIds] = useState<string[]>([]);
   const [prompt, setPrompt] = useState("");
   const [title, setTitle] = useState("");
+  const [tone, setTone] = useState("");
+  const [audience, setAudience] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   const contexts = contextsData?.data?.contexts ?? [];
@@ -48,10 +50,15 @@ const SlideCreate: React.FC = () => {
     if (!selectedTemplateId || !prompt.trim()) return;
     try {
       setError(null);
+      const enrichedPrompt = [
+        prompt,
+        tone ? `\nTone: ${tone}` : "",
+        audience ? `\nTarget audience: ${audience}` : "",
+      ].join("");
       const result = await generatePresentation({
         templateId: selectedTemplateId,
         contextIds: selectedContextIds,
-        prompt,
+        prompt: enrichedPrompt,
         title: title || undefined,
       }).unwrap();
       navigate(`/slides`);
@@ -169,6 +176,40 @@ const SlideCreate: React.FC = () => {
             helperText={t("slides.create.titleHelper")}
             sx={{ mb: 3 }}
           />
+
+          {/* Tone & Audience */}
+          <Box sx={{ display: "flex", gap: 2, mb: 3 }}>
+            <TextField
+              select
+              label={t("slides.create.tone")}
+              fullWidth
+              value={tone}
+              onChange={(e) => setTone(e.target.value)}
+            >
+              <MenuItem value="">{t("slides.create.toneDefault")}</MenuItem>
+              <MenuItem value="professional">{t("slides.create.tones.professional")}</MenuItem>
+              <MenuItem value="casual">{t("slides.create.tones.casual")}</MenuItem>
+              <MenuItem value="formal">{t("slides.create.tones.formal")}</MenuItem>
+              <MenuItem value="inspirational">{t("slides.create.tones.inspirational")}</MenuItem>
+              <MenuItem value="technical">{t("slides.create.tones.technical")}</MenuItem>
+              <MenuItem value="persuasive">{t("slides.create.tones.persuasive")}</MenuItem>
+            </TextField>
+            <TextField
+              select
+              label={t("slides.create.audience")}
+              fullWidth
+              value={audience}
+              onChange={(e) => setAudience(e.target.value)}
+            >
+              <MenuItem value="">{t("slides.create.audienceDefault")}</MenuItem>
+              <MenuItem value="executives">{t("slides.create.audiences.executives")}</MenuItem>
+              <MenuItem value="team members">{t("slides.create.audiences.team")}</MenuItem>
+              <MenuItem value="clients">{t("slides.create.audiences.clients")}</MenuItem>
+              <MenuItem value="investors">{t("slides.create.audiences.investors")}</MenuItem>
+              <MenuItem value="students">{t("slides.create.audiences.students")}</MenuItem>
+              <MenuItem value="general public">{t("slides.create.audiences.general")}</MenuItem>
+            </TextField>
+          </Box>
 
           {/* Prompt */}
           <TextField

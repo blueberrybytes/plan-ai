@@ -1,5 +1,16 @@
 import React from "react";
-import { Box, Typography, Button, Card, CardContent, Grid, Chip, IconButton } from "@mui/material";
+import {
+  Box,
+  Typography,
+  Button,
+  Card,
+  CardContent,
+  Grid,
+  IconButton,
+  Select,
+  MenuItem,
+  SelectChangeEvent,
+} from "@mui/material";
 import {
   Add as AddIcon,
   Palette as PaletteIcon,
@@ -7,21 +18,68 @@ import {
   Slideshow as SlideshowIcon,
   Delete as DeleteIcon,
   Visibility as VisibilityIcon,
+  Download as DownloadIcon,
 } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import SidebarLayout from "../components/layout/SidebarLayout";
-import { useGetPresentationsQuery, useDeletePresentationMutation } from "../store/apis/slideApi";
+import SlideRenderer from "../components/slides/SlideRenderer";
+import {
+  useGetPresentationsQuery,
+  useDeletePresentationMutation,
+  useUpdatePresentationStatusMutation,
+  type PresentationResponse,
+} from "../store/apis/slideApi";
+import { exportToPptx } from "../services/pptxExportService";
+
+interface SlideData {
+  slideTypeKey: string;
+  parameters: Record<string, unknown>;
+}
 
 const Slides: React.FC = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { data: presentations = [], isLoading } = useGetPresentationsQuery();
   const [deletePresentation] = useDeletePresentationMutation();
+  const [updateStatus] = useUpdatePresentationStatusMutation();
 
   const handleDelete = async (id: string) => {
     if (window.confirm(t("slides.presentations.deleteConfirm"))) {
       await deletePresentation(id);
+    }
+  };
+
+  const handleStatusChange = async (event: SelectChangeEvent, id: string) => {
+    const newStatus = event.target.value;
+    await updateStatus({ id, status: newStatus });
+  };
+
+  const handleDownload = async (pres: PresentationResponse) => {
+    if (!pres.slidesJson) return;
+    try {
+      await exportToPptx({
+        title: pres.title,
+        slides: pres.slidesJson as SlideData[],
+        theme: pres.template
+          ? {
+              primaryColor: pres.template.primaryColor || "#000000",
+              secondaryColor: pres.template.secondaryColor || "#666666",
+              backgroundColor: pres.template.backgroundColor || "#ffffff",
+              headingFont: pres.template.headingFont || "Arial",
+              bodyFont: pres.template.bodyFont || "Arial",
+            }
+          : {
+              primaryColor: "#000000",
+              secondaryColor: "#666666",
+              backgroundColor: "#ffffff",
+              headingFont: "Arial",
+              bodyFont: "Arial",
+            },
+      });
+    } catch (e) {
+      console.error("Export failed", e);
+      alert("Failed to export presentation.");
     }
   };
 
@@ -87,7 +145,36 @@ const Slides: React.FC = () => {
           <Grid container spacing={2}>
             {presentations.map((pres) => (
               <Grid item xs={12} sm={6} md={4} key={pres.id}>
-                <Card variant="outlined">
+                <Card
+                  variant="outlined"
+                  sx={{ cursor: "pointer", position: "relative" }}
+                  onClick={() => navigate(`/slides/view/${pres.id}`)}
+                >
+                  {/* First slide thumbnail */}
+                  {(() => {
+                    const slides = Array.isArray(pres.slidesJson)
+                      ? (pres.slidesJson as SlideData[])
+                      : [];
+                    const first = slides[0];
+                    return first ? (
+                      <Box
+                        sx={{
+                          overflow: "hidden",
+                          borderBottom: 1,
+                          borderColor: "divider",
+                          bgcolor: "#0f172a",
+                          display: "flex",
+                          justifyContent: "center",
+                        }}
+                      >
+                        <SlideRenderer
+                          typeKey={first.slideTypeKey}
+                          data={first.parameters}
+                          scale={0.25}
+                        />
+                      </Box>
+                    ) : null;
+                  })()}
                   <CardContent>
                     <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1 }}>
                       <SlideshowIcon color="primary" fontSize="small" />
@@ -95,21 +182,57 @@ const Slides: React.FC = () => {
                         {pres.title}
                       </Typography>
                     </Box>
-                    <Typography variant="body2" color="text.secondary">
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
                       {new Date(pres.createdAt).toLocaleDateString()}
                     </Typography>
-                    <Chip
-                      label={pres.status}
+
+                    <Select
+                      value={pres.status || "DRAFT"}
                       size="small"
-                      color={pres.status === "DRAFT" ? "default" : "success"}
-                      sx={{ mt: 1 }}
-                    />
+                      onClick={(e) => e.stopPropagation()}
+                      onChange={(e) => handleStatusChange(e, pres.id)}
+                      sx={{
+                        height: 32,
+                        fontSize: 13,
+                        bgcolor: pres.status === "COMPLETED" ? "success.light" : "action.hover",
+                        color:
+                          pres.status === "COMPLETED" ? "success.contrastText" : "text.primary",
+                        "& .MuiSelect-select": { py: 0.5, px: 2 },
+                      }}
+                    >
+                      <MenuItem value="DRAFT">Draft</MenuItem>
+                      <MenuItem value="GENERATED">Generated</MenuItem>
+                      <MenuItem value="COMPLETED">Completed</MenuItem>
+                      <MenuItem value="ARCHIVED">Archived</MenuItem>
+                    </Select>
                   </CardContent>
                   <Box sx={{ display: "flex", justifyContent: "flex-end", px: 1, pb: 1, gap: 0.5 }}>
-                    <IconButton size="small">
+                    <IconButton
+                      size="small"
+                      title="Download PPTX"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDownload(pres);
+                      }}
+                    >
+                      <DownloadIcon fontSize="small" />
+                    </IconButton>
+                    <IconButton
+                      size="small"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(`/slides/view/${pres.id}`);
+                      }}
+                    >
                       <VisibilityIcon fontSize="small" />
                     </IconButton>
-                    <IconButton size="small" onClick={() => handleDelete(pres.id)}>
+                    <IconButton
+                      size="small"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDelete(pres.id);
+                      }}
+                    >
                       <DeleteIcon fontSize="small" />
                     </IconButton>
                   </Box>

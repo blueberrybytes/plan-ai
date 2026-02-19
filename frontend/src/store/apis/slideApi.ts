@@ -98,6 +98,21 @@ export const slideApi = createApi({
       }),
       invalidatesTags: [{ type: "Presentation", id: "LIST" }],
     }),
+
+    updatePresentationStatus: builder.mutation<
+      PresentationResponse,
+      { id: string; status: string }
+    >({
+      query: ({ id, status }) => ({
+        url: `/api/presentations/${id}/status`,
+        method: "PATCH",
+        body: { status },
+      }),
+      invalidatesTags: (_result, _error, { id }) => [
+        { type: "Presentation", id },
+        { type: "Presentation", id: "LIST" },
+      ],
+    }),
   }),
 });
 
@@ -111,4 +126,5 @@ export const {
   useGetPresentationQuery,
   useGeneratePresentationMutation,
   useDeletePresentationMutation,
+  useUpdatePresentationStatusMutation,
 } = slideApi;
