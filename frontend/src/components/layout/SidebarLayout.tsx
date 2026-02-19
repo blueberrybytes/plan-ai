@@ -21,6 +21,7 @@ import {
   ChevronRight as ChevronRightIcon,
   IntegrationInstructions as IntegrationInstructionsIcon,
   Chat as ChatIcon,
+  Slideshow as SlideshowIcon,
 } from "@mui/icons-material";
 import { NavLink, useLocation } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
@@ -56,6 +57,11 @@ const navItems: NavItem[] = [
     labelKey: "sidebarLayout.nav.chat",
     path: "/chat",
     icon: <ChatIcon fontSize="small" />,
+  },
+  {
+    labelKey: "sidebarLayout.nav.slides",
+    path: "/slides",
+    icon: <SlideshowIcon fontSize="small" />,
   },
   {
     labelKey: "sidebarLayout.nav.integrations",

@@ -7,16 +7,118 @@
 		"requestBodies": {},
 		"responses": {},
 		"schemas": {
-			"_36_Enums.SessionStatus": {
-				"type": "string",
-				"enum": [
-					"ACTIVE",
-					"COMPLETED",
-					"ARCHIVED"
-				]
+			"SlideTypeConfigResponse": {
+				"properties": {
+					"id": {
+						"type": "string"
+					},
+					"templateId": {
+						"type": "string"
+					},
+					"slideTypeKey": {
+						"type": "string"
+					},
+					"displayName": {
+						"type": "string"
+					},
+					"description": {
+						"type": "string",
+						"nullable": true
+					},
+					"parametersSchema": {},
+					"position": {
+						"type": "number",
+						"format": "double"
+					},
+					"createdAt": {
+						"type": "string",
+						"format": "date-time"
+					}
+				},
+				"required": [
+					"id",
+					"templateId",
+					"slideTypeKey",
+					"displayName",
+					"description",
+					"parametersSchema",
+					"position",
+					"createdAt"
+				],
+				"type": "object",
+				"additionalProperties": false
 			},
-			"SessionStatus": {
-				"$ref": "#/components/schemas/_36_Enums.SessionStatus"
+			"SlideTemplateResponse": {
+				"properties": {
+					"id": {
+						"type": "string"
+					},
+					"userId": {
+						"type": "string"
+					},
+					"name": {
+						"type": "string"
+					},
+					"description": {
+						"type": "string",
+						"nullable": true
+					},
+					"primaryColor": {
+						"type": "string",
+						"nullable": true
+					},
+					"secondaryColor": {
+						"type": "string",
+						"nullable": true
+					},
+					"backgroundColor": {
+						"type": "string",
+						"nullable": true
+					},
+					"headingFont": {
+						"type": "string",
+						"nullable": true
+					},
+					"bodyFont": {
+						"type": "string",
+						"nullable": true
+					},
+					"logoUrl": {
+						"type": "string",
+						"nullable": true
+					},
+					"createdAt": {
+						"type": "string",
+						"format": "date-time"
+					},
+					"updatedAt": {
+						"type": "string",
+						"format": "date-time"
+					},
+					"slideTypes": {
+						"items": {
+							"$ref": "#/components/schemas/SlideTypeConfigResponse"
+						},
+						"type": "array"
+					}
+				},
+				"required": [
+					"id",
+					"userId",
+					"name",
+					"description",
+					"primaryColor",
+					"secondaryColor",
+					"backgroundColor",
+					"headingFont",
+					"bodyFont",
+					"logoUrl",
+					"createdAt",
+					"updatedAt",
+					"slideTypes"
+				],
+				"type": "object",
+				"additionalProperties": false
 			},
 			"JsonValue": {
 				"anyOf": [
@@ -53,6 +155,120 @@
 				"properties": {},
 				"type": "object",
 				"additionalProperties": false
+			},
+			"SlideTypeConfigInput": {
+				"properties": {
+					"slideTypeKey": {
+						"type": "string"
+					},
+					"displayName": {
+						"type": "string"
+					},
+					"description": {
+						"type": "string",
+						"nullable": true
+					},
+					"parametersSchema": {
+						"$ref": "#/components/schemas/JsonValue"
+					},
+					"position": {
+						"type": "number",
+						"format": "double"
+					}
+				},
+				"required": [
+					"slideTypeKey",
+					"displayName",
+					"parametersSchema"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"CreateTemplateRequest": {
+				"properties": {
+					"name": {
+						"type": "string"
+					},
+					"description": {
+						"type": "string"
+					},
+					"primaryColor": {
+						"type": "string"
+					},
+					"secondaryColor": {
+						"type": "string"
+					},
+					"backgroundColor": {
+						"type": "string"
+					},
+					"headingFont": {
+						"type": "string"
+					},
+					"bodyFont": {
+						"type": "string"
+					},
+					"logoUrl": {
+						"type": "string"
+					},
+					"slideTypes": {
+						"items": {
+							"$ref": "#/components/schemas/SlideTypeConfigInput"
+						},
+						"type": "array"
+					}
+				},
+				"required": [
+					"name"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"UpdateTemplateRequest": {
+				"properties": {
+					"name": {
+						"type": "string"
+					},
+					"description": {
+						"type": "string"
+					},
+					"primaryColor": {
+						"type": "string"
+					},
+					"secondaryColor": {
+						"type": "string"
+					},
+					"backgroundColor": {
+						"type": "string"
+					},
+					"headingFont": {
+						"type": "string"
+					},
+					"bodyFont": {
+						"type": "string"
+					},
+					"logoUrl": {
+						"type": "string"
+					},
+					"slideTypes": {
+						"items": {
+							"$ref": "#/components/schemas/SlideTypeConfigInput"
+						},
+						"type": "array"
+					}
+				},
+				"type": "object",
+				"additionalProperties": false
+			},
+			"_36_Enums.SessionStatus": {
+				"type": "string",
+				"enum": [
+					"ACTIVE",
+					"COMPLETED",
+					"ARCHIVED"
+				]
+			},
+			"SessionStatus": {
+				"$ref": "#/components/schemas/_36_Enums.SessionStatus"
 			},
 			"SessionResponse": {
 				"properties": {
@@ -1017,6 +1233,79 @@
 				],
 				"type": "object"
 			},
+			"PresentationResponse": {
+				"properties": {
+					"id": {
+						"type": "string"
+					},
+					"userId": {
+						"type": "string"
+					},
+					"templateId": {
+						"type": "string"
+					},
+					"title": {
+						"type": "string"
+					},
+					"slidesJson": {},
+					"contextIds": {
+						"items": {
+							"type": "string"
+						},
+						"type": "array"
+					},
+					"status": {
+						"type": "string"
+					},
+					"createdAt": {
+						"type": "string",
+						"format": "date-time"
+					},
+					"updatedAt": {
+						"type": "string",
+						"format": "date-time"
+					}
+				},
+				"required": [
+					"id",
+					"userId",
+					"templateId",
+					"title",
+					"slidesJson",
+					"contextIds",
+					"status",
+					"createdAt",
+					"updatedAt"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"GeneratePresentationRequest": {
+				"properties": {
+					"templateId": {
+						"type": "string"
+					},
+					"contextIds": {
+						"items": {
+							"type": "string"
+						},
+						"type": "array"
+					},
+					"prompt": {
+						"type": "string"
+					},
+					"title": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"templateId",
+					"contextIds",
+					"prompt"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
 			"JiraAuthorizationResponse": {
 				"properties": {
 					"authorizationUrl": {
@@ -1757,6 +2046,188 @@
 		"contact": {}
 	},
 	"paths": {
+		"/api/slide-templates": {
+			"get": {
+				"operationId": "ListTemplates",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"items": {
+										"$ref": "#/components/schemas/SlideTemplateResponse"
+									},
+									"type": "array"
+								}
+							}
+						}
+					}
+				},
+				"tags": [
+					"Slide Templates"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": []
+			},
+			"post": {
+				"operationId": "CreateTemplate",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/SlideTemplateResponse"
+								}
+							}
+						}
+					}
+				},
+				"tags": [
+					"Slide Templates"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": [],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/CreateTemplateRequest"
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/slide-templates/{templateId}": {
+			"get": {
+				"operationId": "GetTemplate",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/SlideTemplateResponse"
+								}
+							}
+						}
+					}
+				},
+				"tags": [
+					"Slide Templates"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": [
+					{
+						"in": "path",
+						"name": "templateId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				]
+			},
+			"put": {
+				"operationId": "UpdateTemplate",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/SlideTemplateResponse"
+								}
+							}
+						}
+					}
+				},
+				"tags": [
+					"Slide Templates"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": [
+					{
+						"in": "path",
+						"name": "templateId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/UpdateTemplateRequest"
+							}
+						}
+					}
+				}
+			},
+			"delete": {
+				"operationId": "DeleteTemplate",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"success": {
+											"type": "boolean"
+										}
+									},
+									"required": [
+										"success"
+									],
+									"type": "object"
+								}
+							}
+						}
+					}
+				},
+				"tags": [
+					"Slide Templates"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": [
+					{
+						"in": "path",
+						"name": "templateId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				]
+			}
+		},
 		"/api/sessions": {
 			"get": {
 				"operationId": "ListSessions",
@@ -2672,6 +3143,147 @@
 					}
 				],
 				"parameters": []
+			}
+		},
+		"/api/presentations/generate": {
+			"post": {
+				"operationId": "GeneratePresentation",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/PresentationResponse"
+								}
+							}
+						}
+					}
+				},
+				"tags": [
+					"Presentations"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": [],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/GeneratePresentationRequest"
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/presentations": {
+			"get": {
+				"operationId": "ListPresentations",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"items": {
+										"$ref": "#/components/schemas/PresentationResponse"
+									},
+									"type": "array"
+								}
+							}
+						}
+					}
+				},
+				"tags": [
+					"Presentations"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": []
+			}
+		},
+		"/api/presentations/{presentationId}": {
+			"get": {
+				"operationId": "GetPresentation",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/PresentationResponse"
+								}
+							}
+						}
+					}
+				},
+				"tags": [
+					"Presentations"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": [
+					{
+						"in": "path",
+						"name": "presentationId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				]
+			},
+			"delete": {
+				"operationId": "DeletePresentation",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"success": {
+											"type": "boolean"
+										}
+									},
+									"required": [
+										"success"
+									],
+									"type": "object"
+								}
+							}
+						}
+					}
+				},
+				"tags": [
+					"Presentations"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": [
+					{
+						"in": "path",
+						"name": "presentationId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				]
 			}
 		},
 		"/api/jira/auth": {

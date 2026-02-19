@@ -4,6 +4,38 @@
  */
 
 export interface paths {
+    "/api/slide-templates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ListTemplates"];
+        put?: never;
+        post: operations["CreateTemplate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/slide-templates/{templateId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetTemplate"];
+        put: operations["UpdateTemplate"];
+        post?: never;
+        delete: operations["DeleteTemplate"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/sessions": {
         parameters: {
             query?: never;
@@ -168,6 +200,54 @@ export interface paths {
         put?: never;
         post?: never;
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/presentations/generate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["GeneratePresentation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/presentations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ListPresentations"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/presentations/{presentationId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetPresentation"];
+        put?: never;
+        post?: never;
+        delete: operations["DeletePresentation"];
         options?: never;
         head?: never;
         patch?: never;
@@ -428,9 +508,35 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
-        /** @enum {string} */
-        "_36_Enums.SessionStatus": "ACTIVE" | "COMPLETED" | "ARCHIVED";
-        SessionStatus: components["schemas"]["_36_Enums.SessionStatus"];
+        SlideTypeConfigResponse: {
+            id: string;
+            templateId: string;
+            slideTypeKey: string;
+            displayName: string;
+            description: string | null;
+            parametersSchema: unknown;
+            /** Format: double */
+            position: number;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        SlideTemplateResponse: {
+            id: string;
+            userId: string;
+            name: string;
+            description: string | null;
+            primaryColor: string | null;
+            secondaryColor: string | null;
+            backgroundColor: string | null;
+            headingFont: string | null;
+            bodyFont: string | null;
+            logoUrl: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+            slideTypes: components["schemas"]["SlideTypeConfigResponse"][];
+        };
         /**
          * @description From https://github.com/sindresorhus/type-fest/
          *     Matches any valid JSON value.
@@ -449,6 +555,39 @@ export interface components {
          *     Matches a JSON array.
          */
         JsonArray: Record<string, never>;
+        SlideTypeConfigInput: {
+            slideTypeKey: string;
+            displayName: string;
+            description?: string | null;
+            parametersSchema: components["schemas"]["JsonValue"];
+            /** Format: double */
+            position?: number;
+        };
+        CreateTemplateRequest: {
+            name: string;
+            description?: string;
+            primaryColor?: string;
+            secondaryColor?: string;
+            backgroundColor?: string;
+            headingFont?: string;
+            bodyFont?: string;
+            logoUrl?: string;
+            slideTypes?: components["schemas"]["SlideTypeConfigInput"][];
+        };
+        UpdateTemplateRequest: {
+            name?: string;
+            description?: string;
+            primaryColor?: string;
+            secondaryColor?: string;
+            backgroundColor?: string;
+            headingFont?: string;
+            bodyFont?: string;
+            logoUrl?: string;
+            slideTypes?: components["schemas"]["SlideTypeConfigInput"][];
+        };
+        /** @enum {string} */
+        "_36_Enums.SessionStatus": "ACTIVE" | "COMPLETED" | "ARCHIVED";
+        SessionStatus: components["schemas"]["_36_Enums.SessionStatus"];
         SessionResponse: {
             id: string;
             title: string;
@@ -715,6 +854,25 @@ export interface components {
             /** Format: double */
             status: number;
         };
+        PresentationResponse: {
+            id: string;
+            userId: string;
+            templateId: string;
+            title: string;
+            slidesJson: unknown;
+            contextIds: string[];
+            status: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        GeneratePresentationRequest: {
+            templateId: string;
+            contextIds: string[];
+            prompt: string;
+            title?: string;
+        };
         JiraAuthorizationResponse: {
             authorizationUrl: string;
         };
@@ -914,6 +1072,122 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    ListTemplates: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SlideTemplateResponse"][];
+                };
+            };
+        };
+    };
+    CreateTemplate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateTemplateRequest"];
+            };
+        };
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SlideTemplateResponse"];
+                };
+            };
+        };
+    };
+    GetTemplate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                templateId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SlideTemplateResponse"];
+                };
+            };
+        };
+    };
+    UpdateTemplate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                templateId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateTemplateRequest"];
+            };
+        };
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SlideTemplateResponse"];
+                };
+            };
+        };
+    };
+    DeleteTemplate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                templateId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        success: boolean;
+                    };
+                };
+            };
+        };
+    };
     ListSessions: {
         parameters: {
             query?: {
@@ -1422,6 +1696,96 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["GenericResponse"];
+                };
+            };
+        };
+    };
+    GeneratePresentation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GeneratePresentationRequest"];
+            };
+        };
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PresentationResponse"];
+                };
+            };
+        };
+    };
+    ListPresentations: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PresentationResponse"][];
+                };
+            };
+        };
+    };
+    GetPresentation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                presentationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PresentationResponse"];
+                };
+            };
+        };
+    };
+    DeletePresentation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                presentationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        success: boolean;
+                    };
                 };
             };
         };

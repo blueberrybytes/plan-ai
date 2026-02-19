@@ -504,6 +504,7 @@
       "chat": "Chat",
       "sessions": "Sesiones",
       "contexts": "Contextos",
+      "slides": "Diapositivas",
       "integrations": "Integraciones"
     },
     "tooltip": {
@@ -619,6 +620,107 @@
       "Intermediate": "Intermedio",
       "Advanced": "Avanzado",
       "Native": "Nativo"
+    }
+  },
+  "slides": {
+    "title": "Diapositivas",
+    "catalogSubtitle": "Explora los tipos de diapositiva disponibles",
+    "actions": {
+      "createSlides": "Crear Diapositivas",
+      "viewSlideTypes": "Ver Tipos de Diapositiva",
+      "createTheme": "Crear Tema",
+      "viewThemes": "Ver Temas",
+      "back": "Volver"
+    },
+    "slideTypesPage": {
+      "title": "Tipos de Diapositiva"
+    },
+    "themes": {
+      "title": "Temas",
+      "create": "Crear Tema",
+      "empty": "Aún no hay temas. Crea uno para empezar.",
+      "loading": "Cargando temas...",
+      "deleteConfirm": "¿Estás seguro de que deseas eliminar este tema?",
+      "form": {
+        "name": "Nombre del Tema",
+        "colors": "Colores",
+        "primaryColor": "Primario",
+        "secondaryColor": "Secundario",
+        "backgroundColor": "Fondo",
+        "typography": "Tipografía",
+        "headingFont": "Fuente de Título",
+        "bodyFont": "Fuente de Cuerpo",
+        "presets": "Preajustes",
+        "save": "Guardar Tema",
+        "saving": "Guardando..."
+      }
+    },
+    "create": {
+      "title": "Crear Presentación",
+      "subtitle": "Elige un tema y describe lo que quieres. La IA decidirá la estructura, cantidad de diapositivas y contenido.",
+      "selectTheme": "Tema",
+      "selectContexts": "Contextos (opcional)",
+      "contextsHelper": "Selecciona contextos para enriquecer la presentación con tus datos vía RAG",
+      "presentationTitle": "Título (opcional)",
+      "titleHelper": "Déjalo vacío y la IA generará uno",
+      "prompt": "¿De qué debería tratar esta presentación?",
+      "promptPlaceholder": "ej., Crear una actualización de estado del proyecto con resumen del equipo, métricas del Q1 y hoja de ruta",
+      "generate": "Generar con IA",
+      "generating": "Generando...",
+      "error": "Error al generar la presentación. Inténtalo de nuevo.",
+      "themePreview": "Vista previa — {{name}}",
+      "previewTitle": "Tu Presentación",
+      "previewSubtitle": "El contenido generado por IA aparecerá aquí",
+      "selectThemePrompt": "Selecciona un tema para ver la vista previa"
+    },
+    "templates": {
+      "title": "Plantillas",
+      "create": "Nueva Plantilla",
+      "edit": "Editar Plantilla",
+      "delete": "Eliminar Plantilla",
+      "deleteConfirm": "¿Estás seguro de que deseas eliminar esta plantilla?",
+      "empty": "Aún no hay plantillas. Crea una para empezar.",
+      "form": {
+        "name": "Nombre de la Plantilla",
+        "description": "Descripción",
+        "primaryColor": "Color Primario",
+        "secondaryColor": "Color Secundario",
+        "backgroundColor": "Color de Fondo",
+        "headingFont": "Fuente de Título",
+        "bodyFont": "Fuente de Cuerpo",
+        "logoUrl": "URL del Logo",
+        "slideTypes": "Tipos de Diapositiva",
+        "addSlideType": "Agregar Tipo de Diapositiva",
+        "save": "Guardar Plantilla",
+        "saving": "Guardando...",
+        "cancel": "Cancelar"
+      }
+    },
+    "presentations": {
+      "title": "Presentaciones",
+      "generate": "Generar Presentación",
+      "delete": "Eliminar",
+      "deleteConfirm": "¿Estás seguro de que deseas eliminar esta presentación?",
+      "empty": "Aún no hay presentaciones. Genera una desde una plantilla.",
+      "generating": "Generando presentación...",
+      "form": {
+        "template": "Plantilla",
+        "contexts": "Contextos",
+        "prompt": "Describe lo que deseas en la presentación",
+        "title": "Título de la Presentación (opcional)",
+        "generate": "Generar",
+        "cancel": "Cancelar"
+      }
+    },
+    "slideTypes": {
+      "title_only": "Diapositiva de Título",
+      "text_block": "Bloque de Texto",
+      "text_image": "Texto + Imagen",
+      "bullet_list": "Lista de Puntos",
+      "two_columns": "Dos Columnas",
+      "team_grid": "Miembros del Equipo",
+      "showcase": "Exhibición",
+      "stats": "Estadísticas Clave"
     }
   }
 }

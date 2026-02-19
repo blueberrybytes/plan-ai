@@ -504,6 +504,7 @@
       "chat": "Chat",
       "sessions": "Sessions",
       "contexts": "Contexts",
+      "slides": "Slides",
       "integrations": "Integrations"
     },
     "tooltip": {
@@ -619,6 +620,107 @@
       "Intermediate": "Intermediate",
       "Advanced": "Advanced",
       "Native": "Native"
+    }
+  },
+  "slides": {
+    "title": "Slides",
+    "catalogSubtitle": "Browse available slide types and preview them",
+    "actions": {
+      "createSlides": "Create Slides",
+      "viewSlideTypes": "View Slide Types",
+      "createTheme": "Create Theme",
+      "viewThemes": "View Themes",
+      "back": "Back"
+    },
+    "slideTypesPage": {
+      "title": "Slide Types"
+    },
+    "themes": {
+      "title": "Themes",
+      "create": "Create Theme",
+      "empty": "No themes yet. Create one to get started.",
+      "loading": "Loading themes...",
+      "deleteConfirm": "Are you sure you want to delete this theme?",
+      "form": {
+        "name": "Theme Name",
+        "colors": "Colors",
+        "primaryColor": "Primary",
+        "secondaryColor": "Secondary",
+        "backgroundColor": "Background",
+        "typography": "Typography",
+        "headingFont": "Heading Font",
+        "bodyFont": "Body Font",
+        "presets": "Presets",
+        "save": "Save Theme",
+        "saving": "Saving..."
+      }
+    },
+    "create": {
+      "title": "Create Presentation",
+      "subtitle": "Choose a theme and describe what you want. The AI will decide the structure, slide count, and content.",
+      "selectTheme": "Theme",
+      "selectContexts": "Contexts (optional)",
+      "contextsHelper": "Select contexts to enrich the presentation with your data via RAG",
+      "presentationTitle": "Title (optional)",
+      "titleHelper": "Leave empty and the AI will generate one",
+      "prompt": "What should this presentation be about?",
+      "promptPlaceholder": "e.g., Create a project status update with team overview, Q1 metrics, and next quarter roadmap",
+      "generate": "Generate with AI",
+      "generating": "Generating...",
+      "error": "Failed to generate presentation. Please try again.",
+      "themePreview": "Preview — {{name}}",
+      "previewTitle": "Your Presentation",
+      "previewSubtitle": "AI-generated content will appear here",
+      "selectThemePrompt": "Select a theme to see a preview"
+    },
+    "templates": {
+      "title": "Templates",
+      "create": "New Template",
+      "edit": "Edit Template",
+      "delete": "Delete Template",
+      "deleteConfirm": "Are you sure you want to delete this template?",
+      "empty": "No templates yet. Create one to get started.",
+      "form": {
+        "name": "Template Name",
+        "description": "Description",
+        "primaryColor": "Primary Color",
+        "secondaryColor": "Secondary Color",
+        "backgroundColor": "Background Color",
+        "headingFont": "Heading Font",
+        "bodyFont": "Body Font",
+        "logoUrl": "Logo URL",
+        "slideTypes": "Slide Types",
+        "addSlideType": "Add Slide Type",
+        "save": "Save Template",
+        "saving": "Saving...",
+        "cancel": "Cancel"
+      }
+    },
+    "presentations": {
+      "title": "Presentations",
+      "generate": "Generate Presentation",
+      "delete": "Delete",
+      "deleteConfirm": "Are you sure you want to delete this presentation?",
+      "empty": "No presentations yet. Generate one from a template.",
+      "generating": "Generating presentation...",
+      "form": {
+        "template": "Template",
+        "contexts": "Contexts",
+        "prompt": "Describe what you want in the presentation",
+        "title": "Presentation Title (optional)",
+        "generate": "Generate",
+        "cancel": "Cancel"
+      }
+    },
+    "slideTypes": {
+      "title_only": "Title Slide",
+      "text_block": "Text Block",
+      "text_image": "Text + Image",
+      "bullet_list": "Bullet List",
+      "two_columns": "Two Columns",
+      "team_grid": "Team Members",
+      "showcase": "Showcase",
+      "stats": "Key Stats"
     }
   }
 }

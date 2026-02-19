@@ -63,8 +63,9 @@ model User {
     assignedTasks Task[]       @relation("TaskAssignee")
     contexts      Context[]
 
-    integrations UserIntegration[]
-    threads      ChatThread[]
+    integrations    UserIntegration[]
+    threads         ChatThread[]
+    slideTemplates  SlideTemplate[]
 }
 
 model UserIntegration {
@@ -275,4 +276,51 @@ model ChatMessage {
     createdAt DateTime   @default(now())
 
     @@index([threadId])
+}
+
+model SlideTemplate {
+    id              String            @id @default(cuid())
+    userId          String
+    user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+    name            String            @db.VarChar(120)
+    description     String?           @db.Text
+    primaryColor    String?           @db.VarChar(24)
+    secondaryColor  String?           @db.VarChar(24)
+    backgroundColor String?           @db.VarChar(24)
+    headingFont     String?           @db.VarChar(80)
+    bodyFont        String?           @db.VarChar(80)
+    logoUrl         String?           @db.Text
+    slideTypes      SlideTypeConfig[]
+    presentations   Presentation[]
+    createdAt       DateTime          @default(now())
+    updatedAt       DateTime          @updatedAt
+
+    @@index([userId])
+}
+
+model SlideTypeConfig {
+    id               String        @id @default(cuid())
+    templateId       String
+    template         SlideTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+    slideTypeKey     String        @db.VarChar(64)
+    displayName      String        @db.VarChar(120)
+    description      String?       @db.Text
+    parametersSchema Json
+    position         Int           @default(0)
+    createdAt        DateTime      @default(now())
+
+    @@index([templateId])
+}
+
+model Presentation {
+    id         String        @id @default(cuid())
+    userId     String
+    templateId String
+    template   SlideTemplate @relation(fields: [templateId], references: [id])
+    title      String
+    slidesJson Json
+    contextIds String[]
+    status     String        @default("DRAFT") @db.VarChar(24)
+    createdAt  DateTime      @default(now())
+    updatedAt  DateTime      @updatedAt
 }
