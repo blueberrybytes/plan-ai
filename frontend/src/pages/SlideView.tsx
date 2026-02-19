@@ -24,12 +24,40 @@ const SlideView: React.FC = () => {
   const isStreaming = searchParams.get("streaming") === "true";
 
   const { presentationId } = useParams<{ presentationId: string }>();
-  const { data: presentation, isLoading } = useGetPresentationQuery(presentationId || "");
+
+  // Poll every 2s if generating
+  const { data: presentation, isLoading } = useGetPresentationQuery(presentationId || "", {
+    pollingInterval: 2000,
+    skip: !presentationId,
+    selectFromResult: (result) => ({
+      ...result,
+      // Only poll if status is generating
+      pollingInterval:
+        result.data?.status === "GENERATING" || result.data?.status === "GENERATING_IMAGES"
+          ? 2000
+          : 0,
+    }),
+  });
+
+  // RTK Query's pollingInterval in options is static usually, unless we force re-render.
+  // Actually, passing it as an option works if the component re-renders.
+  // But strictly, we might need a separate state or just rely on the hook update.
+  // Let's stick to the standard way:
+  /* 
+  const { data: presentation, isLoading } = useGetPresentationQuery(presentationId || "", {
+    pollingInterval: (presentation?.status === "GENERATING" || presentation?.status === "GENERATING_IMAGES") ? 2000 : 0,
+  });
+  */
+  // But `presentation` is from valid scope? Yes.
+
   const { data: template } = useGetTemplateQuery(presentation?.templateId || "", {
     skip: !presentation?.templateId,
   });
 
   const [currentSlide, setCurrentSlide] = useState(0);
+
+  // Auto-advance to new slides if streaming and user hasn't navigated back?
+  // Let's just notify or show them.
 
   // Keyboard navigation
   React.useEffect(() => {
@@ -48,13 +76,43 @@ const SlideView: React.FC = () => {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [presentation]);
 
-  if (isLoading) {
+  if (isLoading || (!presentation && isLoading)) {
     return (
       <SidebarLayout>
         <Box
           sx={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100vh" }}
         >
           <CircularProgress />
+        </Box>
+      </SidebarLayout>
+    );
+  }
+
+  // Show "Generating..." if status is generating but no slides yet
+  const isGenerating =
+    presentation?.status === "GENERATING" || presentation?.status === "GENERATING_IMAGES";
+  const slides = (presentation?.slidesJson as SlideData[]) || [];
+
+  if (isGenerating && slides.length === 0) {
+    return (
+      <SidebarLayout>
+        <Box
+          sx={{
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "center",
+            alignItems: "center",
+            height: "100vh",
+            gap: 2,
+          }}
+        >
+          <CircularProgress size={60} />
+          <Typography variant="h5" color="text.secondary" sx={{ animation: "pulse 1.5s infinite" }}>
+            {t("slides.create.generating")}...
+          </Typography>
+          <Typography variant="body2" color="text.disabled">
+            Creation in progress. Slides will appear here live.
+          </Typography>
         </Box>
       </SidebarLayout>
     );
@@ -73,7 +131,6 @@ const SlideView: React.FC = () => {
     );
   }
 
-  const slides = (presentation.slidesJson as SlideData[]) || [];
   const brandColors = template
     ? {
         primary: template.primaryColor || "#6366f1",

@@ -66,7 +66,7 @@ export class PresentationController extends Controller {
   ): Promise<PresentationResponse> {
     const user = await this.resolveUser(request);
 
-    const presentation = await slideGenerationService.generatePresentation(
+    const presentation = await slideGenerationService.startPresentationGeneration(
       user.id,
       body.templateId,
       body.contextIds,

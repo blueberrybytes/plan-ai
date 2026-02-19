@@ -101,6 +101,7 @@ const AppContent: React.FC = () => {
           <Route path="/slides/themes/create" element={<SlideThemeCreate />} />
           <Route path="/slides/create" element={<SlideCreate />} />
           <Route path="/slides/view/:presentationId" element={<SlideView />} />
+          <Route path="/slides/:presentationId" element={<SlideView />} />
         </Route>
       </Routes>
     </>
