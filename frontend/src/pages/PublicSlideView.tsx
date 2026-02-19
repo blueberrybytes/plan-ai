@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Box, IconButton, Fade, CircularProgress, Typography, Tooltip } from "@mui/material";
+import { Helmet } from "react-helmet-async";
 import {
   ChevronLeft as ChevronLeftIcon,
   ChevronRight as ChevronRightIcon,
@@ -209,6 +210,30 @@ const PublicSlideView: React.FC = () => {
         transition: "background-color 0.5s",
       }}
     >
+      <Helmet>
+        <title>{`${presentation.title} | Plan AI`}</title>
+        <meta name="description" content={`View presentation: ${presentation.title}`} />
+
+        {/* Open Graph / Facebook */}
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content={window.location.href} />
+        <meta property="og:title" content={presentation.title} />
+        <meta property="og:description" content={`View presentation: ${presentation.title}`} />
+        <meta
+          property="og:image"
+          content="https://plan-ai.blueberrybytes.com/logos/android-chrome-512x512.png"
+        />
+
+        {/* Twitter */}
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:url" content={window.location.href} />
+        <meta name="twitter:title" content={presentation.title} />
+        <meta name="twitter:description" content={`View presentation: ${presentation.title}`} />
+        <meta
+          name="twitter:image"
+          content="https://plan-ai.blueberrybytes.com/logos/android-chrome-512x512.png"
+        />
+      </Helmet>
       {/* Main slide area */}
       <Box
         sx={{
