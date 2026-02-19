@@ -17,7 +17,8 @@ import { logger } from "../utils/logger";
 import { type AuthenticatedRequest } from "../middleware/authMiddleware";
 import { queryContexts } from "../vector/contextFileVectorService";
 import { generateText } from "ai";
-import { openai } from "@ai-sdk/openai";
+import { createOpenRouter } from "@openrouter/ai-sdk-provider";
+import EnvUtils from "../utils/EnvUtils";
 
 interface ChatMessage {
   id: string;
@@ -57,6 +58,11 @@ interface SendMessageResponse {
 @Tags("Chat")
 @Security("ClientLevel")
 export class ChatController extends Controller {
+  private readonly openrouter = createOpenRouter({
+    apiKey: EnvUtils.get("OPENROUTER_API_KEY"),
+  });
+  private readonly modelName = "google/gemini-2.0-flash-001";
+
   @Get("threads")
   public async listThreads(@Request() request: AuthenticatedRequest): Promise<ChatThread[]> {
     if (!request.user) {
@@ -227,7 +233,7 @@ export class ChatController extends Controller {
       include: {
         messages: {
           orderBy: { createdAt: "asc" },
-          take: 10, // Limit history
+          take: 100, // Limit history
         },
       },
     });
@@ -245,7 +251,7 @@ export class ChatController extends Controller {
     let contextText = "";
     if (thread.contextIds.length > 0) {
       // Swapped arguments to match definition: (contextIds: string[], queryText: string)
-      const contexts = await queryContexts(thread.contextIds, body.content);
+      const contexts = await queryContexts(thread.contextIds, body.content, 500);
       if (contexts && contexts.length > 0) {
         contextText = contexts.join("\n---\n");
       }
@@ -279,7 +285,7 @@ ${contextText}
 
     try {
       const { text } = await generateText({
-        model: openai("gpt-4o"),
+        model: this.openrouter(this.modelName),
         messages: messages,
       });
 

@@ -1,12 +1,18 @@
 import { Router } from "express";
 import { streamText } from "ai";
-import { openai } from "@ai-sdk/openai";
+import { createOpenRouter } from "@openrouter/ai-sdk-provider";
+import EnvUtils from "../utils/EnvUtils";
 import prisma from "../prisma/prismaClient";
 import { authenticateUser, AuthenticatedRequest } from "../middleware/authMiddleware";
 import { queryContexts } from "../vector/contextFileVectorService";
 import { logger } from "../utils/logger";
 
 const router = Router();
+
+const openrouter = createOpenRouter({
+  apiKey: EnvUtils.get("OPENROUTER_API_KEY"),
+});
+const modelName = "google/gemini-2.0-flash-001";
 
 // POST /api/chat/threads/:threadId/stream
 router.post(
@@ -34,7 +40,7 @@ router.post(
         include: {
           messages: {
             orderBy: { createdAt: "asc" },
-            take: 10,
+            take: 100,
           },
         },
       });
@@ -51,7 +57,7 @@ router.post(
       // 2. Retrieve Context (RAG)
       let contextText = "";
       if (thread.contextIds.length > 0) {
-        const contexts = await queryContexts(thread.contextIds, content, 50);
+        const contexts = await queryContexts(thread.contextIds, content, 500);
         if (contexts && contexts.length > 0) {
           contextText = contexts.join("\n---\n");
         }
@@ -77,7 +83,7 @@ ${contextText}
 
       // 3. Stream Text
       const result = await streamText({
-        model: openai("gpt-5.2-2025-12-11"),
+        model: openrouter(modelName),
         messages,
         onFinish: async ({ text }) => {
           try {
