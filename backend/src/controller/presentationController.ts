@@ -22,6 +22,11 @@ interface GeneratePresentationRequest {
   title?: string;
 }
 
+interface UpdatePresentationRequest {
+  title?: string;
+  status?: string;
+}
+
 interface UpdatePresentationStatusRequest {
   status: string;
 }
@@ -98,6 +103,16 @@ export class PresentationController extends Controller {
     const user = await this.resolveUser(request);
     await slideGenerationService.deletePresentation(user.id, presentationId);
     return { success: true };
+  }
+
+  @Patch("{presentationId}")
+  public async updatePresentation(
+    @Path() presentationId: string,
+    @Body() body: UpdatePresentationRequest,
+    @Request() request: AuthenticatedRequest,
+  ): Promise<PresentationResponse> {
+    const user = await this.resolveUser(request);
+    return slideGenerationService.updatePresentation(user.id, presentationId, body);
   }
 
   @Patch("{presentationId}/status")

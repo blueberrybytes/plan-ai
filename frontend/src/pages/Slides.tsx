@@ -7,8 +7,6 @@ import {
   CardContent,
   Grid,
   IconButton,
-  Select,
-  MenuItem,
   SelectChangeEvent,
 } from "@mui/material";
 import {
@@ -20,6 +18,7 @@ import {
   Visibility as VisibilityIcon,
   Download as DownloadIcon,
 } from "@mui/icons-material";
+
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import SidebarLayout from "../components/layout/SidebarLayout";
@@ -31,6 +30,7 @@ import {
   type PresentationResponse,
 } from "../store/apis/slideApi";
 import { exportToPptx } from "../services/pptxExportService";
+import EditPresentationDialog from "../components/slides/EditPresentationDialog";
 
 interface SlideData {
   slideTypeKey: string;
@@ -43,6 +43,20 @@ const Slides: React.FC = () => {
   const { data: presentations = [], isLoading } = useGetPresentationsQuery();
   const [deletePresentation] = useDeletePresentationMutation();
   const [updateStatus] = useUpdatePresentationStatusMutation();
+
+  const [editDialogOpen, setEditDialogOpen] = React.useState(false);
+  const [selectedPresentation, setSelectedPresentation] =
+    React.useState<PresentationResponse | null>(null);
+
+  const handleEdit = (pres: PresentationResponse) => {
+    setSelectedPresentation(pres);
+    setEditDialogOpen(true);
+  };
+
+  const handleEditClose = () => {
+    setEditDialogOpen(false);
+    setSelectedPresentation(null);
+  };
 
   const handleDelete = async (id: string) => {
     if (window.confirm(t("slides.presentations.deleteConfirm"))) {
@@ -185,26 +199,6 @@ const Slides: React.FC = () => {
                     <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
                       {new Date(pres.createdAt).toLocaleDateString()}
                     </Typography>
-
-                    <Select
-                      value={pres.status || "DRAFT"}
-                      size="small"
-                      onClick={(e) => e.stopPropagation()}
-                      onChange={(e) => handleStatusChange(e, pres.id)}
-                      sx={{
-                        height: 32,
-                        fontSize: 13,
-                        bgcolor: pres.status === "COMPLETED" ? "success.light" : "action.hover",
-                        color:
-                          pres.status === "COMPLETED" ? "success.contrastText" : "text.primary",
-                        "& .MuiSelect-select": { py: 0.5, px: 2 },
-                      }}
-                    >
-                      <MenuItem value="DRAFT">Draft</MenuItem>
-                      <MenuItem value="GENERATED">Generated</MenuItem>
-                      <MenuItem value="COMPLETED">Completed</MenuItem>
-                      <MenuItem value="ARCHIVED">Archived</MenuItem>
-                    </Select>
                   </CardContent>
                   <Box sx={{ display: "flex", justifyContent: "flex-end", px: 1, pb: 1, gap: 0.5 }}>
                     <IconButton
@@ -217,6 +211,7 @@ const Slides: React.FC = () => {
                     >
                       <DownloadIcon fontSize="small" />
                     </IconButton>
+
                     <IconButton
                       size="small"
                       onClick={(e) => {
@@ -242,6 +237,11 @@ const Slides: React.FC = () => {
           </Grid>
         )}
       </Box>
+      <EditPresentationDialog
+        open={editDialogOpen}
+        onClose={handleEditClose}
+        presentation={selectedPresentation}
+      />
     </SidebarLayout>
   );
 };

@@ -10,6 +10,10 @@ export type CreateTemplateRequest = components["schemas"]["CreateTemplateRequest
 export type UpdateTemplateRequest = components["schemas"]["UpdateTemplateRequest"];
 export type PresentationResponse = components["schemas"]["PresentationResponse"];
 export type GeneratePresentationRequest = components["schemas"]["GeneratePresentationRequest"];
+export interface UpdatePresentationRequest {
+  title?: string;
+  status?: string;
+}
 
 export const slideApi = createApi({
   reducerPath: "slideApi",
@@ -113,6 +117,21 @@ export const slideApi = createApi({
         { type: "Presentation", id: "LIST" },
       ],
     }),
+
+    updatePresentation: builder.mutation<
+      PresentationResponse,
+      { id: string; data: UpdatePresentationRequest }
+    >({
+      query: ({ id, data }) => ({
+        url: `/api/presentations/${id}`,
+        method: "PATCH",
+        body: data,
+      }),
+      invalidatesTags: (_result, _error, { id }) => [
+        { type: "Presentation", id },
+        { type: "Presentation", id: "LIST" },
+      ],
+    }),
   }),
 });
 
@@ -127,4 +146,5 @@ export const {
   useGeneratePresentationMutation,
   useDeletePresentationMutation,
   useUpdatePresentationStatusMutation,
+  useUpdatePresentationMutation,
 } = slideApi;

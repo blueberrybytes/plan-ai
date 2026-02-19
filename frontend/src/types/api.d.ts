@@ -250,7 +250,7 @@ export interface paths {
         delete: operations["DeletePresentation"];
         options?: never;
         head?: never;
-        patch?: never;
+        patch: operations["UpdatePresentation"];
         trace?: never;
     };
     "/api/presentations/{presentationId}/status": {
@@ -899,6 +899,10 @@ export interface components {
             contextIds: string[];
             prompt: string;
             title?: string;
+        };
+        UpdatePresentationRequest: {
+            title?: string;
+            status?: string;
         };
         UpdatePresentationStatusRequest: {
             status: string;
@@ -1816,6 +1820,32 @@ export interface operations {
                     "application/json": {
                         success: boolean;
                     };
+                };
+            };
+        };
+    };
+    UpdatePresentation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                presentationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdatePresentationRequest"];
+            };
+        };
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PresentationResponse"];
                 };
             };
         };

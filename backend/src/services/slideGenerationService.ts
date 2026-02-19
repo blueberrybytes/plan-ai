@@ -138,6 +138,20 @@ export class SlideGenerationService {
     return updated;
   }
 
+  public async updatePresentation(
+    userId: string,
+    presentationId: string,
+    data: { title?: string; status?: string },
+  ): Promise<Presentation> {
+    await this.getPresentationById(userId, presentationId);
+    const updated = await prisma.presentation.update({
+      where: { id: presentationId },
+      data,
+    });
+    logger.info(`Updated presentation ${presentationId}`);
+    return updated;
+  }
+
   private buildPrompt(
     template: TemplateWithSlideTypes,
     contextText: string,

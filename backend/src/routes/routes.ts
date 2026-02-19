@@ -519,6 +519,15 @@ const models: TsoaRoute.Models = {
         "additionalProperties": false,
     },
     // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "UpdatePresentationRequest": {
+        "dataType": "refObject",
+        "properties": {
+            "title": {"dataType":"string"},
+            "status": {"dataType":"string"},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
     "UpdatePresentationStatusRequest": {
         "dataType": "refObject",
         "properties": {
@@ -1701,6 +1710,39 @@ export function RegisterRoutes(app: Router,opts?:{multer?:ReturnType<typeof mult
 
               await templateService.apiHandler({
                 methodName: 'deletePresentation',
+                controller,
+                response,
+                next,
+                validatedArgs,
+                successStatus: undefined,
+              });
+            } catch (err) {
+                return next(err);
+            }
+        });
+        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+        const argsPresentationController_updatePresentation: Record<string, TsoaRoute.ParameterSchema> = {
+                presentationId: {"in":"path","name":"presentationId","required":true,"dataType":"string"},
+                body: {"in":"body","name":"body","required":true,"ref":"UpdatePresentationRequest"},
+                request: {"in":"request","name":"request","required":true,"dataType":"object"},
+        };
+        app.patch('/api/presentations/:presentationId',
+            authenticateMiddleware([{"ClientLevel":[]}]),
+            ...(fetchMiddlewares<RequestHandler>(PresentationController)),
+            ...(fetchMiddlewares<RequestHandler>(PresentationController.prototype.updatePresentation)),
+
+            async function PresentationController_updatePresentation(request: ExRequest, response: ExResponse, next: any) {
+
+            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+
+            let validatedArgs: any[] = [];
+            try {
+                validatedArgs = templateService.getValidatedArgs({ args: argsPresentationController_updatePresentation, request, response });
+
+                const controller = new PresentationController();
+
+              await templateService.apiHandler({
+                methodName: 'updatePresentation',
                 controller,
                 response,
                 next,
