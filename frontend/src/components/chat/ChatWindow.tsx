@@ -50,6 +50,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
   const [optimisticMessages, setOptimisticMessages] = useState<ChatMessage[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const userScrolledUp = useRef(false);
   const token = useSelector((state: RootState) => state.session.user?.token);
 
   // Fetch contexts here to display chips only
@@ -63,11 +64,33 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
     }
   }, [activeThread?.id, messages.length, isStreaming]);
 
+  // Auto-scroll to bottom only when the user hasn't scrolled up manually.
+  // When a new message is sent, always force-scroll to bottom.
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    const el = scrollRef.current;
+    if (!el) return;
+    if (!userScrolledUp.current) {
+      el.scrollTop = el.scrollHeight;
     }
   }, [messages, optimisticMessages]);
+
+  // Reset "scrolled up" flag and snap to bottom whenever a new send starts.
+  useEffect(() => {
+    if (isStreaming) {
+      userScrolledUp.current = false;
+      if (scrollRef.current) {
+        scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+      }
+    }
+  }, [isStreaming]);
+
+  const handleScroll = () => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+    // Mark as "scrolled up" if more than 80px from the bottom.
+    userScrolledUp.current = distanceFromBottom > 80;
+  };
 
   const handleSend = async () => {
     const trimmedInput = input.trim();
@@ -227,7 +250,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
         </Toolbar>
       </AppBar>
 
-      <Box sx={{ flexGrow: 1, p: 2, overflowY: "auto" }} ref={scrollRef}>
+      <Box sx={{ flexGrow: 1, p: 2, overflowY: "auto" }} ref={scrollRef} onScroll={handleScroll}>
         {allMessages.map((msg) => (
           <Box
             key={msg.id}

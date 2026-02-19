@@ -53,7 +53,12 @@ export class SlideGenerationService {
     contextIds: string[],
     prompt: string,
     title?: string,
+    numSlides?: number,
   ): Promise<Presentation> {
+    // Clamp numSlides to max 15
+    const clampedNumSlides =
+      numSlides !== undefined ? Math.min(Math.max(1, numSlides), 15) : undefined;
+
     // 1. Load template
     const template = await slideTemplateService.getTemplateById(userId, templateId);
 
@@ -72,12 +77,17 @@ export class SlideGenerationService {
 
     // 3. Trigger background generation (Fire and forget)
     // We don't await this so the API returns immediately.
-    this.generateSlidesBackground(userId, presentation.id, template, contextIds, prompt).catch(
-      (err) => {
-        logger.error(`Background generation failed for ${presentation.id}`, err);
-        this.updateStatus(userId, presentation.id, "FAILED");
-      },
-    );
+    this.generateSlidesBackground(
+      userId,
+      presentation.id,
+      template,
+      contextIds,
+      prompt,
+      clampedNumSlides,
+    ).catch((err) => {
+      logger.error(`Background generation failed for ${presentation.id}`, err);
+      this.updateStatus(userId, presentation.id, "FAILED");
+    });
 
     return presentation;
   }
@@ -91,6 +101,7 @@ export class SlideGenerationService {
     template: TemplateWithSlideTypes,
     contextIds: string[],
     userPrompt: string,
+    numSlides?: number,
   ) {
     logger.info(`Starting background generation for ${presentationId}`);
 
@@ -109,7 +120,7 @@ export class SlideGenerationService {
       }
 
       // 2. Build Prompt
-      const aiPrompt = this.buildPrompt(template, contextText, userPrompt);
+      const aiPrompt = this.buildPrompt(template, contextText, userPrompt, numSlides);
       const model = this.openrouter(this.modelName);
 
       // 3. Stream Object
@@ -286,9 +297,14 @@ export class SlideGenerationService {
     template: TemplateWithSlideTypes,
     contextText: string,
     userPrompt: string,
+    numSlides?: number,
   ): string {
     const enabledTypes = template.slideTypes.map((st) => st.slideTypeKey);
     const catalog = buildSlideTypeCatalog(enabledTypes.length > 0 ? enabledTypes : undefined);
+
+    const slideCountInstruction = numSlides
+      ? `5. Generate EXACTLY ${numSlides} slides (no more, no less). This is a strict requirement.`
+      : `5. Aim for 6-12 slides unless the content requires more (maximum 15 slides).`;
 
     return `You are a presentation architect. Your job is to create a structured slide deck.
 
@@ -302,7 +318,7 @@ ${catalog}
 2. Each slide's "parameters" MUST follow the constraints (max characters, max items).
 3. Choose slide types that best fit the content. Do NOT repeat the same type consecutively unless necessary.
 4. Keep text concise and impactful — presentations are visual, not essays.
-5. Aim for 6-12 slides unless the content requires more.
+${slideCountInstruction}
 6. Start with a "title_only" slide and end with a "title_only" slide (as a closing slide).
 7. Return a JSON object with "title" (string) and "slides" (array of { slideTypeKey, parameters }).
 

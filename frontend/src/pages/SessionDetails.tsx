@@ -9,16 +9,17 @@ import {
   CardContent,
   CircularProgress,
   Divider,
+  IconButton,
   Stack,
   Tab,
   Tabs,
+  Tooltip,
   Typography,
 } from "@mui/material";
 import {
   Home as HomeIcon,
   Refresh as RefreshIcon,
   InfoOutlined,
-  Autorenew as AutorenewIcon,
   AddCircleOutline,
   FileDownloadOutlined,
   AddTask,
@@ -343,14 +344,13 @@ const SessionDetails: React.FC = () => {
               </Typography>
             </Stack>
 
-            <Button
-              variant="outlined"
-              onClick={() => refetch()}
-              startIcon={<RefreshIcon />}
-              disabled={isFetching}
-            >
-              {t("sessionDetails.buttons.refresh")}
-            </Button>
+            <Tooltip title={t("sessionDetails.buttons.refresh")}>
+              <span>
+                <IconButton onClick={() => refetch()} disabled={isFetching} size="small">
+                  <RefreshIcon />
+                </IconButton>
+              </span>
+            </Tooltip>
           </Stack>
 
           <Box
@@ -427,14 +427,17 @@ const SessionDetails: React.FC = () => {
                       </Stack>
 
                       <Stack direction="row" spacing={1}>
-                        <Button
-                          variant="outlined"
-                          startIcon={<AutorenewIcon />}
-                          onClick={() => refetchTasks()}
-                          disabled={isTasksFetching}
-                        >
-                          {t("sessionDetails.buttons.refreshTasks")}
-                        </Button>
+                        <Tooltip title={t("sessionDetails.buttons.refreshTasks")}>
+                          <span>
+                            <IconButton
+                              onClick={() => refetchTasks()}
+                              disabled={isTasksFetching}
+                              size="small"
+                            >
+                              <RefreshIcon />
+                            </IconButton>
+                          </span>
+                        </Tooltip>
                         <Button
                           variant="contained"
                           startIcon={<AddTask />}

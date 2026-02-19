@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import {
   Box,
   Button,
+  CircularProgress,
   Container,
   Divider,
   Grid,
@@ -13,7 +14,8 @@ import {
   InputAdornment,
   Alert,
 } from "@mui/material";
-import { Google as GoogleIcon, Visibility, VisibilityOff } from "@mui/icons-material";
+import { Visibility, VisibilityOff } from "@mui/icons-material";
+import GoogleIcon from "../components/icons/GoogleIcon";
 import MicrosoftIcon from "../components/icons/MicrosoftIcon";
 import { useNavigate, Link } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
@@ -265,6 +267,7 @@ export default function SignUp() {
               type="submit"
               fullWidth
               variant="contained"
+              startIcon={isLoading ? <CircularProgress size={18} color="inherit" /> : undefined}
               sx={{ mt: 3, mb: 2 }}
               disabled={isLoading}
             >

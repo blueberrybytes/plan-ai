@@ -26,7 +26,7 @@ import {
 } from "@mui/icons-material";
 import { NavLink, useLocation } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
-import { selectUser } from "../../store/slices/session/sessionSelector";
+import { selectAvatar, selectUser } from "../../store/slices/session/sessionSelector";
 import { useBrandIdentity } from "../../hooks/useBrandIdentity";
 import { selectSidebarCollapsed } from "../../store/slices/app/appSelector";
 import { toggleSidebar } from "../../store/slices/app/appSlice";
@@ -75,6 +75,7 @@ const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children }) => {
   const location = useLocation();
   const dispatch = useDispatch();
   const user = useSelector(selectUser);
+  const avatar = useSelector(selectAvatar);
   const { logoSrc, logoAlt, productName } = useBrandIdentity();
   const isCollapsed = useSelector(selectSidebarCollapsed);
   const { t } = useTranslation();
@@ -257,6 +258,7 @@ const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children }) => {
           }}
         >
           <Avatar
+            src={avatar || undefined}
             sx={{
               bgcolor: "primary.dark",
               color: "primary.contrastText",

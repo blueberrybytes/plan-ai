@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import {
   Box,
   Button,
+  CircularProgress,
   Container,
   Divider,
   Grid,
@@ -242,6 +243,7 @@ export default function Login() {
               type="submit"
               fullWidth
               variant="contained"
+              startIcon={isLoading ? <CircularProgress size={18} color="inherit" /> : undefined}
               sx={{ mt: 3, mb: 2 }}
               disabled={isLoading}
             >

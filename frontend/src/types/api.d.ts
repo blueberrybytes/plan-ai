@@ -945,6 +945,7 @@ export interface components {
             contextIds: string[];
             prompt: string;
             title?: string;
+            numSlides?: number;
         };
         UpdatePresentationRequest: {
             title?: string;

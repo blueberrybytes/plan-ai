@@ -68,12 +68,17 @@
     }
   },
   "home": {
-    "heading": "Welcome back 👋",
-    "subheading": "Track your sessions, transcripts, and follow-up work in one place. Pick up where you left off or start something new.",
+    "heading": "Welcome back",
+    "subheading": "Your AI workspace — sessions, tasks, slides, and chat, all in one place.",
     "fallbackSessionTitle": "your sessions",
+    "greeting": {
+      "morning": "Good morning",
+      "afternoon": "Good afternoon",
+      "evening": "Good evening"
+    },
     "stats": {
       "activeSessions": {
-        "label": "Active sessions",
+        "label": "Sessions",
         "cta": "View sessions"
       },
       "transcriptsProcessed": {
@@ -83,13 +88,44 @@
       "openTasks": {
         "label": "Open tasks",
         "cta": "View board"
+      },
+      "presentations": {
+        "label": "Presentations",
+        "cta": "View slides"
       }
     },
+    "quickActions": {
+      "heading": "Quick actions",
+      "newSession": {
+        "title": "New session",
+        "description": "Upload a transcript and generate tasks automatically with AI."
+      },
+      "createSlides": {
+        "title": "Create slides",
+        "description": "Generate a branded presentation from any prompt or context."
+      },
+      "chat": {
+        "title": "AI chat",
+        "description": "Chat with your sessions, contexts, and workspace knowledge."
+      },
+      "contexts": {
+        "title": "Manage contexts",
+        "description": "Upload files and documents to enrich AI-generated content."
+      }
+    },
+    "activity": {
+      "heading": "Recent activity"
+    },
+    "presentations": {
+      "heading": "Recent presentations",
+      "loading": "Loading presentations…",
+      "viewAll": "View all presentations"
+    },
     "emptyState": {
-      "title": "Let’s get your workspace going",
-      "description": "Create a session for a workshop, sprint review, or customer call. Upload the transcript to generate action items automatically.",
+      "title": "Your workspace is ready",
+      "description": "Start by creating a session to process a transcript, or jump straight into generating an AI slide deck.",
       "newSession": "New session",
-      "browseSessions": "Browse sessions"
+      "createSlides": "Create slides"
     },
     "transcripts": {
       "title": "Recent transcripts",
@@ -336,33 +372,77 @@
   "landingPage": {
     "header": {
       "signIn": "Sign In",
-      "signUp": "Sign Up"
+      "signUp": "Sign Up Free"
     },
     "hero": {
-      "title": "Turn transcripts into project plans",
-      "subtitle": "Plan AI transforms every meeting into actionable work—no more manual note clean up, just boards, briefs, and dependencies ready for your team.",
-      "cta": "Get Started"
+      "badge": "Powered by BlueBerryBytes",
+      "title": "From meeting to done — in seconds",
+      "subtitle": "Plan AI turns transcripts into tasks, kanban boards, AI-generated slide decks, and contextual chat. The entire delivery stack, powered by AI.",
+      "cta": "Start for free",
+      "ctaSecondary": "Sign in"
+    },
+    "stats": {
+      "faster": "faster planning",
+      "aiPowered": "AI-powered",
+      "manualWork": "manual note cleanup"
     },
     "features": {
-      "heading": "Build momentum with AI-assisted delivery",
+      "heading": "Everything your team needs, nothing it doesn't",
+      "subheading": "One platform that takes your raw meeting output and turns it into structured, actionable work.",
       "items": {
         "transcript": {
           "title": "Transcript intake",
-          "description": "Upload audio notes or drop raw transcripts. We auto-detect speakers and decisions in seconds."
+          "description": "Drop raw meeting transcripts or notes. Plan AI auto-detects speakers, decisions, and action items in seconds."
         },
         "tasks": {
-          "title": "AI task drafting",
-          "description": "Generate scoped, prioritized tasks with owners, due dates, and context that links back to the meeting."
+          "title": "AI task generation",
+          "description": "Generate scoped, prioritized tasks with owners, due dates, and full meeting context — zero manual effort."
         },
         "boards": {
           "title": "Boards & timelines",
-          "description": "Switch between kanban, swimlanes, and roadmap views to keep every project aligned."
+          "description": "Switch between kanban, dependency diagrams, and roadmap views to keep every project aligned."
+        },
+        "slides": {
+          "title": "AI slide decks",
+          "description": "Generate beautiful, branded presentations from any prompt or context — choose your theme and let AI do the rest."
+        },
+        "chat": {
+          "title": "Contextual AI chat",
+          "description": "Ask questions about your sessions, tasks, and context files. Your AI assistant knows your entire workspace."
         },
         "insights": {
           "title": "Delivery insights",
           "description": "Spot blockers early with dependency tracking, burn-up reports, and stakeholder digests."
         }
       }
+    },
+    "howItWorks": {
+      "heading": "Up and running in 3 steps",
+      "steps": {
+        "1": {
+          "title": "Connect & upload",
+          "description": "Sign in with Google or email. Upload meeting transcripts or context files to give Plan AI the full picture."
+        },
+        "2": {
+          "title": "Let AI do the work",
+          "description": "Plan AI extracts tasks, builds boards, and generates slides automatically. No templates to fill, no config to touch."
+        },
+        "3": {
+          "title": "Ship faster",
+          "description": "Review, adjust, and push tasks to Jira or Linear. Share slide decks. Chat with your context. Stay unblocked."
+        }
+      }
+    },
+    "checklist": {
+      "noSetup": "No setup required",
+      "googleLogin": "Sign in with Google",
+      "freeTier": "Free to start",
+      "allInOne": "Tasks, slides & chat in one place"
+    },
+    "cta": {
+      "title": "Stop cleaning up meeting notes",
+      "subtitle": "Join teams using Plan AI to cut planning overhead and ship faster. It takes 30 seconds to get started.",
+      "button": "Get started for free"
     },
     "footer": {
       "copyright": "© {{year}} BlueberryBytes {{productName}}. All rights reserved.",
@@ -691,7 +771,10 @@
         "students": "Students",
         "general": "General Public"
       },
-      "selectThemePrompt": "Select a theme to see a preview"
+      "selectThemePrompt": "Select a theme to see a preview",
+      "numSlides": "Number of slides",
+      "numSlidesHelper": "Leave on AI decides to let the AI choose the ideal slide count (max 15)",
+      "numSlidesAI": "AI decides"
     },
     "templates": {
       "title": "Templates",

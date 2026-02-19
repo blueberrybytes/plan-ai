@@ -20,6 +20,7 @@ interface GeneratePresentationRequest {
   contextIds: string[];
   prompt: string;
   title?: string;
+  numSlides?: number;
 }
 
 interface UpdatePresentationRequest {
@@ -72,6 +73,7 @@ export class PresentationController extends Controller {
       body.contextIds,
       body.prompt,
       body.title,
+      body.numSlides,
     );
 
     this.setStatus(201);

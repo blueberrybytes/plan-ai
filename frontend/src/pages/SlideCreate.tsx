@@ -39,6 +39,7 @@ const SlideCreate: React.FC = () => {
   const [title, setTitle] = useState("");
   const [tone, setTone] = useState("");
   const [audience, setAudience] = useState("");
+  const [numSlides, setNumSlides] = useState<number | undefined>(undefined);
   const [error, setError] = useState<string | null>(null);
 
   const contexts = contextsData?.data?.contexts ?? [];
@@ -60,6 +61,7 @@ const SlideCreate: React.FC = () => {
         contextIds: selectedContextIds,
         prompt: enrichedPrompt,
         title: title || undefined,
+        numSlides: numSlides,
       }).unwrap();
       navigate(`/slides/view/${result.id}?streaming=true`);
       void result;
@@ -210,6 +212,27 @@ const SlideCreate: React.FC = () => {
               <MenuItem value="general public">{t("slides.create.audiences.general")}</MenuItem>
             </TextField>
           </Box>
+
+          {/* Number of slides */}
+          <TextField
+            select
+            label={t("slides.create.numSlides")}
+            fullWidth
+            value={numSlides ?? ""}
+            onChange={(e) => {
+              const val = e.target.value;
+              setNumSlides(val === "" ? undefined : Number(val));
+            }}
+            helperText={t("slides.create.numSlidesHelper")}
+            sx={{ mb: 3 }}
+          >
+            <MenuItem value="">{t("slides.create.numSlidesAI")}</MenuItem>
+            {Array.from({ length: 15 }, (_, i) => i + 1).map((n) => (
+              <MenuItem key={n} value={n}>
+                {n}
+              </MenuItem>
+            ))}
+          </TextField>
 
           {/* Prompt */}
           <TextField

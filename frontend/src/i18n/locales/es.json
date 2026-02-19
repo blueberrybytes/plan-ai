@@ -68,12 +68,17 @@
     }
   },
   "home": {
-    "heading": "Bienvenido de nuevo 👋",
-    "subheading": "Supervisa tus sesiones, transcripciones y tareas en un solo lugar. Retoma donde lo dejaste o empieza algo nuevo.",
+    "heading": "Bienvenido de nuevo",
+    "subheading": "Tu workspace de IA — sesiones, tareas, slides y chat, todo en un solo lugar.",
     "fallbackSessionTitle": "tus sesiones",
+    "greeting": {
+      "morning": "Buenos días",
+      "afternoon": "Buenas tardes",
+      "evening": "Buenas noches"
+    },
     "stats": {
       "activeSessions": {
-        "label": "Sesiones activas",
+        "label": "Sesiones",
         "cta": "Ver sesiones"
       },
       "transcriptsProcessed": {
@@ -83,13 +88,44 @@
       "openTasks": {
         "label": "Tareas abiertas",
         "cta": "Ver tablero"
+      },
+      "presentations": {
+        "label": "Presentaciones",
+        "cta": "Ver slides"
       }
     },
+    "quickActions": {
+      "heading": "Acciones rápidas",
+      "newSession": {
+        "title": "Nueva sesión",
+        "description": "Sube una transcripción y genera tareas automáticamente con IA."
+      },
+      "createSlides": {
+        "title": "Crear slides",
+        "description": "Genera una presentación con tu marca a partir de cualquier prompt o contexto."
+      },
+      "chat": {
+        "title": "Chat con IA",
+        "description": "Chatea con tus sesiones, contextos y conocimiento del workspace."
+      },
+      "contexts": {
+        "title": "Gestionar contextos",
+        "description": "Sube archivos y documentos para enriquecer el contenido generado por IA."
+      }
+    },
+    "activity": {
+      "heading": "Actividad reciente"
+    },
+    "presentations": {
+      "heading": "Presentaciones recientes",
+      "loading": "Cargando presentaciones…",
+      "viewAll": "Ver todas las presentaciones"
+    },
     "emptyState": {
-      "title": "Activa tu espacio de trabajo",
-      "description": "Crea una sesión para talleres, revisiones de sprint o llamadas con clientes. Sube la transcripción para generar tareas automáticamente.",
+      "title": "Tu workspace está listo",
+      "description": "Empieza creando una sesión para procesar una transcripción, o genera directamente un slide deck con IA.",
       "newSession": "Nueva sesión",
-      "browseSessions": "Explorar sesiones"
+      "createSlides": "Crear slides"
     },
     "transcripts": {
       "title": "Transcripciones recientes",
@@ -336,33 +372,77 @@
   "landingPage": {
     "header": {
       "signIn": "Iniciar sesión",
-      "signUp": "Registrarse"
+      "signUp": "Registro gratuito"
     },
     "hero": {
-      "title": "Convierte transcripciones en planes de proyecto",
-      "subtitle": "Plan AI transforma cada reunión en trabajo accionable: sin limpiar notas manualmente, solo tableros, resúmenes y dependencias listos para tu equipo.",
-      "cta": "Comenzar"
+      "badge": "Impulsado por BlueBerryBytes",
+      "title": "De reunión a listo — en segundos",
+      "subtitle": "Plan AI convierte transcripciones en tareas, tableros kanban, presentaciones generadas por IA y chat contextual. Todo el stack de entrega, potenciado por IA.",
+      "cta": "Empieza gratis",
+      "ctaSecondary": "Iniciar sesión"
+    },
+    "stats": {
+      "faster": "planificación más rápida",
+      "aiPowered": "impulsado por IA",
+      "manualWork": "limpieza manual de notas"
     },
     "features": {
-      "heading": "Impulsa el ritmo con entrega asistida por IA",
+      "heading": "Todo lo que tu equipo necesita, sin lo que no",
+      "subheading": "Una plataforma que toma el resultado de tus reuniones y lo convierte en trabajo estructurado y accionable.",
       "items": {
         "transcript": {
           "title": "Ingesta de transcripciones",
-          "description": "Sube notas de audio o transcripciones en bruto. Detectamos oradores y decisiones en segundos."
+          "description": "Sube transcripciones o notas de reuniones. Plan AI detecta oradores, decisiones y acciones en segundos."
         },
         "tasks": {
-          "title": "Redacción de tareas con IA",
-          "description": "Genera tareas priorizadas con responsables, fechas límite y contexto que enlaza con la reunión."
+          "title": "Generación de tareas con IA",
+          "description": "Genera tareas priorizadas con responsables, fechas límite y contexto completo de la reunión — sin esfuerzo manual."
         },
         "boards": {
           "title": "Tableros y cronogramas",
-          "description": "Alterna entre kanban, swimlanes y vistas de roadmap para mantener cada proyecto alineado."
+          "description": "Alterna entre kanban, diagramas de dependencias y vistas de roadmap para mantener cada proyecto alineado."
+        },
+        "slides": {
+          "title": "Presentaciones con IA",
+          "description": "Genera presentaciones con tu marca a partir de cualquier prompt o contexto — elige tu tema y deja que la IA haga el resto."
+        },
+        "chat": {
+          "title": "Chat contextual con IA",
+          "description": "Haz preguntas sobre tus sesiones, tareas y archivos de contexto. Tu asistente de IA conoce todo tu workspace."
         },
         "insights": {
           "title": "Insights de entrega",
           "description": "Detecta bloqueos temprano con seguimiento de dependencias, burn-up reports y resúmenes para stakeholders."
         }
       }
+    },
+    "howItWorks": {
+      "heading": "Funcionando en 3 pasos",
+      "steps": {
+        "1": {
+          "title": "Conecta y sube",
+          "description": "Inicia sesión con Google o email. Sube transcripciones o archivos de contexto para que Plan AI tenga el panorama completo."
+        },
+        "2": {
+          "title": "Deja que la IA trabaje",
+          "description": "Plan AI extrae tareas, construye tableros y genera presentaciones automáticamente. Sin plantillas que rellenar."
+        },
+        "3": {
+          "title": "Entrega más rápido",
+          "description": "Revisa, ajusta y envía tareas a Jira o Linear. Comparte presentaciones. Chatea con tu contexto. Mantente desbloqueado."
+        }
+      }
+    },
+    "checklist": {
+      "noSetup": "Sin configuración",
+      "googleLogin": "Inicia sesión con Google",
+      "freeTier": "Gratis para empezar",
+      "allInOne": "Tareas, slides y chat en un solo lugar"
+    },
+    "cta": {
+      "title": "Deja de limpiar notas de reuniones",
+      "subtitle": "Únete a los equipos que usan Plan AI para reducir la carga de planificación y entregar más rápido. Empezar tarda 30 segundos.",
+      "button": "Empieza gratis"
     },
     "footer": {
       "copyright": "© {{year}} BlueberryBytes {{productName}}. Todos los derechos reservados.",
@@ -691,7 +771,10 @@
         "students": "Estudiantes",
         "general": "Público General"
       },
-      "selectThemePrompt": "Selecciona un tema para ver la vista previa"
+      "selectThemePrompt": "Selecciona un tema para ver la vista previa",
+      "numSlides": "Número de diapositivas",
+      "numSlidesHelper": "Deja en 'IA decide' para que la IA elija la cantidad ideal (máx. 15)",
+      "numSlidesAI": "IA decide"
     },
     "templates": {
       "title": "Plantillas",
