@@ -88,7 +88,7 @@ const Home: React.FC = () => {
     return t("home.greeting.evening");
   }, [t]);
 
-  const firstName = user?.email?.split("@")[0] ?? "";
+  const firstName = user?.displayName?.split(" ")[0] ?? "";
 
   const quickActions = [
     {
