@@ -11,6 +11,7 @@ import {
   ListItemText,
   Tooltip,
   Typography,
+  alpha,
 } from "@mui/material";
 import {
   Dashboard as DashboardIcon,
@@ -115,9 +116,9 @@ const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children }) => {
         sx={{
           width: isCollapsed ? 80 : 264,
           flexShrink: 0,
-          borderRight: 1,
-          borderColor: "divider",
-          bgcolor: "background.paper",
+          borderRight: "1px solid",
+          borderColor: "rgba(255, 255, 255, 0.08)",
+          bgcolor: "background.default",
           display: "flex",
           flexDirection: "column",
           py: 3,
@@ -126,6 +127,8 @@ const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children }) => {
             theme.transitions.create(["width", "padding"], {
               duration: theme.transitions.duration.shorter,
             }),
+          position: "relative",
+          zIndex: 10,
         }}
       >
         <Box
@@ -139,9 +142,18 @@ const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children }) => {
           }}
         >
           <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-            <img src={logoSrc} alt={logoAlt} style={{ height: 32 }} />
+            <img src={logoSrc} alt={logoAlt} style={{ height: 32, filter: "brightness(1.2)" }} />
             {!isCollapsed ? (
-              <Typography variant="h6" sx={{ fontWeight: 700 }}>
+              <Typography
+                variant="h6"
+                sx={{
+                  fontWeight: 800,
+                  letterSpacing: "-0.5px",
+                  background: "linear-gradient(90deg, #fff 0%, #94a3b8 100%)",
+                  WebkitBackgroundClip: "text",
+                  WebkitTextFillColor: "transparent",
+                }}
+              >
                 {productName}
               </Typography>
             ) : null}
@@ -151,13 +163,17 @@ const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children }) => {
               isCollapsed ? t("sidebarLayout.tooltip.expand") : t("sidebarLayout.tooltip.collapse")
             }
           >
-            <IconButton onClick={handleToggleCollapse} size="small">
+            <IconButton
+              onClick={handleToggleCollapse}
+              size="small"
+              sx={{ color: "text.secondary" }}
+            >
               {isCollapsed ? <ChevronRightIcon /> : <ChevronLeftIcon />}
             </IconButton>
           </Tooltip>
         </Box>
 
-        <Divider sx={{ my: 3 }} />
+        <Divider sx={{ my: 3, opacity: 0.5 }} />
 
         <List sx={{ flexGrow: 1, p: 0 }}>
           {navItems.map((item) => (
@@ -167,15 +183,32 @@ const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children }) => {
               to={item.path}
               selected={isNavActive(item.path)}
               sx={{
-                borderRadius: 1,
-                mb: 0.5,
+                borderRadius: "12px",
+                mb: 0.8,
+                mx: isCollapsed ? 0.5 : 0,
                 justifyContent: isCollapsed ? "center" : "flex-start",
+                padding: isCollapsed ? "10px" : "10px 16px",
                 "&.Mui-selected": {
-                  bgcolor: "primary.main",
-                  color: "primary.contrastText",
+                  bgcolor: alpha("#4361EE", 0.12),
+                  color: "primary.light",
+                  border: "1px solid rgba(67, 97, 238, 0.2)",
                   "& .MuiListItemIcon-root": {
-                    color: "primary.contrastText",
+                    color: "primary.light",
                   },
+                  "&::after": {
+                    content: '""',
+                    position: "absolute",
+                    left: 0,
+                    top: "20%",
+                    bottom: "20%",
+                    width: "3px",
+                    bgcolor: "primary.main",
+                    borderRadius: "0 4px 4px 0",
+                    boxShadow: "0 0 10px rgba(67, 97, 238, 0.8)",
+                  },
+                },
+                "&:hover": {
+                  bgcolor: "rgba(255, 255, 255, 0.04)",
                 },
               }}
             >
@@ -191,14 +224,17 @@ const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children }) => {
               {!isCollapsed ? (
                 <ListItemText
                   primary={t(item.labelKey)}
-                  primaryTypographyProps={{ fontWeight: 500 }}
+                  primaryTypographyProps={{
+                    fontWeight: 600,
+                    fontSize: "0.9375rem",
+                  }}
                 />
               ) : null}
             </ListItemButton>
           ))}
         </List>
 
-        <Divider sx={{ my: 2 }} />
+        <Divider sx={{ my: 2, opacity: 0.5 }} />
 
         <ButtonBase
           component={NavLink}
@@ -207,7 +243,7 @@ const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children }) => {
             display: "flex",
             alignItems: "center",
             gap: isCollapsed ? 0 : 1.5,
-            borderRadius: 1,
+            borderRadius: "14px",
             px: 1.5,
             py: 1,
             width: "100%",
@@ -215,20 +251,35 @@ const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children }) => {
             transition: (theme) =>
               theme.transitions.create(["background-color"], { duration: 200 }),
             "&:hover": {
-              bgcolor: "action.hover",
+              bgcolor: "rgba(255, 255, 255, 0.04)",
             },
             justifyContent: isCollapsed ? "center" : "flex-start",
           }}
         >
-          <Avatar sx={{ bgcolor: "primary.light", color: "primary.contrastText" }}>
+          <Avatar
+            sx={{
+              bgcolor: "primary.dark",
+              color: "primary.contrastText",
+              width: 36,
+              height: 36,
+              fontSize: "0.875rem",
+              fontWeight: 700,
+              boxShadow: "0 0 15px rgba(67, 97, 238, 0.2)",
+            }}
+          >
             {profileInitials || <PersonIcon fontSize="small" />}
           </Avatar>
           {!isCollapsed ? (
             <Box sx={{ flexGrow: 1, minWidth: 0 }}>
-              <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+              <Typography variant="subtitle2" sx={{ fontWeight: 700, color: "#fff" }}>
                 {user?.displayName || t("sidebarLayout.profile.fallbackName")}
               </Typography>
-              <Typography variant="body2" color="text.secondary" noWrap>
+              <Typography
+                variant="body2"
+                color="text.secondary"
+                noWrap
+                sx={{ fontSize: "0.75rem" }}
+              >
                 {user?.email || t("sidebarLayout.profile.fallbackEmail")}
               </Typography>
             </Box>
@@ -236,7 +287,25 @@ const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children }) => {
         </ButtonBase>
       </Box>
 
-      <Box component="main" sx={{ flexGrow: 1, minWidth: 0 }}>
+      <Box
+        component="main"
+        sx={{
+          flexGrow: 1,
+          minWidth: 0,
+          bgcolor: "#0b0d11",
+          position: "relative",
+          "&::before": {
+            content: '""',
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            height: "1px",
+            background:
+              "linear-gradient(90deg, rgba(67, 97, 238, 0) 0%, rgba(67, 97, 238, 0.1) 50%, rgba(67, 97, 238, 0) 100%)",
+          },
+        }}
+      >
         {children}
       </Box>
     </Box>
