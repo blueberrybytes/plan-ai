@@ -801,10 +801,15 @@
     },
     "presentations": {
       "title": "Presentaciones",
+      "loading": "Cargando presentaciones...",
       "generate": "Generar Presentación",
       "delete": "Eliminar",
       "deleteConfirm": "¿Estás seguro de que deseas eliminar esta presentación?",
       "empty": "Aún no hay presentaciones. Genera una desde una plantilla.",
+      "emptyTitle": "Aún no hay presentaciones",
+      "emptyDescription": "Genera tu primer slide deck con IA en segundos. Elige un tema, añade contexto y deja que Gemini haga el resto.",
+      "emptyCtaPrimary": "Generar presentación",
+      "emptyCtaSecondary": "Ver tipos de slides",
       "generating": "Generando presentación...",
       "form": {
         "template": "Plantilla",

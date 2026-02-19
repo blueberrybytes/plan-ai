@@ -9,6 +9,8 @@ import {
   Visibility as VisibilityIcon,
   Download as DownloadIcon,
   Language as LanguageIcon,
+  AutoAwesome as AutoAwesomeIcon,
+  GridView as GridViewIcon,
 } from "@mui/icons-material";
 
 import { useNavigate } from "react-router-dom";
@@ -131,10 +133,61 @@ const Slides: React.FC = () => {
         {isLoading ? (
           <Typography color="text.secondary">{t("slides.presentations.loading")}</Typography>
         ) : presentations.length === 0 ? (
-          <Card variant="outlined" sx={{ p: 4, textAlign: "center" }}>
-            <SlideshowIcon sx={{ fontSize: 48, color: "text.disabled", mb: 1 }} />
-            <Typography color="text.secondary">{t("slides.presentations.empty")}</Typography>
-          </Card>
+          <Box
+            sx={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              textAlign: "center",
+              py: 10,
+              px: 4,
+              borderRadius: 3,
+              border: "1px dashed",
+              borderColor: "divider",
+              bgcolor: "rgba(255,255,255,0.02)",
+            }}
+          >
+            <Box
+              sx={{
+                width: 80,
+                height: 80,
+                borderRadius: "50%",
+                background:
+                  "linear-gradient(135deg, rgba(67,97,238,0.15) 0%, rgba(167,139,250,0.15) 100%)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                mb: 3,
+              }}
+            >
+              <SlideshowIcon sx={{ fontSize: 40, color: "primary.main" }} />
+            </Box>
+            <Typography variant="h5" fontWeight={700} sx={{ mb: 1 }}>
+              {t("slides.presentations.emptyTitle")}
+            </Typography>
+            <Typography variant="body1" color="text.secondary" sx={{ mb: 4, maxWidth: 440 }}>
+              {t("slides.presentations.emptyDescription")}
+            </Typography>
+            <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap", justifyContent: "center" }}>
+              <Button
+                variant="contained"
+                size="large"
+                startIcon={<AutoAwesomeIcon />}
+                onClick={() => navigate("/slides/create")}
+              >
+                {t("slides.presentations.emptyCtaPrimary")}
+              </Button>
+              <Button
+                variant="outlined"
+                size="large"
+                startIcon={<GridViewIcon />}
+                onClick={() => navigate("/slides/types")}
+              >
+                {t("slides.presentations.emptyCtaSecondary")}
+              </Button>
+            </Box>
+          </Box>
         ) : (
           <Grid container spacing={2}>
             {presentations.map((pres) => (

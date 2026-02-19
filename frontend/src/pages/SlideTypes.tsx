@@ -56,6 +56,36 @@ const SlideTypes: React.FC = () => {
                 }}
               >
                 <CardActionArea onClick={() => setSelected(slideType)}>
+                  {/* Mini thumbnail preview */}
+                  <Box
+                    sx={{
+                      width: "100%",
+                      height: 130,
+                      overflow: "hidden",
+                      bgcolor: "#0f172a",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      borderBottom: "1px solid",
+                      borderColor: "divider",
+                    }}
+                  >
+                    <Box
+                      sx={{
+                        transform: "scale(0.235)",
+                        transformOrigin: "top left",
+                        width: 960 * 0.235,
+                        height: 540 * 0.235,
+                        pointerEvents: "none",
+                      }}
+                    >
+                      <SlideRenderer
+                        typeKey={slideType.key}
+                        data={slideType.sampleData}
+                        scale={1}
+                      />
+                    </Box>
+                  </Box>
                   <CardContent sx={{ py: 1.5, px: 2 }}>
                     <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 0.5 }}>
                       <Typography variant="subtitle1" fontWeight={600}>

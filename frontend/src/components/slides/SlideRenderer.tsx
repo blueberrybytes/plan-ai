@@ -1,5 +1,70 @@
-import React from "react";
+import React, { useState } from "react";
 import { Box, Typography } from "@mui/material";
+import ImageIcon from "@mui/icons-material/Image";
+
+/**
+ * Image with a styled gradient placeholder shown while loading or on error.
+ */
+interface SlideImageProps {
+  src: string;
+  alt: string;
+  query?: string;
+  primary?: string;
+  style?: React.CSSProperties;
+}
+
+const SlideImage: React.FC<SlideImageProps> = ({ src, alt, query, primary = "#6366f1", style }) => {
+  const [status, setStatus] = useState<"loading" | "loaded" | "error">("loading");
+
+  return (
+    <Box sx={{ position: "relative", width: "100%", height: "100%" }}>
+      {/* Placeholder — shown while loading or on error */}
+      {status !== "loaded" && (
+        <Box
+          sx={{
+            position: "absolute",
+            inset: 0,
+            background: `linear-gradient(135deg, ${primary}22 0%, ${primary}44 100%)`,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 1,
+            borderRadius: "inherit",
+          }}
+        >
+          <ImageIcon sx={{ fontSize: 48, color: primary, opacity: 0.6 }} />
+          {query && (
+            <Typography
+              sx={{
+                fontSize: 13,
+                color: "#94a3b8",
+                textAlign: "center",
+                px: 2,
+                maxWidth: 200,
+                lineHeight: 1.4,
+              }}
+            >
+              {query}
+            </Typography>
+          )}
+        </Box>
+      )}
+      {/* Actual image */}
+      <img
+        src={src}
+        alt={alt}
+        onLoad={() => setStatus("loaded")}
+        onError={() => setStatus("error")}
+        style={{
+          ...style,
+          opacity: status === "loaded" ? 1 : 0,
+          transition: "opacity 0.4s ease",
+        }}
+      />
+    </Box>
+  );
+};
 
 const typingKeyframes = `
   @keyframes slideInUp {
@@ -205,12 +270,14 @@ export const TextImageSlide: React.FC<SlideProps> = ({
             bgcolor: "rgba(99,102,241,0.1)",
           }}
         >
-          <img
+          <SlideImage
             src={
               (data.imageUrl as string) ||
               `https://image.pollinations.ai/prompt/${encodeURIComponent(String(data.imageQuery || "abstract background"))}?width=800&height=600&nologo=true`
             }
             alt={String(data.imageQuery || "Image")}
+            query={String(data.imageQuery || "")}
+            primary={primary}
             style={{ width: "100%", height: "100%", objectFit: "cover" }}
           />
         </Box>
@@ -428,12 +495,14 @@ export const ShowcaseSlide: React.FC<SlideProps> = ({ data, brandColors, fonts, 
           minHeight: 240,
         }}
       >
-        <img
+        <SlideImage
           src={
             (data.imageUrl as string) ||
             `https://image.pollinations.ai/prompt/${encodeURIComponent(String(data.imageQuery || "professional showcase image"))}?width=1200&height=600&nologo=true`
           }
           alt={String(data.imageQuery || "Featured Image")}
+          query={String(data.imageQuery || "")}
+          primary={primary}
           style={{ width: "100%", height: "100%", objectFit: "cover" }}
         />
       </Box>
