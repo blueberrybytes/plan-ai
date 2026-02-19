@@ -150,7 +150,10 @@ export const TextImageSlide: React.FC<SlideProps> = ({ data, brandColors, fonts,
           }}
         >
           <img
-            src={`https://image.pollinations.ai/prompt/${encodeURIComponent(String(data.imageQuery || "abstract background"))}?width=800&height=600&nologo=true`}
+            src={
+              (data.imageUrl as string) ||
+              `https://image.pollinations.ai/prompt/${encodeURIComponent(String(data.imageQuery || "abstract background"))}?width=800&height=600&nologo=true`
+            }
             alt={String(data.imageQuery || "Image")}
             style={{ width: "100%", height: "100%", objectFit: "cover" }}
           />
@@ -164,7 +167,15 @@ export const TextImageSlide: React.FC<SlideProps> = ({ data, brandColors, fonts,
 export const BulletListSlide: React.FC<SlideProps> = ({ data, brandColors, fonts, scale }) => {
   const primary = brandColors?.primary || "#6366f1";
   const rawBullets = data.bullets;
-  const bullets: string[] = Array.isArray(rawBullets) ? rawBullets.map(String) : [];
+  let bullets: string[] = [];
+  if (Array.isArray(rawBullets)) {
+    bullets = rawBullets.map(String);
+  } else if (typeof rawBullets === "string") {
+    bullets = rawBullets
+      .split("\n")
+      .map((b) => b.trim())
+      .filter(Boolean);
+  }
   return (
     <SlideFrame brandColors={brandColors} fonts={fonts} scale={scale}>
       <Typography
@@ -362,7 +373,10 @@ export const ShowcaseSlide: React.FC<SlideProps> = ({ data, brandColors, fonts, 
         }}
       >
         <img
-          src={`https://image.pollinations.ai/prompt/${encodeURIComponent(String(data.imageQuery || "professional showcase image"))}?width=1200&height=600&nologo=true`}
+          src={
+            (data.imageUrl as string) ||
+            `https://image.pollinations.ai/prompt/${encodeURIComponent(String(data.imageQuery || "professional showcase image"))}?width=1200&height=600&nologo=true`
+          }
           alt={String(data.imageQuery || "Featured Image")}
           style={{ width: "100%", height: "100%", objectFit: "cover" }}
         />

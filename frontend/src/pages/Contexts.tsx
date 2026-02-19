@@ -58,7 +58,14 @@ const Contexts: React.FC = () => {
   const [deleteContextFile, { isLoading: isDeletingFile }] = useDeleteContextFileMutation();
 
   const context = data?.data ?? null;
-  const contexts = contextsData?.data?.contexts ?? [];
+  const contexts = React.useMemo(() => contextsData?.data?.contexts ?? [], [contextsData]);
+
+  // Auto-select first context if none selected
+  React.useEffect(() => {
+    if (!isListLoading && contexts.length > 0 && !contextId) {
+      navigate(`/contexts/${contexts[0].id}`, { replace: true });
+    }
+  }, [isListLoading, contexts, contextId, navigate]);
 
   const [dialogMode, setDialogMode] = React.useState<"create" | "edit" | null>(null);
   const [dialogName, setDialogName] = React.useState("");

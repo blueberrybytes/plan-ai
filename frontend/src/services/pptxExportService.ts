@@ -104,11 +104,13 @@ export const exportToPptx = async (options: ExportOptions) => {
           fontFace: bodyFont,
           fontSize: 14,
           color: "CBD5E1",
-          valign: "top",
+          valign: "middle",
         });
-        if (params.imageQuery) {
+        if (params.imageUrl || params.imageQuery) {
           slidePage.addImage({
-            path: `https://image.pollinations.ai/prompt/${encodeURIComponent(String(params.imageQuery))}?width=800&height=600&nologo=true`,
+            path: (params.imageUrl as string)
+              ? (params.imageUrl as string)
+              : `https://image.pollinations.ai/prompt/${encodeURIComponent(String(params.imageQuery))}?width=800&height=600&nologo=true`,
             x: 5.5,
             y: 1,
             w: 4,
@@ -138,7 +140,14 @@ export const exportToPptx = async (options: ExportOptions) => {
           color: primaryColor.replace("#", ""),
           bold: true,
         });
-        const bullets = Array.isArray(params.bullets) ? params.bullets.map(String) : [];
+        const bullets = Array.isArray(params.bullets)
+          ? params.bullets.map(String)
+          : typeof params.bullets === "string"
+            ? (params.bullets as string)
+                .split("\n")
+                .map((b) => b.trim())
+                .filter(Boolean)
+            : [];
         const bulletText = bullets.map((b) => ({ text: b, options: { breakLine: true } }));
         slidePage.addText(bulletText, {
           x: 0.5,
@@ -167,9 +176,19 @@ export const exportToPptx = async (options: ExportOptions) => {
           align: "center",
         });
         // Left
+        // Left Column Background + Content
+        slidePage.addShape(pptx.ShapeType.rect, {
+          x: 0.5,
+          y: 1.1,
+          w: 4.25,
+          h: 4,
+          fill: { color: "6366f1", alpha: 94 }, // ~0.06 opacity
+          line: { color: "6366f1", width: 1, alpha: 85 },
+        });
+
         if (params.leftTitle) {
           slidePage.addText(String(params.leftTitle), {
-            x: 0.5,
+            x: 0.6,
             y: 1.2,
             w: 4,
             h: 0.4,
@@ -180,19 +199,29 @@ export const exportToPptx = async (options: ExportOptions) => {
           });
         }
         slidePage.addText(String(params.leftBody || ""), {
-          x: 0.5,
+          x: 0.6,
           y: 1.7,
           w: 4,
-          h: 3,
+          h: 3.3,
           fontFace: bodyFont,
           fontSize: 14,
           color: "94A3B8",
+          valign: "top",
         });
 
-        // Right
+        // Right Column Background + Content
+        slidePage.addShape(pptx.ShapeType.rect, {
+          x: 5.25,
+          y: 1.1,
+          w: 4.25,
+          h: 4,
+          fill: { color: "10b981", alpha: 94 }, // ~0.06 opacity
+          line: { color: "10b981", width: 1, alpha: 85 },
+        });
+
         if (params.rightTitle) {
           slidePage.addText(String(params.rightTitle), {
-            x: 5,
+            x: 5.35,
             y: 1.2,
             w: 4,
             h: 0.4,
@@ -203,13 +232,14 @@ export const exportToPptx = async (options: ExportOptions) => {
           });
         }
         slidePage.addText(String(params.rightBody || ""), {
-          x: 5,
+          x: 5.35,
           y: 1.7,
           w: 4,
-          h: 3,
+          h: 3.3,
           fontFace: bodyFont,
           fontSize: 14,
           color: "94A3B8",
+          valign: "top",
         });
         break;
 
@@ -225,9 +255,11 @@ export const exportToPptx = async (options: ExportOptions) => {
           bold: true,
           align: "center",
         });
-        if (params.imageQuery) {
+        if (params.imageUrl || params.imageQuery) {
           slidePage.addImage({
-            path: `https://image.pollinations.ai/prompt/${encodeURIComponent(String(params.imageQuery))}?width=1200&height=600&nologo=true`,
+            path: (params.imageUrl as string)
+              ? (params.imageUrl as string)
+              : `https://image.pollinations.ai/prompt/${encodeURIComponent(String(params.imageQuery))}?width=1200&height=600&nologo=true`,
             x: 2,
             y: 1.2,
             w: 6,

@@ -1,14 +1,5 @@
 import React from "react";
-import {
-  Box,
-  Typography,
-  Button,
-  Card,
-  CardContent,
-  Grid,
-  IconButton,
-  SelectChangeEvent,
-} from "@mui/material";
+import { Box, Typography, Button, Card, CardContent, Grid, IconButton } from "@mui/material";
 import {
   Add as AddIcon,
   Palette as PaletteIcon,
@@ -26,7 +17,6 @@ import SlideRenderer from "../components/slides/SlideRenderer";
 import {
   useGetPresentationsQuery,
   useDeletePresentationMutation,
-  useUpdatePresentationStatusMutation,
   type PresentationResponse,
 } from "../store/apis/slideApi";
 import { exportToPptx } from "../services/pptxExportService";
@@ -42,16 +32,10 @@ const Slides: React.FC = () => {
   const navigate = useNavigate();
   const { data: presentations = [], isLoading } = useGetPresentationsQuery();
   const [deletePresentation] = useDeletePresentationMutation();
-  const [updateStatus] = useUpdatePresentationStatusMutation();
 
   const [editDialogOpen, setEditDialogOpen] = React.useState(false);
   const [selectedPresentation, setSelectedPresentation] =
     React.useState<PresentationResponse | null>(null);
-
-  const handleEdit = (pres: PresentationResponse) => {
-    setSelectedPresentation(pres);
-    setEditDialogOpen(true);
-  };
 
   const handleEditClose = () => {
     setEditDialogOpen(false);
@@ -62,11 +46,6 @@ const Slides: React.FC = () => {
     if (window.confirm(t("slides.presentations.deleteConfirm"))) {
       await deletePresentation(id);
     }
-  };
-
-  const handleStatusChange = async (event: SelectChangeEvent, id: string) => {
-    const newStatus = event.target.value;
-    await updateStatus({ id, status: newStatus });
   };
 
   const handleDownload = async (pres: PresentationResponse) => {

@@ -8,6 +8,7 @@ import prisma from "../prisma/prismaClient";
 import { queryContexts } from "../vector/contextFileVectorService";
 import { slideTemplateService, TemplateWithSlideTypes } from "./slideTemplateService";
 import { buildSlideTypeCatalog } from "./slideTypeRegistry";
+import { imageGenerationService } from "./imageGenerationService";
 
 // Loose wrapper around generateObject to handle type compatibility
 const generateObjectLoose = generateObject as unknown as (args: {
@@ -78,15 +79,27 @@ export class SlideGenerationService {
         title: title || slidePlan.title,
         slidesJson: slidePlan.slides as unknown as Prisma.InputJsonValue,
         contextIds,
-        status: "DRAFT",
+        status: "GENERATING_IMAGES", // New status or keep DRAFT but update later? keeping DRAFT but will update slides.
+      },
+    });
+
+    // 6. Generate images asynchronously
+    await this.processSlideImages(userId, presentation.id, slidePlan.slides, template);
+
+    // 7. Update presentation with image URLs
+    const finalPresentation = await prisma.presentation.update({
+      where: { id: presentation.id },
+      data: {
+        slidesJson: slidePlan.slides as unknown as Prisma.InputJsonValue,
+        status: "DRAFT", // Ready for review
       },
     });
 
     logger.info(
-      `Generated presentation "${presentation.title}" (${presentation.id}) with ${slidePlan.slides.length} slides`,
+      `Generated presentation "${presentation.title}" (${presentation.id}) with image assets`,
     );
 
-    return presentation;
+    return finalPresentation;
   }
 
   /**
@@ -206,6 +219,40 @@ ${userPrompt}`;
       logger.error("Failed to generate slide plan with AI", error);
       throw new Error("Failed to generate presentation content");
     }
+  }
+
+  private async processSlideImages(
+    userId: string,
+    presentationId: string,
+    slides: { slideTypeKey: string; parameters: Record<string, unknown> }[],
+    template: TemplateWithSlideTypes,
+  ) {
+    logger.info(`Processing images for presentation ${presentationId}`);
+
+    // Iterate serially to avoid rate limits or parallel if quota allows
+    // Parallel with limit is better.
+    const imagePromises = slides.map(async (slide) => {
+      const params = slide.parameters;
+      if (typeof params.imageQuery === "string" && params.imageQuery.trim().length > 0) {
+        // Enhance prompt with theme context
+        const themeContext = `Style: ${template.name}. Colors: Primary ${template.primaryColor}, Secondary ${template.secondaryColor}, Background ${template.backgroundColor}.`;
+        const fullPrompt = `${params.imageQuery}. ${themeContext}`;
+
+        // Generate image
+        const imageUrl = await imageGenerationService.generateAndStoreImage(
+          fullPrompt,
+          userId,
+          presentationId,
+        );
+
+        if (imageUrl) {
+          // Explicitly cast to assign the new property
+          (slide.parameters as Record<string, unknown>).imageUrl = imageUrl;
+        }
+      }
+    });
+
+    await Promise.all(imagePromises);
   }
 }
 
