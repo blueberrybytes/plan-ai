@@ -13,7 +13,7 @@ Plan AI is an AI-assisted planning and execution platform that ingests meeting t
 - **Transcript ingestion & enrichment** – upload recordings or notes and get language detection, summaries, and action items.
 - **Context-aware workspace** – vectorize knowledge bases with Qdrant so every meeting has the right background.
 - **Action management** – Kanban-inspired task boards with Jira integration hooks.
-- **Full-stack TypeScript** – React + RTK Query frontend, Express + TSOA backend, Prisma ORM, Firebase auth, and OpenAI embeddings.
+- **Full-stack TypeScript** – React + RTK Query frontend, Express + TSOA backend, Prisma ORM, Firebase auth, OpenRouter (Gemini 2.0 Flash), and OpenAI embeddings.
 
 > ✨ **Looking for a managed version or consulting?** Reach out via [projects@blueberrybytes.com](mailto:projects@blueberrybytes.com).
 
@@ -27,18 +27,19 @@ graph TD
   BE --> Postgres[(PostgreSQL)]
   BE --> FirebaseStorage[(Firebase Storage)]
   BE --> Qdrant[(Qdrant Vector DB)]
-  BE --> OpenAI[(OpenAI Embeddings + LLMs)]
+  BE --> OpenRouter[(OpenRouter Gemini 2.0 Flash)]
+  BE --> OpenAI[(OpenAI Embeddings)]
   BE --> Jira[(Jira Cloud)]
   Qdrant -->|Context vectors| BE
   FirebaseStorage -->|File URLs| FE
 ```
 
-| Layer             | Tech                                                    |
-| ----------------- | ------------------------------------------------------- |
-| Frontend          | React + TypeScript, RTK Query, Firebase Auth            |
-| Backend           | Node.js, Express, TSOA, Prisma, Zod, Vitest             |
-| Data & Storage    | PostgreSQL, Qdrant Vector DB, Firebase Storage          |
-| AI & Integrations | OpenAI (embeddings + GPT), Jira OAuth2, Atlassian Cloud |
+| Layer             | Tech                                                                |
+| ----------------- | ------------------------------------------------------------------- |
+| Frontend          | React + TypeScript, RTK Query, Firebase Auth                        |
+| Backend           | Node.js, Express, TSOA, Prisma, Zod, Vitest                         |
+| Data & Storage    | PostgreSQL, Qdrant Vector DB, Firebase Storage                      |
+| AI & Integrations | OpenRouter (Gemini 2.0 Flash), OpenAI (embeddings), Jira, Atlassian |
 
 ## Product preview
 
@@ -52,7 +53,7 @@ Plan AI features a RAG (Retrieval-Augmented Generation) chat interface that allo
 
 1.  **Create a Context**: Upload PDFs, DOCX, or text files to a "Context" in the `/contexts` page.
 2.  **Start a Chat**: Go to `/chat`, create a new thread, and select one or more Contexts.
-3.  **Ask Questions**: The AI will retrieve relevant chunks from your documents and use them to answer your questions accurately.
+3.  **Ask Questions**: The AI (Gemini 2.0 Flash) will retrieve up to **500 relevant chunks** (leveraging its **1M token context**) from your documents and use them to answer your questions accurately. For session transcripts, it retrieves up to **1,000 chunks** for deep task extraction.
 
 ## Quick start
 
@@ -109,7 +110,7 @@ This regenerates TSOA routes, Prisma client, and frontend API typings to keep bo
 
 Common keys (non-exhaustive):
 
-- **Backend**: `PORT`, `FRONTEND_URL`, `DATABASE_URL`, `QDRANT_URL`, `OPENAI_API_KEY`, `FIREBASE_SERVICE_KEY`, `JIRA_CLIENT_ID`, `JIRA_CLIENT_SECRET`
+- **Backend**: `PORT`, `FRONTEND_URL`, `DATABASE_URL`, `QDRANT_URL`, `OPENAI_API_KEY`, `OPENROUTER_API_KEY`, `FIREBASE_SERVICE_KEY`, `JIRA_CLIENT_ID`, `JIRA_CLIENT_SECRET`
 - **Frontend**: `REACT_APP_API_BACKEND_URL`, `REACT_APP_FIREBASE_*`, `REACT_APP_GOOGLE_DRIVE_API_KEY`
 
 > ℹ️ Templates include local-only defaults for convenience. Replace them when deploying to staging or production.

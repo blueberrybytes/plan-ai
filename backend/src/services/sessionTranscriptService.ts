@@ -6,7 +6,7 @@ import {
   TranscriptSource,
   Task,
 } from "@prisma/client";
-import { createOpenAI } from "@ai-sdk/openai";
+import { createOpenRouter } from "@openrouter/ai-sdk-provider";
 import { generateObject } from "ai";
 import { z, type ZodTypeAny } from "zod";
 import EnvUtils from "../utils/EnvUtils";
@@ -85,11 +85,11 @@ export interface CreateTranscriptResult {
 }
 
 export class SessionTranscriptService {
-  private readonly openAI = createOpenAI({
-    apiKey: EnvUtils.get("OPENAI_API_KEY"),
+  private readonly openrouter = createOpenRouter({
+    apiKey: EnvUtils.get("OPENROUTER_API_KEY"),
   });
 
-  private readonly modelName = "gpt-5.2-2025-12-11";
+  private readonly modelName = "google/gemini-2.0-flash-001";
 
   public async createTranscriptForSession(
     input: CreateTranscriptInput,
@@ -178,7 +178,7 @@ export class SessionTranscriptService {
     objective: string | null,
     englishLevel?: string,
   ): Promise<TranscriptAnalysis> {
-    const model = this.openAI(this.modelName);
+    const model = this.openrouter(this.modelName);
     const todayIso = new Date().toISOString().split("T")[0];
 
     // RAG: Query context vectors if contextIds are provided
@@ -187,7 +187,7 @@ export class SessionTranscriptService {
       try {
         // Use the first 500 characters of the transcript as the query
         const query = content.slice(0, 500);
-        const chunks = await queryContexts(contextIds, query, 100);
+        const chunks = await queryContexts(contextIds, query, 1000);
         if (chunks.length > 0) {
           dynamicContext = `\nRetrieved context from knowledge base:\n${chunks.join("\n\n")}\n`;
         }

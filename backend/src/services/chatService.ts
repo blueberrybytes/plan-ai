@@ -1,5 +1,5 @@
 import { ChatRole, ChatThread, ChatMessage } from "@prisma/client";
-import { createOpenAI } from "@ai-sdk/openai";
+import { createOpenRouter } from "@openrouter/ai-sdk-provider";
 import { generateText } from "ai";
 import EnvUtils from "../utils/EnvUtils";
 import prisma from "../prisma/prismaClient";
@@ -14,10 +14,10 @@ Keep answers concise and technical.
 `;
 
 export class ChatService {
-  private readonly openAI = createOpenAI({
-    apiKey: EnvUtils.get("OPENAI_API_KEY"),
+  private readonly openrouter = createOpenRouter({
+    apiKey: EnvUtils.get("OPENROUTER_API_KEY"),
   });
-  private readonly modelName = "gpt-5.2-2025-12-11";
+  private readonly modelName = "google/gemini-2.0-flash-001";
 
   public async createThread(
     userId: string,
@@ -85,7 +85,7 @@ export class ChatService {
     let contextSection = "";
     if (thread.contextIds.length > 0) {
       try {
-        const chunks = await queryContexts(thread.contextIds, content);
+        const chunks = await queryContexts(thread.contextIds, content, 500);
         if (chunks.length > 0) {
           contextSection = `\nRelevant Context from Knowledge Base:\n${chunks.join("\n\n")}\n`;
         }
@@ -95,14 +95,14 @@ export class ChatService {
     }
 
     // 3. Build History
-    // We only take the last 20 messages to fit context window
-    const history = thread.messages.slice(-20).map((msg) => ({
+    // We take the last 100 messages to leverage Gemini's large context
+    const history = thread.messages.slice(-100).map((msg) => ({
       role: msg.role === ChatRole.USER ? "user" : "assistant",
       content: msg.content,
     })) as Array<{ role: "user" | "assistant"; content: string }>;
 
     // 4. Generate Response
-    const model = this.openAI(this.modelName);
+    const model = this.openrouter(this.modelName);
     const { text } = await generateText({
       model,
       system: SYSTEM_PROMPT + contextSection,
