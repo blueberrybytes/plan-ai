@@ -3,3 +3,7 @@ TODO.md
 .idea
 .vscode
 settings.local.json
+.env
+recorder/dist
+recorder/dist-electron
+recorder/release

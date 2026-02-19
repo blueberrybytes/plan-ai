@@ -217,4 +217,28 @@ export class SessionController {
       };
     }
   }
+
+  /**
+   * Generate a Firebase Custom Token for the authenticated user.
+   * Called by the web app after the user logs in, to hand off auth to the Electron desktop recorder.
+   */
+  @Get("desktop-token")
+  @Security("ClientLevel")
+  public async getDesktopToken(
+    @Request() request: AuthenticatedRequest,
+  ): Promise<ApiResponse<{ customToken: string }>> {
+    try {
+      const customToken = await firebaseAdmin.auth().createCustomToken(request.user!.uid);
+
+      return {
+        status: 200,
+        data: { customToken },
+      };
+    } catch {
+      throw {
+        status: 500,
+        message: "Failed to generate desktop auth token",
+      };
+    }
+  }
 }

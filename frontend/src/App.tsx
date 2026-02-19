@@ -30,6 +30,7 @@ import SlideThemeCreate from "./pages/SlideThemeCreate";
 import SlideCreate from "./pages/SlideCreate";
 import SlideView from "./pages/SlideView";
 import PublicSlideView from "./pages/PublicSlideView";
+import DesktopCallback from "./pages/DesktopCallback";
 import "./App.css";
 import "./i18n";
 import { useGetCurrentUserQuery } from "./store/apis/sessionApi";
@@ -141,6 +142,9 @@ const AppRoutes: React.FC = () => {
 
             {/* Public Presentation View */}
             <Route path="/p/:presentationId" element={<PublicSlideView />} />
+
+            {/* Desktop app auth handoff — opened by the Electron recorder in system browser */}
+            <Route path="/auth/desktop" element={<DesktopCallback />} />
 
             {/* All other routes rendered with TokenRefreshProvider */}
             <Route

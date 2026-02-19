@@ -284,6 +284,62 @@ export class SessionsModelController extends Controller {
     return `Use the following context when analyzing the transcript:\n${sections.join("\n")}`;
   }
 
+  /**
+   * Transcribe a raw audio chunk uploaded by the Electron recorder.
+   * The Groq API key lives exclusively on the server — it is never sent to the client.
+   */
+  @Post("{sessionId}/transcribe-chunk")
+  @Security("ClientLevel")
+  public async transcribeChunk(
+    @Request() request: AuthenticatedRequest,
+    @Path() sessionId: string,
+    @UploadedFiles() files: Express.Multer.File[],
+  ): Promise<ApiResponse<{ text: string }>> {
+    await this.getSessionForUser(request, sessionId);
+
+    if (!files || files.length === 0) {
+      this.setStatus(400);
+      throw { status: 400, message: "No audio file uploaded" };
+    }
+
+    const audioFile = files[0];
+
+    const groqApiKey = process.env.GROQ_API_KEY;
+    if (!groqApiKey) {
+      this.setStatus(500);
+      throw { status: 500, message: "Transcription service is not configured" };
+    }
+
+    // Call Groq Whisper via multipart form (compatible with OpenAI audio API)
+    const form = new FormData();
+    const audioBlob = new Blob([new Uint8Array(audioFile.buffer)], {
+      type: audioFile.mimetype || "audio/webm",
+    });
+    form.append("file", audioBlob, audioFile.originalname || "chunk.webm");
+    form.append("model", "whisper-large-v3-turbo");
+    form.append("response_format", "text");
+
+    const groqResponse = await fetch("https://api.groq.com/openai/v1/audio/transcriptions", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${groqApiKey}` },
+      body: form,
+    });
+
+    if (!groqResponse.ok) {
+      const errBody = await groqResponse.text();
+      logger.error("Groq transcription error", { status: groqResponse.status, body: errBody });
+      this.setStatus(502);
+      throw { status: 502, message: "Transcription service returned an error" };
+    }
+
+    const text = await groqResponse.text();
+
+    return {
+      status: 200,
+      data: { text: text.trim() },
+    };
+  }
+
   @Post("{sessionId}/transcripts/upload")
   @Security("ClientLevel")
   public async uploadTranscript(

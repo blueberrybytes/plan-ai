@@ -52,6 +52,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/sessions/{sessionId}/transcribe-chunk": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description Transcribe a raw audio chunk uploaded by the Electron recorder.
+         *     The Groq API key lives exclusively on the server — it is never sent to the client.
+         */
+        post: operations["TranscribeChunk"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/sessions/{sessionId}/transcripts/upload": {
         parameters: {
             query?: never;
@@ -197,6 +217,26 @@ export interface paths {
          *     Requires authentication.
          */
         get: operations["GetCurrentUser"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/session/desktop-token": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description Generate a Firebase Custom Token for the authenticated user.
+         *     Called by the web app after the user logs in, to hand off auth to the Electron desktop recorder.
+         */
+        get: operations["GetDesktopToken"];
         put?: never;
         post?: never;
         delete?: never;
@@ -650,6 +690,14 @@ export interface components {
             /** Format: double */
             status: number;
         };
+        "ApiResponse__text-string__": {
+            message?: string;
+            data: {
+                text: string;
+            } | null;
+            /** Format: double */
+            status: number;
+        };
         /** @enum {string} */
         "_36_Enums.TranscriptSource": "MANUAL" | "RECORDING" | "UPLOAD" | "IMPORTED";
         TranscriptSource: components["schemas"]["_36_Enums.TranscriptSource"];
@@ -890,6 +938,14 @@ export interface components {
             /** Format: double */
             status: number;
         };
+        "ApiResponse__customToken-string__": {
+            message?: string;
+            data: {
+                customToken: string;
+            } | null;
+            /** Format: double */
+            status: number;
+        };
         "DefaultSelection_Prisma._36_PresentationPayload_": {
             /** Format: date-time */
             updatedAt: string;
@@ -945,6 +1001,7 @@ export interface components {
             contextIds: string[];
             prompt: string;
             title?: string;
+            /** Format: double */
             numSlides?: number;
         };
         UpdatePresentationRequest: {
@@ -1313,6 +1370,34 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ApiResponse_SessionResponse_"];
+                };
+            };
+        };
+    };
+    TranscribeChunk: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sessionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    files: string[];
+                };
+            };
+        };
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse__text-string__"];
                 };
             };
         };
@@ -1777,6 +1862,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["GenericResponse"];
+                };
+            };
+        };
+    };
+    GetDesktopToken: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse__customToken-string__"];
                 };
             };
         };

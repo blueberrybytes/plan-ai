@@ -370,6 +370,34 @@
 				],
 				"type": "object"
 			},
+			"ApiResponse__text-string__": {
+				"properties": {
+					"message": {
+						"type": "string"
+					},
+					"data": {
+						"properties": {
+							"text": {
+								"type": "string"
+							}
+						},
+						"required": [
+							"text"
+						],
+						"type": "object",
+						"nullable": true
+					},
+					"status": {
+						"type": "number",
+						"format": "double"
+					}
+				},
+				"required": [
+					"data",
+					"status"
+				],
+				"type": "object"
+			},
 			"_36_Enums.TranscriptSource": {
 				"type": "string",
 				"enum": [
@@ -1233,6 +1261,34 @@
 				],
 				"type": "object"
 			},
+			"ApiResponse__customToken-string__": {
+				"properties": {
+					"message": {
+						"type": "string"
+					},
+					"data": {
+						"properties": {
+							"customToken": {
+								"type": "string"
+							}
+						},
+						"required": [
+							"customToken"
+						],
+						"type": "object",
+						"nullable": true
+					},
+					"status": {
+						"type": "number",
+						"format": "double"
+					}
+				},
+				"required": [
+					"data",
+					"status"
+				],
+				"type": "object"
+			},
 			"DefaultSelection_Prisma._36_PresentationPayload_": {
 				"properties": {
 					"updatedAt": {
@@ -1443,6 +1499,10 @@
 					},
 					"title": {
 						"type": "string"
+					},
+					"numSlides": {
+						"type": "number",
+						"format": "double"
 					}
 				},
 				"required": [
@@ -2488,6 +2548,64 @@
 				}
 			}
 		},
+		"/api/sessions/{sessionId}/transcribe-chunk": {
+			"post": {
+				"operationId": "TranscribeChunk",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiResponse__text-string__"
+								}
+							}
+						}
+					}
+				},
+				"description": "Transcribe a raw audio chunk uploaded by the Electron recorder.\nThe Groq API key lives exclusively on the server — it is never sent to the client.",
+				"tags": [
+					"Sessions"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": [
+					{
+						"in": "path",
+						"name": "sessionId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"multipart/form-data": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"files": {
+										"items": {
+											"type": "string",
+											"format": "binary"
+										},
+										"type": "array"
+									}
+								},
+								"required": [
+									"files"
+								]
+							}
+						}
+					}
+				}
+			}
+		},
 		"/api/sessions/{sessionId}/transcripts/upload": {
 			"post": {
 				"operationId": "UploadTranscript",
@@ -3305,6 +3423,33 @@
 					}
 				},
 				"description": "Get current user information.\nRequires authentication.",
+				"tags": [
+					"Session"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": []
+			}
+		},
+		"/api/session/desktop-token": {
+			"get": {
+				"operationId": "GetDesktopToken",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiResponse__customToken-string__"
+								}
+							}
+						}
+					}
+				},
+				"description": "Generate a Firebase Custom Token for the authenticated user.\nCalled by the web app after the user logs in, to hand off auth to the Electron desktop recorder.",
 				"tags": [
 					"Session"
 				],

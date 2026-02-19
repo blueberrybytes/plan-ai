@@ -324,6 +324,9 @@ export const sessionApi = createApi({
         { type: "Task" as const, id: `${sessionId}-LIST` },
       ],
     }),
+    getDesktopToken: builder.query<{ data: { customToken: string } }, void>({
+      query: () => "/api/session/desktop-token",
+    }),
   }),
 });
 
@@ -348,4 +351,5 @@ export const {
   useCreateSessionTaskMutation,
   useUpdateSessionTaskMutation,
   useDeleteSessionTaskMutation,
+  useGetDesktopTokenQuery,
 } = sessionApi;

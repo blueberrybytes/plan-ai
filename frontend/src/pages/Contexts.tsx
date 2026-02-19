@@ -13,6 +13,7 @@ import {
   IconButton,
   Stack,
   TextField,
+  Tooltip,
   Typography,
 } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
@@ -271,367 +272,310 @@ const Contexts: React.FC = () => {
 
   return (
     <SidebarLayout>
-      <Box
-        sx={{
-          minHeight: "100vh",
-          bgcolor: "background.default",
-          py: { xs: 4, md: 6 },
-        }}
-      >
-        <Box sx={{ maxWidth: 1200, mx: "auto", px: { xs: 3, md: 6 } }}>
-          <Stack spacing={4}>
-            <Stack
-              direction={{ xs: "column", md: "row" }}
-              spacing={{ xs: 2, md: 0 }}
-              justifyContent="space-between"
-              alignItems={{ xs: "flex-start", md: "center" }}
-            >
-              <Box>
-                <Typography variant="h3" sx={{ fontWeight: 700 }}>
-                  {t("contexts.heading")}
-                </Typography>
-                <Typography variant="body1" color="text.secondary" sx={{ mt: 1 }}>
-                  {t("contexts.description")}
-                </Typography>
-              </Box>
-              <Button
-                variant="contained"
-                startIcon={<AddIcon />}
-                onClick={openCreateDialog}
-                disabled={isCreating}
-                size="large"
-              >
-                {isCreating ? t("contexts.buttons.creating") : t("contexts.buttons.create")}
-              </Button>
-            </Stack>
+      <Box sx={{ display: "flex", height: "100vh", overflow: "hidden" }}>
+        {/* ── Left panel: context list ── */}
+        <Box
+          sx={{
+            width: 280,
+            flexShrink: 0,
+            borderRight: 1,
+            borderColor: "divider",
+            overflowY: "auto",
+            bgcolor: "background.paper",
+            display: "flex",
+            flexDirection: "column",
+          }}
+        >
+          {/* Header */}
+          <Box sx={{ p: 2, borderBottom: 1, borderColor: "divider" }}>
+            <Typography variant="h6" fontWeight={700}>
+              {t("contexts.heading")}
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              {t(`contexts.list.count${contexts.length === 1 ? "" : "_plural"}`, {
+                count: contexts.length,
+              })}
+            </Typography>
+          </Box>
 
-            <Card variant="outlined">
-              <CardContent>
-                <Stack spacing={2}>
-                  <Stack
-                    direction={{ xs: "column", sm: "row" }}
-                    justifyContent="space-between"
-                    alignItems={{ xs: "flex-start", sm: "center" }}
-                    spacing={{ xs: 1.5, sm: 2 }}
+          {/* List */}
+          <Box sx={{ flex: 1, overflowY: "auto", px: 1.5, py: 1.5 }}>
+            {listError ? (
+              <Alert severity="error" sx={{ mx: 0.5 }}>
+                {t("contexts.list.error")}
+              </Alert>
+            ) : isListLoading ? (
+              <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
+                <CircularProgress size={24} />
+              </Box>
+            ) : contexts.length === 0 ? (
+              <Box sx={{ px: 1, py: 4, textAlign: "center", color: "text.secondary" }}>
+                <Typography variant="body2">{t("contexts.list.emptyDescription")}</Typography>
+              </Box>
+            ) : (
+              contexts.map((item) => {
+                const displayName = item.name?.trim() || t("contexts.info.untitled");
+                const isSelected = item.id === contextId;
+                return (
+                  <Box
+                    key={item.id}
+                    onClick={() => handleSelectContext(item.id)}
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 1.5,
+                      px: 1.5,
+                      py: 1.25,
+                      mb: 0.5,
+                      borderRadius: 2,
+                      cursor: "pointer",
+                      border: isSelected ? 2 : 1,
+                      borderColor: isSelected ? "primary.main" : "divider",
+                      bgcolor: isSelected ? "action.selected" : "transparent",
+                      transition: "all 0.15s ease",
+                      "&:hover": { bgcolor: isSelected ? "action.selected" : "action.hover" },
+                    }}
                   >
-                    <Box>
-                      <Typography variant="subtitle2" color="text.secondary">
-                        {t("contexts.list.label")}
+                    <Box
+                      sx={{
+                        width: 10,
+                        height: 10,
+                        borderRadius: "50%",
+                        flexShrink: 0,
+                        bgcolor: item.color ?? "primary.main",
+                        border: (theme) => `1px solid ${theme.palette.divider}`,
+                      }}
+                    />
+                    <Box sx={{ flex: 1, minWidth: 0 }}>
+                      <Typography
+                        variant="subtitle2"
+                        fontWeight={600}
+                        noWrap
+                        color={isSelected ? "primary.main" : "text.primary"}
+                      >
+                        {displayName}
                       </Typography>
-                      <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                        {contexts.length === 0
-                          ? t("contexts.list.emptyTitle")
-                          : t("contexts.list.selectPrompt")}
-                      </Typography>
+                      {item.description ? (
+                        <Typography
+                          variant="caption"
+                          color="text.secondary"
+                          sx={{
+                            display: "block",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          {item.description}
+                        </Typography>
+                      ) : null}
                     </Box>
-                    <Typography variant="body2" color="text.secondary">
-                      {t(`contexts.list.count${contexts.length === 1 ? "" : "_plural"}`, {
-                        count: contexts.length,
+                  </Box>
+                );
+              })
+            )}
+          </Box>
+
+          {/* New context button pinned at bottom */}
+          <Box sx={{ p: 1.5, borderTop: 1, borderColor: "divider" }}>
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={openCreateDialog}
+              disabled={isCreating}
+              fullWidth
+            >
+              {isCreating ? t("contexts.buttons.creating") : t("contexts.buttons.create")}
+            </Button>
+          </Box>
+        </Box>
+
+        {/* ── Right panel: context detail ── */}
+        <Box sx={{ flex: 1, overflowY: "auto", bgcolor: "background.default" }}>
+          {!contextId ? (
+            <Box
+              sx={{
+                height: "100%",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "text.secondary",
+              }}
+            >
+              <Typography variant="body1">{t("contexts.placeholders.selectContext")}</Typography>
+            </Box>
+          ) : isLoading ? (
+            <Box
+              sx={{
+                display: "flex",
+                justifyContent: "center",
+                alignItems: "center",
+                height: "100%",
+              }}
+            >
+              <CircularProgress />
+            </Box>
+          ) : error ? (
+            <Box sx={{ p: 4 }}>
+              <Alert severity="error">{t("contexts.messages.contextError")}</Alert>
+            </Box>
+          ) : context ? (
+            <Box sx={{ maxWidth: 860, mx: "auto", px: { xs: 3, md: 5 }, py: 5 }}>
+              <Stack spacing={4}>
+                {/* Context header */}
+                <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
+                  <Stack spacing={0.5}>
+                    <Stack direction="row" spacing={1.5} alignItems="center">
+                      {context.color && (
+                        <Box
+                          sx={{
+                            width: 14,
+                            height: 14,
+                            borderRadius: "50%",
+                            bgcolor: context.color,
+                            border: (theme) => `1px solid ${theme.palette.divider}`,
+                            flexShrink: 0,
+                          }}
+                        />
+                      )}
+                      <Typography variant="h4" fontWeight={700}>
+                        {context.name}
+                      </Typography>
+                    </Stack>
+                    {context.description ? (
+                      <Typography variant="body1" color="text.secondary">
+                        {context.description}
+                      </Typography>
+                    ) : (
+                      <Typography variant="body2" color="text.secondary" fontStyle="italic">
+                        {t("contexts.placeholders.missingDescription")}
+                      </Typography>
+                    )}
+                    <Typography variant="caption" color="text.disabled">
+                      {t("contexts.info.updated", {
+                        timestamp: new Date(context.updatedAt).toLocaleString(),
                       })}
                     </Typography>
                   </Stack>
-                  {listError ? (
-                    <Alert severity="error">{t("contexts.list.error")}</Alert>
-                  ) : isListLoading ? (
-                    <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
-                      <CircularProgress size={24} />
-                    </Box>
-                  ) : contexts.length === 0 ? (
+
+                  {/* Actions */}
+                  <Stack direction="row" spacing={1} sx={{ flexShrink: 0, ml: 2 }}>
+                    <Tooltip title={t("contexts.buttons.edit")}>
+                      <IconButton onClick={openEditDialog} disabled={isUpdating}>
+                        <EditIcon />
+                      </IconButton>
+                    </Tooltip>
+                    <Button
+                      variant="contained"
+                      component="label"
+                      startIcon={<UploadIcon />}
+                      disabled={isUploading}
+                    >
+                      {isUploading ? t("contexts.buttons.uploading") : t("contexts.buttons.upload")}
+                      <input type="file" hidden onChange={handleFileUpload} />
+                    </Button>
+                  </Stack>
+                </Stack>
+
+                {uploadError && (
+                  <Alert severity="error" onClose={() => setUploadError(null)}>
+                    {uploadError}
+                  </Alert>
+                )}
+
+                {/* Files section */}
+                <Box>
+                  <Stack
+                    direction="row"
+                    justifyContent="space-between"
+                    alignItems="center"
+                    sx={{ mb: 2 }}
+                  >
+                    <Typography variant="h6" fontWeight={600}>
+                      {t("contexts.files.title")}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      {t(`contexts.files.count${context.files.length === 1 ? "" : "_plural"}`, {
+                        count: context.files.length,
+                      })}
+                    </Typography>
+                  </Stack>
+
+                  {context.files.length === 0 ? (
                     <Box
                       sx={{
-                        px: 2,
-                        py: 8,
+                        py: 6,
                         textAlign: "center",
-                        color: "text.secondary",
-                        borderRadius: 1,
+                        borderRadius: 2,
                         border: (theme) => `1px dashed ${theme.palette.divider}`,
-                        display: "flex",
-                        justifyContent: "center",
+                        color: "text.secondary",
                       }}
                     >
-                      <Typography variant="body1" sx={{ maxWidth: 500 }}>
-                        {t("contexts.list.emptyDescription")}
+                      <Typography variant="body2">{t("contexts.placeholders.noFiles")}</Typography>
+                      <Typography
+                        variant="caption"
+                        color="text.disabled"
+                        sx={{ mt: 0.5, display: "block" }}
+                      >
+                        {t("contexts.placeholders.supportedTypes", {
+                          types: supportedContextLabels,
+                        })}
                       </Typography>
                     </Box>
                   ) : (
-                    <Box
-                      sx={{
-                        display: "flex",
-                        flexWrap: "wrap",
-                        gap: 1.5,
-                      }}
-                    >
-                      {contexts.map((item) => {
-                        const displayName = item.name?.trim() || t("contexts.info.untitled");
-                        const colorSwatch = item.color ?? "primary.main";
-
-                        return (
-                          <Button
-                            key={item.id}
-                            variant={item.id === contextId ? "contained" : "outlined"}
-                            color={item.id === contextId ? "primary" : "inherit"}
-                            onClick={() => handleSelectContext(item.id)}
-                            sx={{
-                              minWidth: 200,
-                              justifyContent: "flex-start",
-                              textTransform: "none",
-                              px: 2,
-                              py: 1.5,
-                            }}
-                          >
-                            <Stack direction="row" spacing={1.5} alignItems="center">
-                              <Box
-                                sx={{
-                                  width: 10,
-                                  height: 10,
-                                  borderRadius: "50%",
-                                  bgcolor: colorSwatch,
-                                  border: (theme) => `1px solid ${theme.palette.divider}`,
-                                }}
-                              />
-                              <Stack spacing={0.25} alignItems="flex-start">
-                                <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
-                                  {displayName}
+                    <Stack spacing={1.5}>
+                      {context.files.map((file) => (
+                        <Card key={file.id} variant="outlined">
+                          <CardContent sx={{ py: 1.5, "&:last-child": { pb: 1.5 } }}>
+                            <Stack direction="row" spacing={2} alignItems="center">
+                              <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+                                <Typography variant="subtitle2" fontWeight={600} noWrap>
+                                  {file.fileName}
                                 </Typography>
-                                {item.description ? (
-                                  <Typography
-                                    variant="caption"
-                                    color="text.secondary"
-                                    sx={{ display: "block", maxWidth: 220 }}
+                                <Typography variant="caption" color="text.secondary">
+                                  {file.mimeType} · {(file.sizeBytes / 1024).toFixed(2)} KB ·{" "}
+                                  {t("contexts.files.uploaded", {
+                                    timestamp: new Date(file.createdAt).toLocaleString(),
+                                  })}
+                                </Typography>
+                              </Box>
+                              <Stack direction="row" spacing={0.5}>
+                                <Tooltip title={t("contexts.buttons.view")}>
+                                  <IconButton
+                                    component="a"
+                                    href={file.publicUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    size="small"
                                   >
-                                    {item.description}
-                                  </Typography>
-                                ) : null}
+                                    <ArrowBackIcon sx={{ transform: "rotate(135deg)" }} />
+                                  </IconButton>
+                                </Tooltip>
+                                <Tooltip title={t("contexts.files.deleteAria")}>
+                                  <IconButton
+                                    color="error"
+                                    size="small"
+                                    onClick={() => handleDeleteFile(file.id)}
+                                    disabled={isDeletingFile}
+                                  >
+                                    {isDeletingFile ? (
+                                      <CircularProgress size={16} />
+                                    ) : (
+                                      <DeleteIcon />
+                                    )}
+                                  </IconButton>
+                                </Tooltip>
                               </Stack>
                             </Stack>
-                          </Button>
-                        );
-                      })}
-                    </Box>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </Stack>
                   )}
-                </Stack>
-              </CardContent>
-            </Card>
-
-            {!contextId ? (
-              <Box
-                sx={{
-                  minHeight: { xs: 240, md: 300 },
-                  borderRadius: 2,
-                  border: (theme) => `1px dashed ${theme.palette.divider}`,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  textAlign: "center",
-                  color: "text.secondary",
-                  px: 4,
-                  py: 6,
-                }}
-              >
-                <Typography variant="body1">{t("contexts.placeholders.selectContext")}</Typography>
-              </Box>
-            ) : isLoading ? (
-              <Card variant="outlined">
-                <CardContent>
-                  <Box sx={{ display: "flex", justifyContent: "center", py: 6 }}>
-                    <CircularProgress />
-                  </Box>
-                </CardContent>
-              </Card>
-            ) : error ? (
-              <Card variant="outlined">
-                <CardContent>
-                  <Alert severity="error">{t("contexts.messages.contextError")}</Alert>
-                </CardContent>
-              </Card>
-            ) : context ? (
-              <Stack spacing={3}>
-                <Card variant="outlined">
-                  <CardContent>
-                    <Stack
-                      direction={{ xs: "column", sm: "row" }}
-                      spacing={{ xs: 3, sm: 2 }}
-                      justifyContent="space-between"
-                      alignItems={{ xs: "flex-start", sm: "center" }}
-                    >
-                      <Stack spacing={1} sx={{ flex: 1 }}>
-                        <Button
-                          startIcon={<ArrowBackIcon />}
-                          onClick={() => navigate("/contexts")}
-                          sx={{
-                            alignSelf: "flex-start",
-                            mb: 0.5,
-                            px: 0,
-                            justifyContent: "flex-start",
-                          }}
-                        >
-                          {t("contexts.buttons.back")}
-                        </Button>
-                        <Typography variant="h4" sx={{ fontWeight: 700 }}>
-                          {context.name}
-                        </Typography>
-                        {context.description ? (
-                          <Typography variant="body1" color="text.secondary">
-                            {context.description}
-                          </Typography>
-                        ) : (
-                          <Typography variant="body2" color="text.secondary">
-                            {t("contexts.placeholders.missingDescription")}
-                          </Typography>
-                        )}
-                        <Stack direction="row" spacing={2} color="text.secondary">
-                          <Typography variant="body2">
-                            {t("contexts.info.updated", {
-                              timestamp: new Date(context.updatedAt).toLocaleString(),
-                            })}
-                          </Typography>
-                          {context.color ? (
-                            <Stack direction="row" spacing={1} alignItems="center">
-                              <Box
-                                sx={{
-                                  width: 16,
-                                  height: 16,
-                                  borderRadius: "50%",
-                                  bgcolor: context.color,
-                                  border: (theme) => `1px solid ${theme.palette.divider}`,
-                                }}
-                              />
-                              <Typography variant="body2">{context.color}</Typography>
-                            </Stack>
-                          ) : null}
-                        </Stack>
-                        <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
-                          <Button
-                            variant="outlined"
-                            startIcon={<EditIcon />}
-                            onClick={openEditDialog}
-                            disabled={isUpdating}
-                          >
-                            {isUpdating ? t("contexts.buttons.saving") : t("contexts.buttons.edit")}
-                          </Button>
-                          <Stack spacing={1} alignItems="flex-start">
-                            <Button
-                              variant="contained"
-                              component="label"
-                              startIcon={<UploadIcon />}
-                              disabled={isUploading}
-                            >
-                              {isUploading
-                                ? t("contexts.buttons.uploading")
-                                : t("contexts.buttons.upload")}
-                              <input type="file" hidden onChange={handleFileUpload} />
-                            </Button>
-                            {uploadError ? (
-                              <Alert severity="error" sx={{ width: "100%" }}>
-                                {uploadError}
-                              </Alert>
-                            ) : (
-                              <Typography variant="caption" color="text.secondary">
-                                {t("contexts.placeholders.supportedTypes", {
-                                  types: supportedContextLabels,
-                                })}
-                              </Typography>
-                            )}
-                          </Stack>
-                        </Stack>
-                      </Stack>
-                    </Stack>
-                  </CardContent>
-                </Card>
-
-                <Card variant="outlined">
-                  <CardContent>
-                    <Stack spacing={2}>
-                      <Stack direction="row" justifyContent="space-between" alignItems="center">
-                        <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                          {t("contexts.files.title")}
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          {t(`contexts.files.count${context.files.length === 1 ? "" : "_plural"}`, {
-                            count: context.files.length,
-                          })}
-                        </Typography>
-                      </Stack>
-                      {context.files.length === 0 ? (
-                        <Box
-                          sx={{
-                            px: 3,
-                            py: 5,
-                            textAlign: "center",
-                            borderRadius: 1,
-                            border: (theme) => `1px dashed ${theme.palette.divider}`,
-                            color: "text.secondary",
-                          }}
-                        >
-                          <Typography variant="body2">
-                            {t("contexts.placeholders.noFiles")}
-                          </Typography>
-                        </Box>
-                      ) : (
-                        <Stack spacing={2}>
-                          {context.files.map((file) => (
-                            <Card key={file.id} variant="outlined">
-                              <CardContent>
-                                <Stack
-                                  direction={{ xs: "column", sm: "row" }}
-                                  spacing={2}
-                                  alignItems={{ sm: "center" }}
-                                >
-                                  <Box sx={{ flexGrow: 1 }}>
-                                    <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-                                      {file.fileName}
-                                    </Typography>
-                                    <Typography variant="body2" color="text.secondary">
-                                      {file.mimeType} · {(file.sizeBytes / 1024).toFixed(2)} KB
-                                    </Typography>
-                                    <Typography variant="caption" color="text.secondary">
-                                      {t("contexts.files.uploaded", {
-                                        timestamp: new Date(file.createdAt).toLocaleString(),
-                                      })}
-                                    </Typography>
-                                  </Box>
-                                  <Stack direction="row" spacing={1}>
-                                    <Button
-                                      variant="outlined"
-                                      component="a"
-                                      href={file.publicUrl}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                    >
-                                      {t("contexts.buttons.view")}
-                                    </Button>
-                                    <IconButton
-                                      color="primary"
-                                      aria-label={t("contexts.files.renameAria")}
-                                      disabled
-                                    >
-                                      <EditIcon />
-                                    </IconButton>
-                                    <IconButton
-                                      color="error"
-                                      aria-label={t("contexts.files.deleteAria")}
-                                      onClick={() => handleDeleteFile(file.id)}
-                                      disabled={isDeletingFile}
-                                    >
-                                      {isDeletingFile ? (
-                                        <CircularProgress size={20} />
-                                      ) : (
-                                        <DeleteIcon />
-                                      )}
-                                    </IconButton>
-                                  </Stack>
-                                </Stack>
-                              </CardContent>
-                            </Card>
-                          ))}
-                        </Stack>
-                      )}
-                    </Stack>
-                  </CardContent>
-                </Card>
+                </Box>
               </Stack>
-            ) : null}
-          </Stack>
+            </Box>
+          ) : null}
         </Box>
       </Box>
 
