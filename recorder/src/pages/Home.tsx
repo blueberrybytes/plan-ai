@@ -30,6 +30,7 @@ import {
   Mic as MicIcon,
   DesktopWindows as DesktopIcon,
   Check as CheckIcon,
+  Refresh as RefreshIcon,
 } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
@@ -50,9 +51,9 @@ export interface RecordingConfig {
 // Stored in projectStorage so Recording page can read it
 const CONFIG_KEY = "recorder-config";
 export const saveConfig = (config: RecordingConfig) =>
-  projectStorage.setItem(CONFIG_KEY, JSON.stringify(config));
+  sessionStorage.setItem(CONFIG_KEY, JSON.stringify(config));
 export const loadConfig = (): RecordingConfig | null => {
-  const raw = projectStorage.getItem(CONFIG_KEY);
+  const raw = sessionStorage.getItem(CONFIG_KEY);
   return raw ? (JSON.parse(raw) as RecordingConfig) : null;
 };
 
@@ -201,11 +202,18 @@ const Home: React.FC = () => {
             >
               Projects
             </Typography>
-            <Tooltip title="New project">
-              <IconButton size="small" onClick={() => setCreateOpen(true)}>
-                <AddIcon fontSize="small" />
-              </IconButton>
-            </Tooltip>
+            <Stack direction="row" spacing={0.5}>
+              <Tooltip title="Refresh projects">
+                <IconButton size="small" onClick={() => void fetchData()}>
+                  <RefreshIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+              <Tooltip title="New project">
+                <IconButton size="small" onClick={() => setCreateOpen(true)}>
+                  <AddIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+            </Stack>
           </Stack>
 
           <Divider sx={{ opacity: 0.4 }} />
@@ -257,8 +265,11 @@ const Home: React.FC = () => {
 
           {/* User info + Sign out */}
           <Stack direction="row" alignItems="center" spacing={1} sx={{ px: 2, py: 1.5 }}>
-            <Avatar sx={{ width: 28, height: 28, bgcolor: "primary.dark", fontSize: "0.7rem" }}>
-              {user?.email?.[0]?.toUpperCase()}
+            <Avatar
+              src={user?.photoURL || undefined}
+              sx={{ width: 28, height: 28, bgcolor: "primary.dark", fontSize: "0.7rem" }}
+            >
+              {!user?.photoURL && user?.email?.[0]?.toUpperCase()}
             </Avatar>
             <Typography variant="caption" color="text.secondary" noWrap sx={{ flex: 1 }}>
               {user?.email}

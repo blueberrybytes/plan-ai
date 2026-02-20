@@ -16,6 +16,7 @@ export interface Context {
 }
 
 function authHeaders(token: string): HeadersInit {
+  console.log("Building auth headers with token of length:", token ? token.length : "NULL");
   return {
     Authorization: `Bearer ${token}`,
     "Content-Type": "application/json",

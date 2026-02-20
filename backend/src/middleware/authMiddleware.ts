@@ -21,14 +21,24 @@ export const authenticateUser = async (
     const token = req.headers.authorization?.split("Bearer ")[1];
 
     if (!token) {
+      console.error("[AuthMiddleware] No token provided in headers");
       res.status(401).json({ message: "Unauthorized: No token provided" });
       return;
     }
 
     // Verify Firebase token
-    const decodedToken = await firebaseAdmin.auth().verifyIdToken(token || "");
+    let decodedToken;
+    try {
+      decodedToken = await firebaseAdmin.auth().verifyIdToken(token || "");
+    } catch (e: any) {
+      console.error("[AuthMiddleware] Firebase token verify failed:", e.message);
+      res.status(403).json({ message: "Unauthorized: Invalid token" });
+      return;
+    }
+
     const userEmail = decodedToken.email ?? "";
-    //console.log("decodedToken", decodedToken);
+    console.log("[AuthMiddleware] Token verified for email:", userEmail);
+
     req.user = {
       uid: decodedToken.uid,
       email: userEmail,
@@ -42,6 +52,7 @@ export const authenticateUser = async (
     });
 
     if (!dbUser) {
+      console.error("[AuthMiddleware] User not found in database:", userEmail);
       res.status(403).json({ message: "Unauthorized: User not found" });
       return;
     } else {
@@ -50,8 +61,8 @@ export const authenticateUser = async (
 
     next();
   } catch (error) {
-    console.error("Error authenticating user:", error);
-    res.status(403).json({ message: "Unauthorized: Invalid token" });
+    console.error("[AuthMiddleware] Unexpected error:", error);
+    res.status(500).json({ message: "Internal server error" });
     return;
   }
 };

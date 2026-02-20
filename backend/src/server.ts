@@ -17,7 +17,13 @@ const PORT = EnvUtils.get("PORT") || 8080;
 const QDRANT_URL = EnvUtils.get("QDRANT_URL") || "http://127.0.0.1:6333";
 
 // Middlewares
-app.use(cors());
+app.use(
+  cors({
+    origin: "*",
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "x-admin-key"],
+  }),
+);
 app.use(bodyParser.urlencoded({ limit: "50mb", extended: true }));
 app.use(bodyParser.json({ limit: "50mb" }));
 
