@@ -30,6 +30,11 @@ const Recordings: React.FC = () => {
     pageSize: 20,
     source: "RECORDING",
   });
+  console.log("data", data);
+  console.log("isLoading", isLoading);
+  console.log("error", error);
+  console.log("refetch", refetch);
+  console.log("isFetching", isFetching);
   const [deleteTranscript] = useDeleteTranscriptMutation();
 
   const handleDelete = async (id: string) => {

@@ -16,7 +16,6 @@ import {
   Download as DownloadIcon,
 } from "@mui/icons-material";
 import { useParams, useNavigate } from "react-router-dom";
-import { useTranslation } from "react-i18next";
 import { useGetTranscriptQuery } from "../store/apis/transcriptApi";
 import SidebarLayout from "../components/layout/SidebarLayout";
 import { useDispatch } from "react-redux";

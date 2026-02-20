@@ -332,7 +332,7 @@ const Recording: React.FC = () => {
             </Typography>
           ) : (
             <Typography variant="body2" color="text.secondary" sx={{ fontStyle: "italic" }}>
-              Transcription will appear here every ~10 seconds…
+              Transcription will appear here every ~5 seconds…
             </Typography>
           )}
         </Box>

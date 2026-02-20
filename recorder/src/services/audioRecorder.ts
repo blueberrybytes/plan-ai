@@ -14,7 +14,7 @@ export interface AudioRecorderOptions {
  *
  * System audio is captured via Electron's desktopCapturer (IPC) using a
  * chromeMediaSourceId. The two streams are mixed using the Web Audio API
- * before being fed into MediaRecorder at 10-second intervals.
+ * before being fed into MediaRecorder at 5-second intervals.
  */
 export class AudioRecorder {
   private activeRecorders: Set<MediaRecorder> = new Set();
@@ -115,14 +115,14 @@ export class AudioRecorder {
 
     recorder.start();
 
-    // Rotate to the next chunk in 10 seconds
+    // Rotate to the next chunk in 5 seconds
     this.chunkTimer = setTimeout(() => {
       if (this.state !== "recording") return;
       if (recorder.state === "recording") {
         recorder.stop();
       }
       this.startNextChunk();
-    }, 10_000);
+    }, 5_000);
   }
 
   stop(): void {
