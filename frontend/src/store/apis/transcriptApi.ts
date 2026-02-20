@@ -2,8 +2,10 @@ import { baseQueryWithReauth } from "../../utils/baseQuery";
 import { createApi } from "@reduxjs/toolkit/query/react";
 import type { components } from "../../types/api";
 
-type StandaloneTranscriptResponse = components["schemas"]["StandaloneTranscriptResponse"];
-type StandaloneTranscriptListResponse = components["schemas"]["StandaloneTranscriptListResponse"];
+type ApiResponseStandaloneTranscriptListResponse =
+  components["schemas"]["ApiResponse_StandaloneTranscriptListResponse_"];
+type ApiResponseStandaloneTranscriptResponse =
+  components["schemas"]["ApiResponse_StandaloneTranscriptResponse_"];
 
 export const transcriptApi = createApi({
   reducerPath: "transcriptApi",
@@ -11,7 +13,7 @@ export const transcriptApi = createApi({
   tagTypes: ["Transcript"],
   endpoints: (builder) => ({
     listGlobalTranscripts: builder.query<
-      StandaloneTranscriptListResponse,
+      ApiResponseStandaloneTranscriptListResponse,
       {
         page?: number;
         pageSize?: number;
@@ -28,7 +30,7 @@ export const transcriptApi = createApi({
       }),
       providesTags: ["Transcript"],
     }),
-    getTranscript: builder.query<StandaloneTranscriptResponse, string>({
+    getTranscript: builder.query<ApiResponseStandaloneTranscriptResponse, string>({
       query: (id: string) => `/api/transcripts/${id}`,
       providesTags: (_result, _error, id: string) => [{ type: "Transcript", id }],
     }),

@@ -9,6 +9,7 @@ import {
   IconButton,
   Button,
   Grid,
+  CardActionArea,
 } from "@mui/material";
 import { Delete as DeleteIcon, Mic as MicIcon, Refresh as RefreshIcon } from "@mui/icons-material";
 import type { components } from "../types/api";
@@ -18,9 +19,11 @@ import {
   useDeleteTranscriptMutation,
 } from "../store/apis/transcriptApi";
 import SidebarLayout from "../components/layout/SidebarLayout";
+import { useNavigate } from "react-router-dom";
 
 const Recordings: React.FC = () => {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const [page, setPage] = useState(1);
   const { data, isLoading, error, refetch, isFetching } = useListGlobalTranscriptsQuery({
     page,
@@ -55,7 +58,7 @@ const Recordings: React.FC = () => {
     );
   }
 
-  const transcripts = data?.transcripts || [];
+  const transcripts = data?.data?.transcripts || [];
 
   return (
     <SidebarLayout>
@@ -97,43 +100,61 @@ const Recordings: React.FC = () => {
               (transcript: components["schemas"]["StandaloneTranscriptResponse"]) => (
                 <Grid item xs={12} md={6} lg={4} key={transcript.id}>
                   <Card sx={{ height: "100%", display: "flex", flexDirection: "column" }}>
-                    <CardContent sx={{ flexGrow: 1 }}>
-                      <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
-                        <Typography
-                          variant="h6"
-                          sx={{ fontSize: "1.1rem", fontWeight: 600, mb: 1 }}
+                    <CardActionArea
+                      onClick={() => navigate(`/recordings/${transcript.id}`)}
+                      sx={{
+                        flexGrow: 1,
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "stretch",
+                      }}
+                    >
+                      <CardContent sx={{ flexGrow: 1 }}>
+                        <Stack
+                          direction="row"
+                          justifyContent="space-between"
+                          alignItems="flex-start"
                         >
-                          {transcript.title || "Untitled Recording"}
+                          <Typography
+                            variant="h6"
+                            sx={{ fontSize: "1.1rem", fontWeight: 600, mb: 1 }}
+                          >
+                            {transcript.title || "Untitled Recording"}
+                          </Typography>
+                          <IconButton
+                            size="small"
+                            color="error"
+                            onMouseDown={(e) => e.stopPropagation()}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              void handleDelete(transcript.id);
+                            }}
+                          >
+                            <DeleteIcon fontSize="small" />
+                          </IconButton>
+                        </Stack>
+
+                        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                          {transcript.recordedAt
+                            ? new Date(transcript.recordedAt).toLocaleString()
+                            : new Date(transcript.createdAt).toLocaleString()}
                         </Typography>
-                        <IconButton
-                          size="small"
-                          color="error"
-                          onClick={() => void handleDelete(transcript.id)}
+
+                        <Typography
+                          variant="body2"
+                          sx={{
+                            display: "-webkit-box",
+                            WebkitLineClamp: 3,
+                            WebkitBoxOrient: "vertical",
+                            overflow: "hidden",
+                          }}
                         >
-                          <DeleteIcon fontSize="small" />
-                        </IconButton>
-                      </Stack>
-
-                      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                        {transcript.recordedAt
-                          ? new Date(transcript.recordedAt).toLocaleString()
-                          : new Date(transcript.createdAt).toLocaleString()}
-                      </Typography>
-
-                      <Typography
-                        variant="body2"
-                        sx={{
-                          display: "-webkit-box",
-                          WebkitLineClamp: 3,
-                          WebkitBoxOrient: "vertical",
-                          overflow: "hidden",
-                        }}
-                      >
-                        {transcript.summary ||
-                          transcript.transcript ||
-                          "No transcript content available."}
-                      </Typography>
-                    </CardContent>
+                          {transcript.summary ||
+                            transcript.transcript ||
+                            "No transcript content available."}
+                        </Typography>
+                      </CardContent>
+                    </CardActionArea>
                   </Card>
                 </Grid>
               ),
@@ -141,12 +162,12 @@ const Recordings: React.FC = () => {
           </Grid>
         )}
 
-        {data && data.total > 20 && (
+        {data?.data && data.data.total > 20 && (
           <Stack direction="row" justifyContent="center" sx={{ mt: 4 }} spacing={2}>
             <Button disabled={page === 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>
               Previous
             </Button>
-            <Button disabled={page * 20 >= data.total} onClick={() => setPage((p) => p + 1)}>
+            <Button disabled={page * 20 >= data.data.total} onClick={() => setPage((p) => p + 1)}>
               Next
             </Button>
           </Stack>

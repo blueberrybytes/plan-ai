@@ -21,6 +21,7 @@ import ProjectInfo from "./pages/ProjectInfo";
 import ProjectTranscriptDetail from "./pages/ProjectTranscriptDetail";
 import Contexts from "./pages/Contexts";
 import Recordings from "./pages/Recordings";
+import RecordingDetail from "./pages/RecordingDetail";
 import ProjectDetails from "./pages/ProjectDetails";
 import Chat from "./pages/Chat";
 import ChatFull from "./pages/ChatFull";
@@ -93,6 +94,7 @@ const AppContent: React.FC = () => {
           <Route path="/contexts" element={<Contexts />} />
           <Route path="/contexts/:contextId" element={<Contexts />} />
           <Route path="/recordings" element={<Recordings />} />
+          <Route path="/recordings/:recordingId" element={<RecordingDetail />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/integrations" element={<Integrations />} />
           <Route path="/integrations/:provider" element={<Integrations />} />
