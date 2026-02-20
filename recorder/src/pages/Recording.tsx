@@ -60,7 +60,7 @@ const Waveform: React.FC<{ active: boolean }> = ({ active }) => (
 );
 
 const Recording: React.FC = () => {
-  const { sessionId } = useParams<{ sessionId: string }>();
+  const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
   const { token } = useAuth();
 
@@ -92,26 +92,26 @@ const Recording: React.FC = () => {
 
   const handleChunk = useCallback(
     async (blob: Blob) => {
-      if (!token || !sessionId) return;
+      if (!token || !projectId) return;
       try {
-        const text = await planAiApi.transcribeChunk(token, sessionId, blob);
+        const text = await planAiApi.transcribeChunk(token, projectId, blob);
         if (text.trim()) appendText(text.trim());
       } catch (err) {
         console.error("Chunk transcription error:", err);
         // Non-fatal — continue recording
       }
     },
-    [token, sessionId],
+    [token, projectId],
   );
 
   const handleStop = useCallback(async () => {
-    if (!token || !sessionId) return;
+    if (!token || !projectId) return;
     setPhase("analyzing");
 
     try {
-      await planAiApi.submitTranscript(token, sessionId, {
+      await planAiApi.submitTranscript(token, projectId, {
         transcript: transcriptRef.current,
-        title: config?.sessionTitle ?? "Live Recording",
+        title: config?.projectTitle ?? "Live Recording",
         persona: config?.persona,
         contextIds: config?.selectedContextIds,
         objective: config?.objective || undefined,
@@ -121,11 +121,11 @@ const Recording: React.FC = () => {
       setError(err instanceof Error ? err.message : "Failed to submit transcript.");
       setPhase("error");
     }
-  }, [token, sessionId, config]);
+  }, [token, projectId, config]);
 
   // Start recorder on mount
   useEffect(() => {
-    if (!token || !sessionId) return;
+    if (!token || !projectId) return;
 
     const recorder = new AudioRecorder({
       onChunk: (blob) => void handleChunk(blob),
@@ -194,12 +194,12 @@ const Recording: React.FC = () => {
         <DoneIcon sx={{ fontSize: 64, color: "success.main" }} />
         <Typography variant="h6">Recording analyzed!</Typography>
         <Typography variant="body2" color="text.secondary" textAlign="center">
-          Your transcript and tasks have been added to <strong>{config?.sessionTitle}</strong>.
+          Your transcript and tasks have been added to <strong>{config?.projectTitle}</strong>.
           <br />
           Open Plan AI in your browser to review them.
         </Typography>
         <Button variant="contained" startIcon={<BackIcon />} onClick={() => navigate("/")}>
-          Back to sessions
+          Back to projects
         </Button>
       </Box>
     );
@@ -222,7 +222,7 @@ const Recording: React.FC = () => {
           {error ?? "An unexpected error occurred."}
         </Alert>
         <Button variant="outlined" startIcon={<BackIcon />} onClick={() => navigate("/")}>
-          Back to sessions
+          Back to projects
         </Button>
       </Box>
     );
@@ -260,7 +260,7 @@ const Recording: React.FC = () => {
             }}
           />
           <Typography variant="subtitle2" fontWeight={700}>
-            {config?.sessionTitle ?? "Recording"}
+            {config?.projectTitle ?? "Recording"}
           </Typography>
           <Chip label={formatTime(elapsed)} size="small" variant="outlined" />
         </Stack>

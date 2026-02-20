@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { selectUser } from "../store/slices/session/sessionSelector";
+import { selectUser } from "../store/slices/auth/authSelector";
 import { TokenService } from "../services/tokenService";
 
 /**

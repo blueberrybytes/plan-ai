@@ -12,11 +12,11 @@ import {
   Button,
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
-import type { TaskResponse, TaskPrioritySchema } from "../../store/apis/sessionApi";
+import type { TaskResponse, TaskPrioritySchema } from "../../store/apis/projectApi";
 import type { components } from "../../types/api";
 import MarkdownRenderer from "../common/MarkdownRenderer";
 
-interface SessionTaskDialogProps {
+interface ProjectTaskDialogProps {
   open: boolean;
   task: TaskResponse | null;
   onClose: () => void;
@@ -48,7 +48,7 @@ type ExtendedTask = TaskResponse & {
   actualMinutes?: number | null;
 };
 
-const SessionTaskDialog: React.FC<SessionTaskDialogProps> = ({
+const ProjectTaskDialog: React.FC<ProjectTaskDialogProps> = ({
   open,
   task,
   onClose,
@@ -266,4 +266,4 @@ const SessionTaskDialog: React.FC<SessionTaskDialogProps> = ({
   );
 };
 
-export default SessionTaskDialog;
+export default ProjectTaskDialog;

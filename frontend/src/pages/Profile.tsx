@@ -29,9 +29,9 @@ import { useDispatch, useSelector } from "react-redux";
 
 import SidebarLayout from "../components/layout/SidebarLayout";
 import DeleteAccountDialog from "../components/dialogs/DeleteAccountDialog";
-import { selectAvatar, selectUser, selectUserDb } from "../store/slices/session/sessionSelector";
-import { logout, setUserDb } from "../store/slices/session/sessionSlice";
-import { useGetCurrentUserQuery } from "../store/apis/sessionApi";
+import { selectAvatar, selectUser, selectUserDb } from "../store/slices/auth/authSelector";
+import { logout, setUserDb } from "../store/slices/auth/authSlice";
+import { useGetCurrentUserQuery } from "../store/apis/authApi";
 import { useDeleteMyAccountMutation } from "../store/apis/accountApi";
 import { useListIntegrationsQuery } from "../store/apis/integrationApi";
 import { useTranslation } from "react-i18next";

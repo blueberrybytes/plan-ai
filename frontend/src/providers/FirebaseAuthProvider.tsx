@@ -2,7 +2,7 @@ import React, { useEffect, useState, createContext, useContext } from "react";
 import { useDispatch } from "react-redux";
 import { auth } from "../firebase/firebase";
 import { onAuthStateChanged } from "firebase/auth";
-import { logout } from "../store/slices/session/sessionSlice";
+import { logout } from "../store/slices/auth/authSlice";
 import { TokenService } from "../services/tokenService";
 
 // Create a context to share auth initialization state

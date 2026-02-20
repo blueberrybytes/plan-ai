@@ -11,7 +11,7 @@ import {
   signupEmail,
   setIsLoading,
   setUserDb,
-} from "../slices/session/sessionSlice";
+} from "../slices/auth/authSlice";
 import { resetStore } from "../actions";
 import {
   signInWithEmailAndPassword,
@@ -25,7 +25,7 @@ import {
   sendEmailVerification,
   User,
 } from "firebase/auth";
-import { UserApp } from "../slices/session/sessionTypes";
+import { UserApp } from "../slices/auth/authTypes";
 import { AppExceptionType, ErrorCause } from "../../types/ErrorTypes";
 import { analytics, auth } from "../../firebase/firebase";
 import { navigate } from "../../navigation/navigation";
@@ -34,7 +34,7 @@ import axios from "axios";
 import { User as UserType } from "../../types/UserTypes";
 
 // API imports
-import { ApiResponseUserResponse, sessionApi } from "../apis/sessionApi";
+import { ApiResponseUserResponse, projectApi } from "../apis/projectApi";
 import { accountApi } from "../apis/accountApi";
 
 /**
@@ -529,7 +529,7 @@ function* logoutFunc(): Generator<any, void, any> {
  */
 function* resetAllApiStates(): Generator<any, void, any> {
   // Reset all API states
-  yield put(sessionApi.util.resetApiState());
+  yield put(projectApi.util.resetApiState());
   yield put(accountApi.util.resetApiState());
 }
 

@@ -14,7 +14,7 @@ import type {
   TaskPrioritySchema,
   TaskResponse,
   TaskStatusSchema,
-} from "../../store/apis/sessionApi";
+} from "../../store/apis/projectApi";
 
 import "reactflow/dist/style.css";
 
@@ -200,12 +200,12 @@ const buildSequentialEdges = (tasks: TaskResponse[]): FlowEdge[] => {
   return edges;
 };
 
-export interface SessionTaskDependencyDiagramProps {
+export interface ProjectTaskDependencyDiagramProps {
   tasks: TaskResponse[];
   onTaskClick?: (task: TaskResponse) => void;
 }
 
-const SessionTaskDependencyDiagram: React.FC<SessionTaskDependencyDiagramProps> = ({
+const ProjectTaskDependencyDiagram: React.FC<ProjectTaskDependencyDiagramProps> = ({
   tasks,
   onTaskClick,
 }) => {
@@ -278,4 +278,4 @@ const SessionTaskDependencyDiagram: React.FC<SessionTaskDependencyDiagramProps> 
   );
 };
 
-export default SessionTaskDependencyDiagram;
+export default ProjectTaskDependencyDiagram;

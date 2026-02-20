@@ -13,8 +13,8 @@ const SlideTypes: React.FC = () => {
   const [selected, setSelected] = useState<SlideTypeDefinition>(SLIDE_TYPES[0]);
 
   return (
-    <SidebarLayout>
-      <Box sx={{ display: "flex", height: "100vh", overflow: "hidden" }}>
+    <SidebarLayout fullHeight>
+      <Box sx={{ display: "flex", height: "100%", overflow: "hidden" }}>
         {/* Left panel — slide type list */}
         <Box
           sx={{

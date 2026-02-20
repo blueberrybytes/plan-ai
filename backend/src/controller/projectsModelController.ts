@@ -16,7 +16,7 @@ import {
 } from "tsoa";
 import {
   Prisma,
-  SessionStatus,
+  ProjectStatus,
   TranscriptSource,
   TaskPriority,
   TaskStatus,
@@ -27,19 +27,26 @@ import { logger } from "../utils/logger";
 import type { AuthenticatedRequest } from "../middleware/authMiddleware";
 import type { ApiResponse } from "./controllerTypes";
 import {
-  sessionTranscriptService,
+  projectTranscriptService,
   type TranscriptAnalysis,
-} from "../services/sessionTranscriptService";
-import { transcriptCrudService } from "../services/transcriptCrudService";
-import { taskCrudService, type TaskWithRelations } from "../services/taskCrudService";
-import type { Express } from "express";
+} from "../services/projectTranscriptService";
+import {
+  transcriptCrudService,
+  type TranscriptListOptions,
+  type CreateTranscriptInput,
+} from "../services/transcriptCrudService";
+import {
+  taskCrudService,
+  type TaskWithRelations,
+  type TaskListOptions,
+} from "../services/taskCrudService";
 import { extractTextFromUpload, isSupportedUploadMimeType } from "../utils/documentTextExtractor";
 
-interface SessionResponse {
+interface ProjectResponse {
   id: string;
   title: string;
   description: string | null;
-  status: SessionStatus;
+  status: ProjectStatus;
   startedAt: Date | null;
   endedAt: Date | null;
   metadata: Prisma.JsonValue | null;
@@ -47,23 +54,23 @@ interface SessionResponse {
   updatedAt: Date;
 }
 
-interface SessionListResponse {
-  sessions: SessionResponse[];
+interface ProjectListResponse {
+  projects: ProjectResponse[];
   total: number;
 }
 
-interface CreateSessionRequest {
+interface CreateProjectRequest {
   title: string;
   description?: string;
-  status?: SessionStatus;
+  status?: ProjectStatus;
   startedAt?: Date | null;
   metadata?: Prisma.InputJsonValue | null;
 }
 
-interface UpdateSessionRequest {
+interface UpdateProjectRequest {
   title?: string;
   description?: string | null;
-  status?: SessionStatus;
+  status?: ProjectStatus;
   startedAt?: Date | null;
   endedAt?: Date | null;
   metadata?: Prisma.InputJsonValue | null;
@@ -83,7 +90,7 @@ interface CreateTranscriptRequest {
 
 interface TranscriptResponse {
   id: string;
-  sessionId: string;
+  projectId: string;
   title: string | null;
   source: TranscriptSource;
   language: string | null;
@@ -96,7 +103,7 @@ interface TranscriptResponse {
 }
 interface TaskResponse {
   id: string;
-  sessionId: string;
+  projectId: string;
   title: string;
   description: string | null;
   summary: string | null;
@@ -185,17 +192,17 @@ interface UpdateTaskRequest {
   dependencyTaskIds?: string[];
 }
 
-@Route("api/sessions")
-@Tags("Sessions")
-export class SessionsModelController extends Controller {
+@Route("api/projects")
+@Tags("Projects")
+export class ProjectsModelController extends Controller {
   @Get()
   @Security("ClientLevel")
   public async listSessions(
     @Request() request: AuthenticatedRequest,
     @Query() page = 1,
     @Query() pageSize = 20,
-    @Query() status?: SessionStatus,
-  ): Promise<ApiResponse<SessionListResponse>> {
+    @Query() status?: ProjectStatus,
+  ): Promise<ApiResponse<ProjectListResponse>> {
     const user = await this.getAuthorizedUser(request);
 
     const currentPage = Math.max(page, 1);
@@ -208,19 +215,19 @@ export class SessionsModelController extends Controller {
     };
 
     const [sessions, total] = await Promise.all([
-      prisma.session.findMany({
+      prisma.project.findMany({
         where: whereClause,
         orderBy: { createdAt: "desc" },
         skip,
         take,
       }),
-      prisma.session.count({ where: whereClause }),
+      prisma.project.count({ where: whereClause }),
     ]);
 
     return {
       status: 200,
       data: {
-        sessions: sessions.map(this.mapSessionResponse),
+        projects: sessions.map(this.mapProjectResponse),
         total,
       },
     };
@@ -288,14 +295,14 @@ export class SessionsModelController extends Controller {
    * Transcribe a raw audio chunk uploaded by the Electron recorder.
    * The Groq API key lives exclusively on the server — it is never sent to the client.
    */
-  @Post("{sessionId}/transcribe-chunk")
+  @Post("{projectId}/transcribe-chunk")
   @Security("ClientLevel")
   public async transcribeChunk(
     @Request() request: AuthenticatedRequest,
-    @Path() sessionId: string,
+    @Path() projectId: string,
     @UploadedFiles() files: Express.Multer.File[],
   ): Promise<ApiResponse<{ text: string }>> {
-    await this.getSessionForUser(request, sessionId);
+    await this.getProjectForUser(request, projectId);
 
     if (!files || files.length === 0) {
       this.setStatus(400);
@@ -340,11 +347,11 @@ export class SessionsModelController extends Controller {
     };
   }
 
-  @Post("{sessionId}/transcripts/upload")
+  @Post("{projectId}/transcripts/upload")
   @Security("ClientLevel")
   public async uploadTranscript(
     @Request() request: AuthenticatedRequest,
-    @Path() sessionId: string,
+    @Path() projectId: string,
     @UploadedFiles() files: Express.Multer.File[],
     @FormField() title?: string,
     @FormField() recordedAt?: string,
@@ -355,7 +362,7 @@ export class SessionsModelController extends Controller {
     @FormField() englishLevel?: string,
   ): Promise<ApiResponse<CreateTranscriptResponse>> {
     const user = await this.getAuthorizedUser(request);
-    await this.getSessionForUser(request, sessionId);
+    await this.getProjectForUser(request, projectId);
 
     if (!files || files.length === 0) {
       this.setStatus(400);
@@ -426,8 +433,8 @@ export class SessionsModelController extends Controller {
 
     const contextPrompt = await this.buildContextPrompt(user.id, contextIds ?? []);
 
-    const result = await sessionTranscriptService.createTranscriptForSession({
-      sessionId,
+    const result = await projectTranscriptService.createTranscriptForProject({
+      projectId,
       content,
       title: title || supportedFiles[0]?.originalname || undefined,
       source: TranscriptSource.UPLOAD,
@@ -441,7 +448,7 @@ export class SessionsModelController extends Controller {
     });
 
     const tasksWithRelations = await Promise.all(
-      result.tasks.map((task) => taskCrudService.getTaskForUser(user.id, task.id)),
+      result.tasks.map((task: Task) => taskCrudService.getTaskForUser(user.id, task.id)),
     );
 
     return {
@@ -449,28 +456,32 @@ export class SessionsModelController extends Controller {
       message: "Transcript uploaded",
       data: {
         transcript: this.mapTranscriptResponse(result.transcript),
-        tasks: tasksWithRelations.map((task) => this.mapTaskResponse(task)),
+        tasks: tasksWithRelations.map((task: TaskWithRelations) => this.mapTaskResponse(task)),
         analysis: this.mapTranscriptAnalysis(result.analysis),
       },
     };
   }
 
-  @Get("{sessionId}/transcripts")
+  @Get("{projectId}/transcripts")
   @Security("ClientLevel")
   public async listTranscripts(
     @Request() request: AuthenticatedRequest,
-    @Path() sessionId: string,
+    @Path() projectId: string,
     @Query() page = 1,
     @Query() pageSize = 20,
   ): Promise<ApiResponse<TranscriptListResponse>> {
     const user = await this.getAuthorizedUser(request);
-    await this.getSessionForUser(request, sessionId);
+    await this.getProjectForUser(request, projectId);
 
-    const { transcripts, total } = await transcriptCrudService.listTranscriptsForUser(user.id, {
-      sessionId,
+    const options: TranscriptListOptions = {
+      projectId,
       page,
       pageSize,
-    });
+    };
+    const { transcripts, total } = await transcriptCrudService.listTranscriptsForUser(
+      user.id,
+      options,
+    );
 
     return {
       status: 200,
@@ -481,15 +492,15 @@ export class SessionsModelController extends Controller {
     };
   }
 
-  @Get("{sessionId}/transcripts/{transcriptId}")
+  @Get("{projectId}/transcripts/{transcriptId}")
   @Security("ClientLevel")
   public async getTranscript(
     @Request() request: AuthenticatedRequest,
-    @Path() sessionId: string,
+    @Path() projectId: string,
     @Path() transcriptId: string,
   ): Promise<ApiResponse<TranscriptResponse>> {
     const user = await this.getAuthorizedUser(request);
-    await this.getSessionForUser(request, sessionId);
+    await this.getProjectForUser(request, projectId);
 
     const transcript = await transcriptCrudService.getTranscriptForUser(user.id, transcriptId);
 
@@ -499,18 +510,18 @@ export class SessionsModelController extends Controller {
     };
   }
 
-  @Post("{sessionId}/transcripts/manual")
+  @Post("{projectId}/transcripts/manual")
   @Security("ClientLevel")
   public async createManualTranscript(
     @Request() request: AuthenticatedRequest,
-    @Path() sessionId: string,
+    @Path() projectId: string,
     @Body() body: ManualTranscriptRequest,
   ): Promise<ApiResponse<TranscriptResponse>> {
     const user = await this.getAuthorizedUser(request);
-    await this.getSessionForUser(request, sessionId);
+    await this.getProjectForUser(request, projectId);
 
-    const transcript = await transcriptCrudService.createTranscriptForUser(user.id, {
-      sessionId,
+    const input: CreateTranscriptInput = {
+      projectId,
       title: body.title ?? null,
       source: body.source ?? TranscriptSource.MANUAL,
       content: body.content ?? null,
@@ -518,7 +529,8 @@ export class SessionsModelController extends Controller {
       language: body.language ?? null,
       recordedAt: body.recordedAt ?? null,
       metadata: body.metadata ?? null,
-    });
+    };
+    const transcript = await transcriptCrudService.createTranscriptForUser(user.id, input);
 
     return {
       status: 201,
@@ -527,16 +539,16 @@ export class SessionsModelController extends Controller {
     };
   }
 
-  @Put("{sessionId}/transcripts/{transcriptId}")
+  @Put("{projectId}/transcripts/{transcriptId}")
   @Security("ClientLevel")
   public async updateTranscript(
     @Request() request: AuthenticatedRequest,
-    @Path() sessionId: string,
+    @Path() projectId: string,
     @Path() transcriptId: string,
     @Body() body: UpdateTranscriptRequest,
   ): Promise<ApiResponse<TranscriptResponse>> {
     const user = await this.getAuthorizedUser(request);
-    await this.getSessionForUser(request, sessionId);
+    await this.getProjectForUser(request, projectId);
 
     const transcript = await transcriptCrudService.updateTranscriptForUser(user.id, transcriptId, {
       title: body.title,
@@ -555,15 +567,15 @@ export class SessionsModelController extends Controller {
     };
   }
 
-  @Delete("{sessionId}/transcripts/{transcriptId}")
+  @Delete("{projectId}/transcripts/{transcriptId}")
   @Security("ClientLevel")
   public async deleteTranscript(
     @Request() request: AuthenticatedRequest,
-    @Path() sessionId: string,
+    @Path() projectId: string,
     @Path() transcriptId: string,
   ): Promise<ApiResponse<null>> {
     const user = await this.getAuthorizedUser(request);
-    await this.getSessionForUser(request, sessionId);
+    await this.getProjectForUser(request, projectId);
 
     await transcriptCrudService.deleteTranscriptForUser(user.id, transcriptId);
 
@@ -574,45 +586,46 @@ export class SessionsModelController extends Controller {
     };
   }
 
-  @Get("{sessionId}/tasks")
+  @Get("{projectId}/tasks")
   @Security("ClientLevel")
   public async listTasks(
     @Request() request: AuthenticatedRequest,
-    @Path() sessionId: string,
+    @Path() projectId: string,
     @Query() status?: TaskStatus,
     @Query() priority?: TaskPriority,
     @Query() page = 1,
     @Query() pageSize = 20,
   ): Promise<ApiResponse<TaskListResponse>> {
     const user = await this.getAuthorizedUser(request);
-    await this.getSessionForUser(request, sessionId);
+    await this.getProjectForUser(request, projectId);
 
-    const { tasks, total } = await taskCrudService.listTasksForUser(user.id, {
-      sessionId,
+    const options: TaskListOptions = {
+      projectId,
       status,
       priority,
       page,
       pageSize,
-    });
+    };
+    const { tasks: resultTasks, total } = await taskCrudService.listTasksForUser(user.id, options);
 
     return {
       status: 200,
       data: {
-        tasks: tasks.map((task) => this.mapTaskResponse(task)),
+        tasks: resultTasks.map((task: Task) => this.mapTaskResponse(task)),
         total,
       },
     };
   }
 
-  @Get("{sessionId}/tasks/{taskId}")
+  @Get("{projectId}/tasks/{taskId}")
   @Security("ClientLevel")
   public async getTask(
     @Request() request: AuthenticatedRequest,
-    @Path() sessionId: string,
+    @Path() projectId: string,
     @Path() taskId: string,
   ): Promise<ApiResponse<TaskResponse>> {
     const user = await this.getAuthorizedUser(request);
-    await this.getSessionForUser(request, sessionId);
+    await this.getProjectForUser(request, projectId);
 
     const task = await taskCrudService.getTaskForUser(user.id, taskId);
 
@@ -622,18 +635,18 @@ export class SessionsModelController extends Controller {
     };
   }
 
-  @Post("{sessionId}/tasks")
+  @Post("{projectId}/tasks")
   @Security("ClientLevel")
   public async createTask(
     @Request() request: AuthenticatedRequest,
-    @Path() sessionId: string,
+    @Path() projectId: string,
     @Body() body: CreateTaskRequest,
   ): Promise<ApiResponse<TaskResponse>> {
     const user = await this.getAuthorizedUser(request);
-    await this.getSessionForUser(request, sessionId);
+    await this.getProjectForUser(request, projectId);
 
     const task = await taskCrudService.createTaskForUser(user.id, {
-      sessionId,
+      projectId,
       title: body.title,
       description: body.description ?? null,
       summary: body.summary ?? null,
@@ -652,16 +665,16 @@ export class SessionsModelController extends Controller {
     };
   }
 
-  @Put("{sessionId}/tasks/{taskId}")
+  @Put("{projectId}/tasks/{taskId}")
   @Security("ClientLevel")
   public async updateTask(
     @Request() request: AuthenticatedRequest,
-    @Path() sessionId: string,
+    @Path() projectId: string,
     @Path() taskId: string,
     @Body() body: UpdateTaskRequest,
   ): Promise<ApiResponse<TaskResponse>> {
     const user = await this.getAuthorizedUser(request);
-    await this.getSessionForUser(request, sessionId);
+    await this.getProjectForUser(request, projectId);
 
     const task = await taskCrudService.updateTaskForUser(user.id, taskId, {
       title: body.title,
@@ -682,15 +695,15 @@ export class SessionsModelController extends Controller {
     };
   }
 
-  @Delete("{sessionId}/tasks/{taskId}")
+  @Delete("{projectId}/tasks/{taskId}")
   @Security("ClientLevel")
   public async deleteTask(
     @Request() request: AuthenticatedRequest,
-    @Path() sessionId: string,
+    @Path() projectId: string,
     @Path() taskId: string,
   ): Promise<ApiResponse<null>> {
     const user = await this.getAuthorizedUser(request);
-    await this.getSessionForUser(request, sessionId);
+    await this.getProjectForUser(request, projectId);
 
     await taskCrudService.deleteTaskForUser(user.id, taskId);
 
@@ -701,17 +714,17 @@ export class SessionsModelController extends Controller {
     };
   }
 
-  @Get("{sessionId}")
+  @Get("{projectId}")
   @Security("ClientLevel")
   public async getSession(
     @Request() request: AuthenticatedRequest,
-    @Path() sessionId: string,
-  ): Promise<ApiResponse<SessionResponse>> {
-    const session = await this.getSessionForUser(request, sessionId);
+    @Path() projectId: string,
+  ): Promise<ApiResponse<ProjectResponse>> {
+    const project = await this.getProjectForUser(request, projectId);
 
     return {
       status: 200,
-      data: this.mapSessionResponse(session),
+      data: this.mapProjectResponse(project),
     };
   }
 
@@ -719,16 +732,16 @@ export class SessionsModelController extends Controller {
   @Security("ClientLevel")
   public async createSession(
     @Request() request: AuthenticatedRequest,
-    @Body() body: CreateSessionRequest,
-  ): Promise<ApiResponse<SessionResponse>> {
+    @Body() body: CreateProjectRequest,
+  ): Promise<ApiResponse<ProjectResponse>> {
     const user = await this.getAuthorizedUser(request);
 
-    const session = await prisma.session.create({
+    const project = await prisma.project.create({
       data: {
         userId: user.id,
         title: body.title,
         description: body.description,
-        status: body.status ?? SessionStatus.ACTIVE,
+        status: body.status ?? ProjectStatus.ACTIVE,
         startedAt: body.startedAt ?? new Date(),
         ...(body.metadata === undefined ? {} : { metadata: body.metadata ?? Prisma.JsonNull }),
       },
@@ -737,21 +750,21 @@ export class SessionsModelController extends Controller {
     return {
       status: 201,
       message: "Session created",
-      data: this.mapSessionResponse(session),
+      data: this.mapProjectResponse(project),
     };
   }
 
-  @Put("{sessionId}")
+  @Put("{projectId}")
   @Security("ClientLevel")
   public async updateSession(
     @Request() request: AuthenticatedRequest,
-    @Path() sessionId: string,
-    @Body() body: UpdateSessionRequest,
-  ): Promise<ApiResponse<SessionResponse>> {
-    await this.getSessionForUser(request, sessionId);
+    @Path() projectId: string,
+    @Body() body: UpdateProjectRequest,
+  ): Promise<ApiResponse<ProjectResponse>> {
+    await this.getProjectForUser(request, projectId);
 
-    const session = await prisma.session.update({
-      where: { id: sessionId },
+    const project = await prisma.project.update({
+      where: { id: projectId },
       data: {
         title: body.title,
         description: body.description,
@@ -765,18 +778,18 @@ export class SessionsModelController extends Controller {
     return {
       status: 200,
       message: "Session updated",
-      data: this.mapSessionResponse(session),
+      data: this.mapProjectResponse(project),
     };
   }
 
-  @Delete("{sessionId}")
+  @Delete("{projectId}")
   @Security("ClientLevel")
   public async deleteSession(
     @Request() request: AuthenticatedRequest,
-    @Path() sessionId: string,
+    @Path() projectId: string,
   ): Promise<ApiResponse<null>> {
-    await this.getSessionForUser(request, sessionId);
-    await prisma.session.delete({ where: { id: sessionId } });
+    await this.getProjectForUser(request, projectId);
+    await prisma.project.delete({ where: { id: projectId } });
 
     return {
       status: 200,
@@ -785,15 +798,15 @@ export class SessionsModelController extends Controller {
     };
   }
 
-  @Post("{sessionId}/transcripts")
+  @Post("{projectId}/transcripts")
   @Security("ClientLevel")
   public async createTranscript(
     @Request() request: AuthenticatedRequest,
-    @Path() sessionId: string,
+    @Path() projectId: string,
     @Body() body: CreateTranscriptRequest,
   ): Promise<ApiResponse<CreateTranscriptResponse>> {
     const user = await this.getAuthorizedUser(request);
-    await this.getSessionForUser(request, sessionId);
+    await this.getProjectForUser(request, projectId);
 
     const contextPrompt = await this.buildContextPrompt(user.id, body.contextIds ?? []);
 
@@ -805,8 +818,8 @@ export class SessionsModelController extends Controller {
       };
     }
 
-    const result = await sessionTranscriptService.createTranscriptForSession({
-      sessionId,
+    const result = await projectTranscriptService.createTranscriptForProject({
+      projectId,
       content: body.content ?? "",
       title: body.title,
       source: body.source,
@@ -820,7 +833,7 @@ export class SessionsModelController extends Controller {
     });
 
     const tasksWithRelations = await Promise.all(
-      result.tasks.map((task) => taskCrudService.getTaskForUser(user.id, task.id)),
+      result.tasks.map((task: Task) => taskCrudService.getTaskForUser(user.id, task.id)),
     );
 
     return {
@@ -828,7 +841,7 @@ export class SessionsModelController extends Controller {
       message: "Transcript created",
       data: {
         transcript: this.mapTranscriptResponse(result.transcript),
-        tasks: tasksWithRelations.map((task) => this.mapTaskResponse(task)),
+        tasks: tasksWithRelations.map((task: TaskWithRelations) => this.mapTaskResponse(task)),
         analysis: this.mapTranscriptAnalysis(result.analysis),
       },
     };
@@ -851,54 +864,54 @@ export class SessionsModelController extends Controller {
     return user;
   }
 
-  private async getSessionForUser(request: AuthenticatedRequest, sessionId: string) {
+  private async getProjectForUser(request: AuthenticatedRequest, projectId: string) {
     if (!request.user) {
       this.setStatus(401);
       throw { status: 401, message: "Unauthorized" };
     }
 
-    const session = await prisma.session.findFirst({
+    const project = await prisma.project.findFirst({
       where: {
-        id: sessionId,
+        id: projectId,
         user: { firebaseUid: request.user.uid },
       },
     });
 
-    if (!session) {
+    if (!project) {
       this.setStatus(404);
-      throw { status: 404, message: "Session not found" };
+      throw { status: 404, message: "Project not found" };
     }
 
-    return session;
+    return project;
   }
 
-  private mapSessionResponse(session: {
+  private mapProjectResponse(project: {
     id: string;
     title: string;
     description: string | null;
-    status: SessionStatus;
+    status: ProjectStatus;
     startedAt: Date | null;
     endedAt: Date | null;
     metadata: Prisma.JsonValue | null;
     createdAt: Date;
     updatedAt: Date;
-  }): SessionResponse {
+  }): ProjectResponse {
     return {
-      id: session.id,
-      title: session.title,
-      description: session.description,
-      status: session.status,
-      startedAt: session.startedAt,
-      endedAt: session.endedAt,
-      metadata: session.metadata,
-      createdAt: session.createdAt,
-      updatedAt: session.updatedAt,
+      id: project.id,
+      title: project.title,
+      description: project.description,
+      status: project.status,
+      startedAt: project.startedAt,
+      endedAt: project.endedAt,
+      metadata: project.metadata,
+      createdAt: project.createdAt,
+      updatedAt: project.updatedAt,
     };
   }
 
   private mapTranscriptResponse(transcript: {
     id: string;
-    sessionId: string;
+    projectId: string;
     title: string | null;
     source: TranscriptSource;
     language: string | null;
@@ -911,7 +924,7 @@ export class SessionsModelController extends Controller {
   }): TranscriptResponse {
     return {
       id: transcript.id,
-      sessionId: transcript.sessionId,
+      projectId: transcript.projectId,
       title: transcript.title,
       source: transcript.source,
       language: transcript.language,
@@ -929,7 +942,7 @@ export class SessionsModelController extends Controller {
   ): TaskResponse {
     return {
       id: task.id,
-      sessionId: task.sessionId,
+      projectId: task.projectId,
       title: task.title,
       description: task.description,
       summary: task.summary,
@@ -947,7 +960,7 @@ export class SessionsModelController extends Controller {
     return {
       language: analysis.language,
       summary: analysis.summary ?? null,
-      tasks: analysis.tasks.map((task) => ({
+      tasks: analysis.tasks.map((task: TranscriptTaskInsight) => ({
         title: task.title,
         description: task.description,
         priority: task.priority,

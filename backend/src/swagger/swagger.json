@@ -259,7 +259,225 @@
 				"type": "object",
 				"additionalProperties": false
 			},
-			"_36_Enums.SessionStatus": {
+			"_36_Enums.Role": {
+				"type": "string",
+				"enum": [
+					"ADMIN",
+					"CLIENT"
+				]
+			},
+			"Role": {
+				"$ref": "#/components/schemas/_36_Enums.Role"
+			},
+			"UserResponse": {
+				"properties": {
+					"id": {
+						"type": "string"
+					},
+					"firebaseUid": {
+						"type": "string"
+					},
+					"email": {
+						"type": "string"
+					},
+					"name": {
+						"type": "string",
+						"nullable": true
+					},
+					"avatarUrl": {
+						"type": "string",
+						"nullable": true
+					},
+					"googleId": {
+						"type": "string",
+						"nullable": true
+					},
+					"isGoogleAccount": {
+						"type": "boolean"
+					},
+					"role": {
+						"$ref": "#/components/schemas/Role"
+					}
+				},
+				"required": [
+					"id",
+					"firebaseUid",
+					"email",
+					"name",
+					"avatarUrl",
+					"googleId",
+					"isGoogleAccount",
+					"role"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"ApiResponse_UserResponse_": {
+				"properties": {
+					"message": {
+						"type": "string"
+					},
+					"data": {
+						"allOf": [
+							{
+								"$ref": "#/components/schemas/UserResponse"
+							}
+						],
+						"nullable": true
+					},
+					"status": {
+						"type": "number",
+						"format": "double"
+					}
+				},
+				"required": [
+					"data",
+					"status"
+				],
+				"type": "object"
+			},
+			"GenericResponse": {
+				"properties": {
+					"message": {
+						"type": "string"
+					},
+					"status": {
+						"type": "number",
+						"format": "double"
+					}
+				},
+				"required": [
+					"message",
+					"status"
+				],
+				"type": "object"
+			},
+			"ApiResponse__customToken-string__": {
+				"properties": {
+					"message": {
+						"type": "string"
+					},
+					"data": {
+						"properties": {
+							"customToken": {
+								"type": "string"
+							}
+						},
+						"required": [
+							"customToken"
+						],
+						"type": "object",
+						"nullable": true
+					},
+					"status": {
+						"type": "number",
+						"format": "double"
+					}
+				},
+				"required": [
+					"data",
+					"status"
+				],
+				"type": "object"
+			},
+			"DefaultSelection_Prisma._36_PresentationPayload_": {
+				"properties": {
+					"updatedAt": {
+						"type": "string",
+						"format": "date-time"
+					},
+					"createdAt": {
+						"type": "string",
+						"format": "date-time"
+					},
+					"status": {
+						"type": "string"
+					},
+					"contextIds": {
+						"items": {
+							"type": "string"
+						},
+						"type": "array"
+					},
+					"slidesJson": {
+						"$ref": "#/components/schemas/JsonValue"
+					},
+					"title": {
+						"type": "string"
+					},
+					"templateId": {
+						"type": "string"
+					},
+					"userId": {
+						"type": "string"
+					},
+					"id": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"updatedAt",
+					"createdAt",
+					"status",
+					"contextIds",
+					"slidesJson",
+					"title",
+					"templateId",
+					"userId",
+					"id"
+				],
+				"type": "object"
+			},
+			"PublicPresentationResponse": {
+				"properties": {
+					"updatedAt": {
+						"type": "string",
+						"format": "date-time"
+					},
+					"createdAt": {
+						"type": "string",
+						"format": "date-time"
+					},
+					"status": {
+						"type": "string"
+					},
+					"contextIds": {
+						"items": {
+							"type": "string"
+						},
+						"type": "array"
+					},
+					"slidesJson": {
+						"$ref": "#/components/schemas/JsonValue"
+					},
+					"title": {
+						"type": "string"
+					},
+					"templateId": {
+						"type": "string"
+					},
+					"userId": {
+						"type": "string"
+					},
+					"id": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"updatedAt",
+					"createdAt",
+					"status",
+					"contextIds",
+					"slidesJson",
+					"title",
+					"templateId",
+					"userId",
+					"id"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"_36_Enums.ProjectStatus": {
 				"type": "string",
 				"enum": [
 					"ACTIVE",
@@ -267,10 +485,10 @@
 					"ARCHIVED"
 				]
 			},
-			"SessionStatus": {
-				"$ref": "#/components/schemas/_36_Enums.SessionStatus"
+			"ProjectStatus": {
+				"$ref": "#/components/schemas/_36_Enums.ProjectStatus"
 			},
-			"SessionResponse": {
+			"ProjectResponse": {
 				"properties": {
 					"id": {
 						"type": "string"
@@ -283,7 +501,7 @@
 						"nullable": true
 					},
 					"status": {
-						"$ref": "#/components/schemas/SessionStatus"
+						"$ref": "#/components/schemas/ProjectStatus"
 					},
 					"startedAt": {
 						"type": "string",
@@ -326,11 +544,11 @@
 				"type": "object",
 				"additionalProperties": false
 			},
-			"SessionListResponse": {
+			"ProjectListResponse": {
 				"properties": {
-					"sessions": {
+					"projects": {
 						"items": {
-							"$ref": "#/components/schemas/SessionResponse"
+							"$ref": "#/components/schemas/ProjectResponse"
 						},
 						"type": "array"
 					},
@@ -340,13 +558,13 @@
 					}
 				},
 				"required": [
-					"sessions",
+					"projects",
 					"total"
 				],
 				"type": "object",
 				"additionalProperties": false
 			},
-			"ApiResponse_SessionListResponse_": {
+			"ApiResponse_ProjectListResponse_": {
 				"properties": {
 					"message": {
 						"type": "string"
@@ -354,7 +572,7 @@
 					"data": {
 						"allOf": [
 							{
-								"$ref": "#/components/schemas/SessionListResponse"
+								"$ref": "#/components/schemas/ProjectListResponse"
 							}
 						],
 						"nullable": true
@@ -415,7 +633,7 @@
 					"id": {
 						"type": "string"
 					},
-					"sessionId": {
+					"projectId": {
 						"type": "string"
 					},
 					"title": {
@@ -461,7 +679,7 @@
 				},
 				"required": [
 					"id",
-					"sessionId",
+					"projectId",
 					"title",
 					"source",
 					"language",
@@ -505,7 +723,7 @@
 					"id": {
 						"type": "string"
 					},
-					"sessionId": {
+					"projectId": {
 						"type": "string"
 					},
 					"title": {
@@ -551,7 +769,7 @@
 				},
 				"required": [
 					"id",
-					"sessionId",
+					"projectId",
 					"title",
 					"description",
 					"summary",
@@ -1030,7 +1248,7 @@
 				"type": "object",
 				"additionalProperties": false
 			},
-			"ApiResponse_SessionResponse_": {
+			"ApiResponse_ProjectResponse_": {
 				"properties": {
 					"message": {
 						"type": "string"
@@ -1038,7 +1256,7 @@
 					"data": {
 						"allOf": [
 							{
-								"$ref": "#/components/schemas/SessionResponse"
+								"$ref": "#/components/schemas/ProjectResponse"
 							}
 						],
 						"nullable": true
@@ -1054,7 +1272,7 @@
 				],
 				"type": "object"
 			},
-			"CreateSessionRequest": {
+			"CreateProjectRequest": {
 				"properties": {
 					"title": {
 						"type": "string"
@@ -1063,7 +1281,7 @@
 						"type": "string"
 					},
 					"status": {
-						"$ref": "#/components/schemas/SessionStatus"
+						"$ref": "#/components/schemas/ProjectStatus"
 					},
 					"startedAt": {
 						"type": "string",
@@ -1085,7 +1303,7 @@
 				"type": "object",
 				"additionalProperties": false
 			},
-			"UpdateSessionRequest": {
+			"UpdateProjectRequest": {
 				"properties": {
 					"title": {
 						"type": "string"
@@ -1095,7 +1313,7 @@
 						"nullable": true
 					},
 					"status": {
-						"$ref": "#/components/schemas/SessionStatus"
+						"$ref": "#/components/schemas/ProjectStatus"
 					},
 					"startedAt": {
 						"type": "string",
@@ -1165,224 +1383,6 @@
 						"type": "string"
 					}
 				},
-				"type": "object",
-				"additionalProperties": false
-			},
-			"_36_Enums.Role": {
-				"type": "string",
-				"enum": [
-					"ADMIN",
-					"CLIENT"
-				]
-			},
-			"Role": {
-				"$ref": "#/components/schemas/_36_Enums.Role"
-			},
-			"UserResponse": {
-				"properties": {
-					"id": {
-						"type": "string"
-					},
-					"firebaseUid": {
-						"type": "string"
-					},
-					"email": {
-						"type": "string"
-					},
-					"name": {
-						"type": "string",
-						"nullable": true
-					},
-					"avatarUrl": {
-						"type": "string",
-						"nullable": true
-					},
-					"googleId": {
-						"type": "string",
-						"nullable": true
-					},
-					"isGoogleAccount": {
-						"type": "boolean"
-					},
-					"role": {
-						"$ref": "#/components/schemas/Role"
-					}
-				},
-				"required": [
-					"id",
-					"firebaseUid",
-					"email",
-					"name",
-					"avatarUrl",
-					"googleId",
-					"isGoogleAccount",
-					"role"
-				],
-				"type": "object",
-				"additionalProperties": false
-			},
-			"ApiResponse_UserResponse_": {
-				"properties": {
-					"message": {
-						"type": "string"
-					},
-					"data": {
-						"allOf": [
-							{
-								"$ref": "#/components/schemas/UserResponse"
-							}
-						],
-						"nullable": true
-					},
-					"status": {
-						"type": "number",
-						"format": "double"
-					}
-				},
-				"required": [
-					"data",
-					"status"
-				],
-				"type": "object"
-			},
-			"GenericResponse": {
-				"properties": {
-					"message": {
-						"type": "string"
-					},
-					"status": {
-						"type": "number",
-						"format": "double"
-					}
-				},
-				"required": [
-					"message",
-					"status"
-				],
-				"type": "object"
-			},
-			"ApiResponse__customToken-string__": {
-				"properties": {
-					"message": {
-						"type": "string"
-					},
-					"data": {
-						"properties": {
-							"customToken": {
-								"type": "string"
-							}
-						},
-						"required": [
-							"customToken"
-						],
-						"type": "object",
-						"nullable": true
-					},
-					"status": {
-						"type": "number",
-						"format": "double"
-					}
-				},
-				"required": [
-					"data",
-					"status"
-				],
-				"type": "object"
-			},
-			"DefaultSelection_Prisma._36_PresentationPayload_": {
-				"properties": {
-					"updatedAt": {
-						"type": "string",
-						"format": "date-time"
-					},
-					"createdAt": {
-						"type": "string",
-						"format": "date-time"
-					},
-					"status": {
-						"type": "string"
-					},
-					"contextIds": {
-						"items": {
-							"type": "string"
-						},
-						"type": "array"
-					},
-					"slidesJson": {
-						"$ref": "#/components/schemas/JsonValue"
-					},
-					"title": {
-						"type": "string"
-					},
-					"templateId": {
-						"type": "string"
-					},
-					"userId": {
-						"type": "string"
-					},
-					"id": {
-						"type": "string"
-					}
-				},
-				"required": [
-					"updatedAt",
-					"createdAt",
-					"status",
-					"contextIds",
-					"slidesJson",
-					"title",
-					"templateId",
-					"userId",
-					"id"
-				],
-				"type": "object"
-			},
-			"PublicPresentationResponse": {
-				"properties": {
-					"updatedAt": {
-						"type": "string",
-						"format": "date-time"
-					},
-					"createdAt": {
-						"type": "string",
-						"format": "date-time"
-					},
-					"status": {
-						"type": "string"
-					},
-					"contextIds": {
-						"items": {
-							"type": "string"
-						},
-						"type": "array"
-					},
-					"slidesJson": {
-						"$ref": "#/components/schemas/JsonValue"
-					},
-					"title": {
-						"type": "string"
-					},
-					"templateId": {
-						"type": "string"
-					},
-					"userId": {
-						"type": "string"
-					},
-					"id": {
-						"type": "string"
-					}
-				},
-				"required": [
-					"updatedAt",
-					"createdAt",
-					"status",
-					"contextIds",
-					"slidesJson",
-					"title",
-					"templateId",
-					"userId",
-					"id"
-				],
 				"type": "object",
 				"additionalProperties": false
 			},
@@ -2459,869 +2459,6 @@
 				]
 			}
 		},
-		"/api/sessions": {
-			"get": {
-				"operationId": "ListSessions",
-				"responses": {
-					"200": {
-						"description": "Ok",
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/ApiResponse_SessionListResponse_"
-								}
-							}
-						}
-					}
-				},
-				"tags": [
-					"Sessions"
-				],
-				"security": [
-					{
-						"ClientLevel": []
-					}
-				],
-				"parameters": [
-					{
-						"in": "query",
-						"name": "page",
-						"required": false,
-						"schema": {
-							"default": 1,
-							"format": "double",
-							"type": "number"
-						}
-					},
-					{
-						"in": "query",
-						"name": "pageSize",
-						"required": false,
-						"schema": {
-							"default": 20,
-							"format": "double",
-							"type": "number"
-						}
-					},
-					{
-						"in": "query",
-						"name": "status",
-						"required": false,
-						"schema": {
-							"$ref": "#/components/schemas/SessionStatus"
-						}
-					}
-				]
-			},
-			"post": {
-				"operationId": "CreateSession",
-				"responses": {
-					"200": {
-						"description": "Ok",
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/ApiResponse_SessionResponse_"
-								}
-							}
-						}
-					}
-				},
-				"tags": [
-					"Sessions"
-				],
-				"security": [
-					{
-						"ClientLevel": []
-					}
-				],
-				"parameters": [],
-				"requestBody": {
-					"required": true,
-					"content": {
-						"application/json": {
-							"schema": {
-								"$ref": "#/components/schemas/CreateSessionRequest"
-							}
-						}
-					}
-				}
-			}
-		},
-		"/api/sessions/{sessionId}/transcribe-chunk": {
-			"post": {
-				"operationId": "TranscribeChunk",
-				"responses": {
-					"200": {
-						"description": "Ok",
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/ApiResponse__text-string__"
-								}
-							}
-						}
-					}
-				},
-				"description": "Transcribe a raw audio chunk uploaded by the Electron recorder.\nThe Groq API key lives exclusively on the server — it is never sent to the client.",
-				"tags": [
-					"Sessions"
-				],
-				"security": [
-					{
-						"ClientLevel": []
-					}
-				],
-				"parameters": [
-					{
-						"in": "path",
-						"name": "sessionId",
-						"required": true,
-						"schema": {
-							"type": "string"
-						}
-					}
-				],
-				"requestBody": {
-					"required": true,
-					"content": {
-						"multipart/form-data": {
-							"schema": {
-								"type": "object",
-								"properties": {
-									"files": {
-										"items": {
-											"type": "string",
-											"format": "binary"
-										},
-										"type": "array"
-									}
-								},
-								"required": [
-									"files"
-								]
-							}
-						}
-					}
-				}
-			}
-		},
-		"/api/sessions/{sessionId}/transcripts/upload": {
-			"post": {
-				"operationId": "UploadTranscript",
-				"responses": {
-					"200": {
-						"description": "Ok",
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/ApiResponse_CreateTranscriptResponse_"
-								}
-							}
-						}
-					}
-				},
-				"tags": [
-					"Sessions"
-				],
-				"security": [
-					{
-						"ClientLevel": []
-					}
-				],
-				"parameters": [
-					{
-						"in": "path",
-						"name": "sessionId",
-						"required": true,
-						"schema": {
-							"type": "string"
-						}
-					}
-				],
-				"requestBody": {
-					"required": true,
-					"content": {
-						"multipart/form-data": {
-							"schema": {
-								"type": "object",
-								"properties": {
-									"files": {
-										"items": {
-											"type": "string",
-											"format": "binary"
-										},
-										"type": "array"
-									},
-									"title": {
-										"type": "string"
-									},
-									"recordedAt": {
-										"type": "string"
-									},
-									"metadata": {
-										"type": "string"
-									},
-									"persona": {
-										"type": "string"
-									},
-									"objective": {
-										"type": "string"
-									},
-									"contextIds": {
-										"type": "string"
-									},
-									"englishLevel": {
-										"type": "string"
-									}
-								},
-								"required": [
-									"files"
-								]
-							}
-						}
-					}
-				}
-			}
-		},
-		"/api/sessions/{sessionId}/transcripts": {
-			"get": {
-				"operationId": "ListTranscripts",
-				"responses": {
-					"200": {
-						"description": "Ok",
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/ApiResponse_TranscriptListResponse_"
-								}
-							}
-						}
-					}
-				},
-				"tags": [
-					"Sessions"
-				],
-				"security": [
-					{
-						"ClientLevel": []
-					}
-				],
-				"parameters": [
-					{
-						"in": "path",
-						"name": "sessionId",
-						"required": true,
-						"schema": {
-							"type": "string"
-						}
-					},
-					{
-						"in": "query",
-						"name": "page",
-						"required": false,
-						"schema": {
-							"default": 1,
-							"format": "double",
-							"type": "number"
-						}
-					},
-					{
-						"in": "query",
-						"name": "pageSize",
-						"required": false,
-						"schema": {
-							"default": 20,
-							"format": "double",
-							"type": "number"
-						}
-					}
-				]
-			},
-			"post": {
-				"operationId": "CreateTranscript",
-				"responses": {
-					"200": {
-						"description": "Ok",
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/ApiResponse_CreateTranscriptResponse_"
-								}
-							}
-						}
-					}
-				},
-				"tags": [
-					"Sessions"
-				],
-				"security": [
-					{
-						"ClientLevel": []
-					}
-				],
-				"parameters": [
-					{
-						"in": "path",
-						"name": "sessionId",
-						"required": true,
-						"schema": {
-							"type": "string"
-						}
-					}
-				],
-				"requestBody": {
-					"required": true,
-					"content": {
-						"application/json": {
-							"schema": {
-								"$ref": "#/components/schemas/CreateTranscriptRequest"
-							}
-						}
-					}
-				}
-			}
-		},
-		"/api/sessions/{sessionId}/transcripts/{transcriptId}": {
-			"get": {
-				"operationId": "GetTranscript",
-				"responses": {
-					"200": {
-						"description": "Ok",
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/ApiResponse_TranscriptResponse_"
-								}
-							}
-						}
-					}
-				},
-				"tags": [
-					"Sessions"
-				],
-				"security": [
-					{
-						"ClientLevel": []
-					}
-				],
-				"parameters": [
-					{
-						"in": "path",
-						"name": "sessionId",
-						"required": true,
-						"schema": {
-							"type": "string"
-						}
-					},
-					{
-						"in": "path",
-						"name": "transcriptId",
-						"required": true,
-						"schema": {
-							"type": "string"
-						}
-					}
-				]
-			},
-			"put": {
-				"operationId": "UpdateTranscript",
-				"responses": {
-					"200": {
-						"description": "Ok",
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/ApiResponse_TranscriptResponse_"
-								}
-							}
-						}
-					}
-				},
-				"tags": [
-					"Sessions"
-				],
-				"security": [
-					{
-						"ClientLevel": []
-					}
-				],
-				"parameters": [
-					{
-						"in": "path",
-						"name": "sessionId",
-						"required": true,
-						"schema": {
-							"type": "string"
-						}
-					},
-					{
-						"in": "path",
-						"name": "transcriptId",
-						"required": true,
-						"schema": {
-							"type": "string"
-						}
-					}
-				],
-				"requestBody": {
-					"required": true,
-					"content": {
-						"application/json": {
-							"schema": {
-								"$ref": "#/components/schemas/UpdateTranscriptRequest"
-							}
-						}
-					}
-				}
-			},
-			"delete": {
-				"operationId": "DeleteTranscript",
-				"responses": {
-					"200": {
-						"description": "Ok",
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/ApiResponse_null_"
-								}
-							}
-						}
-					}
-				},
-				"tags": [
-					"Sessions"
-				],
-				"security": [
-					{
-						"ClientLevel": []
-					}
-				],
-				"parameters": [
-					{
-						"in": "path",
-						"name": "sessionId",
-						"required": true,
-						"schema": {
-							"type": "string"
-						}
-					},
-					{
-						"in": "path",
-						"name": "transcriptId",
-						"required": true,
-						"schema": {
-							"type": "string"
-						}
-					}
-				]
-			}
-		},
-		"/api/sessions/{sessionId}/transcripts/manual": {
-			"post": {
-				"operationId": "CreateManualTranscript",
-				"responses": {
-					"200": {
-						"description": "Ok",
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/ApiResponse_TranscriptResponse_"
-								}
-							}
-						}
-					}
-				},
-				"tags": [
-					"Sessions"
-				],
-				"security": [
-					{
-						"ClientLevel": []
-					}
-				],
-				"parameters": [
-					{
-						"in": "path",
-						"name": "sessionId",
-						"required": true,
-						"schema": {
-							"type": "string"
-						}
-					}
-				],
-				"requestBody": {
-					"required": true,
-					"content": {
-						"application/json": {
-							"schema": {
-								"$ref": "#/components/schemas/ManualTranscriptRequest"
-							}
-						}
-					}
-				}
-			}
-		},
-		"/api/sessions/{sessionId}/tasks": {
-			"get": {
-				"operationId": "ListTasks",
-				"responses": {
-					"200": {
-						"description": "Ok",
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/ApiResponse_TaskListResponse_"
-								}
-							}
-						}
-					}
-				},
-				"tags": [
-					"Sessions"
-				],
-				"security": [
-					{
-						"ClientLevel": []
-					}
-				],
-				"parameters": [
-					{
-						"in": "path",
-						"name": "sessionId",
-						"required": true,
-						"schema": {
-							"type": "string"
-						}
-					},
-					{
-						"in": "query",
-						"name": "status",
-						"required": false,
-						"schema": {
-							"$ref": "#/components/schemas/TaskStatus"
-						}
-					},
-					{
-						"in": "query",
-						"name": "priority",
-						"required": false,
-						"schema": {
-							"$ref": "#/components/schemas/TaskPriority"
-						}
-					},
-					{
-						"in": "query",
-						"name": "page",
-						"required": false,
-						"schema": {
-							"default": 1,
-							"format": "double",
-							"type": "number"
-						}
-					},
-					{
-						"in": "query",
-						"name": "pageSize",
-						"required": false,
-						"schema": {
-							"default": 20,
-							"format": "double",
-							"type": "number"
-						}
-					}
-				]
-			},
-			"post": {
-				"operationId": "CreateTask",
-				"responses": {
-					"200": {
-						"description": "Ok",
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/ApiResponse_TaskResponse_"
-								}
-							}
-						}
-					}
-				},
-				"tags": [
-					"Sessions"
-				],
-				"security": [
-					{
-						"ClientLevel": []
-					}
-				],
-				"parameters": [
-					{
-						"in": "path",
-						"name": "sessionId",
-						"required": true,
-						"schema": {
-							"type": "string"
-						}
-					}
-				],
-				"requestBody": {
-					"required": true,
-					"content": {
-						"application/json": {
-							"schema": {
-								"$ref": "#/components/schemas/CreateTaskRequest"
-							}
-						}
-					}
-				}
-			}
-		},
-		"/api/sessions/{sessionId}/tasks/{taskId}": {
-			"get": {
-				"operationId": "GetTask",
-				"responses": {
-					"200": {
-						"description": "Ok",
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/ApiResponse_TaskResponse_"
-								}
-							}
-						}
-					}
-				},
-				"tags": [
-					"Sessions"
-				],
-				"security": [
-					{
-						"ClientLevel": []
-					}
-				],
-				"parameters": [
-					{
-						"in": "path",
-						"name": "sessionId",
-						"required": true,
-						"schema": {
-							"type": "string"
-						}
-					},
-					{
-						"in": "path",
-						"name": "taskId",
-						"required": true,
-						"schema": {
-							"type": "string"
-						}
-					}
-				]
-			},
-			"put": {
-				"operationId": "UpdateTask",
-				"responses": {
-					"200": {
-						"description": "Ok",
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/ApiResponse_TaskResponse_"
-								}
-							}
-						}
-					}
-				},
-				"tags": [
-					"Sessions"
-				],
-				"security": [
-					{
-						"ClientLevel": []
-					}
-				],
-				"parameters": [
-					{
-						"in": "path",
-						"name": "sessionId",
-						"required": true,
-						"schema": {
-							"type": "string"
-						}
-					},
-					{
-						"in": "path",
-						"name": "taskId",
-						"required": true,
-						"schema": {
-							"type": "string"
-						}
-					}
-				],
-				"requestBody": {
-					"required": true,
-					"content": {
-						"application/json": {
-							"schema": {
-								"$ref": "#/components/schemas/UpdateTaskRequest"
-							}
-						}
-					}
-				}
-			},
-			"delete": {
-				"operationId": "DeleteTask",
-				"responses": {
-					"200": {
-						"description": "Ok",
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/ApiResponse_null_"
-								}
-							}
-						}
-					}
-				},
-				"tags": [
-					"Sessions"
-				],
-				"security": [
-					{
-						"ClientLevel": []
-					}
-				],
-				"parameters": [
-					{
-						"in": "path",
-						"name": "sessionId",
-						"required": true,
-						"schema": {
-							"type": "string"
-						}
-					},
-					{
-						"in": "path",
-						"name": "taskId",
-						"required": true,
-						"schema": {
-							"type": "string"
-						}
-					}
-				]
-			}
-		},
-		"/api/sessions/{sessionId}": {
-			"get": {
-				"operationId": "GetSession",
-				"responses": {
-					"200": {
-						"description": "Ok",
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/ApiResponse_SessionResponse_"
-								}
-							}
-						}
-					}
-				},
-				"tags": [
-					"Sessions"
-				],
-				"security": [
-					{
-						"ClientLevel": []
-					}
-				],
-				"parameters": [
-					{
-						"in": "path",
-						"name": "sessionId",
-						"required": true,
-						"schema": {
-							"type": "string"
-						}
-					}
-				]
-			},
-			"put": {
-				"operationId": "UpdateSession",
-				"responses": {
-					"200": {
-						"description": "Ok",
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/ApiResponse_SessionResponse_"
-								}
-							}
-						}
-					}
-				},
-				"tags": [
-					"Sessions"
-				],
-				"security": [
-					{
-						"ClientLevel": []
-					}
-				],
-				"parameters": [
-					{
-						"in": "path",
-						"name": "sessionId",
-						"required": true,
-						"schema": {
-							"type": "string"
-						}
-					}
-				],
-				"requestBody": {
-					"required": true,
-					"content": {
-						"application/json": {
-							"schema": {
-								"$ref": "#/components/schemas/UpdateSessionRequest"
-							}
-						}
-					}
-				}
-			},
-			"delete": {
-				"operationId": "DeleteSession",
-				"responses": {
-					"200": {
-						"description": "Ok",
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/ApiResponse_null_"
-								}
-							}
-						}
-					}
-				},
-				"tags": [
-					"Sessions"
-				],
-				"security": [
-					{
-						"ClientLevel": []
-					}
-				],
-				"parameters": [
-					{
-						"in": "path",
-						"name": "sessionId",
-						"required": true,
-						"schema": {
-							"type": "string"
-						}
-					}
-				]
-			}
-		},
 		"/api/session/login": {
 			"post": {
 				"operationId": "Login",
@@ -3485,6 +2622,869 @@
 					{
 						"in": "path",
 						"name": "presentationId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				]
+			}
+		},
+		"/api/projects": {
+			"get": {
+				"operationId": "ListSessions",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiResponse_ProjectListResponse_"
+								}
+							}
+						}
+					}
+				},
+				"tags": [
+					"Projects"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": [
+					{
+						"in": "query",
+						"name": "page",
+						"required": false,
+						"schema": {
+							"default": 1,
+							"format": "double",
+							"type": "number"
+						}
+					},
+					{
+						"in": "query",
+						"name": "pageSize",
+						"required": false,
+						"schema": {
+							"default": 20,
+							"format": "double",
+							"type": "number"
+						}
+					},
+					{
+						"in": "query",
+						"name": "status",
+						"required": false,
+						"schema": {
+							"$ref": "#/components/schemas/ProjectStatus"
+						}
+					}
+				]
+			},
+			"post": {
+				"operationId": "CreateSession",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiResponse_ProjectResponse_"
+								}
+							}
+						}
+					}
+				},
+				"tags": [
+					"Projects"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": [],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/CreateProjectRequest"
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/projects/{projectId}/transcribe-chunk": {
+			"post": {
+				"operationId": "TranscribeChunk",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiResponse__text-string__"
+								}
+							}
+						}
+					}
+				},
+				"description": "Transcribe a raw audio chunk uploaded by the Electron recorder.\nThe Groq API key lives exclusively on the server — it is never sent to the client.",
+				"tags": [
+					"Projects"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": [
+					{
+						"in": "path",
+						"name": "projectId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"multipart/form-data": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"files": {
+										"items": {
+											"type": "string",
+											"format": "binary"
+										},
+										"type": "array"
+									}
+								},
+								"required": [
+									"files"
+								]
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/projects/{projectId}/transcripts/upload": {
+			"post": {
+				"operationId": "UploadTranscript",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiResponse_CreateTranscriptResponse_"
+								}
+							}
+						}
+					}
+				},
+				"tags": [
+					"Projects"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": [
+					{
+						"in": "path",
+						"name": "projectId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"multipart/form-data": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"files": {
+										"items": {
+											"type": "string",
+											"format": "binary"
+										},
+										"type": "array"
+									},
+									"title": {
+										"type": "string"
+									},
+									"recordedAt": {
+										"type": "string"
+									},
+									"metadata": {
+										"type": "string"
+									},
+									"persona": {
+										"type": "string"
+									},
+									"objective": {
+										"type": "string"
+									},
+									"contextIds": {
+										"type": "string"
+									},
+									"englishLevel": {
+										"type": "string"
+									}
+								},
+								"required": [
+									"files"
+								]
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/projects/{projectId}/transcripts": {
+			"get": {
+				"operationId": "ListTranscripts",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiResponse_TranscriptListResponse_"
+								}
+							}
+						}
+					}
+				},
+				"tags": [
+					"Projects"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": [
+					{
+						"in": "path",
+						"name": "projectId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"in": "query",
+						"name": "page",
+						"required": false,
+						"schema": {
+							"default": 1,
+							"format": "double",
+							"type": "number"
+						}
+					},
+					{
+						"in": "query",
+						"name": "pageSize",
+						"required": false,
+						"schema": {
+							"default": 20,
+							"format": "double",
+							"type": "number"
+						}
+					}
+				]
+			},
+			"post": {
+				"operationId": "CreateTranscript",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiResponse_CreateTranscriptResponse_"
+								}
+							}
+						}
+					}
+				},
+				"tags": [
+					"Projects"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": [
+					{
+						"in": "path",
+						"name": "projectId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/CreateTranscriptRequest"
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/projects/{projectId}/transcripts/{transcriptId}": {
+			"get": {
+				"operationId": "GetTranscript",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiResponse_TranscriptResponse_"
+								}
+							}
+						}
+					}
+				},
+				"tags": [
+					"Projects"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": [
+					{
+						"in": "path",
+						"name": "projectId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"in": "path",
+						"name": "transcriptId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				]
+			},
+			"put": {
+				"operationId": "UpdateTranscript",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiResponse_TranscriptResponse_"
+								}
+							}
+						}
+					}
+				},
+				"tags": [
+					"Projects"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": [
+					{
+						"in": "path",
+						"name": "projectId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"in": "path",
+						"name": "transcriptId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/UpdateTranscriptRequest"
+							}
+						}
+					}
+				}
+			},
+			"delete": {
+				"operationId": "DeleteTranscript",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiResponse_null_"
+								}
+							}
+						}
+					}
+				},
+				"tags": [
+					"Projects"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": [
+					{
+						"in": "path",
+						"name": "projectId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"in": "path",
+						"name": "transcriptId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				]
+			}
+		},
+		"/api/projects/{projectId}/transcripts/manual": {
+			"post": {
+				"operationId": "CreateManualTranscript",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiResponse_TranscriptResponse_"
+								}
+							}
+						}
+					}
+				},
+				"tags": [
+					"Projects"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": [
+					{
+						"in": "path",
+						"name": "projectId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/ManualTranscriptRequest"
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/projects/{projectId}/tasks": {
+			"get": {
+				"operationId": "ListTasks",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiResponse_TaskListResponse_"
+								}
+							}
+						}
+					}
+				},
+				"tags": [
+					"Projects"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": [
+					{
+						"in": "path",
+						"name": "projectId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"in": "query",
+						"name": "status",
+						"required": false,
+						"schema": {
+							"$ref": "#/components/schemas/TaskStatus"
+						}
+					},
+					{
+						"in": "query",
+						"name": "priority",
+						"required": false,
+						"schema": {
+							"$ref": "#/components/schemas/TaskPriority"
+						}
+					},
+					{
+						"in": "query",
+						"name": "page",
+						"required": false,
+						"schema": {
+							"default": 1,
+							"format": "double",
+							"type": "number"
+						}
+					},
+					{
+						"in": "query",
+						"name": "pageSize",
+						"required": false,
+						"schema": {
+							"default": 20,
+							"format": "double",
+							"type": "number"
+						}
+					}
+				]
+			},
+			"post": {
+				"operationId": "CreateTask",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiResponse_TaskResponse_"
+								}
+							}
+						}
+					}
+				},
+				"tags": [
+					"Projects"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": [
+					{
+						"in": "path",
+						"name": "projectId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/CreateTaskRequest"
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/projects/{projectId}/tasks/{taskId}": {
+			"get": {
+				"operationId": "GetTask",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiResponse_TaskResponse_"
+								}
+							}
+						}
+					}
+				},
+				"tags": [
+					"Projects"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": [
+					{
+						"in": "path",
+						"name": "projectId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"in": "path",
+						"name": "taskId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				]
+			},
+			"put": {
+				"operationId": "UpdateTask",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiResponse_TaskResponse_"
+								}
+							}
+						}
+					}
+				},
+				"tags": [
+					"Projects"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": [
+					{
+						"in": "path",
+						"name": "projectId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"in": "path",
+						"name": "taskId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/UpdateTaskRequest"
+							}
+						}
+					}
+				}
+			},
+			"delete": {
+				"operationId": "DeleteTask",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiResponse_null_"
+								}
+							}
+						}
+					}
+				},
+				"tags": [
+					"Projects"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": [
+					{
+						"in": "path",
+						"name": "projectId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"in": "path",
+						"name": "taskId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				]
+			}
+		},
+		"/api/projects/{projectId}": {
+			"get": {
+				"operationId": "GetSession",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiResponse_ProjectResponse_"
+								}
+							}
+						}
+					}
+				},
+				"tags": [
+					"Projects"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": [
+					{
+						"in": "path",
+						"name": "projectId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				]
+			},
+			"put": {
+				"operationId": "UpdateSession",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiResponse_ProjectResponse_"
+								}
+							}
+						}
+					}
+				},
+				"tags": [
+					"Projects"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": [
+					{
+						"in": "path",
+						"name": "projectId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/UpdateProjectRequest"
+							}
+						}
+					}
+				}
+			},
+			"delete": {
+				"operationId": "DeleteSession",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiResponse_null_"
+								}
+							}
+						}
+					}
+				},
+				"tags": [
+					"Projects"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": [
+					{
+						"in": "path",
+						"name": "projectId",
 						"required": true,
 						"schema": {
 							"type": "string"

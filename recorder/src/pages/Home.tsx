@@ -33,26 +33,26 @@ import {
 } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
-import { planAiApi, type Session, type Context } from "../services/planAiApi";
+import { planAiApi, type Project, type Context } from "../services/planAiApi";
 import type { DesktopSource } from "../types/electron";
 
 type Persona = "SECRETARY" | "ARCHITECT" | "PRODUCT_MANAGER" | "DEVELOPER";
 
 export interface RecordingConfig {
-  sessionId: string;
-  sessionTitle: string;
+  projectId: string;
+  projectTitle: string;
   persona: Persona;
   selectedContextIds: string[];
   objective: string;
   systemSourceId: string | null;
 }
 
-// Stored in sessionStorage so Recording page can read it
+// Stored in projectStorage so Recording page can read it
 const CONFIG_KEY = "recorder-config";
 export const saveConfig = (config: RecordingConfig) =>
-  sessionStorage.setItem(CONFIG_KEY, JSON.stringify(config));
+  projectStorage.setItem(CONFIG_KEY, JSON.stringify(config));
 export const loadConfig = (): RecordingConfig | null => {
-  const raw = sessionStorage.getItem(CONFIG_KEY);
+  const raw = projectStorage.getItem(CONFIG_KEY);
   return raw ? (JSON.parse(raw) as RecordingConfig) : null;
 };
 
@@ -67,14 +67,14 @@ const Home: React.FC = () => {
   const { user, token, signOut } = useAuth();
   const navigate = useNavigate();
 
-  const [sessions, setSessions] = useState<Session[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
   const [contexts, setContexts] = useState<Context[]>([]);
   const [desktopSources, setDesktopSources] = useState<DesktopSource[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Selected session
-  const [selectedSession, setSelectedSession] = useState<Session | null>(null);
+  // Selected project
+  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
 
   // Config state
   const [persona, setPersona] = useState<Persona>("SECRETARY");
@@ -82,7 +82,7 @@ const Home: React.FC = () => {
   const [objective, setObjective] = useState("");
   const [systemSourceId, setSystemSourceId] = useState<string | null>(null);
 
-  // New session dialog
+  // New project dialog
   const [createOpen, setCreateOpen] = useState(false);
   const [newTitle, setNewTitle] = useState("");
   const [newDesc, setNewDesc] = useState("");
@@ -94,11 +94,11 @@ const Home: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const [sessionList, contextList] = await Promise.all([
-        planAiApi.listSessions(token),
+      const [projectList, contextList] = await Promise.all([
+        planAiApi.listProjects(token),
         planAiApi.listContexts(token),
       ]);
-      setSessions(sessionList);
+      setProjects(projectList);
       setContexts(contextList);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load data.");
@@ -120,35 +120,35 @@ const Home: React.FC = () => {
   }, []);
 
   const handleStartRecording = () => {
-    if (!selectedSession) return;
+    if (!selectedProject) return;
     const config: RecordingConfig = {
-      sessionId: selectedSession.id,
-      sessionTitle: selectedSession.title,
+      projectId: selectedProject.id,
+      projectTitle: selectedProject.title,
       persona,
       selectedContextIds,
       objective,
       systemSourceId,
     };
     saveConfig(config);
-    navigate(`/recording/${selectedSession.id}`);
+    navigate(`/recording/${selectedProject.id}`);
   };
 
-  const handleCreateSession = async () => {
+  const handleCreateProject = async () => {
     if (!token || !newTitle.trim()) return;
     setCreating(true);
     setCreateError(null);
     try {
-      const session = await planAiApi.createSession(token, {
+      const project = await planAiApi.createProject(token, {
         title: newTitle.trim(),
         description: newDesc.trim() || undefined,
       });
-      setSessions((prev) => [session, ...prev]);
-      setSelectedSession(session);
+      setProjects((prev) => [project, ...prev]);
+      setSelectedProject(project);
       setCreateOpen(false);
       setNewTitle("");
       setNewDesc("");
     } catch (err) {
-      setCreateError(err instanceof Error ? err.message : "Failed to create session.");
+      setCreateError(err instanceof Error ? err.message : "Failed to create project.");
     } finally {
       setCreating(false);
     }
@@ -174,7 +174,7 @@ const Home: React.FC = () => {
           borderTop: "1px solid rgba(255,255,255,0.06)",
         }}
       >
-        {/* ── LEFT: Session list ────────────────────────────── */}
+        {/* ── LEFT: Project list ────────────────────────────── */}
         <Box
           sx={{
             width: 260,
@@ -199,9 +199,9 @@ const Home: React.FC = () => {
                 textTransform: "uppercase",
               }}
             >
-              Sessions
+              Projects
             </Typography>
-            <Tooltip title="New session">
+            <Tooltip title="New project">
               <IconButton size="small" onClick={() => setCreateOpen(true)}>
                 <AddIcon fontSize="small" />
               </IconButton>
@@ -220,17 +220,17 @@ const Home: React.FC = () => {
                 {error}
               </Alert>
             </Box>
-          ) : sessions.length === 0 ? (
+          ) : projects.length === 0 ? (
             <Typography variant="body2" color="text.secondary" sx={{ p: 2, textAlign: "center" }}>
-              No sessions yet. Create one to get started.
+              No projects yet. Create one to get started.
             </Typography>
           ) : (
             <List dense disablePadding sx={{ overflowY: "auto", flex: 1 }}>
-              {sessions.map((session) => (
+              {projects.map((project) => (
                 <ListItemButton
-                  key={session.id}
-                  selected={selectedSession?.id === session.id}
-                  onClick={() => setSelectedSession(session)}
+                  key={project.id}
+                  selected={selectedProject?.id === project.id}
+                  onClick={() => setSelectedProject(project)}
                   sx={{
                     px: 2,
                     py: 1,
@@ -240,12 +240,12 @@ const Home: React.FC = () => {
                   }}
                 >
                   <ListItemText
-                    primary={session.title}
+                    primary={project.title}
                     primaryTypographyProps={{ fontSize: "0.875rem", fontWeight: 500 }}
-                    secondary={new Date(session.createdAt).toLocaleDateString()}
+                    secondary={new Date(project.createdAt).toLocaleDateString()}
                     secondaryTypographyProps={{ fontSize: "0.7rem" }}
                   />
-                  {selectedSession?.id === session.id && (
+                  {selectedProject?.id === project.id && (
                     <CheckIcon sx={{ fontSize: 16, color: "primary.main" }} />
                   )}
                 </ListItemButton>
@@ -282,7 +282,7 @@ const Home: React.FC = () => {
             gap: 3,
           }}
         >
-          {!selectedSession ? (
+          {!selectedProject ? (
             <Box
               sx={{
                 flex: 1,
@@ -294,17 +294,17 @@ const Home: React.FC = () => {
               <Stack spacing={1} alignItems="center">
                 <MicIcon sx={{ fontSize: 48, color: "text.secondary", opacity: 0.4 }} />
                 <Typography color="text.secondary">
-                  Select a session to configure recording
+                  Select a project to configure recording
                 </Typography>
               </Stack>
             </Box>
           ) : (
             <>
               <Box>
-                <Typography variant="h6">{selectedSession.title}</Typography>
-                {selectedSession.description && (
+                <Typography variant="h6">{selectedProject.title}</Typography>
+                {selectedProject.description && (
                   <Typography variant="body2" color="text.secondary">
-                    {selectedSession.description}
+                    {selectedProject.description}
                   </Typography>
                 )}
               </Box>
@@ -417,9 +417,9 @@ const Home: React.FC = () => {
         </Box>
       </Box>
 
-      {/* Create session dialog */}
+      {/* Create project dialog */}
       <Dialog open={createOpen} onClose={() => setCreateOpen(false)} maxWidth="xs" fullWidth>
-        <DialogTitle>New session</DialogTitle>
+        <DialogTitle>New project</DialogTitle>
         <DialogContent>
           <Stack spacing={2} sx={{ mt: 1 }}>
             <TextField
@@ -446,7 +446,7 @@ const Home: React.FC = () => {
             Cancel
           </Button>
           <Button
-            onClick={() => void handleCreateSession()}
+            onClick={() => void handleCreateProject()}
             variant="contained"
             disabled={creating || !newTitle.trim()}
           >

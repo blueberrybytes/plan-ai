@@ -3,10 +3,10 @@ import React from "react";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import SidebarLayout from "./SidebarLayout";
-import { selectUser } from "../../store/slices/session/sessionSelector";
+import { selectUser } from "../../store/slices/auth/authSelector";
 import { selectSidebarCollapsed } from "../../store/slices/app/appSelector";
 import { toggleSidebar } from "../../store/slices/app/appSlice";
-import { UserApp } from "../../store/slices/session/sessionTypes";
+import { UserApp } from "../../store/slices/auth/authTypes";
 
 jest.mock("../../hooks/useBrandIdentity", () => ({
   useBrandIdentity: () => ({
@@ -53,7 +53,7 @@ describe("SidebarLayout", () => {
   });
 
   it("renders product info, navigation and profile details", () => {
-    renderSidebar("/sessions");
+    renderSidebar("/projects");
 
     expect(screen.getByText("Plan AI")).toBeInTheDocument();
     expect(screen.getByRole("img", { name: "Plan AI" })).toBeInTheDocument();

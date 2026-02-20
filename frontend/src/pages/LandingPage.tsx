@@ -25,7 +25,7 @@ import {
 } from "@mui/icons-material";
 import { Link as RouterLink, useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
-import { selectUser } from "../store/slices/session/sessionSelector";
+import { selectUser } from "../store/slices/auth/authSelector";
 import { useBrandIdentity } from "../hooks/useBrandIdentity";
 import { useTranslation } from "react-i18next";
 

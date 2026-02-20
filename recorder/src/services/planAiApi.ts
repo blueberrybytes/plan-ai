@@ -1,6 +1,6 @@
 const BASE_URL = import.meta.env.VITE_PLAN_AI_API_URL ?? "";
 
-export interface Session {
+export interface Project {
   id: string;
   title: string;
   description: string | null;
@@ -32,24 +32,24 @@ async function handleResponse<T>(res: Response): Promise<T> {
 }
 
 export const planAiApi = {
-  async listSessions(token: string): Promise<Session[]> {
-    const res = await fetch(`${BASE_URL}/api/sessions?pageSize=50`, {
+  async listProjects(token: string): Promise<Project[]> {
+    const res = await fetch(`${BASE_URL}/api/projects?pageSize=50`, {
       headers: authHeaders(token),
     });
-    const data = await handleResponse<{ sessions: Session[] }>(res);
-    return data.sessions;
+    const data = await handleResponse<{ projects: Project[] }>(res);
+    return data.projects;
   },
 
-  async createSession(
+  async createProject(
     token: string,
     payload: { title: string; description?: string },
-  ): Promise<Session> {
-    const res = await fetch(`${BASE_URL}/api/sessions`, {
+  ): Promise<Project> {
+    const res = await fetch(`${BASE_URL}/api/projects`, {
       method: "POST",
       headers: authHeaders(token),
       body: JSON.stringify(payload),
     });
-    return handleResponse<Session>(res);
+    return handleResponse<Project>(res);
   },
 
   async listContexts(token: string): Promise<Context[]> {
@@ -64,11 +64,11 @@ export const planAiApi = {
    * Send a raw audio chunk to the backend for Groq Whisper transcription.
    * The backend holds the Groq API key — it never touches the client.
    */
-  async transcribeChunk(token: string, sessionId: string, audioBlob: Blob): Promise<string> {
+  async transcribeChunk(token: string, projectId: string, audioBlob: Blob): Promise<string> {
     const form = new FormData();
     form.append("audio", audioBlob, "chunk.webm");
 
-    const res = await fetch(`${BASE_URL}/api/sessions/${sessionId}/transcribe-chunk`, {
+    const res = await fetch(`${BASE_URL}/api/projects/${projectId}/transcribe-chunk`, {
       method: "POST",
       headers: { Authorization: `Bearer ${token}` },
       body: form,
@@ -82,7 +82,7 @@ export const planAiApi = {
    */
   async submitTranscript(
     token: string,
-    sessionId: string,
+    projectId: string,
     payload: {
       transcript: string;
       title?: string;
@@ -101,7 +101,7 @@ export const planAiApi = {
       payload.contextIds.forEach((id) => form.append("contextIds", id));
     }
 
-    const res = await fetch(`${BASE_URL}/api/sessions/${sessionId}/transcripts/upload`, {
+    const res = await fetch(`${BASE_URL}/api/projects/${projectId}/transcripts/upload`, {
       method: "POST",
       headers: { Authorization: `Bearer ${token}` },
       body: form,

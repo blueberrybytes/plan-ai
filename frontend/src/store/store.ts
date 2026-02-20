@@ -5,7 +5,8 @@ import { persistStore, persistReducer, createMigrate } from "redux-persist";
 import storage from "redux-persist/lib/storage"; // Defaults to localStorage for web
 import rootSaga from "./rootSaga";
 import rootReducer from "./rootReducers";
-import { sessionApi } from "./apis/sessionApi";
+import { authApi } from "./apis/authApi";
+import { projectApi } from "./apis/projectApi";
 import { accountApi } from "./apis/accountApi";
 import { contextApi } from "./apis/contextApi";
 import { jiraApi } from "./apis/jiraApi";
@@ -46,7 +47,8 @@ const store = configureStore({
         },
       }),
       sagaMiddleware,
-      sessionApi.middleware,
+      authApi.middleware,
+      projectApi.middleware,
       accountApi.middleware,
       contextApi.middleware,
       jiraApi.middleware,

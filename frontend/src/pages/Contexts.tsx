@@ -5,27 +5,25 @@ import {
   Button,
   Card,
   CardContent,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
   CircularProgress,
   IconButton,
   Stack,
-  TextField,
   Tooltip,
   Typography,
 } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
-import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
 import UploadIcon from "@mui/icons-material/Upload";
 import AddIcon from "@mui/icons-material/Add";
+import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import { useTranslation } from "react-i18next";
 import SidebarLayout from "../components/layout/SidebarLayout";
+import ContextFormDialog from "../components/context/ContextFormDialog";
+import ConfirmDeletionDialog from "../components/dialogs/ConfirmDeletionDialog";
 import {
   useDeleteContextFileMutation,
+  useDeleteContextMutation,
   useGetContextQuery,
   useCreateContextMutation,
   useUpdateContextMutation,
@@ -48,25 +46,38 @@ const Contexts: React.FC = () => {
     return typeof primary === "string" && primary.startsWith("#") ? primary : "#1976d2";
   }, [theme.palette.primary.main]);
 
-  const { data: contextsData, isLoading: isListLoading, error: listError } = useListContextsQuery();
+  const {
+    data: contextsData,
+    isLoading: isListLoading,
+    error: listError,
+    refetch: refetchList,
+  } = useListContextsQuery();
   const { data, isLoading, error, refetch } = useGetContextQuery(contextId ?? "", {
     skip: !contextId,
   });
 
   const [createContext, { isLoading: isCreating }] = useCreateContextMutation();
   const [updateContext, { isLoading: isUpdating }] = useUpdateContextMutation();
+  const [deleteContext, { isLoading: isDeletingContext }] = useDeleteContextMutation();
   const [uploadContextFile, { isLoading: isUploading }] = useUploadContextFileMutation();
   const [deleteContextFile, { isLoading: isDeletingFile }] = useDeleteContextFileMutation();
+
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = React.useState(false);
+  const [deletedContextId, setDeletedContextId] = React.useState<string | null>(null);
 
   const context = data?.data ?? null;
   const contexts = React.useMemo(() => contextsData?.data?.contexts ?? [], [contextsData]);
 
-  // Auto-select first context if none selected
+  // Auto-select first context if none selected, but never re-select a just-deleted one
   React.useEffect(() => {
     if (!isListLoading && contexts.length > 0 && !contextId) {
-      navigate(`/contexts/${contexts[0].id}`, { replace: true });
+      const next = contexts.find((c) => c.id !== deletedContextId);
+      if (next) {
+        setDeletedContextId(null);
+        navigate(`/contexts/${next.id}`, { replace: true });
+      }
     }
-  }, [isListLoading, contexts, contextId, navigate]);
+  }, [isListLoading, contexts, contextId, navigate, deletedContextId]);
 
   const [dialogMode, setDialogMode] = React.useState<"create" | "edit" | null>(null);
   const [dialogName, setDialogName] = React.useState("");
@@ -258,21 +269,39 @@ const Contexts: React.FC = () => {
   };
 
   const isDialogOpen = dialogMode !== null;
-  const dialogTitle =
-    dialogMode === "create" ? t("contexts.dialog.title.create") : t("contexts.dialog.title.edit");
-  const dialogPrimaryLabel =
-    dialogMode === "create"
-      ? t("contexts.dialog.primary.create")
-      : t("contexts.dialog.primary.save");
   const isDialogSubmitting = dialogMode === "create" ? isCreating : isUpdating;
   const handleDialogSubmit = dialogMode === "create" ? handleCreateContext : handleUpdateContext;
+  const handleDeleteContext = async () => {
+    if (!contextId) return;
+    const deletedId = contextId;
+    try {
+      await deleteContext(deletedId).unwrap();
+      setDeleteConfirmOpen(false);
+      setDeletedContextId(deletedId);
+      // Navigate away BEFORE refetching so useGetContextQuery is skipped immediately.
+      navigate("/contexts", { replace: true });
+      // Refetch list — auto-select effect will pick the next non-deleted context.
+      refetchList();
+      dispatch(
+        setToastMessage({
+          severity: "success",
+          message: t("contexts.messages.deleteContextSuccess"),
+        }),
+      );
+    } catch {
+      dispatch(
+        setToastMessage({ severity: "error", message: t("contexts.messages.deleteContextError") }),
+      );
+    }
+  };
+
   const handleSelectContext = (id: string) => {
     navigate(`/contexts/${id}`);
   };
 
   return (
-    <SidebarLayout>
-      <Box sx={{ display: "flex", height: "100vh", overflow: "hidden" }}>
+    <SidebarLayout fullHeight>
+      <Box sx={{ display: "flex", height: "100%", overflow: "hidden" }}>
         {/* ── Left panel: context list ── */}
         <Box
           sx={{
@@ -280,7 +309,7 @@ const Contexts: React.FC = () => {
             flexShrink: 0,
             borderRight: 1,
             borderColor: "divider",
-            overflowY: "auto",
+            overflow: "hidden",
             bgcolor: "background.paper",
             display: "flex",
             flexDirection: "column",
@@ -299,7 +328,7 @@ const Contexts: React.FC = () => {
           </Box>
 
           {/* List */}
-          <Box sx={{ flex: 1, overflowY: "auto", px: 1.5, py: 1.5 }}>
+          <Box sx={{ flex: 1, overflowY: "auto", minHeight: 0, px: 1.5, py: 1.5 }}>
             {listError ? (
               <Alert severity="error" sx={{ mx: 0.5 }}>
                 {t("contexts.list.error")}
@@ -377,7 +406,7 @@ const Contexts: React.FC = () => {
           </Box>
 
           {/* New context button pinned at bottom */}
-          <Box sx={{ p: 1.5, borderTop: 1, borderColor: "divider" }}>
+          <Box sx={{ p: 1.5, borderTop: 1, borderColor: "divider", flexShrink: 0 }}>
             <Button
               variant="contained"
               startIcon={<AddIcon />}
@@ -465,6 +494,15 @@ const Contexts: React.FC = () => {
                         <EditIcon />
                       </IconButton>
                     </Tooltip>
+                    <Tooltip title={t("contexts.buttons.delete")}>
+                      <IconButton
+                        color="error"
+                        onClick={() => setDeleteConfirmOpen(true)}
+                        disabled={isDeletingContext}
+                      >
+                        <DeleteIcon />
+                      </IconButton>
+                    </Tooltip>
                     <Button
                       variant="contained"
                       component="label"
@@ -548,7 +586,7 @@ const Contexts: React.FC = () => {
                                     rel="noopener noreferrer"
                                     size="small"
                                   >
-                                    <ArrowBackIcon sx={{ transform: "rotate(135deg)" }} />
+                                    <OpenInNewIcon fontSize="small" />
                                   </IconButton>
                                 </Tooltip>
                                 <Tooltip title={t("contexts.files.deleteAria")}>
@@ -579,57 +617,30 @@ const Contexts: React.FC = () => {
         </Box>
       </Box>
 
-      <Dialog open={isDialogOpen} onClose={closeDialog} fullWidth maxWidth="xs">
-        <DialogTitle>{dialogTitle}</DialogTitle>
-        <DialogContent>
-          <Box component="form" sx={{ display: "flex", flexDirection: "column", gap: 2, mt: 1 }}>
-            <TextField
-              label={t("contexts.dialog.fields.name")}
-              value={dialogName}
-              onChange={(event) => setDialogName(event.target.value)}
-              required
-              autoFocus
-            />
-            <TextField
-              label={t("contexts.dialog.fields.description")}
-              value={dialogDescription}
-              onChange={(event) => setDialogDescription(event.target.value)}
-              multiline
-              minRows={2}
-            />
-            <Stack direction="row" spacing={2} alignItems="center">
-              <TextField
-                label={t("contexts.dialog.fields.color")}
-                type="color"
-                value={dialogColor}
-                onChange={(event) => setDialogColor(event.target.value)}
-                InputLabelProps={{ shrink: true }}
-                sx={{ width: 120 }}
-              />
-              <Typography variant="body2" color="text.secondary">
-                {dialogColor.toUpperCase()}
-              </Typography>
-            </Stack>
-            {dialogError ? (
-              <Typography color="error" variant="body2">
-                {dialogError}
-              </Typography>
-            ) : null}
-          </Box>
-        </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 3 }}>
-          <Button onClick={closeDialog} disabled={isDialogSubmitting}>
-            {t("contexts.buttons.cancel")}
-          </Button>
-          <Button onClick={handleDialogSubmit} variant="contained" disabled={isDialogSubmitting}>
-            {isDialogSubmitting
-              ? dialogMode === "create"
-                ? t("contexts.dialog.primary.creating")
-                : t("contexts.dialog.primary.saving")
-              : dialogPrimaryLabel}
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <ConfirmDeletionDialog
+        open={deleteConfirmOpen}
+        title={t("contexts.dialog.title.delete")}
+        entityName={context?.name}
+        description={t("contexts.dialog.deleteWarning", { name: context?.name ?? "" })}
+        isProcessing={isDeletingContext}
+        onConfirm={handleDeleteContext}
+        onCancel={() => setDeleteConfirmOpen(false)}
+      />
+
+      <ContextFormDialog
+        open={isDialogOpen}
+        mode={dialogMode ?? "create"}
+        name={dialogName}
+        description={dialogDescription}
+        color={dialogColor}
+        error={dialogError}
+        isSubmitting={isDialogSubmitting}
+        onChangeName={setDialogName}
+        onChangeDescription={setDialogDescription}
+        onChangeColor={setDialogColor}
+        onSubmit={handleDialogSubmit}
+        onClose={closeDialog}
+      />
     </SidebarLayout>
   );
 };

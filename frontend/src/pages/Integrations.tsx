@@ -14,7 +14,7 @@ import {
 import { useSelector } from "react-redux";
 import { useParams, useSearchParams } from "react-router-dom";
 import SidebarLayout from "../components/layout/SidebarLayout";
-import { selectUser } from "../store/slices/session/sessionSelector";
+import { selectUser } from "../store/slices/auth/authSelector";
 import { IntegrationProviderType, useListIntegrationsQuery } from "../store/apis/integrationApi";
 import { useLazyGetJiraAuthorizationUrlQuery } from "../store/apis/jiraApi";
 import type { components } from "../types/api";

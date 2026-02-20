@@ -12,7 +12,7 @@ enum Role {
     CLIENT
 }
 
-enum SessionStatus {
+enum ProjectStatus {
     ACTIVE
     COMPLETED
     ARCHIVED
@@ -59,7 +59,7 @@ model User {
     isGoogleAccount Boolean  @default(false)
 
     customTheme   CustomTheme?
-    sessions      Session[]
+    projects      Project[]
     assignedTasks Task[]       @relation("TaskAssignee")
     contexts      Context[]
 
@@ -118,13 +118,13 @@ model CustomTheme {
     updatedAt          DateTime @updatedAt
 }
 
-model Session {
+model Project {
     id          String        @id @default(cuid())
     user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
     userId      String
     title       String
     description String?
-    status      SessionStatus @default(ACTIVE)
+    status      ProjectStatus @default(ACTIVE)
     startedAt   DateTime?
     endedAt     DateTime?
     metadata    Json?
@@ -136,12 +136,13 @@ model Session {
 
     @@index([userId])
     @@index([status])
+    @@map("projects")
 }
 
 model Transcript {
     id         String           @id @default(cuid())
-    session    Session          @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-    sessionId  String
+    project    Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+    projectId  String
     title      String?
     source     TranscriptSource @default(MANUAL)
     language   String?
@@ -155,14 +156,14 @@ model Transcript {
 
     taskLinks TaskTranscriptLink[]
 
-    @@index([sessionId])
+    @@index([projectId])
     @@index([source])
 }
 
 model Task {
     id                 String       @id @default(cuid())
-    session            Session      @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-    sessionId          String
+    project            Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+    projectId          String
     title              String
     description        String?
     summary            String?
@@ -190,7 +191,7 @@ model Task {
     dependants      TaskDependency[]     @relation("TaskDependencyDependencies")
     transcriptLinks TaskTranscriptLink[]
 
-    @@index([sessionId])
+    @@index([projectId])
     @@index([status])
     @@index([lane, position])
     @@index([assigneeId])

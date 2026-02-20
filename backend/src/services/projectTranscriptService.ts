@@ -65,7 +65,7 @@ const generateObjectLoose = generateObject as unknown as (args: {
 }) => Promise<{ object: unknown }>;
 
 export interface CreateTranscriptInput {
-  sessionId: string;
+  projectId: string;
   content: string;
   title?: string;
   source?: TranscriptSource;
@@ -84,14 +84,14 @@ export interface CreateTranscriptResult {
   analysis: TranscriptAnalysis;
 }
 
-export class SessionTranscriptService {
+export class ProjectTranscriptService {
   private readonly openrouter = createOpenRouter({
     apiKey: EnvUtils.get("OPENROUTER_API_KEY"),
   });
 
   private readonly modelName = "google/gemini-2.0-flash-001";
 
-  public async createTranscriptForSession(
+  public async createTranscriptForProject(
     input: CreateTranscriptInput,
   ): Promise<CreateTranscriptResult> {
     const analysis = await this.analyzeTranscript(
@@ -106,7 +106,7 @@ export class SessionTranscriptService {
     const result = await prisma.$transaction(async (tx) => {
       const transcript = await tx.transcript.create({
         data: {
-          sessionId: input.sessionId,
+          projectId: input.projectId,
           title: input.title ?? null,
           source: input.source ?? TranscriptSource.MANUAL,
           language: analysis.language,
@@ -132,7 +132,7 @@ export class SessionTranscriptService {
         );
         const createdTask = await tx.task.create({
           data: {
-            sessionId: input.sessionId,
+            projectId: input.projectId,
             title: taskCandidate.title,
             description: taskCandidate.description ?? null,
             summary: taskCandidate.summary ?? null,
@@ -362,4 +362,4 @@ ${content}`;
   }
 }
 
-export const sessionTranscriptService = new SessionTranscriptService();
+export const projectTranscriptService = new ProjectTranscriptService();

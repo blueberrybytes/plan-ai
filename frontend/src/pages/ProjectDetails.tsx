@@ -26,32 +26,32 @@ import {
 } from "@mui/icons-material";
 import SidebarLayout from "../components/layout/SidebarLayout";
 import {
-  useGetSessionQuery,
-  useListSessionTasksQuery,
-  useDeleteSessionTaskMutation,
-} from "../store/apis/sessionApi";
+  useGetProjectQuery,
+  useListProjectTasksQuery,
+  useDeleteProjectTaskMutation,
+} from "../store/apis/projectApi";
 import { useDispatch } from "react-redux";
 import { setToastMessage } from "../store/slices/app/appSlice";
 import { useTranslation } from "react-i18next";
-import SessionTaskFormDialog from "../components/session/SessionTaskFormDialog";
-import SessionTaskBoard from "../components/session/SessionTaskBoard";
-import SessionTaskDependencyDiagram from "../components/session/SessionTaskDependencyDiagram";
-import SessionTaskGantt from "../components/session/SessionTaskGantt";
-import SessionExportDialog, { type ExportFormat } from "../components/session/SessionExportDialog";
-import SessionTranscriptDialog from "../components/session/SessionTranscriptDialog";
-import SessionTaskDialog from "../components/session/SessionTaskDialog";
+import ProjectTaskFormDialog from "../components/project/ProjectTaskFormDialog";
+import ProjectTaskBoard from "../components/project/ProjectTaskBoard";
+import ProjectTaskDependencyDiagram from "../components/project/ProjectTaskDependencyDiagram";
+import ProjectTaskGantt from "../components/project/ProjectTaskGantt";
+import ProjectExportDialog, { type ExportFormat } from "../components/project/ProjectExportDialog";
+import ProjectTranscriptDialog from "../components/project/ProjectTranscriptDialog";
+import ProjectTaskDialog from "../components/project/ProjectTaskDialog";
 import { toPng } from "html-to-image";
-import type { TaskResponse } from "../store/apis/sessionApi";
+import type { TaskResponse } from "../store/apis/projectApi";
 import ConfirmDeletionDialog from "../components/dialogs/ConfirmDeletionDialog";
 
-const SessionDetails: React.FC = () => {
+const ProjectDetails: React.FC = () => {
   const params = useParams();
-  const sessionId = params.sessionId ?? null;
+  const projectId = params.projectId ?? null;
   const dispatch = useDispatch();
   const { t } = useTranslation();
 
-  const { data, isLoading, isFetching, error, refetch } = useGetSessionQuery(sessionId ?? "", {
-    skip: !sessionId,
+  const { data, isLoading, isFetching, error, refetch } = useGetProjectQuery(projectId ?? "", {
+    skip: !projectId,
   });
 
   const {
@@ -60,9 +60,9 @@ const SessionDetails: React.FC = () => {
     isFetching: isTasksFetching,
     error: tasksError,
     refetch: refetchTasks,
-  } = useListSessionTasksQuery(
-    { sessionId: sessionId ?? "", params: undefined },
-    { skip: !sessionId },
+  } = useListProjectTasksQuery(
+    { projectId: projectId ?? "", params: undefined },
+    { skip: !projectId },
   );
 
   const [activeTab, setActiveTab] = useState<"board" | "diagram" | "timeline">("board");
@@ -80,9 +80,9 @@ const SessionDetails: React.FC = () => {
   const session = data?.data;
   const tasks = useMemo(() => tasksData?.data?.tasks ?? [], [tasksData]);
   const exportableTasks = useMemo(() => tasks, [tasks]);
-  const [deleteSessionTask, { isLoading: isDeletingTask }] = useDeleteSessionTaskMutation();
+  const [deleteProjectTask, { isLoading: isDeletingTask }] = useDeleteProjectTaskMutation();
 
-  const ensuredSessionId = sessionId as string;
+  const ensuredSessionId = projectId as string;
   const buildJiraPayload = useCallback(() => {
     return exportableTasks.map((task) => ({
       id: task.id,
@@ -207,13 +207,13 @@ const SessionDetails: React.FC = () => {
         return (tasksError.data as { message?: string }).message;
       }
       return typeof tasksError.status === "number"
-        ? t("sessionDetails.messages.tasksErrorStatus", { status: tasksError.status })
-        : t("sessionDetails.messages.tasksErrorFallback");
+        ? t("projectDetails.messages.tasksErrorStatus", { status: tasksError.status })
+        : t("projectDetails.messages.tasksErrorFallback");
     }
 
     return (
       (tasksError as { message?: string }).message ??
-      t("sessionDetails.messages.tasksErrorFallback")
+      t("projectDetails.messages.tasksErrorFallback")
     );
   })();
 
@@ -239,7 +239,7 @@ const SessionDetails: React.FC = () => {
       return statusLabel;
     }
 
-    return (error as { message?: string }).message ?? t("sessionDetails.messages.unexpectedError");
+    return (error as { message?: string }).message ?? t("projectDetails.messages.unexpectedError");
   })();
 
   const handleOpenCreateTask = () => {
@@ -271,14 +271,14 @@ const SessionDetails: React.FC = () => {
     }
 
     try {
-      await deleteSessionTask({
-        sessionId: ensuredSessionId,
+      await deleteProjectTask({
+        projectId: ensuredSessionId,
         taskId: taskPendingDeletion.id,
       }).unwrap();
       dispatch(
         setToastMessage({
           severity: "success",
-          message: t("sessionDetails.messages.deleteSuccess"),
+          message: t("projectDetails.messages.deleteSuccess"),
         }),
       );
       setSelectedTask(null);
@@ -288,7 +288,7 @@ const SessionDetails: React.FC = () => {
       dispatch(
         setToastMessage({
           severity: "error",
-          message: t("sessionDetails.messages.deleteError"),
+          message: t("projectDetails.messages.deleteError"),
         }),
       );
     } finally {
@@ -297,8 +297,8 @@ const SessionDetails: React.FC = () => {
     }
   };
 
-  if (!sessionId) {
-    return <Navigate to="/sessions" replace />;
+  if (!projectId) {
+    return <Navigate to="/projects" replace />;
   }
 
   return (
@@ -313,7 +313,7 @@ const SessionDetails: React.FC = () => {
         <Stack spacing={3}>
           <Stack direction="row" alignItems="center" justifyContent="space-between">
             <Stack spacing={1}>
-              <Breadcrumbs aria-label={t("sessionDetails.breadcrumbs.aria")}>
+              <Breadcrumbs aria-label={t("projectDetails.breadcrumbs.aria")}>
                 <Button
                   component={RouterLink}
                   to="/home"
@@ -321,30 +321,30 @@ const SessionDetails: React.FC = () => {
                   startIcon={<HomeIcon fontSize="small" />}
                   sx={{ textTransform: "none" }}
                 >
-                  {t("sessionDetails.breadcrumbs.home")}
+                  {t("projectDetails.breadcrumbs.home")}
                 </Button>
                 <Button
                   component={RouterLink}
-                  to="/sessions"
+                  to="/projects"
                   color="inherit"
                   sx={{ textTransform: "none" }}
                 >
-                  {t("sessionDetails.breadcrumbs.sessions")}
+                  {t("projectDetails.breadcrumbs.sessions")}
                 </Button>
                 <Typography color="text.primary">
-                  {session?.title ?? t("sessionDetails.breadcrumbs.fallback")}
+                  {session?.title ?? t("projectDetails.breadcrumbs.fallback")}
                 </Typography>
               </Breadcrumbs>
 
               <Typography variant="h3" sx={{ fontWeight: 700 }}>
-                {session?.title ?? t("sessionDetails.breadcrumbs.fallback")}
+                {session?.title ?? t("projectDetails.breadcrumbs.fallback")}
               </Typography>
               <Typography variant="subtitle1" color="text.secondary">
-                {t("sessionDetails.subtitle")}
+                {t("projectDetails.subtitle")}
               </Typography>
             </Stack>
 
-            <Tooltip title={t("sessionDetails.buttons.refresh")}>
+            <Tooltip title={t("projectDetails.buttons.refresh")}>
               <span>
                 <IconButton onClick={() => refetch()} disabled={isFetching} size="small">
                   <RefreshIcon />
@@ -370,23 +370,23 @@ const SessionDetails: React.FC = () => {
               justifyContent="space-between"
             >
               <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-                {t("sessionDetails.sections.actions")}
+                {t("projectDetails.sections.actions")}
               </Typography>
               <Stack direction="row" spacing={1.5} flexWrap="wrap">
                 <Button
                   component={RouterLink}
-                  to={`/sessions/${sessionId}/info`}
+                  to={`/projects/${projectId}/info`}
                   variant="contained"
                   startIcon={<InfoOutlined />}
                 >
-                  {t("sessionDetails.buttons.moreInfo")}
+                  {t("projectDetails.buttons.moreInfo")}
                 </Button>
                 <Button
                   variant="outlined"
                   startIcon={<AddCircleOutline />}
                   onClick={() => setIsTranscriptDialogOpen(true)}
                 >
-                  {t("sessionDetails.buttons.addTranscript")}
+                  {t("projectDetails.buttons.addTranscript")}
                 </Button>
                 <Button
                   variant="outlined"
@@ -394,7 +394,7 @@ const SessionDetails: React.FC = () => {
                   startIcon={<FileDownloadOutlined />}
                   onClick={() => setIsExportDialogOpen(true)}
                 >
-                  {t("sessionDetails.buttons.export")}
+                  {t("projectDetails.buttons.export")}
                 </Button>
               </Stack>
             </Stack>
@@ -419,15 +419,15 @@ const SessionDetails: React.FC = () => {
                     >
                       <Stack spacing={0.5}>
                         <Typography variant="h5" sx={{ fontWeight: 700 }}>
-                          {t("sessionDetails.sections.tasksOverviewTitle")}
+                          {t("projectDetails.sections.tasksOverviewTitle")}
                         </Typography>
                         <Typography variant="body2" color="text.secondary">
-                          {t("sessionDetails.sections.tasksOverviewDescription")}
+                          {t("projectDetails.sections.tasksOverviewDescription")}
                         </Typography>
                       </Stack>
 
                       <Stack direction="row" spacing={1}>
-                        <Tooltip title={t("sessionDetails.buttons.refreshTasks")}>
+                        <Tooltip title={t("projectDetails.buttons.refreshTasks")}>
                           <span>
                             <IconButton
                               onClick={() => refetchTasks()}
@@ -443,7 +443,7 @@ const SessionDetails: React.FC = () => {
                           startIcon={<AddTask />}
                           onClick={handleOpenCreateTask}
                         >
-                          {t("sessionDetails.buttons.createTask")}
+                          {t("projectDetails.buttons.createTask")}
                         </Button>
                       </Stack>
                     </Stack>
@@ -453,11 +453,11 @@ const SessionDetails: React.FC = () => {
                     <Tabs
                       value={activeTab}
                       onChange={(_, value: "board" | "diagram" | "timeline") => setActiveTab(value)}
-                      aria-label={t("sessionDetails.tabs.aria")}
+                      aria-label={t("projectDetails.tabs.aria")}
                     >
-                      <Tab label={t("sessionDetails.tabs.board")} value="board" />
-                      <Tab label={t("sessionDetails.tabs.diagram")} value="diagram" />
-                      <Tab label={t("sessionDetails.tabs.timeline")} value="timeline" />
+                      <Tab label={t("projectDetails.tabs.board")} value="board" />
+                      <Tab label={t("projectDetails.tabs.diagram")} value="diagram" />
+                      <Tab label={t("projectDetails.tabs.timeline")} value="timeline" />
                     </Tabs>
 
                     {isTasksLoading ? (
@@ -477,27 +477,27 @@ const SessionDetails: React.FC = () => {
                         severity="info"
                         action={
                           <Button color="primary" size="small" onClick={handleOpenCreateTask}>
-                            {t("sessionDetails.buttons.createTask")}
+                            {t("projectDetails.buttons.createTask")}
                           </Button>
                         }
                       >
-                        {t("sessionDetails.messages.noTasks")}
+                        {t("projectDetails.messages.noTasks")}
                       </Alert>
                     ) : activeTab === "board" ? (
-                      <SessionTaskBoard
+                      <ProjectTaskBoard
                         tasks={tasks}
                         onTaskClick={(task) => setSelectedTask(task)}
                       />
                     ) : activeTab === "diagram" ? (
                       <div ref={diagramRef}>
-                        <SessionTaskDependencyDiagram
+                        <ProjectTaskDependencyDiagram
                           tasks={tasks}
                           onTaskClick={(task) => setSelectedTask(task)}
                         />
                       </div>
                     ) : (
                       <div ref={ganttRef}>
-                        <SessionTaskGantt
+                        <ProjectTaskGantt
                           tasks={tasks}
                           onTaskClick={(task) => setSelectedTask(task)}
                         />
@@ -508,16 +508,16 @@ const SessionDetails: React.FC = () => {
               </Card>
             </Stack>
           ) : (
-            <Alert severity="warning">{t("sessionDetails.messages.sessionNotFound")}</Alert>
+            <Alert severity="warning">{t("projectDetails.messages.sessionNotFound")}</Alert>
           )}
         </Stack>
       </Box>
-      <SessionTranscriptDialog
+      <ProjectTranscriptDialog
         open={isTranscriptDialogOpen}
         onClose={() => setIsTranscriptDialogOpen(false)}
-        sessionId={ensuredSessionId}
+        projectId={ensuredSessionId}
       />
-      <SessionTaskDialog
+      <ProjectTaskDialog
         open={Boolean(selectedTask)}
         task={selectedTask}
         onClose={() => setSelectedTask(null)}
@@ -539,15 +539,15 @@ const SessionDetails: React.FC = () => {
         }}
         onConfirm={executeTaskDeletion}
         isProcessing={isDeletingTask}
-        title={t("sessionDetails.dialogs.deleteTask.title")}
+        title={t("projectDetails.dialogs.deleteTask.title")}
         entityName={
-          taskPendingDeletion?.title ?? t("sessionDetails.dialogs.deleteTask.entityFallback")
+          taskPendingDeletion?.title ?? t("projectDetails.dialogs.deleteTask.entityFallback")
         }
-        description={t("sessionDetails.dialogs.deleteTask.description")}
-        additionalWarning={t("sessionDetails.dialogs.deleteTask.additionalWarning")}
-        confirmLabel={t("sessionDetails.dialogs.deleteTask.confirm")}
+        description={t("projectDetails.dialogs.deleteTask.description")}
+        additionalWarning={t("projectDetails.dialogs.deleteTask.additionalWarning")}
+        confirmLabel={t("projectDetails.dialogs.deleteTask.confirm")}
       />
-      <SessionExportDialog
+      <ProjectExportDialog
         open={isExportDialogOpen}
         onClose={() => setIsExportDialogOpen(false)}
         onExport={async (format) => {
@@ -555,10 +555,10 @@ const SessionDetails: React.FC = () => {
         }}
         tasks={tasks}
       />
-      <SessionTaskFormDialog
+      <ProjectTaskFormDialog
         open={isTaskFormOpen}
         mode={taskFormMode}
-        sessionId={ensuredSessionId}
+        projectId={ensuredSessionId}
         tasks={tasks}
         task={taskFormMode === "edit" ? taskForForm : null}
         onClose={handleTaskFormClose}
@@ -568,4 +568,4 @@ const SessionDetails: React.FC = () => {
   );
 };
 
-export default SessionDetails;
+export default ProjectDetails;

@@ -22,13 +22,9 @@ import {
   loginGoogle,
   loginMicrosoft,
   setIsLoading,
-} from "../store/slices/session/sessionSlice";
+} from "../store/slices/auth/authSlice";
 import { ErrorCause } from "../types/ErrorTypes";
-import {
-  selectErrorSession,
-  selectIsLoading,
-  selectUser,
-} from "../store/slices/session/sessionSelector";
+import { selectErrorSession, selectIsLoading, selectUser } from "../store/slices/auth/authSelector";
 import { EMAIL_REGEX } from "../utils/regex";
 import GoogleIcon from "../components/icons/GoogleIcon";
 import MicrosoftIcon from "../components/icons/MicrosoftIcon";

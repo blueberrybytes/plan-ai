@@ -7,13 +7,13 @@ export interface TranscriptListResult {
 }
 
 export interface TranscriptListOptions {
-  sessionId?: string;
+  projectId?: string;
   page?: number;
   pageSize?: number;
 }
 
 export interface CreateTranscriptInput {
-  sessionId: string;
+  projectId: string;
   title?: string | null;
   source?: TranscriptSource;
   content?: string | null;
@@ -38,11 +38,11 @@ export class TranscriptCrudService {
     userId: string,
     input: CreateTranscriptInput,
   ): Promise<Transcript> {
-    await this.assertSessionBelongsToUser(userId, input.sessionId);
+    await this.assertProjectBelongsToUser(userId, input.projectId);
 
     return prisma.transcript.create({
       data: {
-        sessionId: input.sessionId,
+        projectId: input.projectId,
         title: input.title ?? null,
         source: input.source ?? TranscriptSource.MANUAL,
         transcript: input.content ?? null,
@@ -68,8 +68,8 @@ export class TranscriptCrudService {
     const skip = (page - 1) * pageSize;
 
     const where: Prisma.TranscriptWhereInput = {
-      session: { user: { id: userId } },
-      ...(options.sessionId ? { sessionId: options.sessionId } : {}),
+      project: { user: { id: userId } },
+      ...(options.projectId ? { projectId: options.projectId } : {}),
     };
 
     const [transcripts, total] = await Promise.all([
@@ -89,7 +89,7 @@ export class TranscriptCrudService {
     const transcript = await prisma.transcript.findFirst({
       where: {
         id: transcriptId,
-        session: { user: { id: userId } },
+        project: { user: { id: userId } },
       },
     });
 
@@ -148,14 +148,14 @@ export class TranscriptCrudService {
     await prisma.transcript.delete({ where: { id: transcriptId } });
   }
 
-  private async assertSessionBelongsToUser(userId: string, sessionId: string) {
-    const session = await prisma.session.findFirst({
-      where: { id: sessionId, userId },
+  private async assertProjectBelongsToUser(userId: string, projectId: string) {
+    const project = await prisma.project.findFirst({
+      where: { id: projectId, userId },
       select: { id: true },
     });
 
-    if (!session) {
-      throw { status: 404, message: "Session not found" };
+    if (!project) {
+      throw { status: 404, message: "Project not found" };
     }
   }
 }

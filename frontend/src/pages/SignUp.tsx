@@ -24,12 +24,8 @@ import {
   loginGoogle,
   loginMicrosoft,
   setIsLoading,
-} from "../store/slices/session/sessionSlice";
-import {
-  selectErrorSession,
-  selectIsLoading,
-  selectUser,
-} from "../store/slices/session/sessionSelector";
+} from "../store/slices/auth/authSlice";
+import { selectErrorSession, selectIsLoading, selectUser } from "../store/slices/auth/authSelector";
 import { EMAIL_REGEX } from "../utils/regex";
 import { useBrandIdentity } from "../hooks/useBrandIdentity";
 import { useTranslation } from "react-i18next";

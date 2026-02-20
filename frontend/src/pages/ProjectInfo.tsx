@@ -26,12 +26,12 @@ import {
   LibraryBooksOutlined,
 } from "@mui/icons-material";
 import SidebarLayout from "../components/layout/SidebarLayout";
-import { useGetSessionQuery, useListSessionTranscriptsQuery } from "../store/apis/sessionApi";
+import { useGetProjectQuery, useListProjectTranscriptsQuery } from "../store/apis/projectApi";
 import { useTranslation } from "react-i18next";
 
-const SessionInfo: React.FC = () => {
+const ProjectInfo: React.FC = () => {
   const params = useParams();
-  const sessionId = params.sessionId ?? null;
+  const projectId = params.projectId ?? null;
   const { t } = useTranslation();
 
   const {
@@ -40,7 +40,7 @@ const SessionInfo: React.FC = () => {
     isFetching: isSessionFetching,
     error: sessionError,
     refetch: refetchSession,
-  } = useGetSessionQuery(sessionId ?? "", { skip: !sessionId });
+  } = useGetProjectQuery(projectId ?? "", { skip: !projectId });
 
   const {
     data: transcriptsData,
@@ -48,16 +48,16 @@ const SessionInfo: React.FC = () => {
     isFetching: isTranscriptsFetching,
     error: transcriptsError,
     refetch: refetchTranscripts,
-  } = useListSessionTranscriptsQuery(
-    { sessionId: sessionId ?? "", params: undefined },
-    { skip: !sessionId },
+  } = useListProjectTranscriptsQuery(
+    { projectId: projectId ?? "", params: undefined },
+    { skip: !projectId },
   );
 
-  if (!sessionId) {
-    return <Navigate to="/sessions" replace />;
+  if (!projectId) {
+    return <Navigate to="/projects" replace />;
   }
 
-  const session = sessionData?.data ?? null;
+  const project = sessionData?.data ?? null;
   const transcripts = transcriptsData?.data?.transcripts ?? [];
 
   const sessionErrorMessage = (() => {
@@ -78,13 +78,13 @@ const SessionInfo: React.FC = () => {
         return (sessionError.data as { message?: string }).message;
       }
       return typeof sessionError.status === "number"
-        ? t("sessionInfo.messages.sessionErrorStatus", { status: sessionError.status })
-        : t("sessionInfo.messages.sessionErrorFallback");
+        ? t("projectInfo.messages.sessionErrorStatus", { status: sessionError.status })
+        : t("projectInfo.messages.sessionErrorFallback");
     }
 
     return (
       (sessionError as { message?: string }).message ??
-      t("sessionInfo.messages.sessionErrorFallback")
+      t("projectInfo.messages.sessionErrorFallback")
     );
   })();
 
@@ -106,13 +106,13 @@ const SessionInfo: React.FC = () => {
         return (transcriptsError.data as { message?: string }).message;
       }
       return typeof transcriptsError.status === "number"
-        ? t("sessionInfo.messages.transcriptsErrorStatus", { status: transcriptsError.status })
-        : t("sessionInfo.messages.transcriptsErrorFallback");
+        ? t("projectInfo.messages.transcriptsErrorStatus", { status: transcriptsError.status })
+        : t("projectInfo.messages.transcriptsErrorFallback");
     }
 
     return (
       (transcriptsError as { message?: string }).message ??
-      t("sessionInfo.messages.transcriptsErrorFallback")
+      t("projectInfo.messages.transcriptsErrorFallback")
     );
   })();
 
@@ -128,29 +128,29 @@ const SessionInfo: React.FC = () => {
         }}
       >
         <Stack direction="row" alignItems="center" spacing={2}>
-          <Breadcrumbs aria-label={t("sessionInfo.breadcrumbs.aria")} sx={{ flexGrow: 1 }}>
-            <Link component={RouterLink} underline="hover" color="inherit" to="/sessions">
-              {t("sessionInfo.breadcrumbs.sessions")}
+          <Breadcrumbs aria-label={t("projectInfo.breadcrumbs.aria")} sx={{ flexGrow: 1 }}>
+            <Link component={RouterLink} underline="hover" color="inherit" to="/projects">
+              {t("projectInfo.breadcrumbs.sessions")}
             </Link>
             <Link
               component={RouterLink}
               underline="hover"
               color="inherit"
-              to={`/sessions/${sessionId}`}
+              to={`/projects/${projectId}`}
             >
-              {t("sessionInfo.breadcrumbs.workspace")}
+              {t("projectInfo.breadcrumbs.workspace")}
             </Link>
-            <Typography color="text.primary">{t("sessionInfo.breadcrumbs.info")}</Typography>
+            <Typography color="text.primary">{t("projectInfo.breadcrumbs.info")}</Typography>
           </Breadcrumbs>
 
           <Stack direction="row" spacing={1}>
             <Button
               component={RouterLink}
-              to={`/sessions/${sessionId}`}
+              to={`/projects/${projectId}`}
               variant="outlined"
               startIcon={<ArrowBackIcon />}
             >
-              {t("sessionInfo.buttons.backToWorkspace")}
+              {t("projectInfo.buttons.backToWorkspace")}
             </Button>
             <Button
               variant="outlined"
@@ -162,7 +162,7 @@ const SessionInfo: React.FC = () => {
               }}
               disabled={isSessionFetching || isTranscriptsFetching}
             >
-              {t("sessionInfo.buttons.refresh")}
+              {t("projectInfo.buttons.refresh")}
             </Button>
           </Stack>
         </Stack>
@@ -173,8 +173,8 @@ const SessionInfo: React.FC = () => {
           </Box>
         ) : sessionErrorMessage ? (
           <Alert severity="error">{sessionErrorMessage}</Alert>
-        ) : !session ? (
-          <Alert severity="warning">{t("sessionInfo.messages.sessionNotFound")}</Alert>
+        ) : !project ? (
+          <Alert severity="warning">{t("projectInfo.messages.sessionNotFound")}</Alert>
         ) : (
           <Stack spacing={3}>
             <Card variant="outlined">
@@ -182,14 +182,14 @@ const SessionInfo: React.FC = () => {
                 <Stack spacing={2}>
                   <Stack direction="row" spacing={1} alignItems="center">
                     <Typography variant="h4" sx={{ fontWeight: 700 }}>
-                      {session.title}
+                      {project.title}
                     </Typography>
-                    <Chip label={session.status} color="primary" variant="outlined" />
+                    <Chip label={project.status} color="primary" variant="outlined" />
                   </Stack>
 
-                  {session.description ? (
+                  {project.description ? (
                     <Typography variant="body1" color="text.primary">
-                      {session.description}
+                      {project.description}
                     </Typography>
                   ) : null}
 
@@ -198,41 +198,41 @@ const SessionInfo: React.FC = () => {
                   <Stack direction={{ xs: "column", md: "row" }} spacing={3}>
                     <Stack spacing={0.5}>
                       <Typography variant="overline" color="text.secondary">
-                        {t("sessionInfo.meta.created")}
+                        {t("projectInfo.meta.created")}
                       </Typography>
                       <Typography variant="body2">
-                        {new Date(session.createdAt).toLocaleString()}
+                        {new Date(project.createdAt).toLocaleString()}
                       </Typography>
                     </Stack>
                     <Stack spacing={0.5}>
                       <Typography variant="overline" color="text.secondary">
-                        {t("sessionInfo.meta.updated")}
+                        {t("projectInfo.meta.updated")}
                       </Typography>
                       <Typography variant="body2">
-                        {new Date(session.updatedAt).toLocaleString()}
+                        {new Date(project.updatedAt).toLocaleString()}
                       </Typography>
                     </Stack>
                     <Stack spacing={0.5}>
                       <Typography variant="overline" color="text.secondary">
-                        {t("sessionInfo.meta.started")}
+                        {t("projectInfo.meta.started")}
                       </Typography>
                       <Typography variant="body2">
-                        {session.startedAt ? new Date(session.startedAt).toLocaleString() : "—"}
+                        {project.startedAt ? new Date(project.startedAt).toLocaleString() : "—"}
                       </Typography>
                     </Stack>
                     <Stack spacing={0.5}>
                       <Typography variant="overline" color="text.secondary">
-                        {t("sessionInfo.meta.ended")}
+                        {t("projectInfo.meta.ended")}
                       </Typography>
                       <Typography variant="body2">
-                        {session.endedAt ? new Date(session.endedAt).toLocaleString() : "—"}
+                        {project.endedAt ? new Date(project.endedAt).toLocaleString() : "—"}
                       </Typography>
                     </Stack>
                   </Stack>
 
                   <Box>
                     <Typography variant="overline" color="text.secondary">
-                      {t("sessionInfo.sections.metadataLabel")}
+                      {t("projectInfo.sections.metadataLabel")}
                     </Typography>
                     <Typography
                       component="pre"
@@ -245,9 +245,9 @@ const SessionInfo: React.FC = () => {
                         fontFamily: "monospace",
                       }}
                     >
-                      {session.metadata
-                        ? JSON.stringify(session.metadata, null, 2)
-                        : t("sessionInfo.messages.noMetadata")}
+                      {project.metadata
+                        ? JSON.stringify(project.metadata, null, 2)
+                        : t("projectInfo.messages.noMetadata")}
                     </Typography>
                   </Box>
                 </Stack>
@@ -265,10 +265,10 @@ const SessionInfo: React.FC = () => {
                   >
                     <Stack spacing={0.5}>
                       <Typography variant="h5" sx={{ fontWeight: 600 }}>
-                        {t("sessionInfo.sections.transcriptsTitle")}
+                        {t("projectInfo.sections.transcriptsTitle")}
                       </Typography>
                       <Typography variant="body2" color="text.secondary">
-                        {t("sessionInfo.sections.transcriptsDescription")}
+                        {t("projectInfo.sections.transcriptsDescription")}
                       </Typography>
                     </Stack>
                     <Button
@@ -277,7 +277,7 @@ const SessionInfo: React.FC = () => {
                       onClick={() => refetchTranscripts()}
                       disabled={isTranscriptsFetching}
                     >
-                      {t("sessionInfo.buttons.refreshTranscripts")}
+                      {t("projectInfo.buttons.refreshTranscripts")}
                     </Button>
                   </Stack>
 
@@ -288,26 +288,26 @@ const SessionInfo: React.FC = () => {
                   ) : transcriptsErrorMessage ? (
                     <Alert severity="error">{transcriptsErrorMessage}</Alert>
                   ) : transcripts.length === 0 ? (
-                    <Alert severity="info">{t("sessionInfo.messages.noTranscripts")}</Alert>
+                    <Alert severity="info">{t("projectInfo.messages.noTranscripts")}</Alert>
                   ) : (
                     <TableContainer>
                       <Table size="small">
                         <TableHead>
                           <TableRow>
                             <TableCell sx={{ fontWeight: 600 }}>
-                              {t("sessionInfo.table.title")}
+                              {t("projectInfo.table.title")}
                             </TableCell>
                             <TableCell sx={{ fontWeight: 600 }}>
-                              {t("sessionInfo.table.source")}
+                              {t("projectInfo.table.source")}
                             </TableCell>
                             <TableCell sx={{ fontWeight: 600 }}>
-                              {t("sessionInfo.table.recorded")}
+                              {t("projectInfo.table.recorded")}
                             </TableCell>
                             <TableCell sx={{ fontWeight: 600 }}>
-                              {t("sessionInfo.table.created")}
+                              {t("projectInfo.table.created")}
                             </TableCell>
                             <TableCell sx={{ fontWeight: 600 }}>
-                              {t("sessionInfo.table.summary")}
+                              {t("projectInfo.table.summary")}
                             </TableCell>
                           </TableRow>
                         </TableHead>
@@ -317,7 +317,7 @@ const SessionInfo: React.FC = () => {
                               key={transcript.id}
                               hover
                               component={RouterLink}
-                              to={`/sessions/${sessionId}/info/transcripts/${transcript.id}`}
+                              to={`/projects/${projectId}/info/transcripts/${transcript.id}`}
                               sx={{
                                 textDecoration: "none",
                                 color: "inherit",
@@ -325,15 +325,15 @@ const SessionInfo: React.FC = () => {
                               }}
                             >
                               <TableCell>
-                                {transcript.title ?? t("sessionInfo.table.untitled")}
+                                {transcript.title ?? t("projectInfo.table.untitled")}
                               </TableCell>
                               <TableCell>
-                                {transcript.source ?? t("sessionInfo.table.missing")}
+                                {transcript.source ?? t("projectInfo.table.missing")}
                               </TableCell>
                               <TableCell>
                                 {transcript.recordedAt
                                   ? new Date(transcript.recordedAt).toLocaleString()
-                                  : t("sessionInfo.table.missing")}
+                                  : t("projectInfo.table.missing")}
                               </TableCell>
                               <TableCell>
                                 {new Date(transcript.createdAt).toLocaleString()}
@@ -345,7 +345,7 @@ const SessionInfo: React.FC = () => {
                                   </Typography>
                                 ) : (
                                   <Typography variant="body2" color="text.secondary">
-                                    {t("sessionInfo.table.noSummary")}
+                                    {t("projectInfo.table.noSummary")}
                                   </Typography>
                                 )}
                               </TableCell>
@@ -365,4 +365,4 @@ const SessionInfo: React.FC = () => {
   );
 };
 
-export default SessionInfo;
+export default ProjectInfo;

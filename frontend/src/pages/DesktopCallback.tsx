@@ -3,7 +3,7 @@ import { Box, CircularProgress, Typography, Alert, Stack } from "@mui/material";
 import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
 import { useAuth } from "../providers/FirebaseAuthProvider";
 import { auth } from "../firebase/firebase";
-import { useGetDesktopTokenQuery } from "../store/apis/sessionApi";
+import { useLazyGetDesktopTokenQuery } from "../store/apis/authApi";
 
 /**
  * /auth/desktop?local_port=4321 — opened by the Plan AI Recorder (Electron app)
@@ -30,17 +30,19 @@ const DesktopCallback: React.FC = () => {
   // Read local_port from URL — present when opened by the Electron dev build
   const localPort = new URLSearchParams(window.location.search).get("local_port");
 
-  const { data, error } = useGetDesktopTokenQuery(undefined, {
-    skip: !firebaseUser || !isAuthInitialized,
-  });
+  const [triggerGetDesktopToken, { data, error }] = useLazyGetDesktopTokenQuery();
 
   useEffect(() => {
     if (!isAuthInitialized) return;
     if (!firebaseUser) {
       const next = encodeURIComponent(window.location.pathname + window.location.search);
       window.location.href = `/login?next=${next}`;
+      return;
     }
-  }, [isAuthInitialized, firebaseUser]);
+
+    // If authenticated, trigger the token fetch
+    triggerGetDesktopToken();
+  }, [isAuthInitialized, firebaseUser, triggerGetDesktopToken]);
 
   useEffect(() => {
     if (!data?.data?.customToken) return;

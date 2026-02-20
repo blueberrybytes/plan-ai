@@ -51,7 +51,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
   const [isStreaming, setIsStreaming] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const userScrolledUp = useRef(false);
-  const token = useSelector((state: RootState) => state.session.user?.token);
+  const token = useSelector((state: RootState) => state.auth.user?.token);
 
   // Fetch contexts here to display chips only
   const { data: contextResponse } = useListContextsQuery();

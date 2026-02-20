@@ -17,8 +17,8 @@ import {
   type TaskResponse,
   type TaskStatusSchema,
   type TaskPrioritySchema,
-  useUpdateSessionTaskMutation,
-} from "../../store/apis/sessionApi";
+  useUpdateProjectTaskMutation,
+} from "../../store/apis/projectApi";
 import { setToastMessage } from "../../store/slices/app/appSlice";
 import MarkdownRenderer from "../common/MarkdownRenderer";
 
@@ -56,7 +56,7 @@ const COLUMNS: TaskBoardColumn[] = [
   },
 ];
 
-export interface SessionTaskBoardProps {
+export interface ProjectTaskBoardProps {
   tasks: TaskResponse[];
   onTaskClick?: (task: TaskResponse) => void;
 }
@@ -216,9 +216,9 @@ const DraggableTaskCard: React.FC<{
   );
 };
 
-const SessionTaskBoard: React.FC<SessionTaskBoardProps> = ({ tasks, onTaskClick }) => {
+const ProjectTaskBoard: React.FC<ProjectTaskBoardProps> = ({ tasks, onTaskClick }) => {
   const dispatch = useDispatch();
-  const [updateTask] = useUpdateSessionTaskMutation();
+  const [updateTask] = useUpdateProjectTaskMutation();
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
 
   const [boardState, setBoardState] = useState<BoardState>({
@@ -377,12 +377,12 @@ const SessionTaskBoard: React.FC<SessionTaskBoardProps> = ({ tasks, onTaskClick 
     try {
       console.info("TaskBoard updating task status", {
         taskId: task.id,
-        sessionId: task.sessionId,
+        projectId: task.projectId,
         from: originStatus,
         to: targetStatus,
       });
       await updateTask({
-        path: { sessionId: task.sessionId, taskId: task.id },
+        path: { projectId: task.projectId, taskId: task.id },
         body: { status: targetStatus },
       }).unwrap();
       dragOriginStatusRef.current = null;
@@ -390,7 +390,7 @@ const SessionTaskBoard: React.FC<SessionTaskBoardProps> = ({ tasks, onTaskClick 
       console.error("TaskBoard update failed", {
         error: mutationError,
         taskId: task.id,
-        sessionId: task.sessionId,
+        projectId: task.projectId,
         from: originStatus,
         to: targetStatus,
       });
@@ -449,4 +449,4 @@ const SessionTaskBoard: React.FC<SessionTaskBoardProps> = ({ tasks, onTaskClick 
   );
 };
 
-export default SessionTaskBoard;
+export default ProjectTaskBoard;

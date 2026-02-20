@@ -5,7 +5,7 @@ import CssBaseline from "@mui/material/CssBaseline";
 import { HelmetProvider } from "react-helmet-async";
 import { Provider, useDispatch, useSelector } from "react-redux";
 import { PersistGate } from "redux-persist/integration/react";
-import { selectUser } from "./store/slices/session/sessionSelector";
+import { selectUser } from "./store/slices/auth/authSelector";
 import NavigationProvider from "./providers/NavigationProvider";
 import FirebaseAuthProvider, { useAuth } from "./providers/FirebaseAuthProvider";
 import TokenRefreshProvider from "./providers/TokenRefreshProvider";
@@ -16,11 +16,11 @@ import SignUp from "./pages/SignUp";
 import ForgotPassword from "./pages/ForgotPassword";
 import Profile from "./pages/Profile";
 import Integrations from "./pages/Integrations";
-import Sessions from "./pages/Sessions";
-import SessionInfo from "./pages/SessionInfo";
-import SessionTranscriptDetail from "./pages/SessionTranscriptDetail";
+import Projects from "./pages/Projects";
+import ProjectInfo from "./pages/ProjectInfo";
+import ProjectTranscriptDetail from "./pages/ProjectTranscriptDetail";
 import Contexts from "./pages/Contexts";
-import SessionDetails from "./pages/SessionDetails";
+import ProjectDetails from "./pages/ProjectDetails";
 import Chat from "./pages/Chat";
 import ChatFull from "./pages/ChatFull";
 import Slides from "./pages/Slides";
@@ -31,10 +31,11 @@ import SlideCreate from "./pages/SlideCreate";
 import SlideView from "./pages/SlideView";
 import PublicSlideView from "./pages/PublicSlideView";
 import DesktopCallback from "./pages/DesktopCallback";
+import NotFound from "./pages/NotFound";
 import "./App.css";
 import "./i18n";
-import { useGetCurrentUserQuery } from "./store/apis/sessionApi";
-import { setUserDb } from "./store/slices/session/sessionSlice";
+import { useGetCurrentUserQuery } from "./store/apis/authApi";
+import { setUserDb } from "./store/slices/auth/authSlice";
 import AuthenticatedRoute from "./routes/AuthenticatedRoute";
 import UnauthenticatedRoute from "./routes/UnauthenticatedRoute";
 import store, { persistor } from "./store/store";
@@ -81,12 +82,12 @@ const AppContent: React.FC = () => {
         {/* Authenticated routes */}
         <Route element={<AuthenticatedRoute />}>
           <Route path="/home" element={<Home />} />
-          <Route path="/sessions" element={<Sessions />} />
-          <Route path="/sessions/:sessionId" element={<SessionDetails />} />
-          <Route path="/sessions/:sessionId/info" element={<SessionInfo />} />
+          <Route path="/projects" element={<Projects />} />
+          <Route path="/projects/:projectId" element={<ProjectDetails />} />
+          <Route path="/projects/:projectId/info" element={<ProjectInfo />} />
           <Route
-            path="/sessions/:sessionId/info/transcripts/:transcriptId"
-            element={<SessionTranscriptDetail />}
+            path="/projects/:projectId/info/transcripts/:transcriptId"
+            element={<ProjectTranscriptDetail />}
           />
           <Route path="/contexts" element={<Contexts />} />
           <Route path="/contexts/:contextId" element={<Contexts />} />
@@ -104,6 +105,9 @@ const AppContent: React.FC = () => {
           <Route path="/slides/view/:presentationId" element={<SlideView />} />
           <Route path="/slides/:presentationId" element={<SlideView />} />
         </Route>
+
+        {/* Catch-all Not Found Route */}
+        <Route path="*" element={<NotFound />} />
       </Routes>
     </>
   );

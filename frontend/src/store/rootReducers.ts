@@ -1,9 +1,10 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { combineReducers } from "@reduxjs/toolkit";
-import sessionReducer from "./slices/session/sessionSlice";
+import authReducer from "./slices/auth/authSlice";
 import appReducer from "./slices/app/appSlice";
 import { resetStore } from "./actions";
-import { sessionApi } from "./apis/sessionApi";
+import { authApi } from "./apis/authApi";
+import { projectApi } from "./apis/projectApi";
 import { accountApi } from "./apis/accountApi";
 import { contextApi } from "./apis/contextApi";
 import { jiraApi } from "./apis/jiraApi";
@@ -14,8 +15,9 @@ import { slideApi } from "./apis/slideApi";
 // Define the combined reducers
 const appReducers = combineReducers({
   app: appReducer,
-  session: sessionReducer,
-  [sessionApi.reducerPath]: sessionApi.reducer,
+  auth: authReducer,
+  [authApi.reducerPath]: authApi.reducer,
+  [projectApi.reducerPath]: projectApi.reducer,
   [accountApi.reducerPath]: accountApi.reducer,
   [contextApi.reducerPath]: contextApi.reducer,
   [jiraApi.reducerPath]: jiraApi.reducer,

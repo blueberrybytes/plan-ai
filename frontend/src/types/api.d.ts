@@ -36,154 +36,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/sessions": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["ListSessions"];
-        put?: never;
-        post: operations["CreateSession"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/sessions/{sessionId}/transcribe-chunk": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * @description Transcribe a raw audio chunk uploaded by the Electron recorder.
-         *     The Groq API key lives exclusively on the server — it is never sent to the client.
-         */
-        post: operations["TranscribeChunk"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/sessions/{sessionId}/transcripts/upload": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["UploadTranscript"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/sessions/{sessionId}/transcripts": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["ListTranscripts"];
-        put?: never;
-        post: operations["CreateTranscript"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/sessions/{sessionId}/transcripts/{transcriptId}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["GetTranscript"];
-        put: operations["UpdateTranscript"];
-        post?: never;
-        delete: operations["DeleteTranscript"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/sessions/{sessionId}/transcripts/manual": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["CreateManualTranscript"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/sessions/{sessionId}/tasks": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["ListTasks"];
-        put?: never;
-        post: operations["CreateTask"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/sessions/{sessionId}/tasks/{taskId}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["GetTask"];
-        put: operations["UpdateTask"];
-        post?: never;
-        delete: operations["DeleteTask"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/sessions/{sessionId}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["GetSession"];
-        put: operations["UpdateSession"];
-        post?: never;
-        delete: operations["DeleteSession"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/session/login": {
         parameters: {
             query?: never;
@@ -260,6 +112,154 @@ export interface paths {
         put?: never;
         post?: never;
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/projects": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ListSessions"];
+        put?: never;
+        post: operations["CreateSession"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/projects/{projectId}/transcribe-chunk": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description Transcribe a raw audio chunk uploaded by the Electron recorder.
+         *     The Groq API key lives exclusively on the server — it is never sent to the client.
+         */
+        post: operations["TranscribeChunk"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/projects/{projectId}/transcripts/upload": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["UploadTranscript"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/projects/{projectId}/transcripts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ListTranscripts"];
+        put?: never;
+        post: operations["CreateTranscript"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/projects/{projectId}/transcripts/{transcriptId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetTranscript"];
+        put: operations["UpdateTranscript"];
+        post?: never;
+        delete: operations["DeleteTranscript"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/projects/{projectId}/transcripts/manual": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["CreateManualTranscript"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/projects/{projectId}/tasks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ListTasks"];
+        put?: never;
+        post: operations["CreateTask"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/projects/{projectId}/tasks/{taskId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetTask"];
+        put: operations["UpdateTask"];
+        post?: never;
+        delete: operations["DeleteTask"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/projects/{projectId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetSession"];
+        put: operations["UpdateSession"];
+        post?: never;
+        delete: operations["DeleteSession"];
         options?: never;
         head?: never;
         patch?: never;
@@ -662,13 +662,71 @@ export interface components {
             slideTypes?: components["schemas"]["SlideTypeConfigInput"][];
         };
         /** @enum {string} */
-        "_36_Enums.SessionStatus": "ACTIVE" | "COMPLETED" | "ARCHIVED";
-        SessionStatus: components["schemas"]["_36_Enums.SessionStatus"];
-        SessionResponse: {
+        "_36_Enums.Role": "ADMIN" | "CLIENT";
+        Role: components["schemas"]["_36_Enums.Role"];
+        UserResponse: {
+            id: string;
+            firebaseUid: string;
+            email: string;
+            name: string | null;
+            avatarUrl: string | null;
+            googleId: string | null;
+            isGoogleAccount: boolean;
+            role: components["schemas"]["Role"];
+        };
+        ApiResponse_UserResponse_: {
+            message?: string;
+            data: components["schemas"]["UserResponse"] | null;
+            /** Format: double */
+            status: number;
+        };
+        GenericResponse: {
+            message: string;
+            /** Format: double */
+            status: number;
+        };
+        "ApiResponse__customToken-string__": {
+            message?: string;
+            data: {
+                customToken: string;
+            } | null;
+            /** Format: double */
+            status: number;
+        };
+        "DefaultSelection_Prisma._36_PresentationPayload_": {
+            /** Format: date-time */
+            updatedAt: string;
+            /** Format: date-time */
+            createdAt: string;
+            status: string;
+            contextIds: string[];
+            slidesJson: components["schemas"]["JsonValue"];
+            title: string;
+            templateId: string;
+            userId: string;
+            id: string;
+        };
+        PublicPresentationResponse: {
+            /** Format: date-time */
+            updatedAt: string;
+            /** Format: date-time */
+            createdAt: string;
+            status: string;
+            contextIds: string[];
+            slidesJson: components["schemas"]["JsonValue"];
+            title: string;
+            templateId: string;
+            userId: string;
+            id: string;
+        };
+        /** @enum {string} */
+        "_36_Enums.ProjectStatus": "ACTIVE" | "COMPLETED" | "ARCHIVED";
+        ProjectStatus: components["schemas"]["_36_Enums.ProjectStatus"];
+        ProjectResponse: {
             id: string;
             title: string;
             description: string | null;
-            status: components["schemas"]["SessionStatus"];
+            status: components["schemas"]["ProjectStatus"];
             /** Format: date-time */
             startedAt: string | null;
             /** Format: date-time */
@@ -679,14 +737,14 @@ export interface components {
             /** Format: date-time */
             updatedAt: string;
         };
-        SessionListResponse: {
-            sessions: components["schemas"]["SessionResponse"][];
+        ProjectListResponse: {
+            projects: components["schemas"]["ProjectResponse"][];
             /** Format: double */
             total: number;
         };
-        ApiResponse_SessionListResponse_: {
+        ApiResponse_ProjectListResponse_: {
             message?: string;
-            data: components["schemas"]["SessionListResponse"] | null;
+            data: components["schemas"]["ProjectListResponse"] | null;
             /** Format: double */
             status: number;
         };
@@ -703,7 +761,7 @@ export interface components {
         TranscriptSource: components["schemas"]["_36_Enums.TranscriptSource"];
         TranscriptResponse: {
             id: string;
-            sessionId: string;
+            projectId: string;
             title: string | null;
             source: components["schemas"]["TranscriptSource"];
             language: string | null;
@@ -725,7 +783,7 @@ export interface components {
         TaskPriority: components["schemas"]["_36_Enums.TaskPriority"];
         TaskResponse: {
             id: string;
-            sessionId: string;
+            projectId: string;
             title: string;
             description: string | null;
             summary: string | null;
@@ -877,24 +935,24 @@ export interface components {
             metadata?: components["schemas"]["InputJsonValue"] | null;
             dependencyTaskIds?: string[];
         };
-        ApiResponse_SessionResponse_: {
+        ApiResponse_ProjectResponse_: {
             message?: string;
-            data: components["schemas"]["SessionResponse"] | null;
+            data: components["schemas"]["ProjectResponse"] | null;
             /** Format: double */
             status: number;
         };
-        CreateSessionRequest: {
+        CreateProjectRequest: {
             title: string;
             description?: string;
-            status?: components["schemas"]["SessionStatus"];
+            status?: components["schemas"]["ProjectStatus"];
             /** Format: date-time */
             startedAt?: string | null;
             metadata?: components["schemas"]["InputJsonValue"] | null;
         };
-        UpdateSessionRequest: {
+        UpdateProjectRequest: {
             title?: string;
             description?: string | null;
-            status?: components["schemas"]["SessionStatus"];
+            status?: components["schemas"]["ProjectStatus"];
             /** Format: date-time */
             startedAt?: string | null;
             /** Format: date-time */
@@ -913,64 +971,6 @@ export interface components {
             /** @enum {string} */
             persona?: "SECRETARY" | "ARCHITECT" | "PRODUCT_MANAGER" | "DEVELOPER";
             englishLevel?: string;
-        };
-        /** @enum {string} */
-        "_36_Enums.Role": "ADMIN" | "CLIENT";
-        Role: components["schemas"]["_36_Enums.Role"];
-        UserResponse: {
-            id: string;
-            firebaseUid: string;
-            email: string;
-            name: string | null;
-            avatarUrl: string | null;
-            googleId: string | null;
-            isGoogleAccount: boolean;
-            role: components["schemas"]["Role"];
-        };
-        ApiResponse_UserResponse_: {
-            message?: string;
-            data: components["schemas"]["UserResponse"] | null;
-            /** Format: double */
-            status: number;
-        };
-        GenericResponse: {
-            message: string;
-            /** Format: double */
-            status: number;
-        };
-        "ApiResponse__customToken-string__": {
-            message?: string;
-            data: {
-                customToken: string;
-            } | null;
-            /** Format: double */
-            status: number;
-        };
-        "DefaultSelection_Prisma._36_PresentationPayload_": {
-            /** Format: date-time */
-            updatedAt: string;
-            /** Format: date-time */
-            createdAt: string;
-            status: string;
-            contextIds: string[];
-            slidesJson: components["schemas"]["JsonValue"];
-            title: string;
-            templateId: string;
-            userId: string;
-            id: string;
-        };
-        PublicPresentationResponse: {
-            /** Format: date-time */
-            updatedAt: string;
-            /** Format: date-time */
-            createdAt: string;
-            status: string;
-            contextIds: string[];
-            slidesJson: components["schemas"]["JsonValue"];
-            title: string;
-            templateId: string;
-            userId: string;
-            id: string;
         };
         TemplateSubset: {
             name: string;
@@ -1326,463 +1326,6 @@ export interface operations {
             };
         };
     };
-    ListSessions: {
-        parameters: {
-            query?: {
-                page?: number;
-                pageSize?: number;
-                status?: components["schemas"]["SessionStatus"];
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Ok */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiResponse_SessionListResponse_"];
-                };
-            };
-        };
-    };
-    CreateSession: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CreateSessionRequest"];
-            };
-        };
-        responses: {
-            /** @description Ok */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiResponse_SessionResponse_"];
-                };
-            };
-        };
-    };
-    TranscribeChunk: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                sessionId: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "multipart/form-data": {
-                    files: string[];
-                };
-            };
-        };
-        responses: {
-            /** @description Ok */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiResponse__text-string__"];
-                };
-            };
-        };
-    };
-    UploadTranscript: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                sessionId: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "multipart/form-data": {
-                    files: string[];
-                    title?: string;
-                    recordedAt?: string;
-                    metadata?: string;
-                    persona?: string;
-                    objective?: string;
-                    contextIds?: string;
-                    englishLevel?: string;
-                };
-            };
-        };
-        responses: {
-            /** @description Ok */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiResponse_CreateTranscriptResponse_"];
-                };
-            };
-        };
-    };
-    ListTranscripts: {
-        parameters: {
-            query?: {
-                page?: number;
-                pageSize?: number;
-            };
-            header?: never;
-            path: {
-                sessionId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Ok */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiResponse_TranscriptListResponse_"];
-                };
-            };
-        };
-    };
-    CreateTranscript: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                sessionId: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CreateTranscriptRequest"];
-            };
-        };
-        responses: {
-            /** @description Ok */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiResponse_CreateTranscriptResponse_"];
-                };
-            };
-        };
-    };
-    GetTranscript: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                sessionId: string;
-                transcriptId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Ok */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiResponse_TranscriptResponse_"];
-                };
-            };
-        };
-    };
-    UpdateTranscript: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                sessionId: string;
-                transcriptId: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["UpdateTranscriptRequest"];
-            };
-        };
-        responses: {
-            /** @description Ok */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiResponse_TranscriptResponse_"];
-                };
-            };
-        };
-    };
-    DeleteTranscript: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                sessionId: string;
-                transcriptId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Ok */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiResponse_null_"];
-                };
-            };
-        };
-    };
-    CreateManualTranscript: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                sessionId: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ManualTranscriptRequest"];
-            };
-        };
-        responses: {
-            /** @description Ok */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiResponse_TranscriptResponse_"];
-                };
-            };
-        };
-    };
-    ListTasks: {
-        parameters: {
-            query?: {
-                status?: components["schemas"]["TaskStatus"];
-                priority?: components["schemas"]["TaskPriority"];
-                page?: number;
-                pageSize?: number;
-            };
-            header?: never;
-            path: {
-                sessionId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Ok */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiResponse_TaskListResponse_"];
-                };
-            };
-        };
-    };
-    CreateTask: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                sessionId: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CreateTaskRequest"];
-            };
-        };
-        responses: {
-            /** @description Ok */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiResponse_TaskResponse_"];
-                };
-            };
-        };
-    };
-    GetTask: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                sessionId: string;
-                taskId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Ok */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiResponse_TaskResponse_"];
-                };
-            };
-        };
-    };
-    UpdateTask: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                sessionId: string;
-                taskId: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["UpdateTaskRequest"];
-            };
-        };
-        responses: {
-            /** @description Ok */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiResponse_TaskResponse_"];
-                };
-            };
-        };
-    };
-    DeleteTask: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                sessionId: string;
-                taskId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Ok */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiResponse_null_"];
-                };
-            };
-        };
-    };
-    GetSession: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                sessionId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Ok */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiResponse_SessionResponse_"];
-                };
-            };
-        };
-    };
-    UpdateSession: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                sessionId: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["UpdateSessionRequest"];
-            };
-        };
-        responses: {
-            /** @description Ok */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiResponse_SessionResponse_"];
-                };
-            };
-        };
-    };
-    DeleteSession: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                sessionId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Ok */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiResponse_null_"];
-                };
-            };
-        };
-    };
     Login: {
         parameters: {
             query?: never;
@@ -1904,6 +1447,463 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PublicPresentationResponse"];
+                };
+            };
+        };
+    };
+    ListSessions: {
+        parameters: {
+            query?: {
+                page?: number;
+                pageSize?: number;
+                status?: components["schemas"]["ProjectStatus"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_ProjectListResponse_"];
+                };
+            };
+        };
+    };
+    CreateSession: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateProjectRequest"];
+            };
+        };
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_ProjectResponse_"];
+                };
+            };
+        };
+    };
+    TranscribeChunk: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                projectId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    files: string[];
+                };
+            };
+        };
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse__text-string__"];
+                };
+            };
+        };
+    };
+    UploadTranscript: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                projectId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    files: string[];
+                    title?: string;
+                    recordedAt?: string;
+                    metadata?: string;
+                    persona?: string;
+                    objective?: string;
+                    contextIds?: string;
+                    englishLevel?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_CreateTranscriptResponse_"];
+                };
+            };
+        };
+    };
+    ListTranscripts: {
+        parameters: {
+            query?: {
+                page?: number;
+                pageSize?: number;
+            };
+            header?: never;
+            path: {
+                projectId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_TranscriptListResponse_"];
+                };
+            };
+        };
+    };
+    CreateTranscript: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                projectId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateTranscriptRequest"];
+            };
+        };
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_CreateTranscriptResponse_"];
+                };
+            };
+        };
+    };
+    GetTranscript: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                projectId: string;
+                transcriptId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_TranscriptResponse_"];
+                };
+            };
+        };
+    };
+    UpdateTranscript: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                projectId: string;
+                transcriptId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateTranscriptRequest"];
+            };
+        };
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_TranscriptResponse_"];
+                };
+            };
+        };
+    };
+    DeleteTranscript: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                projectId: string;
+                transcriptId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_null_"];
+                };
+            };
+        };
+    };
+    CreateManualTranscript: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                projectId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ManualTranscriptRequest"];
+            };
+        };
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_TranscriptResponse_"];
+                };
+            };
+        };
+    };
+    ListTasks: {
+        parameters: {
+            query?: {
+                status?: components["schemas"]["TaskStatus"];
+                priority?: components["schemas"]["TaskPriority"];
+                page?: number;
+                pageSize?: number;
+            };
+            header?: never;
+            path: {
+                projectId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_TaskListResponse_"];
+                };
+            };
+        };
+    };
+    CreateTask: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                projectId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateTaskRequest"];
+            };
+        };
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_TaskResponse_"];
+                };
+            };
+        };
+    };
+    GetTask: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                projectId: string;
+                taskId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_TaskResponse_"];
+                };
+            };
+        };
+    };
+    UpdateTask: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                projectId: string;
+                taskId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateTaskRequest"];
+            };
+        };
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_TaskResponse_"];
+                };
+            };
+        };
+    };
+    DeleteTask: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                projectId: string;
+                taskId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_null_"];
+                };
+            };
+        };
+    };
+    GetSession: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                projectId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_ProjectResponse_"];
+                };
+            };
+        };
+    };
+    UpdateSession: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                projectId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateProjectRequest"];
+            };
+        };
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_ProjectResponse_"];
+                };
+            };
+        };
+    };
+    DeleteSession: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                projectId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_null_"];
                 };
             };
         };

@@ -28,44 +28,44 @@ import { Link as RouterLink } from "react-router-dom";
 import { useSelector } from "react-redux";
 import SidebarLayout from "../components/layout/SidebarLayout";
 import {
-  useListSessionsQuery,
-  useListSessionTranscriptsQuery,
-  useListSessionTasksQuery,
+  useListProjectsQuery,
+  useListProjectTranscriptsQuery,
+  useListProjectTasksQuery,
   type TaskResponse,
-} from "../store/apis/sessionApi";
+} from "../store/apis/projectApi";
 import { useGetPresentationsQuery } from "../store/apis/slideApi";
 import type { components } from "../types/api";
 import { skipToken } from "@reduxjs/toolkit/query";
 import { useTranslation } from "react-i18next";
-import { selectUser } from "../store/slices/session/sessionSelector";
+import { selectUser } from "../store/slices/auth/authSelector";
 
-type SessionResponse = components["schemas"]["SessionResponse"];
+type ProjectResponse = components["schemas"]["ProjectResponse"];
 type TranscriptResponse = components["schemas"]["TranscriptResponse"];
 
 const Home: React.FC = () => {
   const { t } = useTranslation();
   const user = useSelector(selectUser);
 
-  const { data: sessionsData, isLoading: isSessionsLoading } = useListSessionsQuery({
+  const { data: sessionsData, isLoading: isProjectsLoading } = useListProjectsQuery({
     page: 1,
     pageSize: 5,
   });
 
   const { data: presentationsData, isLoading: isPresentationsLoading } = useGetPresentationsQuery();
 
-  const sessions: SessionResponse[] = sessionsData?.data?.sessions ?? [];
+  const projects: ProjectResponse[] = sessionsData?.data?.projects ?? [];
   const presentations = useMemo(() => presentationsData ?? [], [presentationsData]);
 
-  const firstSessionId = sessions[0]?.id;
+  const firstProjectId = projects[0]?.id;
 
-  const { data: transcriptsData, isLoading: isTranscriptsLoading } = useListSessionTranscriptsQuery(
-    firstSessionId ? { sessionId: firstSessionId, params: { page: 1, pageSize: 5 } } : skipToken,
+  const { data: transcriptsData, isLoading: isTranscriptsLoading } = useListProjectTranscriptsQuery(
+    firstProjectId ? { projectId: firstProjectId, params: { page: 1, pageSize: 5 } } : skipToken,
   );
 
   const transcripts: TranscriptResponse[] = transcriptsData?.data?.transcripts ?? [];
 
-  const { data: tasksData, isLoading: isTasksLoading } = useListSessionTasksQuery(
-    firstSessionId ? { sessionId: firstSessionId, params: { page: 1, pageSize: 5 } } : skipToken,
+  const { data: tasksData, isLoading: isTasksLoading } = useListProjectTasksQuery(
+    firstProjectId ? { projectId: firstProjectId, params: { page: 1, pageSize: 5 } } : skipToken,
   );
 
   const tasks: TaskResponse[] = useMemo(() => tasksData?.data?.tasks ?? [], [tasksData]);
@@ -75,7 +75,7 @@ const Home: React.FC = () => {
   ).length;
 
   const isLoadingAny =
-    isSessionsLoading || isTranscriptsLoading || isTasksLoading || isPresentationsLoading;
+    isProjectsLoading || isTranscriptsLoading || isTasksLoading || isPresentationsLoading;
 
   const topTasks = tasks.slice(0, 3);
   const recentTranscripts = transcripts.slice(0, 3);
@@ -95,7 +95,7 @@ const Home: React.FC = () => {
       icon: <AddCircleOutlineIcon sx={{ fontSize: 28 }} />,
       title: t("home.quickActions.newSession.title"),
       description: t("home.quickActions.newSession.description"),
-      to: "/sessions?create=true",
+      to: "/projects?create=true",
       color: "#4361EE",
     },
     {
@@ -123,16 +123,16 @@ const Home: React.FC = () => {
 
   const stats = [
     {
-      label: t("home.stats.activeSessions.label"),
-      value: isSessionsLoading ? null : (sessionsData?.data?.total ?? sessions.length),
-      cta: { label: t("home.stats.activeSessions.cta"), to: "/sessions" },
+      label: t("home.stats.activeProjects.label"),
+      value: isProjectsLoading ? null : (sessionsData?.data?.total ?? projects.length),
+      cta: { label: t("home.stats.activeProjects.cta"), to: "/projects" },
       color: "#4361EE",
     },
     {
       label: t("home.stats.openTasks.label"),
       value: isTasksLoading ? null : openTaskCount,
-      cta: firstSessionId
-        ? { label: t("home.stats.openTasks.cta"), to: `/sessions/${firstSessionId}` }
+      cta: firstProjectId
+        ? { label: t("home.stats.openTasks.cta"), to: `/projects/${firstProjectId}` }
         : undefined,
       color: "#a78bfa",
     },
@@ -274,7 +274,7 @@ const Home: React.FC = () => {
         </Grid>
 
         {/* Activity: Transcripts + Tasks */}
-        {(sessions.length > 0 || isSessionsLoading) && (
+        {(projects.length > 0 || isProjectsLoading) && (
           <>
             <Typography variant="h5" sx={{ fontWeight: 700, mb: 2 }}>
               {t("home.activity.heading")}
@@ -292,10 +292,10 @@ const Home: React.FC = () => {
                       <Typography variant="h6" sx={{ fontWeight: 600 }}>
                         {t("home.transcripts.title")}
                       </Typography>
-                      {firstSessionId && (
+                      {firstProjectId && (
                         <Button
                           component={RouterLink}
-                          to={`/sessions/${firstSessionId}/info#transcripts`}
+                          to={`/projects/${firstProjectId}/info#transcripts`}
                           size="small"
                           startIcon={<DescriptionIcon fontSize="small" />}
                         >
@@ -366,10 +366,10 @@ const Home: React.FC = () => {
                       <Typography variant="h6" sx={{ fontWeight: 600 }}>
                         {t("home.tasks.title")}
                       </Typography>
-                      {firstSessionId && (
+                      {firstProjectId && (
                         <Button
                           component={RouterLink}
-                          to={`/sessions/${firstSessionId}`}
+                          to={`/projects/${firstProjectId}`}
                           size="small"
                           startIcon={<ListAltIcon fontSize="small" />}
                         >
@@ -515,7 +515,7 @@ const Home: React.FC = () => {
         )}
 
         {/* Empty state */}
-        {!isLoadingAny && sessions.length === 0 && presentations.length === 0 && (
+        {!isLoadingAny && projects.length === 0 && presentations.length === 0 && (
           <Card
             variant="outlined"
             sx={{
@@ -545,7 +545,7 @@ const Home: React.FC = () => {
                 <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
                   <Button
                     component={RouterLink}
-                    to="/sessions?create=true"
+                    to="/projects?create=true"
                     variant="contained"
                     startIcon={<AddCircleOutlineIcon />}
                   >

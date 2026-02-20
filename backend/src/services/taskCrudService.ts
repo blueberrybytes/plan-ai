@@ -2,7 +2,7 @@ import { Prisma, Task, TaskPriority, TaskStatus } from "@prisma/client";
 import prisma from "../prisma/prismaClient";
 
 export interface TaskListOptions {
-  sessionId?: string;
+  projectId?: string;
   status?: TaskStatus;
   priority?: TaskPriority;
   page?: number;
@@ -20,7 +20,7 @@ export interface TaskListResult {
 }
 
 export interface CreateTaskInput {
-  sessionId: string;
+  projectId: string;
   title: string;
   description?: string | null;
   summary?: string | null;
@@ -64,8 +64,8 @@ export class TaskCrudService {
     const skip = (page - 1) * pageSize;
 
     const where: Prisma.TaskWhereInput = {
-      session: { userId },
-      ...(options.sessionId ? { sessionId: options.sessionId } : {}),
+      project: { userId },
+      ...(options.projectId ? { projectId: options.projectId } : {}),
       ...(options.status ? { status: options.status } : {}),
       ...(options.priority ? { priority: options.priority } : {}),
     };
@@ -88,7 +88,7 @@ export class TaskCrudService {
     const task = await prisma.task.findFirst({
       where: {
         id: taskId,
-        session: { userId },
+        project: { userId },
       },
       include: this.defaultTaskInclude,
     });
@@ -104,11 +104,11 @@ export class TaskCrudService {
     userId: string,
     input: CreateTaskInput,
   ): Promise<TaskWithRelations> {
-    await this.assertSessionBelongsToUser(userId, input.sessionId);
+    await this.assertProjectBelongsToUser(userId, input.projectId);
 
     const task = await prisma.task.create({
       data: {
-        sessionId: input.sessionId,
+        projectId: input.projectId,
         title: input.title,
         description: input.description ?? null,
         summary: input.summary ?? null,
@@ -190,14 +190,14 @@ export class TaskCrudService {
     await prisma.task.delete({ where: { id: taskId } });
   }
 
-  private async assertSessionBelongsToUser(userId: string, sessionId: string) {
-    const session = await prisma.session.findFirst({
-      where: { id: sessionId, userId },
+  private async assertProjectBelongsToUser(userId: string, projectId: string) {
+    const project = await prisma.project.findFirst({
+      where: { id: projectId, userId },
       select: { id: true },
     });
 
-    if (!session) {
-      throw { status: 404, message: "Session not found" };
+    if (!project) {
+      throw { status: 404, message: "Project not found" };
     }
   }
 

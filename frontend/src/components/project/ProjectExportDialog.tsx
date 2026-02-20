@@ -11,11 +11,11 @@ import {
   Stack,
   Typography,
 } from "@mui/material";
-import type { TaskResponse } from "../../store/apis/sessionApi";
+import type { TaskResponse } from "../../store/apis/projectApi";
 
 export type ExportFormat = "jira" | "csv" | "diagram" | "gantt";
 
-interface SessionExportDialogProps {
+interface ProjectExportDialogProps {
   open: boolean;
   onClose: () => void;
   onExport: (format: ExportFormat) => void;
@@ -24,7 +24,7 @@ interface SessionExportDialogProps {
 
 const formatSummary = (tasks: TaskResponse[]) => `${tasks.length} tasks ready for export`;
 
-const SessionExportDialog: React.FC<SessionExportDialogProps> = ({
+const ProjectExportDialog: React.FC<ProjectExportDialogProps> = ({
   open,
   onClose,
   onExport,
@@ -34,7 +34,7 @@ const SessionExportDialog: React.FC<SessionExportDialogProps> = ({
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle>Export session</DialogTitle>
+      <DialogTitle>Export project</DialogTitle>
       <DialogContent>
         <Stack spacing={2} sx={{ mb: 2 }}>
           <Typography variant="body2" color="text.secondary">
@@ -72,4 +72,4 @@ const SessionExportDialog: React.FC<SessionExportDialogProps> = ({
   );
 };
 
-export default SessionExportDialog;
+export default ProjectExportDialog;

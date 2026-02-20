@@ -19,7 +19,7 @@ import {
   DescriptionOutlined,
 } from "@mui/icons-material";
 import SidebarLayout from "../components/layout/SidebarLayout";
-import { useGetSessionQuery, useGetSessionTranscriptQuery } from "../store/apis/sessionApi";
+import { useGetProjectQuery, useGetProjectTranscriptQuery } from "../store/apis/projectApi";
 import { useTranslation } from "react-i18next";
 
 const formatDateTime = (value: string | null | undefined, fallback: string) => {
@@ -43,9 +43,9 @@ const prettyJson = (value: unknown, emptyFallback: string, errorFallback: string
   }
 };
 
-const SessionTranscriptDetail: React.FC = () => {
+const ProjectTranscriptDetail: React.FC = () => {
   const params = useParams();
-  const sessionId = params.sessionId ?? null;
+  const projectId = params.projectId ?? null;
   const transcriptId = params.transcriptId ?? null;
   const { t } = useTranslation();
 
@@ -53,7 +53,7 @@ const SessionTranscriptDetail: React.FC = () => {
     isLoading: isSessionLoading,
     error: sessionError,
     refetch: refetchSession,
-  } = useGetSessionQuery(sessionId ?? "", { skip: !sessionId });
+  } = useGetProjectQuery(projectId ?? "", { skip: !projectId });
 
   const {
     data: transcriptData,
@@ -61,17 +61,17 @@ const SessionTranscriptDetail: React.FC = () => {
     isFetching: isTranscriptFetching,
     error: transcriptError,
     refetch: refetchTranscript,
-  } = useGetSessionTranscriptQuery(
-    { sessionId: sessionId ?? "", transcriptId: transcriptId ?? "" },
-    { skip: !sessionId || !transcriptId },
+  } = useGetProjectTranscriptQuery(
+    { projectId: projectId ?? "", transcriptId: transcriptId ?? "" },
+    { skip: !projectId || !transcriptId },
   );
 
-  if (!sessionId) {
-    return <Navigate to="/sessions" replace />;
+  if (!projectId) {
+    return <Navigate to="/projects" replace />;
   }
 
   if (!transcriptId) {
-    return <Navigate to={`/sessions/${sessionId}/info`} replace />;
+    return <Navigate to={`/projects/${projectId}/info`} replace />;
   }
 
   const transcript = transcriptData?.data ?? null;
@@ -94,13 +94,13 @@ const SessionTranscriptDetail: React.FC = () => {
         return (sessionError.data as { message?: string }).message;
       }
       return typeof sessionError.status === "number"
-        ? t("sessionTranscriptDetail.messages.sessionErrorStatus", { status: sessionError.status })
-        : t("sessionTranscriptDetail.messages.sessionErrorFallback");
+        ? t("projectTranscriptDetail.messages.sessionErrorStatus", { status: sessionError.status })
+        : t("projectTranscriptDetail.messages.sessionErrorFallback");
     }
 
     return (
       (sessionError as { message?: string }).message ??
-      t("sessionTranscriptDetail.messages.sessionErrorFallback")
+      t("projectTranscriptDetail.messages.sessionErrorFallback")
     );
   })();
 
@@ -122,15 +122,15 @@ const SessionTranscriptDetail: React.FC = () => {
         return (transcriptError.data as { message?: string }).message;
       }
       return typeof transcriptError.status === "number"
-        ? t("sessionTranscriptDetail.messages.transcriptErrorStatus", {
+        ? t("projectTranscriptDetail.messages.transcriptErrorStatus", {
             status: transcriptError.status,
           })
-        : t("sessionTranscriptDetail.messages.transcriptErrorFallback");
+        : t("projectTranscriptDetail.messages.transcriptErrorFallback");
     }
 
     return (
       (transcriptError as { message?: string }).message ??
-      t("sessionTranscriptDetail.messages.transcriptErrorFallback")
+      t("projectTranscriptDetail.messages.transcriptErrorFallback")
     );
   })();
 
@@ -152,41 +152,41 @@ const SessionTranscriptDetail: React.FC = () => {
       >
         <Stack direction="row" alignItems="center" spacing={2}>
           <Breadcrumbs
-            aria-label={t("sessionTranscriptDetail.breadcrumbs.aria")}
+            aria-label={t("projectTranscriptDetail.breadcrumbs.aria")}
             sx={{ flexGrow: 1 }}
           >
-            <Link component={RouterLink} underline="hover" color="inherit" to="/sessions">
-              {t("sessionTranscriptDetail.breadcrumbs.sessions")}
+            <Link component={RouterLink} underline="hover" color="inherit" to="/projects">
+              {t("projectTranscriptDetail.breadcrumbs.sessions")}
             </Link>
             <Link
               component={RouterLink}
               underline="hover"
               color="inherit"
-              to={`/sessions/${sessionId}`}
+              to={`/projects/${projectId}`}
             >
-              {t("sessionTranscriptDetail.breadcrumbs.workspace")}
+              {t("projectTranscriptDetail.breadcrumbs.workspace")}
             </Link>
             <Link
               component={RouterLink}
               underline="hover"
               color="inherit"
-              to={`/sessions/${sessionId}/info`}
+              to={`/projects/${projectId}/info`}
             >
-              {t("sessionTranscriptDetail.breadcrumbs.info")}
+              {t("projectTranscriptDetail.breadcrumbs.info")}
             </Link>
             <Typography color="text.primary">
-              {t("sessionTranscriptDetail.breadcrumbs.transcript")}
+              {t("projectTranscriptDetail.breadcrumbs.transcript")}
             </Typography>
           </Breadcrumbs>
 
           <Stack direction="row" spacing={1}>
             <Button
               component={RouterLink}
-              to={`/sessions/${sessionId}/info`}
+              to={`/projects/${projectId}/info`}
               variant="outlined"
               startIcon={<ArrowBackIcon />}
             >
-              {t("sessionTranscriptDetail.buttons.backToInfo")}
+              {t("projectTranscriptDetail.buttons.backToInfo")}
             </Button>
             <Button
               variant="outlined"
@@ -195,7 +195,7 @@ const SessionTranscriptDetail: React.FC = () => {
               onClick={handleRefresh}
               disabled={isTranscriptFetching || isSessionLoading}
             >
-              {t("sessionTranscriptDetail.buttons.refresh")}
+              {t("projectTranscriptDetail.buttons.refresh")}
             </Button>
           </Stack>
         </Stack>
@@ -208,7 +208,7 @@ const SessionTranscriptDetail: React.FC = () => {
           <Alert severity="error">{transcriptErrorMessage}</Alert>
         ) : !transcript ? (
           <Alert severity="warning">
-            {t("sessionTranscriptDetail.messages.transcriptNotFound")}
+            {t("projectTranscriptDetail.messages.transcriptNotFound")}
           </Alert>
         ) : (
           <Stack spacing={3}>
@@ -217,7 +217,7 @@ const SessionTranscriptDetail: React.FC = () => {
                 <Stack spacing={2}>
                   <Stack direction="row" spacing={1} alignItems="center">
                     <Typography variant="h4" sx={{ fontWeight: 700 }}>
-                      {transcript.title ?? t("sessionTranscriptDetail.messages.untitled")}
+                      {transcript.title ?? t("projectTranscriptDetail.messages.untitled")}
                     </Typography>
                     {transcript.source ? (
                       <Chip
@@ -235,34 +235,34 @@ const SessionTranscriptDetail: React.FC = () => {
                   <Stack direction={{ xs: "column", md: "row" }} spacing={3}>
                     <Stack spacing={0.5}>
                       <Typography variant="overline" color="text.secondary">
-                        {t("sessionTranscriptDetail.meta.recorded")}
+                        {t("projectTranscriptDetail.meta.recorded")}
                       </Typography>
                       <Typography variant="body2">
                         {formatDateTime(
                           transcript.recordedAt,
-                          t("sessionTranscriptDetail.table.missing"),
+                          t("projectTranscriptDetail.table.missing"),
                         )}
                       </Typography>
                     </Stack>
                     <Stack spacing={0.5}>
                       <Typography variant="overline" color="text.secondary">
-                        {t("sessionTranscriptDetail.meta.created")}
+                        {t("projectTranscriptDetail.meta.created")}
                       </Typography>
                       <Typography variant="body2">
                         {formatDateTime(
                           transcript.createdAt,
-                          t("sessionTranscriptDetail.table.missing"),
+                          t("projectTranscriptDetail.table.missing"),
                         )}
                       </Typography>
                     </Stack>
                     <Stack spacing={0.5}>
                       <Typography variant="overline" color="text.secondary">
-                        {t("sessionTranscriptDetail.meta.updated")}
+                        {t("projectTranscriptDetail.meta.updated")}
                       </Typography>
                       <Typography variant="body2">
                         {formatDateTime(
                           transcript.updatedAt,
-                          t("sessionTranscriptDetail.table.missing"),
+                          t("projectTranscriptDetail.table.missing"),
                         )}
                       </Typography>
                     </Stack>
@@ -271,7 +271,7 @@ const SessionTranscriptDetail: React.FC = () => {
                   {transcript.summary ? (
                     <Box>
                       <Typography variant="overline" color="text.secondary">
-                        {t("sessionTranscriptDetail.sections.summary")}
+                        {t("projectTranscriptDetail.sections.summary")}
                       </Typography>
                       <Typography variant="body1" color="text.primary">
                         {transcript.summary}
@@ -286,7 +286,7 @@ const SessionTranscriptDetail: React.FC = () => {
               <CardContent>
                 <Stack spacing={2}>
                   <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                    {t("sessionTranscriptDetail.sections.transcript")}
+                    {t("projectTranscriptDetail.sections.transcript")}
                   </Typography>
                   <Box
                     component="pre"
@@ -299,7 +299,7 @@ const SessionTranscriptDetail: React.FC = () => {
                       fontFamily: "monospace",
                     }}
                   >
-                    {transcript.transcript ?? t("sessionTranscriptDetail.messages.noText")}
+                    {transcript.transcript ?? t("projectTranscriptDetail.messages.noText")}
                   </Box>
                 </Stack>
               </CardContent>
@@ -309,7 +309,7 @@ const SessionTranscriptDetail: React.FC = () => {
               <CardContent>
                 <Stack spacing={2}>
                   <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                    {t("sessionTranscriptDetail.sections.metadata")}
+                    {t("projectTranscriptDetail.sections.metadata")}
                   </Typography>
                   <Box
                     component="pre"
@@ -323,8 +323,8 @@ const SessionTranscriptDetail: React.FC = () => {
                   >
                     {prettyJson(
                       transcript.metadata,
-                      t("sessionTranscriptDetail.messages.noMetadata"),
-                      t("sessionTranscriptDetail.messages.metadataError"),
+                      t("projectTranscriptDetail.messages.noMetadata"),
+                      t("projectTranscriptDetail.messages.metadataError"),
                     )}
                   </Box>
                 </Stack>
@@ -339,4 +339,4 @@ const SessionTranscriptDetail: React.FC = () => {
   );
 };
 
-export default SessionTranscriptDetail;
+export default ProjectTranscriptDetail;

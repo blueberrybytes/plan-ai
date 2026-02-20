@@ -179,8 +179,8 @@ const Chat: React.FC = () => {
   const messages = threadData?.messages ?? [];
 
   return (
-    <SidebarLayout>
-      <Box sx={{ display: "flex", height: "calc(100vh - 0px)" }}>
+    <SidebarLayout fullHeight>
+      <Box sx={{ display: "flex", height: "100%" }}>
         <ChatSidebar
           threads={threads ?? []}
           selectedThreadId={selectedThreadId}

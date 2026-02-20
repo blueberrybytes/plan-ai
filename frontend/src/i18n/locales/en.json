@@ -70,16 +70,16 @@
   "home": {
     "heading": "Welcome back",
     "subheading": "Your AI workspace — sessions, tasks, slides, and chat, all in one place.",
-    "fallbackSessionTitle": "your sessions",
+    "fallbackProjectTitle": "your projects",
     "greeting": {
       "morning": "Good morning",
       "afternoon": "Good afternoon",
       "evening": "Good evening"
     },
     "stats": {
-      "activeSessions": {
-        "label": "Sessions",
-        "cta": "View sessions"
+      "activeProjects": {
+        "label": "Projects",
+        "cta": "View projects"
       },
       "transcriptsProcessed": {
         "label": "Transcripts processed",
@@ -95,10 +95,10 @@
       }
     },
     "quickActions": {
-      "heading": "Quick actions",
+      "heading": "Quick Actions",
       "newSession": {
-        "title": "New session",
-        "description": "Upload a transcript and generate tasks automatically with AI."
+        "title": "New project",
+        "description": "Upload a transcript and automatically generate AI tasks."
       },
       "createSlides": {
         "title": "Create slides",
@@ -123,9 +123,9 @@
     },
     "emptyState": {
       "title": "Your workspace is ready",
-      "description": "Start by creating a session to process a transcript, or jump straight into generating an AI slide deck.",
-      "newSession": "New session",
-      "createSlides": "Create slides"
+      "description": "Start by creating a project to process a transcript, or jump straight into generating an AI slide deck.",
+      "newSession": "New project",
+      "createSlides": "Create Slides"
     },
     "transcripts": {
       "title": "Recent transcripts",
@@ -261,7 +261,8 @@
       "uploading": "Uploading...",
       "view": "View",
       "back": "Back to contexts",
-      "cancel": "Cancel"
+      "cancel": "Cancel",
+      "delete": "Delete context"
     },
     "list": {
       "label": "YOUR CONTEXTS",
@@ -293,8 +294,10 @@
     "dialog": {
       "title": {
         "create": "Create context",
-        "edit": "Edit context"
+        "edit": "Edit context",
+        "delete": "Delete context"
       },
+      "deleteWarning": "Are you sure you want to delete \"{{name}}\"? This will remove all its files and cannot be undone.",
       "primary": {
         "create": "Create",
         "save": "Save",
@@ -318,7 +321,9 @@
       "uploadError": "Failed to upload file. Please try again.",
       "deleteSuccess": "File deleted",
       "deleteError": "Failed to delete file. Please try again.",
-      "contextError": "Failed to load context. Please try refreshing the page."
+      "contextError": "Failed to load context. Please try refreshing the page.",
+      "deleteContextSuccess": "Context deleted",
+      "deleteContextError": "Failed to delete context. Please try again."
     }
   },
   "integrationsPage": {
@@ -451,12 +456,12 @@
       "terms": "Terms of Service"
     }
   },
-  "sessionDetails": {
+  "projectDetails": {
     "breadcrumbs": {
       "aria": "Breadcrumb navigation",
       "home": "Home",
-      "sessions": "Sessions",
-      "fallback": "Session"
+      "sessions": "Projects",
+      "fallback": "Project"
     },
     "subtitle": "Review session metadata and track its status.",
     "buttons": {
@@ -468,19 +473,19 @@
       "createTask": "Create task"
     },
     "sections": {
-      "actions": "Session actions",
+      "actions": "Project actions",
       "tasksOverviewTitle": "Tasks Overview",
       "tasksOverviewDescription": "Visualise work with a kanban board or dependency diagram. Session details and transcripts live in the info page."
     },
     "tabs": {
-      "aria": "Session task view",
+      "aria": "Project task view",
       "board": "Board",
       "diagram": "Dependency diagram",
       "timeline": "Timeline"
     },
     "messages": {
       "noTasks": "No tasks yet. Create tasks to populate the board.",
-      "sessionNotFound": "Session not found.",
+      "projectNotFound": "Project not found.",
       "deleteSuccess": "Task deleted",
       "deleteError": "Failed to delete task. Please try again.",
       "tasksErrorFallback": "Failed to load tasks.",
@@ -497,11 +502,11 @@
       }
     }
   },
-  "sessionInfo": {
+  "projectInfo": {
     "breadcrumbs": {
       "aria": "Breadcrumb navigation",
-      "sessions": "Sessions",
-      "workspace": "Session workspace",
+      "sessions": "Projects",
+      "workspace": "Project workspace",
       "info": "Information"
     },
     "buttons": {
@@ -531,20 +536,20 @@
       "missing": "—"
     },
     "messages": {
-      "sessionErrorFallback": "Failed to load session.",
-      "sessionErrorStatus": "Session error {{status}}",
+      "projectErrorFallback": "Failed to load project.",
+      "projectErrorStatus": "Project error {{status}}",
       "transcriptsErrorFallback": "Failed to load transcripts.",
       "transcriptsErrorStatus": "Transcripts error {{status}}",
-      "sessionNotFound": "Session not found.",
+      "projectNotFound": "Project not found.",
       "noTranscripts": "No transcripts have been captured for this session yet.",
       "noMetadata": "No metadata provided."
     }
   },
-  "sessionTranscriptDetail": {
+  "projectTranscriptDetail": {
     "breadcrumbs": {
       "aria": "Breadcrumb navigation",
-      "sessions": "Sessions",
-      "workspace": "Session workspace",
+      "sessions": "Projects",
+      "workspace": "Project workspace",
       "info": "Information",
       "transcript": "Transcript"
     },
@@ -567,8 +572,8 @@
       "noSummary": "No summary"
     },
     "messages": {
-      "sessionErrorFallback": "Failed to load session.",
-      "sessionErrorStatus": "Session error {{status}}",
+      "projectErrorFallback": "Failed to load project.",
+      "projectErrorStatus": "Project error {{status}}",
       "transcriptErrorFallback": "Failed to load transcript.",
       "transcriptErrorStatus": "Transcript error {{status}}",
       "transcriptNotFound": "Transcript not found.",
@@ -582,7 +587,7 @@
     "nav": {
       "home": "Home",
       "chat": "Chat",
-      "sessions": "Sessions",
+      "sessions": "Projects",
       "contexts": "Contexts",
       "slides": "Slides",
       "integrations": "Integrations"
@@ -636,7 +641,7 @@
       "updated": "Updated {{timestamp}}"
     }
   },
-  "sessionTranscriptDialog": {
+  "projectTranscriptDialog": {
     "title": "Generate tasks",
     "modeLabel": "Select input method",
     "uploadLabel": "Upload files (PDF / DOCX)",
@@ -830,5 +835,11 @@
       "showcase": "Showcase",
       "stats": "Key Stats"
     }
+  },
+  "notFound": {
+    "title": "Page Not Found",
+    "heading": "Oops! Page not found",
+    "description": "The page you are looking for doesn't exist or has been moved.",
+    "backToHome": "Back to Home"
   }
 }

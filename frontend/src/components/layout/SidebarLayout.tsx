@@ -26,7 +26,7 @@ import {
 } from "@mui/icons-material";
 import { NavLink, useLocation } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
-import { selectAvatar, selectUser } from "../../store/slices/session/sessionSelector";
+import { selectAvatar, selectUser } from "../../store/slices/auth/authSelector";
 import { useBrandIdentity } from "../../hooks/useBrandIdentity";
 import { selectSidebarCollapsed } from "../../store/slices/app/appSelector";
 import { toggleSidebar } from "../../store/slices/app/appSlice";
@@ -34,6 +34,8 @@ import { useTranslation } from "react-i18next";
 
 type SidebarLayoutProps = {
   children: React.ReactNode;
+  /** Set to true for pages that manage their own full-height layout (e.g. split panels) */
+  fullHeight?: boolean;
 };
 
 type NavItem = {
@@ -46,7 +48,7 @@ const navItems: NavItem[] = [
   { labelKey: "sidebarLayout.nav.home", path: "/home", icon: <DashboardIcon fontSize="small" /> },
   {
     labelKey: "sidebarLayout.nav.sessions",
-    path: "/sessions",
+    path: "/projects",
     icon: <ViewKanbanIcon fontSize="small" />,
   },
   {
@@ -71,7 +73,7 @@ const navItems: NavItem[] = [
   },
 ];
 
-const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children }) => {
+const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children, fullHeight = false }) => {
   const location = useLocation();
   const dispatch = useDispatch();
   const user = useSelector(selectUser);
@@ -108,7 +110,8 @@ const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children }) => {
     <Box
       sx={{
         display: "flex",
-        minHeight: "100vh",
+        height: "100vh",
+        overflow: "hidden",
         bgcolor: "background.default",
       }}
     >
@@ -294,6 +297,8 @@ const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children }) => {
         sx={{
           flexGrow: 1,
           minWidth: 0,
+          height: "100%",
+          overflow: fullHeight ? "hidden" : "auto",
           bgcolor: "#0b0d11",
           position: "relative",
           "&::before": {

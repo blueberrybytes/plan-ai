@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
-import { LoginEmail, SESSION, SessionStateType, UserApp } from "./sessionTypes";
+import { LoginEmail, SESSION, SessionStateType, UserApp } from "./authTypes";
 import { AppExceptionType } from "../../../types/ErrorTypes";
 import { User } from "../../../types/UserTypes";
 
@@ -13,7 +13,7 @@ const initialState: SessionStateType = {
   errorSession: null,
 };
 
-export const sessionSlice = createSlice({
+export const authSlice = createSlice({
   name: SESSION,
   initialState,
   reducers: {
@@ -88,6 +88,6 @@ export const {
   setUser,
   setUserDb,
   logout,
-} = sessionSlice.actions;
+} = authSlice.actions;
 
-export default sessionSlice.reducer;
+export default authSlice.reducer;

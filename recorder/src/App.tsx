@@ -30,7 +30,7 @@ const AppRoutes: React.FC = () => {
       <Route path="/login" element={user ? <Navigate to="/" replace /> : <Login />} />
       <Route path="/" element={user ? <Home /> : <Navigate to="/login" replace />} />
       <Route
-        path="/recording/:sessionId"
+        path="/recording/:projectId"
         element={user ? <Recording /> : <Navigate to="/login" replace />}
       />
       <Route path="*" element={<Navigate to="/" replace />} />

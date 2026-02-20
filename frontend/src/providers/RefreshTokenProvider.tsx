@@ -1,9 +1,9 @@
 import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { auth } from "../firebase/firebase";
-import { selectUser } from "../store/slices/session/sessionSelector";
+import { selectUser } from "../store/slices/auth/authSelector";
 import { TokenService } from "../services/tokenService";
-import { logout } from "../store/slices/session/sessionSlice";
+import { logout } from "../store/slices/auth/authSlice";
 
 interface RefreshTokenContextType {
   isRefreshing: boolean;

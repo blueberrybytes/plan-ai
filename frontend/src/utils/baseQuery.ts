@@ -2,9 +2,9 @@
 import { fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 import type { BaseQueryFn, FetchArgs, FetchBaseQueryError } from "@reduxjs/toolkit/query";
 import { RootState } from "../store/store";
-import { selectUser } from "../store/slices/session/sessionSelector";
+import { selectUser } from "../store/slices/auth/authSelector";
 import { TokenService } from "../services/tokenService";
-import { logout } from "../store/slices/session/sessionSlice";
+import { logout } from "../store/slices/auth/authSlice";
 import { setToastMessage } from "../store/slices/app/appSlice";
 import { clientLogger } from "./clientLogger";
 import i18n from "../i18n";

@@ -10,9 +10,9 @@ import {
   Tooltip,
   Bar,
 } from "recharts";
-import type { TaskResponse, TaskStatusSchema } from "../../store/apis/sessionApi";
+import type { TaskResponse, TaskStatusSchema } from "../../store/apis/projectApi";
 
-type SessionTaskGanttProps = {
+type ProjectTaskGanttProps = {
   tasks: TaskResponse[];
   onTaskClick?: (task: TaskResponse) => void;
 };
@@ -33,7 +33,7 @@ const MIN_DURATION_MS = 60 * 60 * 1000; // 1 hour fallback
 
 const formatDateTime = (value: number) => new Date(value).toLocaleString();
 
-const SessionTaskGantt: React.FC<SessionTaskGanttProps> = ({ tasks, onTaskClick }) => {
+const ProjectTaskGantt: React.FC<ProjectTaskGanttProps> = ({ tasks, onTaskClick }) => {
   const theme = useTheme();
 
   const parseDate = (value: string | null | undefined): number | null => {
@@ -192,4 +192,4 @@ const SessionTaskGantt: React.FC<SessionTaskGanttProps> = ({ tasks, onTaskClick 
   );
 };
 
-export default SessionTaskGantt;
+export default ProjectTaskGantt;

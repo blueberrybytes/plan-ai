@@ -16,9 +16,9 @@ import {
   TaskPrioritySchema,
   TaskResponse,
   TaskStatusSchema,
-  useCreateSessionTaskMutation,
-  useUpdateSessionTaskMutation,
-} from "../../store/apis/sessionApi";
+  useCreateProjectTaskMutation,
+  useUpdateProjectTaskMutation,
+} from "../../store/apis/projectApi";
 import { setToastMessage } from "../../store/slices/app/appSlice";
 import type { components } from "../../types/api";
 
@@ -53,28 +53,28 @@ type RichTask = TaskResponse & {
   metadata?: components["schemas"]["InputJsonValue"] | null;
 };
 
-interface SessionTaskFormDialogProps {
+interface ProjectTaskFormDialogProps {
   open: boolean;
   mode: "create" | "edit";
-  sessionId: string;
+  projectId: string;
   tasks: TaskResponse[];
   task?: TaskResponse | null;
   onClose: () => void;
   onSuccess: (task: TaskResponse) => void;
 }
 
-const SessionTaskFormDialog: React.FC<SessionTaskFormDialogProps> = ({
+const ProjectTaskFormDialog: React.FC<ProjectTaskFormDialogProps> = ({
   open,
   mode,
-  sessionId,
+  projectId,
   tasks,
   task,
   onClose,
   onSuccess,
 }) => {
   const dispatch = useDispatch();
-  const [createTask, { isLoading: isCreating }] = useCreateSessionTaskMutation();
-  const [updateTask, { isLoading: isUpdating }] = useUpdateSessionTaskMutation();
+  const [createTask, { isLoading: isCreating }] = useCreateProjectTaskMutation();
+  const [updateTask, { isLoading: isUpdating }] = useUpdateProjectTaskMutation();
 
   const [title, setTitle] = React.useState("");
   const [summary, setSummary] = React.useState("");
@@ -177,21 +177,21 @@ const SessionTaskFormDialog: React.FC<SessionTaskFormDialogProps> = ({
     try {
       if (mode === "create") {
         const response = await createTask({
-          sessionId,
+          projectId,
           body: basePayload,
         }).unwrap();
-        if (response.data) {
+        if (response) {
           dispatch(
             setToastMessage({
               severity: "success",
               message: "Task created successfully",
             }),
           );
-          onSuccess(response.data);
+          onSuccess(response);
         }
       } else if (mode === "edit" && task) {
         const response = await updateTask({
-          path: { sessionId, taskId: task.id },
+          path: { projectId, taskId: task.id },
           body: basePayload,
         }).unwrap();
         if (response.data) {
@@ -337,4 +337,4 @@ const SessionTaskFormDialog: React.FC<SessionTaskFormDialogProps> = ({
   );
 };
 
-export default SessionTaskFormDialog;
+export default ProjectTaskFormDialog;

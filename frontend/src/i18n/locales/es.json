@@ -70,16 +70,16 @@
   "home": {
     "heading": "Bienvenido de nuevo",
     "subheading": "Tu workspace de IA — sesiones, tareas, slides y chat, todo en un solo lugar.",
-    "fallbackSessionTitle": "tus sesiones",
+    "fallbackProjectTitle": "tus proyectos",
     "greeting": {
       "morning": "Buenos días",
       "afternoon": "Buenas tardes",
       "evening": "Buenas noches"
     },
     "stats": {
-      "activeSessions": {
-        "label": "Sesiones",
-        "cta": "Ver sesiones"
+      "activeProjects": {
+        "label": "Proyectos",
+        "cta": "Ver proyectos"
       },
       "transcriptsProcessed": {
         "label": "Transcripciones procesadas",
@@ -97,7 +97,7 @@
     "quickActions": {
       "heading": "Acciones rápidas",
       "newSession": {
-        "title": "Nueva sesión",
+        "title": "Nuevo proyecto",
         "description": "Sube una transcripción y genera tareas automáticamente con IA."
       },
       "createSlides": {
@@ -123,8 +123,8 @@
     },
     "emptyState": {
       "title": "Tu workspace está listo",
-      "description": "Empieza creando una sesión para procesar una transcripción, o genera directamente un slide deck con IA.",
-      "newSession": "Nueva sesión",
+      "description": "Empieza creando un proyecto para procesar una transcripción, o genera directamente un slide deck con IA.",
+      "newSession": "Nuevo proyecto",
       "createSlides": "Crear slides"
     },
     "transcripts": {
@@ -261,7 +261,8 @@
       "uploading": "Subiendo...",
       "view": "Ver",
       "back": "Volver a contextos",
-      "cancel": "Cancelar"
+      "cancel": "Cancelar",
+      "delete": "Eliminar contexto"
     },
     "list": {
       "label": "TUS CONTEXTOS",
@@ -293,8 +294,10 @@
     "dialog": {
       "title": {
         "create": "Crear contexto",
-        "edit": "Editar contexto"
+        "edit": "Editar contexto",
+        "delete": "Eliminar contexto"
       },
+      "deleteWarning": "¿Seguro que quieres eliminar \"{{name}}\"? Se borrarán todos sus archivos y no se puede deshacer.",
       "primary": {
         "create": "Crear",
         "save": "Guardar",
@@ -318,7 +321,9 @@
       "uploadError": "No se pudo subir el archivo. Inténtalo de nuevo.",
       "deleteSuccess": "Archivo eliminado",
       "deleteError": "No se pudo eliminar el archivo. Inténtalo de nuevo.",
-      "contextError": "No se pudo cargar el contexto. Prueba a actualizar la página."
+      "contextError": "No se pudo cargar el contexto. Prueba a actualizar la página.",
+      "deleteContextSuccess": "Contexto eliminado",
+      "deleteContextError": "No se pudo eliminar el contexto. Inténtalo de nuevo."
     }
   },
   "integrationsPage": {
@@ -451,7 +456,7 @@
       "terms": "Términos de servicio"
     }
   },
-  "sessionDetails": {
+  "projectDetails": {
     "breadcrumbs": {
       "aria": "Navegación de migas de pan",
       "home": "Inicio",
@@ -497,7 +502,7 @@
       }
     }
   },
-  "sessionInfo": {
+  "projectInfo": {
     "breadcrumbs": {
       "aria": "Navegación de migas de pan",
       "sessions": "Sesiones",
@@ -540,7 +545,7 @@
       "noMetadata": "No se proporcionaron metadatos."
     }
   },
-  "sessionTranscriptDetail": {
+  "projectTranscriptDetail": {
     "breadcrumbs": {
       "aria": "Navegación de migas de pan",
       "sessions": "Sesiones",
@@ -636,7 +641,7 @@
       "updated": "Actualizado {{timestamp}}"
     }
   },
-  "sessionTranscriptDialog": {
+  "projectTranscriptDialog": {
     "title": "Generar tareas",
     "modeLabel": "Seleccionar método de entrada",
     "uploadLabel": "Subir archivos (PDF / DOCX)",
@@ -830,5 +835,11 @@
       "showcase": "Exhibición",
       "stats": "Estadísticas Clave"
     }
+  },
+  "notFound": {
+    "title": "Página no encontrada",
+    "heading": "¡Vaya! Página no encontrada",
+    "description": "La página que buscas no existe o ha sido movida.",
+    "backToHome": "Volver al inicio"
   }
 }

@@ -1,7 +1,7 @@
 import { auth } from "../firebase/firebase";
 import { Dispatch } from "@reduxjs/toolkit";
-import { setUser, logout } from "../store/slices/session/sessionSlice";
-import { UserApp } from "../store/slices/session/sessionTypes";
+import { setUser, logout } from "../store/slices/auth/authSlice";
+import { UserApp } from "../store/slices/auth/authTypes";
 
 // Define user information type for Redux store updates
 type UserInfo = UserApp;
