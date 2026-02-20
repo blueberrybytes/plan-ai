@@ -14,10 +14,13 @@ export interface AudioRecorderOptions {
  *
  * System audio is captured via Electron's desktopCapturer (IPC) using a
  * chromeMediaSourceId. The two streams are mixed using the Web Audio API
- * before being fed into MediaRecorder at 30-second intervals.
+ * before being fed into MediaRecorder at 10-second intervals.
  */
 export class AudioRecorder {
-  private mediaRecorder: MediaRecorder | null = null;
+  private activeRecorders: Set<MediaRecorder> = new Set();
+  private currentRecorder: MediaRecorder | null = null;
+  private chunkTimer: ReturnType<typeof setTimeout> | null = null;
+  private mimeType = "";
   private audioContext: AudioContext | null = null;
   private combinedStream: MediaStream | null = null;
   private state: RecorderState = "idle";
@@ -70,41 +73,69 @@ export class AudioRecorder {
 
       this.combinedStream = destination.stream;
 
-      // 4. MediaRecorder — chunk every 30 seconds
-      const mimeType = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
+      // 4. Initialize first recorder chunk
+      this.mimeType = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
         ? "audio/webm;codecs=opus"
         : "audio/webm";
 
-      this.mediaRecorder = new MediaRecorder(this.combinedStream, { mimeType });
-
-      this.mediaRecorder.ondataavailable = (event) => {
-        if (event.data && event.data.size > 0) {
-          this.options.onChunk(event.data);
-        }
-      };
-
-      this.mediaRecorder.onstop = () => {
-        this.cleanup();
-        this.options.onStop();
-      };
-
-      this.mediaRecorder.onerror = (event) => {
-        this.options.onError(new Error(`MediaRecorder error: ${String(event)}`));
-      };
-
-      // Start with 30-second timeslice chunks
-      this.mediaRecorder.start(30_000);
       this.state = "recording";
+      this.startNextChunk();
     } catch (err) {
       this.cleanup();
       this.options.onError(err instanceof Error ? err : new Error("Failed to start recording"));
     }
   }
 
+  private startNextChunk(): void {
+    if (this.state !== "recording" || !this.combinedStream) return;
+
+    const recorder = new MediaRecorder(this.combinedStream, { mimeType: this.mimeType });
+    this.activeRecorders.add(recorder);
+    this.currentRecorder = recorder;
+
+    recorder.ondataavailable = (event) => {
+      // A bare WebM header with no audio data is usually small (e.g. under ~200-300 bytes)
+      // Only emit chunks that have enough substance to be worth transcribing.
+      if (event.data && event.data.size > 1000) {
+        this.options.onChunk(event.data);
+      }
+    };
+
+    recorder.onstop = () => {
+      this.activeRecorders.delete(recorder);
+      if (this.state === "stopping" && this.activeRecorders.size === 0) {
+        this.cleanup();
+        this.options.onStop();
+      }
+    };
+
+    recorder.onerror = (event) => {
+      this.options.onError(new Error(`MediaRecorder error: ${String(event)}`));
+    };
+
+    recorder.start();
+
+    // Rotate to the next chunk in 10 seconds
+    this.chunkTimer = setTimeout(() => {
+      if (this.state !== "recording") return;
+      if (recorder.state === "recording") {
+        recorder.stop();
+      }
+      this.startNextChunk();
+    }, 10_000);
+  }
+
   stop(): void {
-    if (this.state !== "recording" || !this.mediaRecorder) return;
+    if (this.state !== "recording") return;
     this.state = "stopping";
-    this.mediaRecorder.stop();
+    if (this.chunkTimer) clearTimeout(this.chunkTimer);
+
+    if (this.currentRecorder && this.currentRecorder.state === "recording") {
+      this.currentRecorder.stop();
+    } else if (this.activeRecorders.size === 0) {
+      this.cleanup();
+      this.options.onStop();
+    }
   }
 
   private cleanup(): void {
@@ -112,7 +143,8 @@ export class AudioRecorder {
     this.audioContext = null;
     this.combinedStream?.getTracks().forEach((t) => t.stop());
     this.combinedStream = null;
-    this.mediaRecorder = null;
+    this.activeRecorders.clear();
+    this.currentRecorder = null;
     this.state = "idle";
   }
 }

@@ -7,6 +7,339 @@
 		"requestBodies": {},
 		"responses": {},
 		"schemas": {
+			"_36_Enums.TranscriptSource": {
+				"type": "string",
+				"enum": [
+					"MANUAL",
+					"RECORDING",
+					"UPLOAD",
+					"IMPORTED"
+				]
+			},
+			"TranscriptSource": {
+				"$ref": "#/components/schemas/_36_Enums.TranscriptSource"
+			},
+			"JsonValue": {
+				"anyOf": [
+					{
+						"type": "string"
+					},
+					{
+						"type": "number",
+						"format": "double"
+					},
+					{
+						"type": "boolean"
+					},
+					{
+						"$ref": "#/components/schemas/JsonObject"
+					},
+					{
+						"$ref": "#/components/schemas/JsonArray"
+					}
+				],
+				"nullable": true,
+				"description": "From https://github.com/sindresorhus/type-fest/\r\nMatches any valid JSON value."
+			},
+			"JsonObject": {
+				"properties": {},
+				"additionalProperties": {
+					"$ref": "#/components/schemas/JsonValue"
+				},
+				"type": "object",
+				"description": "From https://github.com/sindresorhus/type-fest/\r\nMatches a JSON object.\r\nThis type can be useful to enforce some input to be JSON-compatible or as a super-type to be extended from."
+			},
+			"JsonArray": {
+				"description": "From https://github.com/sindresorhus/type-fest/\r\nMatches a JSON array.",
+				"properties": {},
+				"type": "object",
+				"additionalProperties": false
+			},
+			"StandaloneTranscriptResponse": {
+				"properties": {
+					"id": {
+						"type": "string"
+					},
+					"projectId": {
+						"type": "string",
+						"nullable": true
+					},
+					"userId": {
+						"type": "string"
+					},
+					"title": {
+						"type": "string",
+						"nullable": true
+					},
+					"source": {
+						"$ref": "#/components/schemas/TranscriptSource"
+					},
+					"language": {
+						"type": "string",
+						"nullable": true
+					},
+					"summary": {
+						"type": "string",
+						"nullable": true
+					},
+					"transcript": {
+						"type": "string",
+						"nullable": true
+					},
+					"recordedAt": {
+						"type": "string",
+						"format": "date-time",
+						"nullable": true
+					},
+					"metadata": {
+						"allOf": [
+							{
+								"$ref": "#/components/schemas/JsonValue"
+							}
+						],
+						"nullable": true
+					},
+					"createdAt": {
+						"type": "string",
+						"format": "date-time"
+					},
+					"updatedAt": {
+						"type": "string",
+						"format": "date-time"
+					}
+				},
+				"required": [
+					"id",
+					"projectId",
+					"userId",
+					"title",
+					"source",
+					"language",
+					"summary",
+					"transcript",
+					"recordedAt",
+					"metadata",
+					"createdAt",
+					"updatedAt"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"StandaloneTranscriptListResponse": {
+				"properties": {
+					"transcripts": {
+						"items": {
+							"$ref": "#/components/schemas/StandaloneTranscriptResponse"
+						},
+						"type": "array"
+					},
+					"total": {
+						"type": "number",
+						"format": "double"
+					}
+				},
+				"required": [
+					"transcripts",
+					"total"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"ApiResponse_StandaloneTranscriptListResponse_": {
+				"properties": {
+					"message": {
+						"type": "string"
+					},
+					"data": {
+						"allOf": [
+							{
+								"$ref": "#/components/schemas/StandaloneTranscriptListResponse"
+							}
+						],
+						"nullable": true
+					},
+					"status": {
+						"type": "number",
+						"format": "double"
+					}
+				},
+				"required": [
+					"data",
+					"status"
+				],
+				"type": "object"
+			},
+			"ApiResponse_StandaloneTranscriptResponse_": {
+				"properties": {
+					"message": {
+						"type": "string"
+					},
+					"data": {
+						"allOf": [
+							{
+								"$ref": "#/components/schemas/StandaloneTranscriptResponse"
+							}
+						],
+						"nullable": true
+					},
+					"status": {
+						"type": "number",
+						"format": "double"
+					}
+				},
+				"required": [
+					"data",
+					"status"
+				],
+				"type": "object"
+			},
+			"InputJsonValue": {
+				"anyOf": [
+					{
+						"type": "string"
+					},
+					{
+						"type": "number",
+						"format": "double"
+					},
+					{
+						"type": "boolean"
+					},
+					{
+						"$ref": "#/components/schemas/InputJsonObject"
+					},
+					{
+						"$ref": "#/components/schemas/InputJsonArray"
+					},
+					{
+						"properties": {},
+						"type": "object"
+					}
+				],
+				"description": "Matches any valid value that can be used as an input for operations like\r\ncreate and update as the value of a JSON field. Unlike \\`JsonValue\\`, this\r\ntype allows read-only arrays and read-only object properties and disallows\r\n\\`null\\` at the top level.\r\n\r\n\\`null\\` cannot be used as the value of a JSON field because its meaning\r\nwould be ambiguous. Use \\`Prisma.JsonNull\\` to store the JSON null value or\r\n\\`Prisma.DbNull\\` to clear the JSON value and set the field to the database\r\nNULL value instead."
+			},
+			"InputJsonObject": {
+				"properties": {},
+				"additionalProperties": {
+					"$ref": "#/components/schemas/InputJsonValue"
+				},
+				"type": "object",
+				"description": "Matches a JSON object.\r\nUnlike \\`JsonObject\\`, this type allows undefined and read-only properties."
+			},
+			"InputJsonArray": {
+				"description": "Matches a JSON array.\r\nUnlike \\`JsonArray\\`, readonly arrays are assignable to this type.",
+				"properties": {},
+				"type": "object",
+				"additionalProperties": false
+			},
+			"CreateTranscriptInput": {
+				"properties": {
+					"projectId": {
+						"type": "string",
+						"nullable": true
+					},
+					"title": {
+						"type": "string",
+						"nullable": true
+					},
+					"source": {
+						"$ref": "#/components/schemas/TranscriptSource"
+					},
+					"content": {
+						"type": "string",
+						"nullable": true
+					},
+					"language": {
+						"type": "string",
+						"nullable": true
+					},
+					"summary": {
+						"type": "string",
+						"nullable": true
+					},
+					"recordedAt": {
+						"type": "string",
+						"format": "date-time",
+						"nullable": true
+					},
+					"metadata": {
+						"allOf": [
+							{
+								"$ref": "#/components/schemas/InputJsonValue"
+							}
+						],
+						"nullable": true
+					}
+				},
+				"type": "object",
+				"additionalProperties": false
+			},
+			"UpdateTranscriptInput": {
+				"properties": {
+					"title": {
+						"type": "string",
+						"nullable": true
+					},
+					"source": {
+						"$ref": "#/components/schemas/TranscriptSource"
+					},
+					"language": {
+						"type": "string",
+						"nullable": true
+					},
+					"summary": {
+						"type": "string",
+						"nullable": true
+					},
+					"transcript": {
+						"type": "string",
+						"nullable": true
+					},
+					"metadata": {
+						"allOf": [
+							{
+								"$ref": "#/components/schemas/InputJsonValue"
+							}
+						],
+						"nullable": true
+					},
+					"recordedAt": {
+						"type": "string",
+						"format": "date-time",
+						"nullable": true
+					}
+				},
+				"type": "object",
+				"additionalProperties": false
+			},
+			"ApiResponse__success-boolean__": {
+				"properties": {
+					"message": {
+						"type": "string"
+					},
+					"data": {
+						"properties": {
+							"success": {
+								"type": "boolean"
+							}
+						},
+						"required": [
+							"success"
+						],
+						"type": "object",
+						"nullable": true
+					},
+					"status": {
+						"type": "number",
+						"format": "double"
+					}
+				},
+				"required": [
+					"data",
+					"status"
+				],
+				"type": "object"
+			},
 			"SlideTypeConfigResponse": {
 				"properties": {
 					"id": {
@@ -117,42 +450,6 @@
 					"updatedAt",
 					"slideTypes"
 				],
-				"type": "object",
-				"additionalProperties": false
-			},
-			"JsonValue": {
-				"anyOf": [
-					{
-						"type": "string"
-					},
-					{
-						"type": "number",
-						"format": "double"
-					},
-					{
-						"type": "boolean"
-					},
-					{
-						"$ref": "#/components/schemas/JsonObject"
-					},
-					{
-						"$ref": "#/components/schemas/JsonArray"
-					}
-				],
-				"nullable": true,
-				"description": "From https://github.com/sindresorhus/type-fest/\r\nMatches any valid JSON value."
-			},
-			"JsonObject": {
-				"properties": {},
-				"additionalProperties": {
-					"$ref": "#/components/schemas/JsonValue"
-				},
-				"type": "object",
-				"description": "From https://github.com/sindresorhus/type-fest/\r\nMatches a JSON object.\r\nThis type can be useful to enforce some input to be JSON-compatible or as a super-type to be extended from."
-			},
-			"JsonArray": {
-				"description": "From https://github.com/sindresorhus/type-fest/\r\nMatches a JSON array.",
-				"properties": {},
 				"type": "object",
 				"additionalProperties": false
 			},
@@ -588,52 +885,16 @@
 				],
 				"type": "object"
 			},
-			"ApiResponse__text-string__": {
-				"properties": {
-					"message": {
-						"type": "string"
-					},
-					"data": {
-						"properties": {
-							"text": {
-								"type": "string"
-							}
-						},
-						"required": [
-							"text"
-						],
-						"type": "object",
-						"nullable": true
-					},
-					"status": {
-						"type": "number",
-						"format": "double"
-					}
-				},
-				"required": [
-					"data",
-					"status"
-				],
-				"type": "object"
-			},
-			"_36_Enums.TranscriptSource": {
-				"type": "string",
-				"enum": [
-					"MANUAL",
-					"RECORDING",
-					"UPLOAD",
-					"IMPORTED"
-				]
-			},
-			"TranscriptSource": {
-				"$ref": "#/components/schemas/_36_Enums.TranscriptSource"
-			},
 			"TranscriptResponse": {
 				"properties": {
 					"id": {
 						"type": "string"
 					},
 					"projectId": {
+						"type": "string",
+						"nullable": true
+					},
+					"userId": {
 						"type": "string"
 					},
 					"title": {
@@ -680,6 +941,7 @@
 				"required": [
 					"id",
 					"projectId",
+					"userId",
 					"title",
 					"source",
 					"language",
@@ -947,45 +1209,6 @@
 					"status"
 				],
 				"type": "object"
-			},
-			"InputJsonValue": {
-				"anyOf": [
-					{
-						"type": "string"
-					},
-					{
-						"type": "number",
-						"format": "double"
-					},
-					{
-						"type": "boolean"
-					},
-					{
-						"$ref": "#/components/schemas/InputJsonObject"
-					},
-					{
-						"$ref": "#/components/schemas/InputJsonArray"
-					},
-					{
-						"properties": {},
-						"type": "object"
-					}
-				],
-				"description": "Matches any valid value that can be used as an input for operations like\r\ncreate and update as the value of a JSON field. Unlike \\`JsonValue\\`, this\r\ntype allows read-only arrays and read-only object properties and disallows\r\n\\`null\\` at the top level.\r\n\r\n\\`null\\` cannot be used as the value of a JSON field because its meaning\r\nwould be ambiguous. Use \\`Prisma.JsonNull\\` to store the JSON null value or\r\n\\`Prisma.DbNull\\` to clear the JSON value and set the field to the database\r\nNULL value instead."
-			},
-			"InputJsonObject": {
-				"properties": {},
-				"additionalProperties": {
-					"$ref": "#/components/schemas/InputJsonValue"
-				},
-				"type": "object",
-				"description": "Matches a JSON object.\r\nUnlike \\`JsonObject\\`, this type allows undefined and read-only properties."
-			},
-			"InputJsonArray": {
-				"description": "Matches a JSON array.\r\nUnlike \\`JsonArray\\`, readonly arrays are assignable to this type.",
-				"properties": {},
-				"type": "object",
-				"additionalProperties": false
 			},
 			"ManualTranscriptRequest": {
 				"properties": {
@@ -2066,6 +2289,34 @@
 				"type": "object",
 				"additionalProperties": false
 			},
+			"ApiResponse__text-string__": {
+				"properties": {
+					"message": {
+						"type": "string"
+					},
+					"data": {
+						"properties": {
+							"text": {
+								"type": "string"
+							}
+						},
+						"required": [
+							"text"
+						],
+						"type": "object",
+						"nullable": true
+					},
+					"status": {
+						"type": "number",
+						"format": "double"
+					}
+				},
+				"required": [
+					"data",
+					"status"
+				],
+				"type": "object"
+			},
 			"DefaultSelection_Prisma._36_CustomThemePayload_": {
 				"properties": {
 					"configJson": {
@@ -2277,6 +2528,206 @@
 		"contact": {}
 	},
 	"paths": {
+		"/api/transcripts": {
+			"get": {
+				"operationId": "ListTranscripts",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiResponse_StandaloneTranscriptListResponse_"
+								}
+							}
+						}
+					}
+				},
+				"tags": [
+					"Transcripts"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": [
+					{
+						"in": "query",
+						"name": "page",
+						"required": false,
+						"schema": {
+							"default": 1,
+							"format": "double",
+							"type": "number"
+						}
+					},
+					{
+						"in": "query",
+						"name": "pageSize",
+						"required": false,
+						"schema": {
+							"default": 20,
+							"format": "double",
+							"type": "number"
+						}
+					},
+					{
+						"in": "query",
+						"name": "source",
+						"required": false,
+						"schema": {
+							"$ref": "#/components/schemas/TranscriptSource"
+						}
+					}
+				]
+			},
+			"post": {
+				"operationId": "CreateTranscript",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiResponse_StandaloneTranscriptResponse_"
+								}
+							}
+						}
+					}
+				},
+				"tags": [
+					"Transcripts"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": [],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/CreateTranscriptInput"
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/transcripts/{id}": {
+			"get": {
+				"operationId": "GetTranscript",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiResponse_StandaloneTranscriptResponse_"
+								}
+							}
+						}
+					}
+				},
+				"tags": [
+					"Transcripts"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": [
+					{
+						"in": "path",
+						"name": "id",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				]
+			},
+			"put": {
+				"operationId": "UpdateTranscript",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiResponse_StandaloneTranscriptResponse_"
+								}
+							}
+						}
+					}
+				},
+				"tags": [
+					"Transcripts"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": [
+					{
+						"in": "path",
+						"name": "id",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/UpdateTranscriptInput"
+							}
+						}
+					}
+				}
+			},
+			"delete": {
+				"operationId": "DeleteTranscript",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiResponse__success-boolean__"
+								}
+							}
+						}
+					}
+				},
+				"tags": [
+					"Transcripts"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": [
+					{
+						"in": "path",
+						"name": "id",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				]
+			}
+		},
 		"/api/slide-templates": {
 			"get": {
 				"operationId": "ListTemplates",
@@ -2719,64 +3170,6 @@
 				}
 			}
 		},
-		"/api/projects/{projectId}/transcribe-chunk": {
-			"post": {
-				"operationId": "TranscribeChunk",
-				"responses": {
-					"200": {
-						"description": "Ok",
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/ApiResponse__text-string__"
-								}
-							}
-						}
-					}
-				},
-				"description": "Transcribe a raw audio chunk uploaded by the Electron recorder.\nThe Groq API key lives exclusively on the server — it is never sent to the client.",
-				"tags": [
-					"Projects"
-				],
-				"security": [
-					{
-						"ClientLevel": []
-					}
-				],
-				"parameters": [
-					{
-						"in": "path",
-						"name": "projectId",
-						"required": true,
-						"schema": {
-							"type": "string"
-						}
-					}
-				],
-				"requestBody": {
-					"required": true,
-					"content": {
-						"multipart/form-data": {
-							"schema": {
-								"type": "object",
-								"properties": {
-									"files": {
-										"items": {
-											"type": "string",
-											"format": "binary"
-										},
-										"type": "array"
-									}
-								},
-								"required": [
-									"files"
-								]
-							}
-						}
-					}
-				}
-			}
-		},
 		"/api/projects/{projectId}/transcripts/upload": {
 			"post": {
 				"operationId": "UploadTranscript",
@@ -2857,7 +3250,7 @@
 		},
 		"/api/projects/{projectId}/transcripts": {
 			"get": {
-				"operationId": "ListTranscripts",
+				"operationId": "ListProjectTranscripts",
 				"responses": {
 					"200": {
 						"description": "Ok",
@@ -2910,7 +3303,7 @@
 				]
 			},
 			"post": {
-				"operationId": "CreateTranscript",
+				"operationId": "CreateProjectTranscript",
 				"responses": {
 					"200": {
 						"description": "Ok",
@@ -2955,7 +3348,7 @@
 		},
 		"/api/projects/{projectId}/transcripts/{transcriptId}": {
 			"get": {
-				"operationId": "GetTranscript",
+				"operationId": "GetProjectTranscript",
 				"responses": {
 					"200": {
 						"description": "Ok",
@@ -2996,7 +3389,7 @@
 				]
 			},
 			"put": {
-				"operationId": "UpdateTranscript",
+				"operationId": "UpdateProjectTranscript",
 				"responses": {
 					"200": {
 						"description": "Ok",
@@ -3047,7 +3440,7 @@
 				}
 			},
 			"delete": {
-				"operationId": "DeleteTranscript",
+				"operationId": "DeleteProjectTranscript",
 				"responses": {
 					"200": {
 						"description": "Ok",
@@ -4413,6 +4806,52 @@
 						"application/json": {
 							"schema": {
 								"$ref": "#/components/schemas/SendMessageRequest"
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/audio/transcribe-chunk": {
+			"post": {
+				"operationId": "TranscribeChunk",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiResponse__text-string__"
+								}
+							}
+						}
+					}
+				},
+				"description": "Transcribe a raw audio chunk uploaded by the Electron recorder.\nThe Groq API key lives exclusively on the server — it is never sent to the client.",
+				"tags": [
+					"Audio"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": [],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"multipart/form-data": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"audio": {
+										"type": "string",
+										"format": "binary"
+									}
+								},
+								"required": [
+									"audio"
+								]
 							}
 						}
 					}

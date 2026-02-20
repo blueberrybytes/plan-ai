@@ -90,7 +90,8 @@ interface CreateTranscriptRequest {
 
 interface TranscriptResponse {
   id: string;
-  projectId: string;
+  projectId: string | null;
+  userId: string;
   title: string | null;
   source: TranscriptSource;
   language: string | null;
@@ -291,62 +292,6 @@ export class ProjectsModelController extends Controller {
     return `Use the following context when analyzing the transcript:\n${sections.join("\n")}`;
   }
 
-  /**
-   * Transcribe a raw audio chunk uploaded by the Electron recorder.
-   * The Groq API key lives exclusively on the server — it is never sent to the client.
-   */
-  @Post("{projectId}/transcribe-chunk")
-  @Security("ClientLevel")
-  public async transcribeChunk(
-    @Request() request: AuthenticatedRequest,
-    @Path() projectId: string,
-    @UploadedFiles() files: Express.Multer.File[],
-  ): Promise<ApiResponse<{ text: string }>> {
-    await this.getProjectForUser(request, projectId);
-
-    if (!files || files.length === 0) {
-      this.setStatus(400);
-      throw { status: 400, message: "No audio file uploaded" };
-    }
-
-    const audioFile = files[0];
-
-    const groqApiKey = process.env.GROQ_API_KEY;
-    if (!groqApiKey) {
-      this.setStatus(500);
-      throw { status: 500, message: "Transcription service is not configured" };
-    }
-
-    // Call Groq Whisper via multipart form (compatible with OpenAI audio API)
-    const form = new FormData();
-    const audioBlob = new Blob([new Uint8Array(audioFile.buffer)], {
-      type: audioFile.mimetype || "audio/webm",
-    });
-    form.append("file", audioBlob, audioFile.originalname || "chunk.webm");
-    form.append("model", "whisper-large-v3-turbo");
-    form.append("response_format", "text");
-
-    const groqResponse = await fetch("https://api.groq.com/openai/v1/audio/transcriptions", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${groqApiKey}` },
-      body: form,
-    });
-
-    if (!groqResponse.ok) {
-      const errBody = await groqResponse.text();
-      logger.error("Groq transcription error", { status: groqResponse.status, body: errBody });
-      this.setStatus(502);
-      throw { status: 502, message: "Transcription service returned an error" };
-    }
-
-    const text = await groqResponse.text();
-
-    return {
-      status: 200,
-      data: { text: text.trim() },
-    };
-  }
-
   @Post("{projectId}/transcripts/upload")
   @Security("ClientLevel")
   public async uploadTranscript(
@@ -435,6 +380,7 @@ export class ProjectsModelController extends Controller {
 
     const result = await projectTranscriptService.createTranscriptForProject({
       projectId,
+      userId: user.id,
       content,
       title: title || supportedFiles[0]?.originalname || undefined,
       source: TranscriptSource.UPLOAD,
@@ -464,7 +410,7 @@ export class ProjectsModelController extends Controller {
 
   @Get("{projectId}/transcripts")
   @Security("ClientLevel")
-  public async listTranscripts(
+  public async listProjectTranscripts(
     @Request() request: AuthenticatedRequest,
     @Path() projectId: string,
     @Query() page = 1,
@@ -494,7 +440,7 @@ export class ProjectsModelController extends Controller {
 
   @Get("{projectId}/transcripts/{transcriptId}")
   @Security("ClientLevel")
-  public async getTranscript(
+  public async getProjectTranscript(
     @Request() request: AuthenticatedRequest,
     @Path() projectId: string,
     @Path() transcriptId: string,
@@ -541,7 +487,7 @@ export class ProjectsModelController extends Controller {
 
   @Put("{projectId}/transcripts/{transcriptId}")
   @Security("ClientLevel")
-  public async updateTranscript(
+  public async updateProjectTranscript(
     @Request() request: AuthenticatedRequest,
     @Path() projectId: string,
     @Path() transcriptId: string,
@@ -569,7 +515,7 @@ export class ProjectsModelController extends Controller {
 
   @Delete("{projectId}/transcripts/{transcriptId}")
   @Security("ClientLevel")
-  public async deleteTranscript(
+  public async deleteProjectTranscript(
     @Request() request: AuthenticatedRequest,
     @Path() projectId: string,
     @Path() transcriptId: string,
@@ -800,7 +746,7 @@ export class ProjectsModelController extends Controller {
 
   @Post("{projectId}/transcripts")
   @Security("ClientLevel")
-  public async createTranscript(
+  public async createProjectTranscript(
     @Request() request: AuthenticatedRequest,
     @Path() projectId: string,
     @Body() body: CreateTranscriptRequest,
@@ -820,6 +766,7 @@ export class ProjectsModelController extends Controller {
 
     const result = await projectTranscriptService.createTranscriptForProject({
       projectId,
+      userId: user.id,
       content: body.content ?? "",
       title: body.title,
       source: body.source,
@@ -911,7 +858,8 @@ export class ProjectsModelController extends Controller {
 
   private mapTranscriptResponse(transcript: {
     id: string;
-    projectId: string;
+    projectId: string | null;
+    userId: string;
     title: string | null;
     source: TranscriptSource;
     language: string | null;
@@ -925,6 +873,7 @@ export class ProjectsModelController extends Controller {
     return {
       id: transcript.id,
       projectId: transcript.projectId,
+      userId: transcript.userId,
       title: transcript.title,
       source: transcript.source,
       language: transcript.language,

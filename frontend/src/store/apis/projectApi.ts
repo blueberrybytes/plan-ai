@@ -15,7 +15,7 @@ export type UpdateProjectRequest =
   operations["UpdateSession"]["requestBody"]["content"]["application/json"];
 export type ListProjectsParams = operations["ListSessions"]["parameters"]["query"];
 export type CreateTranscriptRequest =
-  operations["CreateTranscript"]["requestBody"]["content"]["application/json"];
+  operations["CreateProjectTranscript"]["requestBody"]["content"]["application/json"];
 export type ApiResponseCreateTranscriptResponse =
   components["schemas"]["ApiResponse_CreateTranscriptResponse_"];
 export type ApiResponseTranscriptListResponse =
@@ -28,12 +28,12 @@ export type TaskResponse = components["schemas"]["TaskResponse"];
 export type TaskStatusSchema = components["schemas"]["TaskStatus"];
 export type TaskPrioritySchema = components["schemas"]["TaskPriority"];
 
-export type ListTranscriptsParams = operations["ListTranscripts"]["parameters"]["query"];
-export type TranscriptPathParams = operations["GetTranscript"]["parameters"]["path"];
+export type ListTranscriptsParams = operations["ListProjectTranscripts"]["parameters"]["query"];
+export type TranscriptPathParams = operations["GetProjectTranscript"]["parameters"]["path"];
 export type ManualTranscriptRequest =
   operations["CreateManualTranscript"]["requestBody"]["content"]["application/json"];
 export type UpdateTranscriptRequest =
-  operations["UpdateTranscript"]["requestBody"]["content"]["application/json"];
+  operations["UpdateProjectTranscript"]["requestBody"]["content"]["application/json"];
 
 export interface CreateProjectTaskArgs {
   projectId: string;

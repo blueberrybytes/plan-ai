@@ -446,7 +446,7 @@
     },
     "cta": {
       "title": "Deja de limpiar notas de reuniones",
-      "subtitle": "Únete a los equipos que usan Plan AI para reducir la carga de planificación y entregar más rápido. Empezar tarda 30 segundos.",
+      "subtitle": "Únete a los equipos que usan Plan AI para reducir la carga de planificación y entregar más rápido. Empezar tarda 10 segundos.",
       "button": "Empieza gratis"
     },
     "footer": {
@@ -590,7 +590,8 @@
       "sessions": "Sesiones",
       "contexts": "Contextos",
       "slides": "Diapositivas",
-      "integrations": "Integraciones"
+      "integrations": "Integraciones",
+      "recordings": "Grabaciones"
     },
     "tooltip": {
       "expand": "Expandir barra lateral",

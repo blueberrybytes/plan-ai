@@ -62,6 +62,7 @@ model User {
     projects      Project[]
     assignedTasks Task[]       @relation("TaskAssignee")
     contexts      Context[]
+    transcripts   Transcript[]
 
     integrations    UserIntegration[]
     threads         ChatThread[]
@@ -141,8 +142,10 @@ model Project {
 
 model Transcript {
     id         String           @id @default(cuid())
-    project    Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
-    projectId  String
+    user       User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+    userId     String
+    project    Project?         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+    projectId  String?
     title      String?
     source     TranscriptSource @default(MANUAL)
     language   String?

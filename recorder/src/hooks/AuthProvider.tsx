@@ -7,6 +7,7 @@ import {
 } from "firebase/auth";
 import { auth } from "../firebase";
 import { AuthContext, type AuthContextValue } from "./useAuth";
+import { createPlanAiApi } from "../services/planAiApi";
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<AuthContextValue["user"]>(null);
@@ -51,9 +52,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     await firebaseSignOut(auth);
   };
 
+  const api = React.useMemo(() => {
+    return createPlanAiApi(async (forceRefresh?: boolean) => {
+      const currentUser = auth.currentUser;
+      if (!currentUser) return null;
+      try {
+        return await currentUser.getIdToken(forceRefresh);
+      } catch (err) {
+        console.error("Failed to get fresh Firebase token", err);
+        return null;
+      }
+    });
+  }, []);
+
   return (
     <AuthContext.Provider
-      value={{ user, token, loading, signInWithEmail, signInWithDesktopBrowser, signOut }}
+      value={{ user, token, loading, signInWithEmail, signInWithDesktopBrowser, signOut, api }}
     >
       {children}
     </AuthContext.Provider>

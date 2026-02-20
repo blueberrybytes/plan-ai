@@ -257,6 +257,17 @@ const ProjectTranscriptDialog: React.FC<ProjectTranscriptDialogProps> = ({
               <Typography variant="subtitle2" color="text.secondary" gutterBottom>
                 {t("projectTranscriptDialog.modeLabel")}
               </Typography>
+              <Alert severity="info" sx={{ mb: 2 }}>
+                Want to record a live meeting?{" "}
+                <Typography
+                  component="a"
+                  href="/"
+                  sx={{ color: "info.main", fontWeight: "bold", textDecoration: "underline" }}
+                >
+                  Download the Desktop App
+                </Typography>{" "}
+                to capture audio and generate transcripts in real-time.
+              </Alert>
               <RadioGroup row value={mode} onChange={handleModeChange}>
                 <FormControlLabel
                   value="upload"

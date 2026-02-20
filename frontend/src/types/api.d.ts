@@ -4,6 +4,38 @@
  */
 
 export interface paths {
+    "/api/transcripts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ListTranscripts"];
+        put?: never;
+        post: operations["CreateTranscript"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/transcripts/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetTranscript"];
+        put: operations["UpdateTranscript"];
+        post?: never;
+        delete: operations["DeleteTranscript"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/slide-templates": {
         parameters: {
             query?: never;
@@ -133,26 +165,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/projects/{projectId}/transcribe-chunk": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * @description Transcribe a raw audio chunk uploaded by the Electron recorder.
-         *     The Groq API key lives exclusively on the server — it is never sent to the client.
-         */
-        post: operations["TranscribeChunk"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/projects/{projectId}/transcripts/upload": {
         parameters: {
             query?: never;
@@ -176,9 +188,9 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["ListTranscripts"];
+        get: operations["ListProjectTranscripts"];
         put?: never;
-        post: operations["CreateTranscript"];
+        post: operations["CreateProjectTranscript"];
         delete?: never;
         options?: never;
         head?: never;
@@ -192,10 +204,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["GetTranscript"];
-        put: operations["UpdateTranscript"];
+        get: operations["GetProjectTranscript"];
+        put: operations["UpdateProjectTranscript"];
         post?: never;
-        delete: operations["DeleteTranscript"];
+        delete: operations["DeleteProjectTranscript"];
         options?: never;
         head?: never;
         patch?: never;
@@ -522,6 +534,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/audio/transcribe-chunk": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description Transcribe a raw audio chunk uploaded by the Electron recorder.
+         *     The Groq API key lives exclusively on the server — it is never sent to the client.
+         */
+        post: operations["TranscribeChunk"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/account/theme": {
         parameters: {
             query?: never;
@@ -584,6 +616,114 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** @enum {string} */
+        "_36_Enums.TranscriptSource": "MANUAL" | "RECORDING" | "UPLOAD" | "IMPORTED";
+        TranscriptSource: components["schemas"]["_36_Enums.TranscriptSource"];
+        /**
+         * @description From https://github.com/sindresorhus/type-fest/
+         *     Matches any valid JSON value.
+         */
+        JsonValue: (string | number | boolean | components["schemas"]["JsonObject"] | components["schemas"]["JsonArray"]) | null;
+        /**
+         * @description From https://github.com/sindresorhus/type-fest/
+         *     Matches a JSON object.
+         *     This type can be useful to enforce some input to be JSON-compatible or as a super-type to be extended from.
+         */
+        JsonObject: {
+            [key: string]: components["schemas"]["JsonValue"];
+        };
+        /**
+         * @description From https://github.com/sindresorhus/type-fest/
+         *     Matches a JSON array.
+         */
+        JsonArray: Record<string, never>;
+        StandaloneTranscriptResponse: {
+            id: string;
+            projectId: string | null;
+            userId: string;
+            title: string | null;
+            source: components["schemas"]["TranscriptSource"];
+            language: string | null;
+            summary: string | null;
+            transcript: string | null;
+            /** Format: date-time */
+            recordedAt: string | null;
+            metadata: components["schemas"]["JsonValue"] | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        StandaloneTranscriptListResponse: {
+            transcripts: components["schemas"]["StandaloneTranscriptResponse"][];
+            /** Format: double */
+            total: number;
+        };
+        ApiResponse_StandaloneTranscriptListResponse_: {
+            message?: string;
+            data: components["schemas"]["StandaloneTranscriptListResponse"] | null;
+            /** Format: double */
+            status: number;
+        };
+        ApiResponse_StandaloneTranscriptResponse_: {
+            message?: string;
+            data: components["schemas"]["StandaloneTranscriptResponse"] | null;
+            /** Format: double */
+            status: number;
+        };
+        /**
+         * @description Matches any valid value that can be used as an input for operations like
+         *     create and update as the value of a JSON field. Unlike \`JsonValue\`, this
+         *     type allows read-only arrays and read-only object properties and disallows
+         *     \`null\` at the top level.
+         *
+         *     \`null\` cannot be used as the value of a JSON field because its meaning
+         *     would be ambiguous. Use \`Prisma.JsonNull\` to store the JSON null value or
+         *     \`Prisma.DbNull\` to clear the JSON value and set the field to the database
+         *     NULL value instead.
+         */
+        InputJsonValue: string | number | boolean | components["schemas"]["InputJsonObject"] | components["schemas"]["InputJsonArray"] | Record<string, never>;
+        /**
+         * @description Matches a JSON object.
+         *     Unlike \`JsonObject\`, this type allows undefined and read-only properties.
+         */
+        InputJsonObject: {
+            [key: string]: components["schemas"]["InputJsonValue"];
+        };
+        /**
+         * @description Matches a JSON array.
+         *     Unlike \`JsonArray\`, readonly arrays are assignable to this type.
+         */
+        InputJsonArray: Record<string, never>;
+        CreateTranscriptInput: {
+            projectId?: string | null;
+            title?: string | null;
+            source?: components["schemas"]["TranscriptSource"];
+            content?: string | null;
+            language?: string | null;
+            summary?: string | null;
+            /** Format: date-time */
+            recordedAt?: string | null;
+            metadata?: components["schemas"]["InputJsonValue"] | null;
+        };
+        UpdateTranscriptInput: {
+            title?: string | null;
+            source?: components["schemas"]["TranscriptSource"];
+            language?: string | null;
+            summary?: string | null;
+            transcript?: string | null;
+            metadata?: components["schemas"]["InputJsonValue"] | null;
+            /** Format: date-time */
+            recordedAt?: string | null;
+        };
+        "ApiResponse__success-boolean__": {
+            message?: string;
+            data: {
+                success: boolean;
+            } | null;
+            /** Format: double */
+            status: number;
+        };
         SlideTypeConfigResponse: {
             id: string;
             templateId: string;
@@ -613,24 +753,6 @@ export interface components {
             updatedAt: string;
             slideTypes: components["schemas"]["SlideTypeConfigResponse"][];
         };
-        /**
-         * @description From https://github.com/sindresorhus/type-fest/
-         *     Matches any valid JSON value.
-         */
-        JsonValue: (string | number | boolean | components["schemas"]["JsonObject"] | components["schemas"]["JsonArray"]) | null;
-        /**
-         * @description From https://github.com/sindresorhus/type-fest/
-         *     Matches a JSON object.
-         *     This type can be useful to enforce some input to be JSON-compatible or as a super-type to be extended from.
-         */
-        JsonObject: {
-            [key: string]: components["schemas"]["JsonValue"];
-        };
-        /**
-         * @description From https://github.com/sindresorhus/type-fest/
-         *     Matches a JSON array.
-         */
-        JsonArray: Record<string, never>;
         SlideTypeConfigInput: {
             slideTypeKey: string;
             displayName: string;
@@ -748,20 +870,10 @@ export interface components {
             /** Format: double */
             status: number;
         };
-        "ApiResponse__text-string__": {
-            message?: string;
-            data: {
-                text: string;
-            } | null;
-            /** Format: double */
-            status: number;
-        };
-        /** @enum {string} */
-        "_36_Enums.TranscriptSource": "MANUAL" | "RECORDING" | "UPLOAD" | "IMPORTED";
-        TranscriptSource: components["schemas"]["_36_Enums.TranscriptSource"];
         TranscriptResponse: {
             id: string;
-            projectId: string;
+            projectId: string | null;
+            userId: string;
             title: string | null;
             source: components["schemas"]["TranscriptSource"];
             language: string | null;
@@ -838,30 +950,6 @@ export interface components {
             /** Format: double */
             status: number;
         };
-        /**
-         * @description Matches any valid value that can be used as an input for operations like
-         *     create and update as the value of a JSON field. Unlike \`JsonValue\`, this
-         *     type allows read-only arrays and read-only object properties and disallows
-         *     \`null\` at the top level.
-         *
-         *     \`null\` cannot be used as the value of a JSON field because its meaning
-         *     would be ambiguous. Use \`Prisma.JsonNull\` to store the JSON null value or
-         *     \`Prisma.DbNull\` to clear the JSON value and set the field to the database
-         *     NULL value instead.
-         */
-        InputJsonValue: string | number | boolean | components["schemas"]["InputJsonObject"] | components["schemas"]["InputJsonArray"] | Record<string, never>;
-        /**
-         * @description Matches a JSON object.
-         *     Unlike \`JsonObject\`, this type allows undefined and read-only properties.
-         */
-        InputJsonObject: {
-            [key: string]: components["schemas"]["InputJsonValue"];
-        };
-        /**
-         * @description Matches a JSON array.
-         *     Unlike \`JsonArray\`, readonly arrays are assignable to this type.
-         */
-        InputJsonArray: Record<string, never>;
         ManualTranscriptRequest: {
             title?: string | null;
             source?: components["schemas"]["TranscriptSource"];
@@ -1145,6 +1233,14 @@ export interface components {
         SendMessageRequest: {
             content: string;
         };
+        "ApiResponse__text-string__": {
+            message?: string;
+            data: {
+                text: string;
+            } | null;
+            /** Format: double */
+            status: number;
+        };
         "DefaultSelection_Prisma._36_CustomThemePayload_": {
             configJson: components["schemas"]["JsonValue"];
             /** Format: double */
@@ -1210,6 +1306,124 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    ListTranscripts: {
+        parameters: {
+            query?: {
+                page?: number;
+                pageSize?: number;
+                source?: components["schemas"]["TranscriptSource"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_StandaloneTranscriptListResponse_"];
+                };
+            };
+        };
+    };
+    CreateTranscript: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateTranscriptInput"];
+            };
+        };
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_StandaloneTranscriptResponse_"];
+                };
+            };
+        };
+    };
+    GetTranscript: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_StandaloneTranscriptResponse_"];
+                };
+            };
+        };
+    };
+    UpdateTranscript: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateTranscriptInput"];
+            };
+        };
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_StandaloneTranscriptResponse_"];
+                };
+            };
+        };
+    };
+    DeleteTranscript: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse__success-boolean__"];
+                };
+            };
+        };
+    };
     ListTemplates: {
         parameters: {
             query?: never;
@@ -1499,34 +1713,6 @@ export interface operations {
             };
         };
     };
-    TranscribeChunk: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                projectId: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "multipart/form-data": {
-                    files: string[];
-                };
-            };
-        };
-        responses: {
-            /** @description Ok */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiResponse__text-string__"];
-                };
-            };
-        };
-    };
     UploadTranscript: {
         parameters: {
             query?: never;
@@ -1562,7 +1748,7 @@ export interface operations {
             };
         };
     };
-    ListTranscripts: {
+    ListProjectTranscripts: {
         parameters: {
             query?: {
                 page?: number;
@@ -1587,7 +1773,7 @@ export interface operations {
             };
         };
     };
-    CreateTranscript: {
+    CreateProjectTranscript: {
         parameters: {
             query?: never;
             header?: never;
@@ -1613,7 +1799,7 @@ export interface operations {
             };
         };
     };
-    GetTranscript: {
+    GetProjectTranscript: {
         parameters: {
             query?: never;
             header?: never;
@@ -1636,7 +1822,7 @@ export interface operations {
             };
         };
     };
-    UpdateTranscript: {
+    UpdateProjectTranscript: {
         parameters: {
             query?: never;
             header?: never;
@@ -1663,7 +1849,7 @@ export interface operations {
             };
         };
     };
-    DeleteTranscript: {
+    DeleteProjectTranscript: {
         parameters: {
             query?: never;
             header?: never;
@@ -2475,6 +2661,33 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SendMessageResponse"];
+                };
+            };
+        };
+    };
+    TranscribeChunk: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    audio: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse__text-string__"];
                 };
             };
         };

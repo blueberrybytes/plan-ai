@@ -21,7 +21,7 @@ app.use(
   cors({
     origin: "*",
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization", "x-admin-key"],
+    allowedHeaders: ["Content-Type", "Authorization", "x-admin-key", "X-Current-Path"],
   }),
 );
 app.use(bodyParser.urlencoded({ limit: "50mb", extended: true }));

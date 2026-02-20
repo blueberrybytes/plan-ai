@@ -65,6 +65,7 @@ const generateObjectLoose = generateObject as unknown as (args: {
 }) => Promise<{ object: unknown }>;
 
 export interface CreateTranscriptInput {
+  userId: string;
   projectId: string;
   content: string;
   title?: string;
@@ -106,6 +107,7 @@ export class ProjectTranscriptService {
     const result = await prisma.$transaction(async (tx) => {
       const transcript = await tx.transcript.create({
         data: {
+          userId: input.userId,
           projectId: input.projectId,
           title: input.title ?? null,
           source: input.source ?? TranscriptSource.MANUAL,

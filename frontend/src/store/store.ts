@@ -13,6 +13,7 @@ import { jiraApi } from "./apis/jiraApi";
 import { integrationApi } from "./apis/integrationApi";
 import { chatApi } from "./apis/chatApi";
 import { slideApi } from "./apis/slideApi";
+import { transcriptApi } from "./apis/transcriptApi";
 
 const migrations = {
   1: (state: any) => {
@@ -55,6 +56,7 @@ const store = configureStore({
       integrationApi.middleware,
       chatApi.middleware,
       slideApi.middleware,
+      transcriptApi.middleware,
     ),
 });
 

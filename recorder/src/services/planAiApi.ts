@@ -15,15 +15,35 @@ export interface Context {
   description: string | null;
 }
 
-function authHeaders(token: string): HeadersInit {
-  console.log("Building auth headers with token of length:", token ? token.length : "NULL");
-  return {
-    Authorization: `Bearer ${token}`,
-    "Content-Type": "application/json",
-  };
+export interface Transcript {
+  id: string;
+  projectId: string | null;
+  userId: string;
+  title: string | null;
+  source: string;
+  language: string | null;
+  summary: string | null;
+  transcript: string | null;
+  recordedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
 }
 
-async function handleResponse<T>(res: Response): Promise<T> {
+async function handleResponseWithRetry<T>(
+  res: Response,
+  retryRequest: () => Promise<Response>,
+): Promise<T> {
+  if (res.status === 401 || res.status === 403) {
+    console.log(`HTTP ${res.status} encountered, attempting token refresh...`);
+    const refreshedRes = await retryRequest();
+    if (!refreshedRes.ok) {
+      const body = await refreshedRes.json().catch(() => ({ message: refreshedRes.statusText }));
+      throw new Error((body as { message?: string }).message ?? `HTTP ${refreshedRes.status}`);
+    }
+    const json = (await refreshedRes.json()) as { data: T };
+    return json.data;
+  }
+
   if (!res.ok) {
     const body = await res.json().catch(() => ({ message: res.statusText }));
     throw new Error((body as { message?: string }).message ?? `HTTP ${res.status}`);
@@ -32,85 +52,122 @@ async function handleResponse<T>(res: Response): Promise<T> {
   return json.data;
 }
 
-export const planAiApi = {
-  async listProjects(token: string): Promise<Project[]> {
-    const res = await fetch(`${BASE_URL}/api/projects?pageSize=50`, {
-      headers: authHeaders(token),
-    });
-    const data = await handleResponse<{ projects: Project[] }>(res);
-    return data.projects;
-  },
+export const createPlanAiApi = (getToken: (forceRefresh?: boolean) => Promise<string | null>) => {
+  const getAuthHeaders = async (forceRefresh = false): Promise<HeadersInit> => {
+    const token = await getToken(forceRefresh);
+    if (!token) throw new Error("No auth token available");
+    return {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    };
+  };
 
-  async createProject(
-    token: string,
-    payload: { title: string; description?: string },
-  ): Promise<Project> {
-    const res = await fetch(`${BASE_URL}/api/projects`, {
-      method: "POST",
-      headers: authHeaders(token),
-      body: JSON.stringify(payload),
-    });
-    return handleResponse<Project>(res);
-  },
+  return {
+    async listProjects(): Promise<Project[]> {
+      const req = async (force: boolean) =>
+        fetch(`${BASE_URL}/api/projects?pageSize=50`, {
+          headers: await getAuthHeaders(force),
+        });
 
-  async listContexts(token: string): Promise<Context[]> {
-    const res = await fetch(`${BASE_URL}/api/contexts?pageSize=50`, {
-      headers: authHeaders(token),
-    });
-    const data = await handleResponse<{ contexts: Context[] }>(res);
-    return data.contexts;
-  },
-
-  /**
-   * Send a raw audio chunk to the backend for Groq Whisper transcription.
-   * The backend holds the Groq API key — it never touches the client.
-   */
-  async transcribeChunk(token: string, projectId: string, audioBlob: Blob): Promise<string> {
-    const form = new FormData();
-    form.append("audio", audioBlob, "chunk.webm");
-
-    const res = await fetch(`${BASE_URL}/api/projects/${projectId}/transcribe-chunk`, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${token}` },
-      body: form,
-    });
-    const data = await handleResponse<{ text: string }>(res);
-    return data.text;
-  },
-
-  /**
-   * Submit the final accumulated transcript text and trigger AI task generation.
-   */
-  async submitTranscript(
-    token: string,
-    projectId: string,
-    payload: {
-      transcript: string;
-      title?: string;
-      persona?: "SECRETARY" | "ARCHITECT" | "PRODUCT_MANAGER" | "DEVELOPER";
-      contextIds?: string[];
-      objective?: string;
+      const res = await req(false);
+      return handleResponseWithRetry<{ projects: Project[] }>(res, () => req(true)).then(
+        (d) => d.projects,
+      );
     },
-  ): Promise<void> {
-    const form = new FormData();
-    const blob = new Blob([payload.transcript], { type: "text/plain" });
-    form.append("files", blob, `${payload.title ?? "recording"}.txt`);
-    if (payload.title) form.append("title", payload.title);
-    if (payload.persona) form.append("persona", payload.persona);
-    if (payload.objective) form.append("objective", payload.objective);
-    if (payload.contextIds) {
-      payload.contextIds.forEach((id) => form.append("contextIds", id));
-    }
 
-    const res = await fetch(`${BASE_URL}/api/projects/${projectId}/transcripts/upload`, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${token}` },
-      body: form,
-    });
+    async createProject(payload: { title: string; description?: string }): Promise<Project> {
+      const req = async (force: boolean) =>
+        fetch(`${BASE_URL}/api/projects`, {
+          method: "POST",
+          headers: await getAuthHeaders(force),
+          body: JSON.stringify(payload),
+        });
 
-    if (!res.ok) {
-      const body = await res.json().catch(() => ({ message: res.statusText }));
-      throw new Error((body as { message?: string }).message ?? `HTTP ${res.status}`);
-    }
-  },
+      const res = await req(false);
+      return handleResponseWithRetry<Project>(res, () => req(true));
+    },
+
+    async listContexts(): Promise<Context[]> {
+      const req = async (force: boolean) =>
+        fetch(`${BASE_URL}/api/contexts?pageSize=50`, {
+          headers: await getAuthHeaders(force),
+        });
+
+      const res = await req(false);
+      return handleResponseWithRetry<{ contexts: Context[] }>(res, () => req(true)).then(
+        (d) => d.contexts,
+      );
+    },
+
+    async listTranscripts(): Promise<Transcript[]> {
+      const req = async (force: boolean) =>
+        fetch(`${BASE_URL}/api/transcripts?pageSize=50&source=RECORDING`, {
+          headers: await getAuthHeaders(force),
+        });
+
+      const res = await req(false);
+      return handleResponseWithRetry<{ transcripts: Transcript[] }>(res, () => req(true)).then(
+        (d) => d.transcripts,
+      );
+    },
+
+    async transcribeChunk(audioBlob: Blob): Promise<string> {
+      const req = async (force: boolean) => {
+        const token = await getToken(force);
+        if (!token) throw new Error("No auth token available");
+
+        const form = new FormData();
+        form.append("audio", audioBlob, "chunk.webm");
+
+        return fetch(`${BASE_URL}/api/audio/transcribe-chunk`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+          body: form,
+        });
+      };
+
+      const res = await req(false);
+      return handleResponseWithRetry<{ text: string }>(res, () => req(true)).then((d) => d.text);
+    },
+
+    async saveRecording(payload: {
+      content: string;
+      title?: string;
+      recordedAt?: string;
+    }): Promise<Transcript> {
+      const req = async (force: boolean) =>
+        fetch(`${BASE_URL}/api/transcripts`, {
+          method: "POST",
+          headers: await getAuthHeaders(force),
+          body: JSON.stringify({
+            ...payload,
+            source: "RECORDING",
+          }),
+        });
+
+      const res = await req(false);
+      return handleResponseWithRetry<Transcript>(res, () => req(true));
+    },
+
+    async getTranscript(id: string): Promise<Transcript> {
+      const req = async (force: boolean) =>
+        fetch(`${BASE_URL}/api/transcripts/${id}`, {
+          headers: await getAuthHeaders(force),
+        });
+
+      const res = await req(false);
+      return handleResponseWithRetry<Transcript>(res, () => req(true));
+    },
+
+    async deleteTranscript(id: string): Promise<void> {
+      const req = async (force: boolean) =>
+        fetch(`${BASE_URL}/api/transcripts/${id}`, {
+          method: "DELETE",
+          headers: await getAuthHeaders(force),
+        });
+
+      const res = await req(false);
+      await handleResponseWithRetry(res, () => req(true));
+    },
+  };
 };

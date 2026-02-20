@@ -12,17 +12,16 @@ import {
 } from "@mui/material";
 import {
   Stop as StopIcon,
-  FiberManualRecord as RecordIcon,
   CheckCircle as DoneIcon,
   ArrowBack as BackIcon,
 } from "@mui/icons-material";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 import { AudioRecorder } from "../services/audioRecorder";
-import { planAiApi } from "../services/planAiApi";
+// import { planAiApi } from "../services/planAiApi";
 import { loadConfig } from "./Home";
 
-type Phase = "recording" | "analyzing" | "done" | "error";
+type Phase = "recording" | "saving" | "done" | "error";
 
 const formatTime = (seconds: number): string => {
   const h = Math.floor(seconds / 3600);
@@ -60,9 +59,8 @@ const Waveform: React.FC<{ active: boolean }> = ({ active }) => (
 );
 
 const Recording: React.FC = () => {
-  const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
-  const { token } = useAuth();
+  const { token, api } = useAuth();
 
   const config = loadConfig();
 
@@ -92,40 +90,38 @@ const Recording: React.FC = () => {
 
   const handleChunk = useCallback(
     async (blob: Blob) => {
-      if (!token || !projectId) return;
+      if (!token) return;
       try {
-        const text = await planAiApi.transcribeChunk(token, projectId, blob);
+        const text = await api.transcribeChunk(blob);
         if (text.trim()) appendText(text.trim());
       } catch (err) {
         console.error("Chunk transcription error:", err);
         // Non-fatal — continue recording
       }
     },
-    [token, projectId],
+    [token],
   );
 
   const handleStop = useCallback(async () => {
-    if (!token || !projectId) return;
-    setPhase("analyzing");
+    if (!token) return;
+    setPhase("saving");
 
     try {
-      await planAiApi.submitTranscript(token, projectId, {
-        transcript: transcriptRef.current,
-        title: config?.projectTitle ?? "Live Recording",
-        persona: config?.persona,
-        contextIds: config?.selectedContextIds,
-        objective: config?.objective || undefined,
+      await api.saveRecording({
+        content: transcriptRef.current,
+        title: `Recording - ${new Date().toLocaleString()}`,
+        recordedAt: new Date().toISOString(),
       });
       setPhase("done");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to submit transcript.");
+      setError(err instanceof Error ? err.message : "Failed to save transcript.");
       setPhase("error");
     }
-  }, [token, projectId, config]);
+  }, [token]);
 
   // Start recorder on mount
   useEffect(() => {
-    if (!token || !projectId) return;
+    if (!token) return;
 
     const recorder = new AudioRecorder({
       onChunk: (blob) => void handleChunk(blob),
@@ -146,6 +142,7 @@ const Recording: React.FC = () => {
 
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
+      recorder.stop();
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -155,7 +152,7 @@ const Recording: React.FC = () => {
   };
 
   // ── Done / Error states ───────────────────────────────────────────────────
-  if (phase === "analyzing") {
+  if (phase === "saving") {
     return (
       <Box
         sx={{
@@ -169,9 +166,9 @@ const Recording: React.FC = () => {
         }}
       >
         <CircularProgress size={48} />
-        <Typography variant="h6">Analyzing transcript with AI…</Typography>
+        <Typography variant="h6">Saving recording…</Typography>
         <Typography variant="body2" color="text.secondary">
-          Generating tasks and summary. This may take a moment.
+          Uploading your transcript securely.
         </Typography>
         <LinearProgress sx={{ width: "100%", maxWidth: 320 }} />
       </Box>
@@ -192,14 +189,14 @@ const Recording: React.FC = () => {
         }}
       >
         <DoneIcon sx={{ fontSize: 64, color: "success.main" }} />
-        <Typography variant="h6">Recording analyzed!</Typography>
+        <Typography variant="h6">Recording saved!</Typography>
         <Typography variant="body2" color="text.secondary" textAlign="center">
-          Your transcript and tasks have been added to <strong>{config?.projectTitle}</strong>.
+          Your transcript has been successfully saved.
           <br />
-          Open Plan AI in your browser to review them.
+          Open Plan AI down in your browser to view and organize it.
         </Typography>
         <Button variant="contained" startIcon={<BackIcon />} onClick={() => navigate("/")}>
-          Back to projects
+          Back to recordings
         </Button>
       </Box>
     );
@@ -222,7 +219,7 @@ const Recording: React.FC = () => {
           {error ?? "An unexpected error occurred."}
         </Alert>
         <Button variant="outlined" startIcon={<BackIcon />} onClick={() => navigate("/")}>
-          Back to projects
+          Back to recordings
         </Button>
       </Box>
     );
@@ -260,7 +257,7 @@ const Recording: React.FC = () => {
             }}
           />
           <Typography variant="subtitle2" fontWeight={700}>
-            {config?.projectTitle ?? "Recording"}
+            New Recording
           </Typography>
           <Chip label={formatTime(elapsed)} size="small" variant="outlined" />
         </Stack>
@@ -272,7 +269,7 @@ const Recording: React.FC = () => {
           onClick={stopRecording}
           size="small"
         >
-          Stop & Analyze
+          Stop & Save
         </Button>
       </Stack>
 
@@ -335,7 +332,7 @@ const Recording: React.FC = () => {
             </Typography>
           ) : (
             <Typography variant="body2" color="text.secondary" sx={{ fontStyle: "italic" }}>
-              Transcription will appear here every ~30 seconds…
+              Transcription will appear here every ~10 seconds…
             </Typography>
           )}
         </Box>
@@ -353,19 +350,6 @@ const Recording: React.FC = () => {
             flexWrap: "wrap",
           }}
         >
-          <Chip
-            label={config.persona}
-            size="small"
-            variant="outlined"
-            icon={<RecordIcon sx={{ fontSize: "0.75rem !important" }} />}
-          />
-          {config.selectedContextIds.length > 0 && (
-            <Chip
-              label={`${config.selectedContextIds.length} context(s)`}
-              size="small"
-              variant="outlined"
-            />
-          )}
           {config.systemSourceId && (
             <Chip label="System audio + mic" size="small" variant="outlined" />
           )}

@@ -446,7 +446,7 @@
     },
     "cta": {
       "title": "Stop cleaning up meeting notes",
-      "subtitle": "Join teams using Plan AI to cut planning overhead and ship faster. It takes 30 seconds to get started.",
+      "subtitle": "Join teams using Plan AI to cut planning overhead and ship faster. It takes 10 seconds to get started.",
       "button": "Get started for free"
     },
     "footer": {
@@ -590,7 +590,8 @@
       "sessions": "Projects",
       "contexts": "Contexts",
       "slides": "Slides",
-      "integrations": "Integrations"
+      "integrations": "Integrations",
+      "recordings": "Recordings"
     },
     "tooltip": {
       "expand": "Expand sidebar",

@@ -8,12 +8,13 @@ export interface TranscriptListResult {
 
 export interface TranscriptListOptions {
   projectId?: string;
+  source?: TranscriptSource;
   page?: number;
   pageSize?: number;
 }
 
 export interface CreateTranscriptInput {
-  projectId: string;
+  projectId?: string | null;
   title?: string | null;
   source?: TranscriptSource;
   content?: string | null;
@@ -38,11 +39,14 @@ export class TranscriptCrudService {
     userId: string,
     input: CreateTranscriptInput,
   ): Promise<Transcript> {
-    await this.assertProjectBelongsToUser(userId, input.projectId);
+    if (input.projectId) {
+      await this.assertProjectBelongsToUser(userId, input.projectId);
+    }
 
     return prisma.transcript.create({
       data: {
-        projectId: input.projectId,
+        userId,
+        projectId: input.projectId ?? null,
         title: input.title ?? null,
         source: input.source ?? TranscriptSource.MANUAL,
         transcript: input.content ?? null,
@@ -68,8 +72,9 @@ export class TranscriptCrudService {
     const skip = (page - 1) * pageSize;
 
     const where: Prisma.TranscriptWhereInput = {
-      project: { user: { id: userId } },
+      userId,
       ...(options.projectId ? { projectId: options.projectId } : {}),
+      ...(options.source ? { source: options.source } : {}),
     };
 
     const [transcripts, total] = await Promise.all([
@@ -89,7 +94,7 @@ export class TranscriptCrudService {
     const transcript = await prisma.transcript.findFirst({
       where: {
         id: transcriptId,
-        project: { user: { id: userId } },
+        userId,
       },
     });
 

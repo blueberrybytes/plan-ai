@@ -8,6 +8,7 @@ export interface AuthContextValue {
   signInWithEmail: (email: string, password: string) => Promise<void>;
   signInWithDesktopBrowser: () => Promise<void>;
   signOut: () => Promise<void>;
+  api: ReturnType<typeof import("../services/planAiApi").createPlanAiApi>;
 }
 
 export const AuthContext = createContext<AuthContextValue | null>(null);
