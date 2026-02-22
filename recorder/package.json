@@ -5,8 +5,8 @@
   "description": "Plan AI Desktop Recorder — capture any meeting and generate tasks with AI",
   "main": "dist-electron/main/index.js",
   "scripts": {
-    "prebuild": "mkdir -p macos && swiftc -O macos/AudioCapture.swift -o macos/AudioCapture || true",
-    "predev": "mkdir -p macos && swiftc -O macos/AudioCapture.swift -o macos/AudioCapture || true",
+    "prebuild": "mkdir -p macos && swiftc -O macos/AudioCapture.swift -o macos/AudioCapture || true && swiftc -O macos/MicActivity.swift -o macos/MicActivity || true",
+    "predev": "mkdir -p macos && swiftc -O macos/AudioCapture.swift -o macos/AudioCapture || true && swiftc -O macos/MicActivity.swift -o macos/MicActivity || true",
     "dev": "electron-vite dev",
     "build": "electron-vite build",
     "preview": "electron-vite preview",
@@ -54,6 +54,10 @@
         {
           "from": "macos/AudioCapture",
           "to": "MacOS/AudioCapture"
+        },
+        {
+          "from": "macos/MicActivity",
+          "to": "MacOS/MicActivity"
         }
       ],
       "hardenedRuntime": true,

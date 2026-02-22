@@ -356,16 +356,16 @@ export const TwoColumnsSlide: React.FC<SlideProps> = ({ data, brandColors, fonts
             flex: 1,
             p: 3,
             borderRadius: 2,
-            bgcolor: "rgba(99,102,241,0.06)",
-            border: "1px solid rgba(99,102,241,0.15)",
+            bgcolor: "rgba(255,255,255,0.04)",
+            border: "1px solid rgba(255,255,255,0.08)",
           }}
         >
           {data.leftTitle ? (
-            <Typography sx={{ fontSize: 20, fontWeight: 600, mb: 1.5, color: "#e2e8f0" }}>
+            <Typography sx={{ fontSize: 20, fontWeight: 600, mb: 1.5, color: primary }}>
               {String(data.leftTitle)}
             </Typography>
           ) : null}
-          <Typography sx={{ fontSize: 15, lineHeight: 1.7, color: "#94a3b8" }}>
+          <Typography sx={{ fontSize: 15, lineHeight: 1.7, color: "#cbd5e1" }}>
             {data.leftBody as string}
           </Typography>
         </Box>
@@ -374,16 +374,16 @@ export const TwoColumnsSlide: React.FC<SlideProps> = ({ data, brandColors, fonts
             flex: 1,
             p: 3,
             borderRadius: 2,
-            bgcolor: "rgba(16,185,129,0.06)",
-            border: "1px solid rgba(16,185,129,0.15)",
+            bgcolor: "rgba(255,255,255,0.04)",
+            border: "1px solid rgba(255,255,255,0.08)",
           }}
         >
           {data.rightTitle ? (
-            <Typography sx={{ fontSize: 20, fontWeight: 600, mb: 1.5, color: "#e2e8f0" }}>
+            <Typography sx={{ fontSize: 20, fontWeight: 600, mb: 1.5, color: primary }}>
               {String(data.rightTitle)}
             </Typography>
           ) : null}
-          <Typography sx={{ fontSize: 15, lineHeight: 1.7, color: "#94a3b8" }}>
+          <Typography sx={{ fontSize: 15, lineHeight: 1.7, color: "#cbd5e1" }}>
             {data.rightBody as string}
           </Typography>
         </Box>

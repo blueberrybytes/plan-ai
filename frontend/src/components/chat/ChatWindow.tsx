@@ -57,12 +57,11 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
   const { data: contextResponse } = useListContextsQuery();
   const contexts = contextResponse?.data?.contexts ?? [];
 
-  // Reset optimistic messages when the thread changes or new real messages arrive
+  // Reset optimistic messages when the thread changes or new real messages arrive.
+  // We do NOT clear on `!isStreaming` to prevent UI blinking while waiting for the network refetch.
   useEffect(() => {
-    if (!isStreaming) {
-      setOptimisticMessages([]);
-    }
-  }, [activeThread?.id, messages.length, isStreaming]);
+    setOptimisticMessages([]);
+  }, [activeThread?.id, messages.length]);
 
   // Auto-scroll to bottom only when the user hasn't scrolled up manually.
   // When a new message is sent, always force-scroll to bottom.
@@ -266,7 +265,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
                 maxWidth: "85%",
                 bgcolor: msg.role === "USER" ? "primary.main" : "background.paper",
                 color: msg.role === "USER" ? "primary.contrastText" : "text.primary",
-                opacity: msg.id.startsWith("temp-") ? 0.7 : 1,
+                opacity: msg.id.startsWith("temp-user") ? 0.7 : 1,
               }}
             >
               <MarkdownRenderer content={msg.content} />

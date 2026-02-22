@@ -7,13 +7,14 @@ import {
   session,
   systemPreferences,
   shell,
+  Notification,
 } from "electron";
 import * as path from "path";
 import { join } from "path";
 import { fileURLToPath } from "url";
 import { readFileSync, existsSync, unlinkSync, copyFileSync, chmodSync } from "fs";
 import { createServer, IncomingMessage, ServerResponse } from "http";
-import { spawn, ChildProcess } from "child_process";
+import { spawn, ChildProcess, execFile } from "child_process";
 
 // (Removed manual .env loading, electron-vite natively injects import.meta.env during build)
 
@@ -171,6 +172,7 @@ if (!gotTheLock) {
     setupSession();
     startAuthCallbackServer();
     createWindow();
+    startMicActivityPolling();
 
     app.on("activate", () => {
       if (BrowserWindow.getAllWindows().length === 0) createWindow();
@@ -180,6 +182,80 @@ if (!gotTheLock) {
   app.on("window-all-closed", () => {
     if (process.platform !== "darwin") app.quit();
   });
+}
+
+// ─── Native macOS Microphone Activity Detection ──────────────────────────────
+let isMicCurrentlyActive = false;
+
+function startMicActivityPolling() {
+  if (process.platform !== "darwin") return;
+
+  const execDir = path.dirname(process.execPath);
+  let micActivityBinaryPath = path.join(execDir, "MicActivity");
+
+  // In dev mode, use the local binary
+  if (!app.isPackaged) {
+    micActivityBinaryPath = path.join(process.cwd(), "macos", "MicActivity");
+  }
+
+  // Ensure binary exists before polling
+  if (!existsSync(micActivityBinaryPath)) {
+    console.warn(`[MicActivity] Binary not found at ${micActivityBinaryPath}`);
+    return;
+  }
+
+  setInterval(() => {
+    // If the app is already recording (system process is running), don't show the toast
+    if (systemAudioProcess) {
+      isMicCurrentlyActive = true;
+      return;
+    }
+
+    execFile(micActivityBinaryPath, [], (error, stdout) => {
+      if (error) {
+        console.error("[MicActivity] ExecError:", error.message);
+        return;
+      }
+
+      try {
+        const result = JSON.parse(stdout.trim());
+        const isActive = result.isActive === true;
+
+        // Very verbose polling log for debugging Meet
+        console.log(`[MicActivity Poll] Active: ${isActive}`);
+        if (result.allDevices) {
+          console.log("  Devices State:", JSON.stringify(result.allDevices));
+        }
+
+        if (isActive && !isMicCurrentlyActive) {
+          console.log("[MicActivity] Microphone JUST became active! Triggering Toast.");
+          console.log("[MicActivity] Active Devices:", result.activeDevices || "Unknown");
+
+          const notification = new Notification({
+            title: "Microphone Active",
+            body: "Meeting started? Click here to record with Plan AI.",
+            silent: false,
+          });
+
+          notification.on("click", () => {
+            if (mainWindow) {
+              if (mainWindow.isMinimized()) mainWindow.restore();
+              mainWindow.show();
+              mainWindow.focus();
+            }
+          });
+
+          notification.show();
+        } else if (!isActive && isMicCurrentlyActive) {
+          console.log("[MicActivity] Microphone became INACTIVE.");
+        }
+
+        isMicCurrentlyActive = isActive;
+      } catch (err) {
+        console.error("[MicActivity] JSON Parsing Error:", err, "Raw Output:", stdout);
+      }
+    });
+  }, 3000);
 }
 
 // macOS: protocol URL arrives via open-url (fires in the FIRST instance directly)

@@ -7,3 +7,4 @@ settings.local.json
 recorder/dist
 recorder/dist-electron
 recorder/release
+data/
