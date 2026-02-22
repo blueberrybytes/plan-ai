@@ -15,18 +15,7 @@ import { readFileSync, existsSync, unlinkSync, copyFileSync, chmodSync } from "f
 import { createServer, IncomingMessage, ServerResponse } from "http";
 import { spawn, ChildProcess } from "child_process";
 
-// Load .env manually — VITE_ vars never reach process.env in the Node main process
-const envPath = join(process.cwd(), ".env");
-if (existsSync(envPath)) {
-  readFileSync(envPath, "utf-8")
-    .split("\n")
-    .forEach((line) => {
-      const [key, ...rest] = line.trim().split("=");
-      if (key && !key.startsWith("#")) {
-        process.env[key] = rest.join("=").replace(/^["']|["']$/g, "");
-      }
-    });
-}
+// (Removed manual .env loading, electron-vite natively injects import.meta.env during build)
 
 nativeTheme.themeSource = "dark";
 
@@ -203,7 +192,7 @@ app.on("open-url", (event, url) => {
 // IPC: Open the web app desktop auth page in the system browser
 // Append ?local_port=4321 so DesktopCallback can POST the token to localhost
 ipcMain.handle("open-desktop-auth", () => {
-  const webAppUrl = process.env["VITE_PLAN_AI_WEB_URL"] ?? "https://plan-ai.blueberrybytes.com";
+  const webAppUrl = import.meta.env.VITE_PLAN_AI_WEB_URL ?? "https://plan-ai.blueberrybytes.com";
   return shell.openExternal(`${webAppUrl}/auth/desktop?local_port=${AUTH_CALLBACK_PORT}`);
 });
 

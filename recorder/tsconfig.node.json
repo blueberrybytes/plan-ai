@@ -2,12 +2,12 @@
   "compilerOptions": {
     "composite": true,
     "target": "ES2022",
-    "module": "CommonJS",
+    "module": "ESNext",
     "moduleResolution": "node",
     "strict": true,
     "skipLibCheck": true,
     "outDir": "dist-electron",
-    "types": ["node", "electron"]
+    "types": ["node", "electron", "vite/client"]
   },
   "include": ["electron"]
 }
