@@ -8,8 +8,10 @@ import {
   systemPreferences,
   shell,
 } from "electron";
+import * as path from "path";
 import { join } from "path";
-import { readFileSync, existsSync, unlinkSync } from "fs";
+import { fileURLToPath } from "url";
+import { readFileSync, existsSync, unlinkSync, copyFileSync, chmodSync } from "fs";
 import { createServer, IncomingMessage, ServerResponse } from "http";
 import { spawn, ChildProcess } from "child_process";
 
@@ -274,132 +276,132 @@ ipcMain.handle("get-app-version", () => app.getVersion());
 
 // ─── Native macOS System Audio Capture ───────────────────────────────────────
 let systemAudioProcess: ChildProcess | null = null;
+let currentChunkPromiseResolve: ((buf: Uint8Array | null) => void) | null = null;
 let currentAudioPath: string | null = null;
 
 ipcMain.handle("start-system-audio", async () => {
-  if (process.platform !== "darwin") return null;
-  if (systemAudioProcess) throw new Error("System audio capture is already running.");
+  if (systemAudioProcess) return "already_running";
 
-  const binaryPath = app.isPackaged
-    ? join(process.resourcesPath, "macos", "AudioCapture")
-    : join(process.cwd(), "macos", "AudioCapture");
+  const hasMic = await systemPreferences.askForMediaAccess("microphone");
+  console.log(`[IPC main] macOS microphone permission status: ${hasMic ? "granted" : "denied"}`);
+  if (!hasMic) {
+    console.warn("[IPC main] macOS microphone permission denied.");
+  }
 
-  currentAudioPath = join(app.getPath("temp"), `sys_audio_${Date.now()}.m4a`);
-  console.log("[IPC main] Starting macOS system audio capture to", currentAudioPath);
+  const basePath = path.join(app.getPath("temp"), `sys_audio_${Date.now()}`);
+  console.log(`[IPC main] Starting macOS system audio capture with base path: ${basePath}`);
 
-  systemAudioProcess = spawn(binaryPath, [currentAudioPath], {
+  const execDir = path.dirname(process.execPath); // This gives .../Contents/MacOS
+  const bundledBinaryPath = path.join(execDir, "AudioCapture");
+
+  if (!app.isPackaged) {
+    const localBinaryPath = path.join(process.cwd(), "macos", "AudioCapture");
+    if (existsSync(localBinaryPath)) {
+      copyFileSync(localBinaryPath, bundledBinaryPath);
+      chmodSync(bundledBinaryPath, "755");
+    }
+  }
+
+  systemAudioProcess = spawn(bundledBinaryPath, [basePath], {
     stdio: ["ignore", "pipe", "pipe"],
   });
 
-  systemAudioProcess.stdout?.on("data", (d) =>
-    console.log(`[AudioCapture] ${d.toString().trim()}`),
-  );
+  console.log(`[IPC main] Spawning: ${bundledBinaryPath}`);
+  systemAudioProcess.on("error", (err) => {
+    console.error(`[AudioCapture NEW] process SPAWN ERROR:`, err);
+  });
+  systemAudioProcess.stdout?.on("data", (d) => {
+    const out = d.toString().trim();
+    const lines = out.split("\n");
+    for (const line of lines) {
+      if (line.trim().startsWith("CHUNK_READY:")) {
+        const finishedPath = line.replace("CHUNK_READY:", "").trim();
+        if (existsSync(finishedPath)) {
+          try {
+            const buffer = readFileSync(finishedPath);
+            unlinkSync(finishedPath);
+            console.log(`[IPC main] Successfully read ${buffer.length} bytes from ${finishedPath}`);
+            if (currentChunkPromiseResolve) {
+              currentChunkPromiseResolve(new Uint8Array(buffer));
+              currentChunkPromiseResolve = null;
+            }
+          } catch (err) {
+            console.error(`[IPC main] Failed to read ${finishedPath}`, err);
+            if (currentChunkPromiseResolve) {
+              currentChunkPromiseResolve(null);
+              currentChunkPromiseResolve = null;
+            }
+          }
+        } else {
+          console.warn(`[IPC main] System audio file did NOT exist: ${finishedPath}`);
+          if (currentChunkPromiseResolve) {
+            currentChunkPromiseResolve(null);
+            currentChunkPromiseResolve = null;
+          }
+        }
+      } else if (line.trim() !== "") {
+        console.log(`[AudioCapture] ${line.trim()}`);
+      }
+    }
+  });
+
   systemAudioProcess.stderr?.on("data", (d) =>
     console.error(`[AudioCapture ERR] ${d.toString().trim()}`),
   );
-
   systemAudioProcess.on("close", (code) => {
-    console.log(`[AudioCapture] process exited with code ${code}`);
-    systemAudioProcess = null;
+    console.log(`[AudioCapture NEW] process exited with code ${code}`);
+    if (currentChunkPromiseResolve) {
+      currentChunkPromiseResolve(null);
+      currentChunkPromiseResolve = null;
+    }
   });
 
-  return currentAudioPath;
+  return "started";
 });
 
 ipcMain.handle("chunk-system-audio", async () => {
-  if (!systemAudioProcess || !currentAudioPath) return null;
+  if (!systemAudioProcess) return null;
 
-  return new Promise<Uint8Array | null>((resolve) => {
-    console.log("[IPC main] Chunking system audio capture...");
-    const oldProcess = systemAudioProcess!;
-    const oldPath = currentAudioPath!;
+  console.log("[IPC main] Requesting contiguous chunk (SIGUSR1)...");
 
-    // Instantly start the next process to avoid dropping audio
-    const binaryPath = app.isPackaged
-      ? join(process.resourcesPath, "macos", "AudioCapture")
-      : join(process.cwd(), "macos", "AudioCapture");
+  return new Promise((resolve) => {
+    currentChunkPromiseResolve = resolve;
+    systemAudioProcess?.kill("SIGUSR1");
 
-    currentAudioPath = join(app.getPath("temp"), `sys_audio_${Date.now()}.m4a`);
-    systemAudioProcess = spawn(binaryPath, [currentAudioPath], {
-      stdio: ["ignore", "pipe", "pipe"],
-    });
-
-    systemAudioProcess.stdout?.on("data", (d) =>
-      console.log(`[AudioCapture] ${d.toString().trim()}`),
-    );
-    systemAudioProcess.stderr?.on("data", (d) =>
-      console.error(`[AudioCapture ERR] ${d.toString().trim()}`),
-    );
-    systemAudioProcess.on("close", (code) => {
-      console.log(`[AudioCapture NEW] process exited with code ${code}`);
-      if (systemAudioProcess === systemAudioProcess) {
-        systemAudioProcess = null;
-      }
-    });
-
-    // Gracefully kill old one and retrieve data
-    oldProcess.once("close", () => {
-      console.log(`[IPC main] Old AudioCapture process closed. Reading file: ${oldPath}`);
-      try {
-        if (existsSync(oldPath)) {
-          const buffer = readFileSync(oldPath);
-          console.log(`[IPC main] Successfully read ${buffer.length} bytes from sys audio file.`);
-          unlinkSync(oldPath);
-          resolve(new Uint8Array(buffer));
-        } else {
-          console.warn(`[IPC main] System audio file did NOT exist: ${oldPath}`);
-          resolve(null);
-        }
-      } catch (err) {
-        console.error("[IPC main] Error reading sys audio chunk file:", err);
-        resolve(null);
-      }
-    });
-
-    console.log("[IPC main] Sending SIGTERM to old AudioCapture process...");
-    oldProcess.kill("SIGTERM");
-
+    // Safety timeout just in case it hangs
     setTimeout(() => {
-      // Force kill if it hangs
-      try {
-        oldProcess.kill("SIGKILL");
-      } catch {
-        /* ignored */
+      if (currentChunkPromiseResolve === resolve) {
+        console.warn("[IPC main] SIGUSR1 chunk timeout reached.");
+        resolve(null);
+        currentChunkPromiseResolve = null;
       }
-    }, 1500);
+    }, 3000);
   });
 });
 
 ipcMain.handle("stop-system-audio", async () => {
-  if (!systemAudioProcess || !currentAudioPath) return null;
+  if (!systemAudioProcess) return null;
 
-  return new Promise<Uint8Array | null>((resolve) => {
-    console.log("[IPC main] Stopping system audio capture...");
+  console.log("[IPC main] Stopping system audio capture (SIGTERM)...");
 
-    systemAudioProcess!.once("close", () => {
-      systemAudioProcess = null;
-      try {
-        if (existsSync(currentAudioPath!)) {
-          const buffer = readFileSync(currentAudioPath!);
-          unlinkSync(currentAudioPath!);
-          currentAudioPath = null;
-          resolve(new Uint8Array(buffer));
-        } else {
-          resolve(null);
-        }
-      } catch (err) {
-        console.error("[IPC main] Error reading sys audio file:", err);
-        resolve(null);
-      }
-    });
+  return new Promise((resolve) => {
+    currentChunkPromiseResolve = resolve;
+    systemAudioProcess?.kill("SIGTERM");
 
-    systemAudioProcess!.kill("SIGTERM");
+    const proc = systemAudioProcess;
+    systemAudioProcess = null;
 
+    // Force kill if it hangs
     setTimeout(() => {
-      if (systemAudioProcess) {
-        console.warn("[IPC main] AudioCapture process hung, forcing kill.");
-        systemAudioProcess.kill("SIGKILL");
+      try {
+        proc?.kill("SIGKILL");
+      } catch {
+        /* ignored */
       }
-    }, 3000);
+      if (currentChunkPromiseResolve === resolve) {
+        resolve(null);
+        currentChunkPromiseResolve = null;
+      }
+    }, 1500);
   });
 });

@@ -42,8 +42,11 @@
     "files": [
       "dist-electron/**/*"
     ],
-    "extraResources": [
-      "macos/AudioCapture"
+    "extraFiles": [
+      {
+        "from": "macos/AudioCapture",
+        "to": "MacOS/AudioCapture"
+      }
     ],
     "mac": {
       "category": "public.app-category.productivity",
