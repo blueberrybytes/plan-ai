@@ -5,6 +5,7 @@ import {
   desktopCapturer,
   nativeTheme,
   session,
+  systemPreferences,
   shell,
 } from "electron";
 import { join } from "path";
@@ -205,17 +206,66 @@ ipcMain.handle("open-desktop-auth", () => {
 
 // IPC: List desktop/window sources for system audio capture
 ipcMain.handle("get-desktop-sources", async () => {
-  const sources = await desktopCapturer.getSources({
-    types: ["window", "screen"],
-    fetchWindowIcons: true,
-  });
+  console.log("[IPC main] Requesting desktop sources...");
+  try {
+    const sources = await desktopCapturer.getSources({
+      types: ["window", "screen"],
+      fetchWindowIcons: true,
+    });
+    console.log(`[IPC main] desktopCapturer returned ${sources.length} sources`);
+    return sources.map((source) => ({
+      id: source.id,
+      name: source.name,
+      appIconDataURL: source.appIcon?.toDataURL() ?? null,
+      thumbnailDataURL: source.thumbnail?.toDataURL() ?? null,
+    }));
+  } catch (err) {
+    console.error("[IPC main] desktopCapturer failed:", err);
+    throw err;
+  }
+});
 
-  return sources.map((source) => ({
-    id: source.id,
-    name: source.name,
-    appIconDataURL: source.appIcon?.toDataURL() ?? null,
-    thumbnailDataURL: source.thumbnail?.toDataURL() ?? null,
-  }));
+// IPC: Screen Recording Permissions (macOS)
+ipcMain.handle("check-screen-recording-permission", async () => {
+  console.log("[IPC main] Checking macOS screen recording permissions...");
+  if (process.platform !== "darwin") {
+    console.log("[IPC main] Not macOS, bypassing check.");
+    return true;
+  }
+
+  const status = systemPreferences.getMediaAccessStatus("screen");
+  console.log("[IPC main] macOS systemPreferences returned status:", status);
+  if (status === "granted") return true;
+
+  // If not-determined, triggering a dummy capture request forces macOS to show the permission dialog
+  if (status === "not-determined") {
+    console.log("[IPC main] Triggering dummy capture to provoke macOS permission dialog...");
+    try {
+      await desktopCapturer.getSources({ types: ["screen"] });
+    } catch {
+      // Ignore
+    }
+    return false; // Still returning false so the user knows they need to restart the app
+  }
+
+  return false;
+});
+
+// IPC: Microphone Permissions (macOS)
+ipcMain.handle("check-microphone-permission", async () => {
+  console.log("[IPC main] Checking macOS microphone permissions...");
+  if (process.platform !== "darwin") return true;
+
+  const status = systemPreferences.getMediaAccessStatus("microphone");
+  console.log("[IPC main] macOS microphone permission status:", status);
+  if (status === "granted") return true;
+
+  if (status === "not-determined") {
+    console.log("[IPC main] Requesting microphone access...");
+    return await systemPreferences.askForMediaAccess("microphone");
+  }
+
+  return false;
 });
 
 // IPC: App version

@@ -19,7 +19,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 import { AudioRecorder } from "../services/audioRecorder";
 // import { planAiApi } from "../services/planAiApi";
-import { loadConfig } from "./Home";
+import { loadConfig } from "../utils/recorderConfig";
 
 type Phase = "recording" | "saving" | "done" | "error";
 
@@ -89,10 +89,10 @@ const Recording: React.FC = () => {
   };
 
   const handleChunk = useCallback(
-    async (blob: Blob) => {
+    async (chunks: { mic?: Blob; system?: Blob }) => {
       if (!token) return;
       try {
-        const text = await api.transcribeChunk(blob);
+        const text = await api.transcribeChunk(chunks);
         if (text.trim()) appendText(text.trim());
       } catch (err) {
         console.error("Chunk transcription error:", err);
@@ -124,7 +124,7 @@ const Recording: React.FC = () => {
     if (!token) return;
 
     const recorder = new AudioRecorder({
-      onChunk: (blob) => void handleChunk(blob),
+      onChunk: (chunks) => void handleChunk(chunks),
       onStop: () => void handleStop(),
       onError: (err) => {
         setError(err.message);
@@ -133,7 +133,12 @@ const Recording: React.FC = () => {
     });
 
     recorderRef.current = recorder;
-    void recorder.start(config?.systemSourceId ?? undefined);
+
+    // Add a small delay to ensure Home page unmounted and released devices
+    const startTimeout = setTimeout(() => {
+      console.log("[Recording] Starting recorder after delay...");
+      void recorder.start(config?.systemSourceId ?? undefined);
+    }, 1000);
 
     // Elapsed timer
     timerRef.current = setInterval(() => {
@@ -141,6 +146,7 @@ const Recording: React.FC = () => {
     }, 1000);
 
     return () => {
+      clearTimeout(startTimeout);
       if (timerRef.current) clearInterval(timerRef.current);
       recorder.stop();
     };

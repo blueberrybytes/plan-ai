@@ -4838,20 +4838,21 @@
 				],
 				"parameters": [],
 				"requestBody": {
-					"required": true,
+					"required": false,
 					"content": {
 						"multipart/form-data": {
 							"schema": {
 								"type": "object",
 								"properties": {
-									"audio": {
+									"mic": {
+										"type": "string",
+										"format": "binary"
+									},
+									"system": {
 										"type": "string",
 										"format": "binary"
 									}
-								},
-								"required": [
-									"audio"
-								]
+								}
 							}
 						}
 					}

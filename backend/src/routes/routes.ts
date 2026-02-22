@@ -2707,13 +2707,18 @@ export function RegisterRoutes(app: Router,opts?:{multer?:ReturnType<typeof mult
         // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
         const argsAudioController_transcribeChunk: Record<string, TsoaRoute.ParameterSchema> = {
                 request: {"in":"request","name":"request","required":true,"dataType":"object"},
-                audioFile: {"in":"formData","name":"audio","required":true,"dataType":"file"},
+                micFile: {"in":"formData","name":"mic","dataType":"file"},
+                sysFile: {"in":"formData","name":"system","dataType":"file"},
         };
         app.post('/api/audio/transcribe-chunk',
             authenticateMiddleware([{"ClientLevel":[]}]),
             upload.fields([
                 {
-                    name: "audio",
+                    name: "mic",
+                    maxCount: 1
+                },
+                {
+                    name: "system",
                     maxCount: 1
                 }
             ]),

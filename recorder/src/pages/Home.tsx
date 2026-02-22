@@ -29,18 +29,8 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 import type { Transcript } from "../services/planAiApi";
 import type { DesktopSource } from "../types/electron";
-
-export interface RecordingConfig {
-  systemSourceId: string | null;
-}
-
-const CONFIG_KEY = "recorder-config";
-export const saveConfig = (config: RecordingConfig) =>
-  sessionStorage.setItem(CONFIG_KEY, JSON.stringify(config));
-export const loadConfig = (): RecordingConfig | null => {
-  const raw = sessionStorage.getItem(CONFIG_KEY);
-  return raw ? (JSON.parse(raw) as RecordingConfig) : null;
-};
+import { AudioLevelMonitor } from "../components/AudioLevelMonitor";
+import { saveConfig, type RecordingConfig } from "../utils/recorderConfig";
 
 const Home: React.FC = () => {
   const { user, token, signOut, api } = useAuth();
@@ -52,6 +42,14 @@ const Home: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   const [systemSourceId, setSystemSourceId] = useState<string | null>(null);
+  const [hasScreenPermission, setHasScreenPermission] = useState(true);
+
+  console.log(
+    "[Home] Rendering component. sources:",
+    desktopSources.length,
+    "systemSourceId:",
+    systemSourceId,
+  );
 
   const fetchData = useCallback(async () => {
     if (!token) return;
@@ -82,12 +80,40 @@ const Home: React.FC = () => {
     }
   };
 
+  const fetchDesktopSources = useCallback(async () => {
+    try {
+      const perms = await window.electron.checkScreenRecordingPermission?.();
+      setHasScreenPermission(perms ?? true);
+
+      const sources = await window.electron.getDesktopSources();
+      if (sources && sources.length > 0) {
+        setDesktopSources(sources);
+        // Immediate auto-select primary screen if nothing picked
+        if (!systemSourceId) {
+          const primary = sources.find((s) => s.id.startsWith("screen:"));
+          if (primary) {
+            console.log("[Home] Automatically defaulted to primary screen audio:", primary.name);
+            setSystemSourceId(primary.id);
+          }
+        }
+      }
+    } catch (err) {
+      console.error("[Home] Failed to fetch desktop sources:", err);
+      setDesktopSources([]);
+    }
+  }, [systemSourceId]);
+
   useEffect(() => {
-    window.electron
-      .getDesktopSources()
-      .then(setDesktopSources)
-      .catch(() => setDesktopSources([]));
-  }, []);
+    void fetchDesktopSources();
+  }, [fetchDesktopSources]);
+
+  useEffect(() => {
+    console.log("[Home] desktopSources state:", desktopSources.length);
+  }, [desktopSources]);
+
+  useEffect(() => {
+    console.log("[Home] systemSourceId state:", systemSourceId);
+  }, [systemSourceId]);
 
   const handleStartRecording = () => {
     const config: RecordingConfig = { systemSourceId };
@@ -223,7 +249,8 @@ const Home: React.FC = () => {
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
-            justifyContent: "center",
+            justifyContent: "flex-start",
+            pt: 10,
             gap: 4,
           }}
         >
@@ -236,51 +263,35 @@ const Home: React.FC = () => {
             </Typography>
           </Box>
 
-          <Box sx={{ width: "100%", maxWidth: 300 }}>
-            {/* System audio source */}
-            <FormControl size="small" fullWidth sx={{ mb: 4 }}>
-              <InputLabel>System audio source</InputLabel>
-              <Select
-                value={systemSourceId ?? "default"}
-                label="System audio source"
-                onChange={(e) =>
-                  setSystemSourceId(e.target.value === "default" ? null : e.target.value)
-                }
-                renderValue={(selected) => {
-                  if (selected === "default") {
-                    return (
-                      <Stack direction="row" spacing={1} alignItems="center">
-                        <MicIcon fontSize="small" />
-                        <span>Microphone only</span>
-                      </Stack>
-                    );
-                  }
-                  const src = desktopSources.find((s) => s.id === selected);
-                  return (
-                    <Stack direction="row" spacing={1} alignItems="center">
-                      <DesktopIcon fontSize="small" />
-                      <span>{src?.name || "Unknown"}</span>
-                    </Stack>
-                  );
-                }}
-              >
-                <MenuItem value="default">
-                  <Stack direction="row" spacing={1} alignItems="center">
-                    <MicIcon fontSize="small" />
-                    <span>Microphone only</span>
-                  </Stack>
-                </MenuItem>
-                {desktopSources.map((src) => (
-                  <MenuItem key={src.id} value={src.id}>
-                    <Stack direction="row" spacing={1} alignItems="center">
-                      <DesktopIcon fontSize="small" />
-                      <span>{src.name}</span>
-                    </Stack>
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
+          {/* Recording Sources Configuration (Hidden, Auto-selected) */}
+          <Box
+            sx={{
+              width: "100%",
+              maxWidth: 300,
+              p: 2,
+              borderRadius: 2,
+              bgcolor: "background.paper",
+              border: "1px solid rgba(255,255,255,0.1)",
+              mb: 4,
+            }}
+          >
+            <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: "bold" }}>
+              Active Audio Sources
+            </Typography>
 
+            {/* Live Audio Monitors (Mic & System) */}
+            <AudioLevelMonitor systemSourceId={systemSourceId} />
+
+            <Typography
+              variant="caption"
+              color="text.secondary"
+              sx={{ display: "block", mt: 1, fontStyle: "italic" }}
+            >
+              * Automatically capturing Microphone and System Audio (Screen 1)
+            </Typography>
+          </Box>
+
+          <Box sx={{ width: "100%", maxWidth: 300 }}>
             <Button
               variant="contained"
               size="large"

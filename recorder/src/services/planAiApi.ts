@@ -111,13 +111,14 @@ export const createPlanAiApi = (getToken: (forceRefresh?: boolean) => Promise<st
       );
     },
 
-    async transcribeChunk(audioBlob: Blob): Promise<string> {
+    async transcribeChunk(chunks: { mic?: Blob; system?: Blob }): Promise<string> {
       const req = async (force: boolean) => {
         const token = await getToken(force);
         if (!token) throw new Error("No auth token available");
 
         const form = new FormData();
-        form.append("audio", audioBlob, "chunk.webm");
+        if (chunks.mic) form.append("mic", chunks.mic, "mic.webm");
+        if (chunks.system) form.append("system", chunks.system, "sys.webm");
 
         return fetch(`${BASE_URL}/api/audio/transcribe-chunk`, {
           method: "POST",

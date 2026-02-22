@@ -33,13 +33,14 @@ export class AudioController extends Controller {
   @Security("ClientLevel")
   public async transcribeChunk(
     @Request() request: AuthenticatedRequest,
-    @UploadedFile("audio") audioFile: Express.Multer.File,
+    @UploadedFile("mic") micFile?: Express.Multer.File,
+    @UploadedFile("system") sysFile?: Express.Multer.File,
   ): Promise<ApiResponse<{ text: string }>> {
     await this.getAuthorizedUser(request);
 
-    if (!audioFile) {
+    if (!micFile && !sysFile) {
       this.setStatus(400);
-      throw { status: 400, message: "No audio file uploaded" };
+      throw { status: 400, message: "No audio files uploaded" };
     }
 
     const groqApiKey = process.env.GROQ_API_KEY;
@@ -48,33 +49,44 @@ export class AudioController extends Controller {
       throw { status: 500, message: "Transcription service is not configured" };
     }
 
-    // Call Groq Whisper via multipart form (compatible with OpenAI audio API)
-    const form = new FormData();
-    const audioBlob = new Blob([new Uint8Array(audioFile.buffer)], {
-      type: audioFile.mimetype || "audio/webm",
-    });
-    form.append("file", audioBlob, audioFile.originalname || "chunk.webm");
-    form.append("model", "whisper-large-v3-turbo");
-    form.append("response_format", "text");
+    const transcribeWithGroq = async (file: Express.Multer.File): Promise<string> => {
+      const form = new FormData();
+      const audioBlob = new Blob([new Uint8Array(file.buffer)], {
+        type: file.mimetype || "audio/webm",
+      });
+      form.append("file", audioBlob, file.originalname || "chunk.webm");
+      form.append("model", "whisper-large-v3-turbo");
+      form.append("response_format", "text");
 
-    const groqResponse = await fetch("https://api.groq.com/openai/v1/audio/transcriptions", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${groqApiKey}` },
-      body: form,
-    });
+      const groqResponse = await fetch("https://api.groq.com/openai/v1/audio/transcriptions", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${groqApiKey}` },
+        body: form,
+      });
 
-    if (!groqResponse.ok) {
-      const errBody = await groqResponse.text();
-      logger.error("Groq transcription error", { status: groqResponse.status, body: errBody });
-      this.setStatus(502);
-      throw { status: 502, message: "Transcription service returned an error" };
-    }
+      if (!groqResponse.ok) {
+        const errBody = await groqResponse.text();
+        logger.error("Groq transcription error", { status: groqResponse.status, body: errBody });
+        return ""; // Silently fail individual chunks rather than breaking the whole record flow
+      }
 
-    const text = await groqResponse.text();
+      return groqResponse.text().then((t) => t.trim());
+    };
+
+    // Run parallel transcriptions
+    const [micText, sysText] = await Promise.all([
+      micFile ? transcribeWithGroq(micFile) : Promise.resolve(""),
+      sysFile ? transcribeWithGroq(sysFile) : Promise.resolve(""),
+    ]);
+
+    // Format final text
+    let finalOutput = "";
+    if (micText) finalOutput += `User: ${micText}\n`;
+    if (sysText) finalOutput += `Others: ${sysText}\n`;
 
     return {
       status: 200,
-      data: { text: text.trim() },
+      data: { text: finalOutput.trim() },
     };
   }
 }
