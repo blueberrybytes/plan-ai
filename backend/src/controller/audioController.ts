@@ -51,10 +51,18 @@ export class AudioController extends Controller {
 
     const transcribeWithGroq = async (file: Express.Multer.File): Promise<string> => {
       const form = new FormData();
+
+      const isM4A =
+        file.originalname?.endsWith(".m4a") ||
+        file.mimetype === "audio/m4a" ||
+        file.mimetype === "audio/mp4";
+      const actualMime = isM4A ? "audio/m4a" : file.mimetype || "audio/webm";
+      const defaultName = isM4A ? "chunk.m4a" : "chunk.webm";
+
       const audioBlob = new Blob([new Uint8Array(file.buffer)], {
-        type: file.mimetype || "audio/webm",
+        type: actualMime,
       });
-      form.append("file", audioBlob, file.originalname || "chunk.webm");
+      form.append("file", audioBlob, file.originalname || defaultName);
       form.append("model", "whisper-large-v3-turbo");
       form.append("response_format", "text");
 

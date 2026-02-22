@@ -24,6 +24,15 @@ contextBridge.exposeInMainWorld("electron", {
     ipcRenderer.on("desktop-auth-token", handler);
     return () => ipcRenderer.removeListener("desktop-auth-token", handler);
   },
+
+  // Start native macOS system audio recording
+  startSystemAudio: (): Promise<string | null> => ipcRenderer.invoke("start-system-audio"),
+
+  // Chunk native macOS system audio
+  chunkSystemAudio: (): Promise<Uint8Array | null> => ipcRenderer.invoke("chunk-system-audio"),
+
+  // Stop native macOS system audio recording and get the buffer
+  stopSystemAudio: (): Promise<Uint8Array | null> => ipcRenderer.invoke("stop-system-audio"),
 });
 
 interface DesktopSource {

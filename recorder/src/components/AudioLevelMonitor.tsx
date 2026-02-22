@@ -163,7 +163,26 @@ export const AudioLevelMonitor: React.FC<AudioLevelMonitorProps> = ({ systemSour
     }
 
     let cleanupStream: MediaStream | null = null;
-    console.log("[Monitor] Connecting to system source:", systemSourceId);
+    let fallbackTimeout: ReturnType<typeof setTimeout> | null = null;
+
+    if (navigator.userAgent.includes("Mac OS X")) {
+      console.log("[Monitor] Waiting for macOS native system audio...");
+      // For macOS native system audio, we don't have a reliable way to pipe the
+      // ScreenCaptureKit stream back into the Web Audio API without causing echo loops.
+      // So we just set a quiet state to bypass the infinite render bug and let the user know it's selected.
+      setSysLevel(5);
+
+      // Delay to avoid layout thrashing
+      fallbackTimeout = setTimeout(() => {
+        setSysLevel(0); // Rest
+      }, 500);
+
+      return () => {
+        if (fallbackTimeout) clearTimeout(fallbackTimeout);
+      };
+    }
+
+    console.log("[Monitor] Connecting to system source via getUserMedia:", systemSourceId);
 
     void navigator.mediaDevices
       .getUserMedia({
@@ -224,14 +243,22 @@ export const AudioLevelMonitor: React.FC<AudioLevelMonitorProps> = ({ systemSour
           <Typography
             variant="caption"
             color={
-              !systemSourceId ? "text.disabled" : sysLevel > 1 ? "success.main" : "text.secondary"
+              !systemSourceId
+                ? "text.disabled"
+                : navigator.userAgent.includes("Mac OS X")
+                  ? "success.main"
+                  : sysLevel > 1
+                    ? "success.main"
+                    : "text.secondary"
             }
           >
             {!systemSourceId
               ? "OFF (Disabled)"
-              : sysLevel > 1
-                ? "Active (Capturing)"
-                : "Quiet (Selected)"}
+              : navigator.userAgent.includes("Mac OS X")
+                ? "Active (macOS System Audio Link)"
+                : sysLevel > 1
+                  ? "Active (Capturing PC Audio)"
+                  : "Waiting for sound..."}
           </Typography>
         </Stack>
         <LinearProgress

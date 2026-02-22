@@ -117,8 +117,14 @@ export const createPlanAiApi = (getToken: (forceRefresh?: boolean) => Promise<st
         if (!token) throw new Error("No auth token available");
 
         const form = new FormData();
-        if (chunks.mic) form.append("mic", chunks.mic, "mic.webm");
-        if (chunks.system) form.append("system", chunks.system, "sys.webm");
+        if (chunks.mic) {
+          form.append("mic", chunks.mic, "mic.webm");
+        }
+        if (chunks.system) {
+          const isMacNative =
+            chunks.system.type.includes("mp4") || chunks.system.type.includes("m4a");
+          form.append("system", chunks.system, isMacNative ? "system.m4a" : "system.webm");
+        }
 
         return fetch(`${BASE_URL}/api/audio/transcribe-chunk`, {
           method: "POST",

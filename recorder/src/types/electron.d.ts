@@ -18,6 +18,12 @@ declare global {
       checkMicrophonePermission: () => Promise<boolean>;
       /** Registers a listener for the custom-protocol auth token; returns an unsubscribe fn */
       onDesktopAuthToken: (callback: (token: string) => void) => () => void;
+      /** Start native macOS system audio recording (ScreenCaptureKit) */
+      startSystemAudio: () => Promise<string | null>;
+      /** Stop and restart native macOS system audio recording, returning previous chunk */
+      chunkSystemAudio: () => Promise<Uint8Array | null>;
+      /** Stop native macOS system audio recording and retrieve data */
+      stopSystemAudio: () => Promise<Uint8Array | null>;
     };
   }
 }

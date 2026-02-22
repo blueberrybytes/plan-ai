@@ -9,8 +9,9 @@ import {
   shell,
 } from "electron";
 import { join } from "path";
-import { readFileSync, existsSync } from "fs";
+import { readFileSync, existsSync, unlinkSync } from "fs";
 import { createServer, IncomingMessage, ServerResponse } from "http";
+import { spawn, ChildProcess } from "child_process";
 
 // Load .env manually — VITE_ vars never reach process.env in the Node main process
 const envPath = join(process.cwd(), ".env");
@@ -270,3 +271,135 @@ ipcMain.handle("check-microphone-permission", async () => {
 
 // IPC: App version
 ipcMain.handle("get-app-version", () => app.getVersion());
+
+// ─── Native macOS System Audio Capture ───────────────────────────────────────
+let systemAudioProcess: ChildProcess | null = null;
+let currentAudioPath: string | null = null;
+
+ipcMain.handle("start-system-audio", async () => {
+  if (process.platform !== "darwin") return null;
+  if (systemAudioProcess) throw new Error("System audio capture is already running.");
+
+  const binaryPath = app.isPackaged
+    ? join(process.resourcesPath, "macos", "AudioCapture")
+    : join(process.cwd(), "macos", "AudioCapture");
+
+  currentAudioPath = join(app.getPath("temp"), `sys_audio_${Date.now()}.m4a`);
+  console.log("[IPC main] Starting macOS system audio capture to", currentAudioPath);
+
+  systemAudioProcess = spawn(binaryPath, [currentAudioPath], {
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+
+  systemAudioProcess.stdout?.on("data", (d) =>
+    console.log(`[AudioCapture] ${d.toString().trim()}`),
+  );
+  systemAudioProcess.stderr?.on("data", (d) =>
+    console.error(`[AudioCapture ERR] ${d.toString().trim()}`),
+  );
+
+  systemAudioProcess.on("close", (code) => {
+    console.log(`[AudioCapture] process exited with code ${code}`);
+    systemAudioProcess = null;
+  });
+
+  return currentAudioPath;
+});
+
+ipcMain.handle("chunk-system-audio", async () => {
+  if (!systemAudioProcess || !currentAudioPath) return null;
+
+  return new Promise<Uint8Array | null>((resolve) => {
+    console.log("[IPC main] Chunking system audio capture...");
+    const oldProcess = systemAudioProcess!;
+    const oldPath = currentAudioPath!;
+
+    // Instantly start the next process to avoid dropping audio
+    const binaryPath = app.isPackaged
+      ? join(process.resourcesPath, "macos", "AudioCapture")
+      : join(process.cwd(), "macos", "AudioCapture");
+
+    currentAudioPath = join(app.getPath("temp"), `sys_audio_${Date.now()}.m4a`);
+    systemAudioProcess = spawn(binaryPath, [currentAudioPath], {
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+
+    systemAudioProcess.stdout?.on("data", (d) =>
+      console.log(`[AudioCapture] ${d.toString().trim()}`),
+    );
+    systemAudioProcess.stderr?.on("data", (d) =>
+      console.error(`[AudioCapture ERR] ${d.toString().trim()}`),
+    );
+    systemAudioProcess.on("close", (code) => {
+      console.log(`[AudioCapture NEW] process exited with code ${code}`);
+      if (systemAudioProcess === systemAudioProcess) {
+        systemAudioProcess = null;
+      }
+    });
+
+    // Gracefully kill old one and retrieve data
+    oldProcess.once("close", () => {
+      console.log(`[IPC main] Old AudioCapture process closed. Reading file: ${oldPath}`);
+      try {
+        if (existsSync(oldPath)) {
+          const buffer = readFileSync(oldPath);
+          console.log(`[IPC main] Successfully read ${buffer.length} bytes from sys audio file.`);
+          unlinkSync(oldPath);
+          resolve(new Uint8Array(buffer));
+        } else {
+          console.warn(`[IPC main] System audio file did NOT exist: ${oldPath}`);
+          resolve(null);
+        }
+      } catch (err) {
+        console.error("[IPC main] Error reading sys audio chunk file:", err);
+        resolve(null);
+      }
+    });
+
+    console.log("[IPC main] Sending SIGTERM to old AudioCapture process...");
+    oldProcess.kill("SIGTERM");
+
+    setTimeout(() => {
+      // Force kill if it hangs
+      try {
+        oldProcess.kill("SIGKILL");
+      } catch {
+        /* ignored */
+      }
+    }, 1500);
+  });
+});
+
+ipcMain.handle("stop-system-audio", async () => {
+  if (!systemAudioProcess || !currentAudioPath) return null;
+
+  return new Promise<Uint8Array | null>((resolve) => {
+    console.log("[IPC main] Stopping system audio capture...");
+
+    systemAudioProcess!.once("close", () => {
+      systemAudioProcess = null;
+      try {
+        if (existsSync(currentAudioPath!)) {
+          const buffer = readFileSync(currentAudioPath!);
+          unlinkSync(currentAudioPath!);
+          currentAudioPath = null;
+          resolve(new Uint8Array(buffer));
+        } else {
+          resolve(null);
+        }
+      } catch (err) {
+        console.error("[IPC main] Error reading sys audio file:", err);
+        resolve(null);
+      }
+    });
+
+    systemAudioProcess!.kill("SIGTERM");
+
+    setTimeout(() => {
+      if (systemAudioProcess) {
+        console.warn("[IPC main] AudioCapture process hung, forcing kill.");
+        systemAudioProcess.kill("SIGKILL");
+      }
+    }, 3000);
+  });
+});
