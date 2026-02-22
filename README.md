@@ -117,7 +117,6 @@ Fill in your credentials. Both templates include inline comments for every key.
 | `REACT_APP_FIREBASE_MESSAGING_SENDER_ID` | Firebase messaging sender ID                        |
 | `REACT_APP_FIREBASE_APP_ID`              | Firebase app ID                                     |
 | `REACT_APP_FIREBASE_MEASUREMENT_ID`      | Firebase Analytics measurement ID                   |
-| `REACT_APP_GOOGLE_DRIVE_API_KEY`         | Google Drive Picker API key (optional)              |
 | `REACT_APP_ENABLE_REMOTE_LOGS`           | Enable OpenObserve remote logging (`false` locally) |
 
 ### 3 — Start databases and dev servers
