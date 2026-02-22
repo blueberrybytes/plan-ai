@@ -260,6 +260,16 @@ ipcMain.handle("check-microphone-permission", async () => {
   return false;
 });
 
+// IPC: Open System Preferences (macOS)
+ipcMain.handle("open-system-preferences", (_, pane: "microphone" | "screen") => {
+  if (process.platform !== "darwin") return;
+  const url =
+    pane === "microphone"
+      ? "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone"
+      : "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture";
+  shell.openExternal(url);
+});
+
 // IPC: App version
 ipcMain.handle("get-app-version", () => app.getVersion());
 

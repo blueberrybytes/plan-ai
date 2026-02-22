@@ -16,6 +16,8 @@ declare global {
       checkScreenRecordingPermission: () => Promise<boolean>;
       /** Checks if macOS microphone permissions are granted */
       checkMicrophonePermission: () => Promise<boolean>;
+      /** Opens macOS System Preferences for specific privacy panes */
+      openSystemPreferences: (pane: "microphone" | "screen") => Promise<void>;
       /** Registers a listener for the custom-protocol auth token; returns an unsubscribe fn */
       onDesktopAuthToken: (callback: (token: string) => void) => () => void;
       /** Start native macOS system audio recording (ScreenCaptureKit) */

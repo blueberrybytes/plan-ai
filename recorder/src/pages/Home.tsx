@@ -43,6 +43,7 @@ const Home: React.FC = () => {
 
   const [systemSourceId, setSystemSourceId] = useState<string | null>(null);
   const [hasScreenPermission, setHasScreenPermission] = useState(true);
+  const [hasMicPermission, setHasMicPermission] = useState(true);
 
   console.log(
     "[Home] Rendering component. sources:",
@@ -82,8 +83,11 @@ const Home: React.FC = () => {
 
   const fetchDesktopSources = useCallback(async () => {
     try {
-      const perms = await window.electron.checkScreenRecordingPermission?.();
-      setHasScreenPermission(perms ?? true);
+      const screenPerms = await window.electron.checkScreenRecordingPermission?.();
+      setHasScreenPermission(screenPerms ?? true);
+
+      const micPerms = await window.electron.checkMicrophonePermission?.();
+      setHasMicPermission(micPerms ?? true);
 
       const sources = await window.electron.getDesktopSources();
       if (sources && sources.length > 0) {
@@ -291,13 +295,52 @@ const Home: React.FC = () => {
             </Typography>
           </Box>
 
-          <Box sx={{ width: "100%", maxWidth: 300 }}>
+          <Box
+            sx={{ width: "100%", maxWidth: 350, display: "flex", flexDirection: "column", gap: 2 }}
+          >
+            {!hasScreenPermission && navigator.userAgent.includes("Mac OS X") && (
+              <Alert
+                severity="error"
+                variant="filled"
+                action={
+                  <Button
+                    color="inherit"
+                    size="small"
+                    onClick={() => window.electron.openSystemPreferences?.("screen")}
+                  >
+                    Open Settings
+                  </Button>
+                }
+              >
+                Screen Recording permission is required to capture system audio. Please enable it in
+                macOS System Settings &rarr; Privacy & Security.
+              </Alert>
+            )}
+            {!hasMicPermission && navigator.userAgent.includes("Mac OS X") && (
+              <Alert
+                severity="warning"
+                variant="filled"
+                action={
+                  <Button
+                    color="inherit"
+                    size="small"
+                    onClick={() => window.electron.openSystemPreferences?.("microphone")}
+                  >
+                    Open Settings
+                  </Button>
+                }
+              >
+                Microphone permission is required to capture your voice. Please enable it in macOS
+                System Settings &rarr; Privacy & Security.
+              </Alert>
+            )}
             <Button
               variant="contained"
               size="large"
               startIcon={<MicIcon />}
               onClick={handleStartRecording}
               fullWidth
+              disabled={!hasScreenPermission || !hasMicPermission}
               sx={{ py: 1.5, fontSize: "1rem", borderRadius: 2 }}
             >
               Start Recording

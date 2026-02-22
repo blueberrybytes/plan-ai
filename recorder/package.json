@@ -54,7 +54,14 @@
       "target": [
         "dmg",
         "zip"
-      ]
+      ],
+      "hardenedRuntime": true,
+      "entitlements": "macos/entitlements.plist",
+      "entitlementsInherit": "macos/entitlements.plist",
+      "extendInfo": {
+        "NSMicrophoneUsageDescription": "Plan AI Recorder needs microphone access to record your voice during meetings.",
+        "NSScreenCaptureUsageDescription": "Plan AI Recorder needs screen capture access to cleanly capture system audio output."
+      }
     },
     "win": {
       "target": [

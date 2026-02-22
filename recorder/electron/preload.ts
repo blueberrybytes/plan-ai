@@ -18,6 +18,10 @@ contextBridge.exposeInMainWorld("electron", {
   checkMicrophonePermission: (): Promise<boolean> =>
     ipcRenderer.invoke("check-microphone-permission"),
 
+  // Open macOS System Preferences
+  openSystemPreferences: (pane: "microphone" | "screen"): Promise<void> =>
+    ipcRenderer.invoke("open-system-preferences", pane),
+
   // Listen for the custom-protocol token delivered by the main process
   onDesktopAuthToken: (callback: (token: string) => void): (() => void) => {
     const handler = (_event: Electron.IpcRendererEvent, token: string) => callback(token);
