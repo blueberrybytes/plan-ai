@@ -10,6 +10,7 @@ import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
 import { useSelector } from "react-redux";
 import { RootState } from "../store/store";
+import MarkdownRenderer from "../components/common/MarkdownRenderer";
 
 const ContextFileViewer: React.FC = () => {
   const { contextId, fileId } = useParams<{ contextId: string; fileId: string }>();
@@ -48,7 +49,19 @@ const ContextFileViewer: React.FC = () => {
           if (!res.ok) throw new Error("Network response was not ok");
           return res.text();
         })
-        .then((text) => setTextContent(text))
+        .then((text) => {
+          try {
+            // Un-escape double-encoded JSON strings (e.g. from file uploads)
+            const parsed = JSON.parse(text);
+            if (typeof parsed === "string") {
+              setTextContent(parsed);
+              return;
+            }
+          } catch (e) {
+            // Ignore parse errors, it's just raw text
+          }
+          setTextContent(text);
+        })
         .catch((err) => console.error("Failed to load text content:", err))
         .finally(() => setIsFetchingText(false));
     }
@@ -83,6 +96,22 @@ const ContextFileViewer: React.FC = () => {
       if (mimeType.includes("xml")) language = "xml";
       if (mimeType === "text/csv" || mimeType.includes("csv")) language = "csv";
       if (mimeType.includes("markdown")) language = "markdown";
+
+      if (language === "markdown") {
+        return (
+          <Box
+            sx={{
+              p: 2,
+              bgcolor: "background.paper",
+              borderRadius: 2,
+              overflowX: "auto",
+              height: "100%",
+            }}
+          >
+            <MarkdownRenderer content={textContent || "No text content"} />
+          </Box>
+        );
+      }
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const Component = SyntaxHighlighter as any;

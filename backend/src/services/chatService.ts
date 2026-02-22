@@ -104,6 +104,7 @@ export class ChatService {
       try {
         const chunks = await queryContexts(thread.contextIds, content, 500);
         if (chunks.length > 0) {
+          logger.info(`Retrieved ${chunks.length} RAG Chunks`, { chunks });
           contextSection = `\nRelevant Context from Knowledge Base:\n${chunks.join("\n\n")}\n`;
         }
       } catch (error) {
@@ -149,6 +150,8 @@ export class ChatService {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       schema: ResponseSchema as any,
     });
+
+    logger.info("Generated Object Response", { object });
 
     // 5. Save Assistant Message (Stringified JSON to preserve DB Schema)
     const assistantMessage = await prisma.chatMessage.create({

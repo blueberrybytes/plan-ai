@@ -1,5 +1,6 @@
 import { Router } from "express";
-import { streamText } from "ai";
+import { streamObject } from "ai";
+import { z } from "zod";
 import { createOpenRouter } from "@openrouter/ai-sdk-provider";
 import EnvUtils from "../utils/EnvUtils";
 import prisma from "../prisma/prismaClient";
@@ -54,6 +55,20 @@ router.post(
         },
       });
 
+      const ResponseSchema = z.object({
+        text: z.string().describe("The markdown-formatted conversational response."),
+        citations: z
+          .array(
+            z.object({
+              filename: z.string().describe("The name of the file being cited."),
+              lines: z.string().describe("The exact line coverage of the citation (e.g. '45-50')."),
+            }),
+          )
+          .describe(
+            "An array of citations matching the precise sources used from the context blocks.",
+          ),
+      });
+
       // 2. Retrieve Context (RAG)
       let contextText = "";
       if (thread.contextIds.length > 0) {
@@ -68,31 +83,51 @@ You have access to the user's codebase context.
 Answer the user's question based on the provided context if applicable.
 If the context doesn't contain the answer, use your general knowledge but mention that you didn't find it in the context.
 
+CRITICAL CITATION RULES:
+Whenever you state a fact, reference code, or pull information from the Context below, you MUST fill out the 'citations' array in your JSON output.
+Do NOT output inline citations (e.g. [{"filename": "...", ...}]) in your markdown 'text' output. Your markdown 'text' output must flow naturally, and your sources must be populated ONLY inside the 'citations' array.
+
 Context:
 ${contextText}
 `;
 
       const messages = [
         { role: "system" as const, content: systemPrompt },
-        ...thread.messages.map((m) => ({
-          role: m.role.toLowerCase() as "user" | "assistant",
-          content: m.content,
-        })),
+        ...thread.messages.map((m) => {
+          let cleanContent = m.content;
+          if (m.role === "ASSISTANT") {
+            try {
+              const parsed = JSON.parse(cleanContent);
+              if (parsed.text) {
+                cleanContent = parsed.text;
+              }
+            } catch {
+              cleanContent = cleanContent.replace(/\[\s*\{\s*"filename"[\s\S]*?\]/g, "");
+              cleanContent = cleanContent.split("---CITATIONS---")[0].trim();
+            }
+          }
+          return {
+            role: m.role.toLowerCase() as "user" | "assistant",
+            content: cleanContent,
+          };
+        }),
         { role: "user" as const, content },
       ];
 
-      // 3. Stream Text
-      const result = await streamText({
+      // 3. Stream Object
+      const result = await streamObject({
         model: openrouter(modelName),
         messages,
-        onFinish: async ({ text }) => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        schema: ResponseSchema as any,
+        onFinish: async ({ object }) => {
           try {
             // Persist Assistant Message
             await prisma.chatMessage.create({
               data: {
                 threadId,
                 role: "ASSISTANT",
-                content: text,
+                content: JSON.stringify(object),
               },
             });
 

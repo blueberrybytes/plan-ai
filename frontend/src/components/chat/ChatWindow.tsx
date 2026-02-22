@@ -266,8 +266,26 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
                 citations = parsed.citations;
               }
             } catch {
-              // Not JSON, fallback to raw content
+              // Not JSON, fallback to raw content.
+              contentToRender = msg.content;
+
+              // Handle partial JSON from streamObject streaming raw stringified chunks
+              const textMatch = msg.content.match(/"text"\s*:\s*"((?:\\.|[^"\\])*)/);
+              if (textMatch) {
+                try {
+                  contentToRender = JSON.parse(`"${textMatch[1]}"`);
+                } catch {
+                  contentToRender = textMatch[1].replace(/\\n/g, "\n").replace(/\\"/g, '"');
+                }
+              }
             }
+          }
+
+          if (typeof contentToRender === "string") {
+            // Clean inline citations stringified from old messages
+            contentToRender = contentToRender.replace(/\[\s*\{\s*"filename"[\s\S]*?\]/g, "");
+            // Also strip ---CITATIONS--- entirely if it was streamed before the update
+            contentToRender = contentToRender.split("---CITATIONS---")[0].trim();
           }
 
           return (
@@ -300,9 +318,23 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
                       Sources
                     </Typography>
                     <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
-                      {citations.map((cite, idx) => (
-                        <CitationChip key={idx} filename={cite.filename} lines={cite.lines} />
-                      ))}
+                      {(() => {
+                        const groupedCitations = citations.reduce(
+                          (acc, cite) => {
+                            if (!acc[cite.filename]) acc[cite.filename] = [];
+                            acc[cite.filename].push(cite.lines);
+                            return acc;
+                          },
+                          {} as Record<string, string[]>,
+                        );
+                        return Object.entries(groupedCitations).map(([filename, linesArray]) => (
+                          <CitationChip
+                            key={filename}
+                            filename={filename}
+                            lines={(linesArray as string[]).join(", ")}
+                          />
+                        ));
+                      })()}
                     </Box>
                   </Box>
                 )}
