@@ -10,7 +10,8 @@
     "dev": "electron-vite dev",
     "build": "electron-vite build",
     "preview": "electron-vite preview",
-    "package": "electron-vite build && electron-builder"
+    "package": "electron-vite build && electron-builder",
+    "package:win": "electron-vite build && electron-builder --win"
   },
   "dependencies": {
     "@emotion/react": "^11.11.4",
@@ -42,18 +43,18 @@
     "files": [
       "dist-electron/**/*"
     ],
-    "extraFiles": [
-      {
-        "from": "macos/AudioCapture",
-        "to": "MacOS/AudioCapture"
-      }
-    ],
     "mac": {
       "icon": "resources/icon.png",
       "category": "public.app-category.productivity",
       "target": [
         "dmg",
         "zip"
+      ],
+      "extraFiles": [
+        {
+          "from": "macos/AudioCapture",
+          "to": "MacOS/AudioCapture"
+        }
       ],
       "hardenedRuntime": true,
       "entitlements": "macos/entitlements.plist",

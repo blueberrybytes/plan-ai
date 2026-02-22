@@ -166,6 +166,18 @@ export const createPlanAiApi = (getToken: (forceRefresh?: boolean) => Promise<st
       return handleResponseWithRetry<Transcript>(res, () => req(true));
     },
 
+    async updateTranscript(id: string, payload: { title?: string }): Promise<Transcript> {
+      const req = async (force: boolean) =>
+        fetch(`${BASE_URL}/api/transcripts/${id}`, {
+          method: "PUT",
+          headers: await getAuthHeaders(force),
+          body: JSON.stringify(payload),
+        });
+
+      const res = await req(false);
+      return handleResponseWithRetry<Transcript>(res, () => req(true));
+    },
+
     async deleteTranscript(id: string): Promise<void> {
       const req = async (force: boolean) =>
         fetch(`${BASE_URL}/api/transcripts/${id}`, {

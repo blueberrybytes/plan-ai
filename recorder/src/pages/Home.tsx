@@ -17,6 +17,7 @@ import {
   Stack,
   Tooltip,
   Typography,
+  TextField,
 } from "@mui/material";
 import {
   Logout as LogoutIcon,
@@ -24,6 +25,9 @@ import {
   DesktopWindows as DesktopIcon,
   Refresh as RefreshIcon,
   Delete as DeleteIcon,
+  Edit as EditIcon,
+  Check as CheckIcon,
+  Close as CloseIcon,
 } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
@@ -44,6 +48,10 @@ const Home: React.FC = () => {
   const [systemSourceId, setSystemSourceId] = useState<string | null>(null);
   const [hasScreenPermission, setHasScreenPermission] = useState(true);
   const [hasMicPermission, setHasMicPermission] = useState(true);
+
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [savingId, setSavingId] = useState<string | null>(null);
 
   console.log(
     "[Home] Rendering component. sources:",
@@ -69,6 +77,37 @@ const Home: React.FC = () => {
   useEffect(() => {
     void fetchData();
   }, [fetchData]);
+
+  const handleEditStart = (e: React.MouseEvent, t: Transcript) => {
+    e.stopPropagation();
+    setEditingId(t.id);
+    setEditTitle(t.title || "Untitled Recording");
+  };
+
+  const handleEditCancel = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEditingId(null);
+    setEditTitle("");
+  };
+
+  const handleEditSave = async (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    if (!editTitle.trim() || !api) return;
+
+    try {
+      setSavingId(id);
+      await api.updateTranscript(id, { title: editTitle.trim() });
+      setTranscripts((prev) =>
+        prev.map((t) => (t.id === id ? { ...t, title: editTitle.trim() } : t)),
+      );
+      setEditingId(null);
+    } catch (err) {
+      console.error("Failed to update title:", err);
+      // Optional: show error toast here
+    } finally {
+      setSavingId(null);
+    }
+  };
 
   const handleDeleteTranscript = async (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
@@ -200,25 +239,79 @@ const Home: React.FC = () => {
               {transcripts.map((t) => (
                 <ListItemButton
                   key={t.id}
-                  onClick={() => navigate(`/transcript/${t.id}`)}
+                  onClick={() => {
+                    if (editingId !== t.id) navigate(`/transcript/${t.id}`);
+                  }}
                   sx={{
                     px: 2,
                     py: 1,
                   }}
                 >
-                  <ListItemText
-                    primary={t.title || "Untitled Recording"}
-                    primaryTypographyProps={{ fontSize: "0.875rem", fontWeight: 500 }}
-                    secondary={new Date(t.createdAt).toLocaleString()}
-                    secondaryTypographyProps={{ fontSize: "0.7rem" }}
-                  />
-                  <IconButton
-                    size="small"
-                    color="error"
-                    onClick={(e) => void handleDeleteTranscript(e, t.id)}
-                  >
-                    <DeleteIcon fontSize="small" />
-                  </IconButton>
+                  {editingId === t.id ? (
+                    <Box
+                      sx={{ display: "flex", alignItems: "center", flex: 1, mr: 1, gap: 0.5 }}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <TextField
+                        size="small"
+                        autoFocus
+                        value={editTitle}
+                        onChange={(e) => setEditTitle(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") void handleEditSave(e as any, t.id);
+                          if (e.key === "Escape") handleEditCancel(e as any);
+                        }}
+                        sx={{ flex: 1 }}
+                        InputProps={{
+                          sx: { fontSize: "0.875rem", py: 0 },
+                        }}
+                      />
+                      <IconButton
+                        size="small"
+                        color="success"
+                        onClick={(e) => void handleEditSave(e, t.id)}
+                        disabled={savingId === t.id}
+                      >
+                        {savingId === t.id ? (
+                          <CircularProgress size={16} />
+                        ) : (
+                          <CheckIcon fontSize="small" />
+                        )}
+                      </IconButton>
+                      <IconButton
+                        size="small"
+                        color="default"
+                        onClick={handleEditCancel}
+                        disabled={savingId === t.id}
+                      >
+                        <CloseIcon fontSize="small" />
+                      </IconButton>
+                    </Box>
+                  ) : (
+                    <>
+                      <ListItemText
+                        primary={t.title || "Untitled Recording"}
+                        primaryTypographyProps={{ fontSize: "0.875rem", fontWeight: 500 }}
+                        secondary={new Date(t.createdAt).toLocaleString()}
+                        secondaryTypographyProps={{ fontSize: "0.7rem", mt: 0.5 }}
+                      />
+                      <IconButton
+                        size="small"
+                        color="default"
+                        onClick={(e) => handleEditStart(e, t)}
+                        sx={{ mr: 0.5 }}
+                      >
+                        <EditIcon fontSize="small" sx={{ fontSize: "1.1rem" }} />
+                      </IconButton>
+                      <IconButton
+                        size="small"
+                        color="error"
+                        onClick={(e) => void handleDeleteTranscript(e, t.id)}
+                      >
+                        <DeleteIcon fontSize="small" sx={{ fontSize: "1.1rem" }} />
+                      </IconButton>
+                    </>
+                  )}
                 </ListItemButton>
               ))}
             </List>

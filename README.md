@@ -16,6 +16,7 @@ Try the live app at [plan-ai.blueberrybytes.com](https://plan-ai.blueberrybytes.
 
 | Capability                    | Description                                                                                                                                             |
 | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Native macOS recorder**     | Native Electron desktop app capturing system audio and microphone via `ScreenCaptureKit` to seamlessly record and upload meetings.                      |
 | **Transcript ingestion**      | Upload PDFs, DOCX, or raw text. AI auto-detects speakers, decisions, and action items.                                                                  |
 | **AI task generation**        | Scoped, prioritised tasks with owners, due dates, and full meeting context — zero manual effort.                                                        |
 | **Kanban boards & timelines** | Switch between kanban, dependency diagrams, and roadmap views.                                                                                          |
@@ -30,6 +31,7 @@ Try the live app at [plan-ai.blueberrybytes.com](https://plan-ai.blueberrybytes.
 
 ```mermaid
 graph TD
+  Recorder[Electron macOS Recorder] -->|System Audio / Mic| BE
   FE[React 18 Frontend] -->|RTK Query / fetch streaming| BE[Express + TSOA API]
   FE --> FirebaseAuth[Firebase Auth]
   BE --> Postgres[(PostgreSQL 16)]
@@ -44,6 +46,7 @@ graph TD
 
 | Layer          | Tech                                                                                                      |
 | -------------- | --------------------------------------------------------------------------------------------------------- |
+| Recorder       | Electron, React 18, Vite, Swift (`ScreenCaptureKit`), Material UI                                         |
 | Frontend       | React 18, TypeScript 5.7, MUI v6, RTK Query, Redux Saga, redux-persist, i18next, react-router-dom v6      |
 | Backend        | Node.js 20, Express 4, TSOA 6, Prisma 6, Zod, Helmet, Vitest                                              |
 | Data & storage | PostgreSQL 16, Qdrant v1.15, Firebase Storage                                                             |
@@ -68,6 +71,7 @@ graph TD
 
 - Node.js `20.19.3` (`.nvmrc` provided)
 - Yarn `1.22.x`
+- macOS (required for native recorder)
 - Docker Desktop (runs PostgreSQL 16 + Qdrant v1.15)
 - A Firebase project with **Authentication** and **Storage** enabled
 - An [OpenRouter](https://openrouter.ai/) API key (for Gemini 2.0 Flash)
@@ -148,6 +152,7 @@ This regenerates TSOA routes, the Prisma client, and the frontend `api.d.ts` typ
 
 ```
 plan-ai/
+├── recorder/            # Electron macOS Recorder app (React + Swift + Vite)
 ├── backend/
 │   ├── src/
 │   │   ├── controller/          # TSOA controllers (REST routes)
@@ -278,17 +283,19 @@ The repo ships a `Dockerfile` for each package. The backend image installs FFmpe
 
 ## Development scripts
 
-| Command              | Description                                                   |
-| -------------------- | ------------------------------------------------------------- |
-| `yarn install:all`   | Install root, backend, and frontend dependencies              |
-| `yarn dev`           | Run backend + frontend dev servers concurrently               |
-| `yarn docker`        | Start PostgreSQL + Qdrant via Docker Compose                  |
-| `yarn update`        | Regenerate TSOA routes, Prisma client, and frontend API types |
-| `yarn build`         | Production build for both packages                            |
-| `yarn lint`          | ESLint for both packages (strict TypeScript, no `any`)        |
-| `yarn lint:fix`      | Auto-fix lint issues                                          |
-| `yarn format`        | Prettier across the entire monorepo                           |
-| `yarn test:coverage` | Vitest (backend) + Jest (frontend) with coverage thresholds   |
+| Command                 | Description                                                   |
+| ----------------------- | ------------------------------------------------------------- |
+| `yarn install:all`      | Install root, backend, frontend, and recorder dependencies    |
+| `yarn dev`              | Run backend + frontend dev servers concurrently               |
+| `yarn dev:recorder`     | Run the native macOS Electron recorder application            |
+| `yarn package:recorder` | Build the native macOS `.app` bundle from source              |
+| `yarn docker`           | Start PostgreSQL + Qdrant via Docker Compose                  |
+| `yarn update`           | Regenerate TSOA routes, Prisma client, and frontend API types |
+| `yarn build`            | Production build for both packages                            |
+| `yarn lint`             | ESLint for both packages (strict TypeScript, no `any`)        |
+| `yarn lint:fix`         | Auto-fix lint issues                                          |
+| `yarn format`           | Prettier across the entire monorepo                           |
+| `yarn test:coverage`    | Vitest (backend) + Jest (frontend) with coverage thresholds   |
 
 Pre-commit hooks via `lint-staged` enforce formatting + lint. A pre-push hook runs `yarn lint` and `yarn test:coverage`.
 
