@@ -580,10 +580,10 @@ const Contexts: React.FC = () => {
                               <Stack direction="row" spacing={0.5}>
                                 <Tooltip title={t("contexts.buttons.view")}>
                                   <IconButton
-                                    component="a"
-                                    href={file.publicUrl}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      navigate(`/contexts/${contextId}/files/${file.id}`);
+                                    }}
                                     size="small"
                                   >
                                     <OpenInNewIcon fontSize="small" />

@@ -22,6 +22,7 @@ import type { Express } from "express";
 import {
   deleteContextFileFromFirebaseStorage,
   uploadContextFileToFirebaseStorage,
+  getContextFileContentFromFirebaseStorage,
 } from "../firebase/firebaseStorage";
 import {
   indexContextFileVectors,
@@ -129,6 +130,27 @@ export class ContextController extends Controller {
       status: 200,
       data: this.mapContextResponse(context),
     };
+  }
+
+  @Get("{contextId}/files/{fileId}/content")
+  @Security("ClientLevel")
+  public async getContextFileContent(
+    @Request() request: AuthenticatedRequest,
+    @Path() contextId: string,
+    @Path() fileId: string,
+  ): Promise<string> {
+    const user = await this.getAuthorizedUser(request);
+    const context = await contextService.getContextForUser(user.id, contextId);
+    const file = context.files.find((f) => f.id === fileId);
+
+    if (!file) {
+      this.setStatus(404);
+      throw { status: 404, message: "File not found" };
+    }
+
+    const buffer = await getContextFileContentFromFirebaseStorage(file.bucketPath, user.id);
+    this.setHeader("Content-Type", file.mimeType);
+    return buffer.toString("utf-8");
   }
 
   @Put("{contextId}")

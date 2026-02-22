@@ -4463,6 +4463,49 @@
 				]
 			}
 		},
+		"/api/contexts/{contextId}/files/{fileId}/content": {
+			"get": {
+				"operationId": "GetContextFileContent",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "string"
+								}
+							}
+						}
+					}
+				},
+				"tags": [
+					"Contexts"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": [
+					{
+						"in": "path",
+						"name": "contextId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"in": "path",
+						"name": "fileId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				]
+			}
+		},
 		"/api/contexts/{contextId}/files": {
 			"post": {
 				"operationId": "UploadContextFile",

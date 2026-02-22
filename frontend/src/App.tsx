@@ -20,6 +20,7 @@ import Projects from "./pages/Projects";
 import ProjectInfo from "./pages/ProjectInfo";
 import ProjectTranscriptDetail from "./pages/ProjectTranscriptDetail";
 import Contexts from "./pages/Contexts";
+import ContextFileViewer from "./pages/ContextFileViewer";
 import Recordings from "./pages/Recordings";
 import RecordingDetail from "./pages/RecordingDetail";
 import ProjectDetails from "./pages/ProjectDetails";
@@ -93,6 +94,7 @@ const AppContent: React.FC = () => {
           />
           <Route path="/contexts" element={<Contexts />} />
           <Route path="/contexts/:contextId" element={<Contexts />} />
+          <Route path="/contexts/:contextId/files/:fileId" element={<ContextFileViewer />} />
           <Route path="/recordings" element={<Recordings />} />
           <Route path="/recordings/:recordingId" element={<RecordingDetail />} />
           <Route path="/profile" element={<Profile />} />

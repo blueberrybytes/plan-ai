@@ -2375,6 +2375,39 @@ export function RegisterRoutes(app: Router,opts?:{multer?:ReturnType<typeof mult
             }
         });
         // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+        const argsContextController_getContextFileContent: Record<string, TsoaRoute.ParameterSchema> = {
+                request: {"in":"request","name":"request","required":true,"dataType":"object"},
+                contextId: {"in":"path","name":"contextId","required":true,"dataType":"string"},
+                fileId: {"in":"path","name":"fileId","required":true,"dataType":"string"},
+        };
+        app.get('/api/contexts/:contextId/files/:fileId/content',
+            authenticateMiddleware([{"ClientLevel":[]}]),
+            ...(fetchMiddlewares<RequestHandler>(ContextController)),
+            ...(fetchMiddlewares<RequestHandler>(ContextController.prototype.getContextFileContent)),
+
+            async function ContextController_getContextFileContent(request: ExRequest, response: ExResponse, next: any) {
+
+            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+
+            let validatedArgs: any[] = [];
+            try {
+                validatedArgs = templateService.getValidatedArgs({ args: argsContextController_getContextFileContent, request, response });
+
+                const controller = new ContextController();
+
+              await templateService.apiHandler({
+                methodName: 'getContextFileContent',
+                controller,
+                response,
+                next,
+                validatedArgs,
+                successStatus: undefined,
+              });
+            } catch (err) {
+                return next(err);
+            }
+        });
+        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
         const argsContextController_updateContext: Record<string, TsoaRoute.ParameterSchema> = {
                 request: {"in":"request","name":"request","required":true,"dataType":"object"},
                 contextId: {"in":"path","name":"contextId","required":true,"dataType":"string"},

@@ -91,7 +91,24 @@ export const indexContextFileVectors = async (args: IndexContextFileVectorsArgs)
 
     const normalizedText = rawText.trim();
     const rawChunks = await textSplitter.splitText(normalizedText);
-    const chunks = normalizeChunks(rawChunks).map((chunk) => `[File: ${fileName}]\n${chunk}`);
+
+    // Calculate start and end line for each chunk
+    let currentSearchIndex = 0;
+    const chunks = normalizeChunks(rawChunks).map((chunk) => {
+      const matchIndex = normalizedText.indexOf(chunk, currentSearchIndex);
+      const startIndex = matchIndex !== -1 ? matchIndex : currentSearchIndex;
+      currentSearchIndex = startIndex + chunk.length;
+
+      // Calculate start line by counting newlines before the chunk
+      const textBefore = normalizedText.substring(0, startIndex);
+      const startLine = textBefore.split("\n").length;
+
+      // Calculate end line by counting newlines inside the chunk
+      const chunkLines = chunk.split("\n").length;
+      const endLine = startLine + chunkLines - 1;
+
+      return `[File: ${fileName}, Lines: ${startLine}-${endLine}]\n${chunk}`;
+    });
 
     if (chunks.length === 0) {
       logger.info(

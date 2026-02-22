@@ -87,6 +87,21 @@ export async function deleteContextFileFromFirebaseStorage(
   }
 }
 
+export async function getContextFileContentFromFirebaseStorage(
+  storagePath: string,
+  userId?: string,
+): Promise<Buffer> {
+  try {
+    const bucket = getBucket();
+    validateOwnership(storagePath, userId, 1);
+    const [fileBuffer] = await bucket.file(storagePath).download();
+    return fileBuffer;
+  } catch (error) {
+    logger.error("Error downloading context file from Firebase Storage:", error);
+    throw new Error("Failed to download context file from Firebase Storage");
+  }
+}
+
 export async function uploadImageToFirebaseStorage(
   base64Image: string,
   contentId: string,

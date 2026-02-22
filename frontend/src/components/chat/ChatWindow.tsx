@@ -22,6 +22,7 @@ import {
 import { useTranslation } from "react-i18next";
 import { ChatMessage, ChatThread } from "../../store/apis/chatApi";
 import MarkdownRenderer from "../common/MarkdownRenderer";
+import CitationChip from "./CitationChip";
 import { useListContextsQuery } from "../../store/apis/contextApi";
 import { useSelector } from "react-redux";
 import { RootState } from "../../store/store";
@@ -250,28 +251,65 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
       </AppBar>
 
       <Box sx={{ flexGrow: 1, p: 2, overflowY: "auto" }} ref={scrollRef} onScroll={handleScroll}>
-        {allMessages.map((msg) => (
-          <Box
-            key={msg.id}
-            sx={{
-              display: "flex",
-              justifyContent: msg.role === "USER" ? "flex-end" : "flex-start",
-              mb: 2,
-            }}
-          >
-            <Paper
+        {allMessages.map((msg) => {
+          let contentToRender = msg.content;
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          let citations: any[] = [];
+
+          if (msg.role !== "USER") {
+            try {
+              const parsed = JSON.parse(msg.content);
+              if (parsed.text) {
+                contentToRender = parsed.text;
+              }
+              if (Array.isArray(parsed.citations)) {
+                citations = parsed.citations;
+              }
+            } catch {
+              // Not JSON, fallback to raw content
+            }
+          }
+
+          return (
+            <Box
+              key={msg.id}
               sx={{
-                p: 2,
-                maxWidth: "85%",
-                bgcolor: msg.role === "USER" ? "primary.main" : "background.paper",
-                color: msg.role === "USER" ? "primary.contrastText" : "text.primary",
-                opacity: msg.id.startsWith("temp-user") ? 0.7 : 1,
+                display: "flex",
+                justifyContent: msg.role === "USER" ? "flex-end" : "flex-start",
+                mb: 2,
               }}
             >
-              <MarkdownRenderer content={msg.content} />
-            </Paper>
-          </Box>
-        ))}
+              <Paper
+                sx={{
+                  p: 2,
+                  maxWidth: "85%",
+                  bgcolor: msg.role === "USER" ? "primary.main" : "background.paper",
+                  color: msg.role === "USER" ? "primary.contrastText" : "text.primary",
+                  opacity: msg.id.startsWith("temp-user") ? 0.7 : 1,
+                }}
+              >
+                <MarkdownRenderer content={contentToRender} />
+
+                {citations.length > 0 && (
+                  <Box sx={{ mt: 2, pt: 1, borderTop: 1, borderColor: "divider" }}>
+                    <Typography
+                      variant="caption"
+                      color="text.secondary"
+                      sx={{ display: "block", mb: 0.5, fontWeight: 500 }}
+                    >
+                      Sources
+                    </Typography>
+                    <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
+                      {citations.map((cite, idx) => (
+                        <CitationChip key={idx} filename={cite.filename} lines={cite.lines} />
+                      ))}
+                    </Box>
+                  </Box>
+                )}
+              </Paper>
+            </Box>
+          );
+        })}
         {isSending && (
           <Box sx={{ display: "flex", justifyContent: "flex-start", mb: 2 }}>
             <CircularProgress size={20} />

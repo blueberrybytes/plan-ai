@@ -1,6 +1,7 @@
 import { ChatRole, ChatThread, ChatMessage } from "@prisma/client";
 import { createOpenRouter } from "@openrouter/ai-sdk-provider";
-import { generateText } from "ai";
+import { generateObject } from "ai";
+import { z } from "zod";
 import EnvUtils from "../utils/EnvUtils";
 import prisma from "../prisma/prismaClient";
 import { queryContexts } from "../vector/contextFileVectorService";
@@ -11,7 +12,23 @@ You have access to the user's codebase and documents (Contexts).
 When answering, rely primarily on the provided "Relevant Context".
 If the context doesn't contain the answer, say so, but try to be helpful based on general knowledge.
 Keep answers concise and technical.
+
+CRITICAL CITATION RULES:
+Whenever you state a fact, reference code, or pull information from the "Relevant Context from Knowledge Base" section below, you MUST fill out the 'citations' array in your output schema.
+Do NOT use inline markdown citations like [[filename:lines]]. Your markdown 'text' output should flow naturally, and your exact sources must be securely populated inside the 'citations' array mapping the exact Filename to the exact Line numbers (e.g. '45-50').
 `;
+
+const ResponseSchema = z.object({
+  text: z.string().describe("The markdown-formatted conversational response."),
+  citations: z
+    .array(
+      z.object({
+        filename: z.string().describe("The name of the file being cited."),
+        lines: z.string().describe("The exact line coverage of the citation (e.g. '45-50')."),
+      }),
+    )
+    .describe("An array of citations matching the precise sources used from the context blocks."),
+});
 
 export class ChatService {
   private readonly openrouter = createOpenRouter({
@@ -101,20 +118,44 @@ export class ChatService {
       content: msg.content,
     })) as Array<{ role: "user" | "assistant"; content: string }>;
 
-    // 4. Generate Response
+    // 4. Generate Response Structurally
     const model = this.openrouter(this.modelName);
-    const { text } = await generateText({
+
+    // We parse the history string payloads to text only
+    // (older messages might be JSON strings now, we need to extract their text for context)
+    const historyParsed: Array<{ role: "user" | "assistant"; content: string }> = history.map(
+      (msg) => {
+        try {
+          const parsed = JSON.parse(msg.content);
+          return {
+            role: msg.role === "user" ? "user" : "assistant",
+            content: parsed.text || msg.content,
+          };
+        } catch {
+          return { role: msg.role === "user" ? "user" : "assistant", content: msg.content };
+        }
+      },
+    );
+
+    const messages: Array<{ role: "user" | "assistant"; content: string }> = [
+      ...historyParsed,
+      { role: "user", content },
+    ];
+
+    const { object } = await generateObject({
       model,
       system: SYSTEM_PROMPT + contextSection,
-      messages: [...history, { role: "user", content }],
+      messages,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      schema: ResponseSchema as any,
     });
 
-    // 5. Save Assistant Message
+    // 5. Save Assistant Message (Stringified JSON to preserve DB Schema)
     const assistantMessage = await prisma.chatMessage.create({
       data: {
         threadId,
         role: ChatRole.ASSISTANT,
-        content: text,
+        content: JSON.stringify(object),
       },
     });
 

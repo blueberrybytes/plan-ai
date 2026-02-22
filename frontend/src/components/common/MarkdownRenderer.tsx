@@ -1,5 +1,5 @@
 import React from "react";
-import { Typography, Box, SxProps } from "@mui/material";
+import { Box, SxProps } from "@mui/material";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
@@ -52,11 +52,6 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content, sx }) => {
               </code>
             );
           },
-          p: ({ children }) => (
-            <Typography variant="body1" sx={{ mb: 1, lastChild: { mb: 0 } }}>
-              {children}
-            </Typography>
-          ),
         }}
       >
         {content}

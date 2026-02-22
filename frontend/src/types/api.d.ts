@@ -454,6 +454,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/contexts/{contextId}/files/{fileId}/content": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetContextFileContent"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/contexts/{contextId}/files": {
         parameters: {
             query?: never;
@@ -2462,6 +2478,29 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ApiResponse_null_"];
+                };
+            };
+        };
+    };
+    GetContextFileContent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                contextId: string;
+                fileId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": string;
                 };
             };
         };
