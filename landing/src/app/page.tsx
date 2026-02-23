@@ -131,7 +131,21 @@ export default function Home() {
         </div>
       </section>
 
-      <footer className="border-t border-white/10 py-8 text-center text-white/40 text-sm">
+      <footer className="border-t border-white/10 py-12 flex flex-col items-center justify-center gap-6 text-center text-white/40 text-sm bg-[#0b0d11]">
+        <div className="flex flex-col items-center gap-3">
+          <span className="text-white/60 font-medium tracking-wide text-xs uppercase">
+            Built by
+          </span>
+          <a
+            href="https://www.blueberrybytes.com"
+            target="_blank"
+            rel="noreferrer"
+            className="opacity-70 hover:opacity-100 transition-opacity"
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/logos/bbb.png" alt="Blueberrybytes Logo" className="h-8" />
+          </a>
+        </div>
         <p>© {new Date().getFullYear()} Blueberrybytes. All rights reserved.</p>
       </footer>
     </main>

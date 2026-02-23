@@ -6,7 +6,7 @@
 
 Plan AI is an AI-powered delivery platform that turns meeting transcripts into structured tasks, kanban boards, AI-generated slide decks, and contextual chat — the entire team delivery stack, powered by Gemini 2.0 Flash. By open-sourcing the stack we invite the community to co-build the future of meeting intelligence while highlighting Blueberrybytes' expertise in TypeScript-first AI systems.
 
-Try the live app at [plan-ai.blueberrybytes.com](https://plan-ai.blueberrybytes.com).
+Try the live app at [plan-ai.blueberrybytes.com](https://plan-ai.blueberrybytes.com) or download the native recorder at [landing.plan-ai.blueberrybytes.com](https://landing.plan-ai.blueberrybytes.com/).
 
 [![Deploy on Railway](https://railway.app/button.svg)](https://railway.com/deploy/plan-ai)
 
