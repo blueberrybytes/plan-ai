@@ -1,0 +1,330 @@
+generator client {
+    provider = "prisma-client-js"
+}
+
+datasource db {
+    provider = "postgresql"
+    url      = env("DATABASE_URL")
+}
+
+enum Role {
+    ADMIN
+    CLIENT
+}
+
+enum ProjectStatus {
+    ACTIVE
+    COMPLETED
+    ARCHIVED
+}
+
+enum TranscriptSource {
+    MANUAL
+    RECORDING
+    UPLOAD
+    IMPORTED
+}
+
+enum TaskStatus {
+    BACKLOG
+    IN_PROGRESS
+    BLOCKED
+    COMPLETED
+    ARCHIVED
+}
+
+enum TaskPriority {
+    LOW
+    MEDIUM
+    HIGH
+    URGENT
+}
+
+enum DependencyType {
+    BLOCKS
+    RELATES_TO
+    DUPLICATES
+}
+
+model User {
+    id              String   @id @default(cuid())
+    firebaseUid     String   @unique
+    email           String   @unique
+    name            String?
+    avatarUrl       String?
+    googleId        String?  @unique
+    createdAt       DateTime @default(now())
+    updatedAt       DateTime @updatedAt
+    role            Role     @default(CLIENT)
+    isGoogleAccount Boolean  @default(false)
+
+    customTheme   CustomTheme?
+    projects      Project[]
+    assignedTasks Task[]       @relation("TaskAssignee")
+    contexts      Context[]
+    transcripts   Transcript[]
+
+    integrations    UserIntegration[]
+    threads         ChatThread[]
+    slideTemplates  SlideTemplate[]
+}
+
+model UserIntegration {
+    id           String              @id @default(cuid())
+    userId       String
+    provider     IntegrationProvider
+    status       IntegrationStatus   @default(CONNECTED)
+    accessToken  String // encrypted/hashed at rest
+    refreshToken String? // optional, also secured
+    expiresAt    DateTime? // access token expiry when known
+    scope        String? // raw scope string from provider
+    accountId    String? // Jira cloud ID or Linear org ID
+    accountName  String? // friendly display name
+    metadata     Json? // extra provider data
+    createdAt    DateTime            @default(now())
+    updatedAt    DateTime            @updatedAt
+
+    user User @relation(fields: [userId], references: [id])
+
+    @@unique([userId, provider])
+}
+
+enum IntegrationProvider {
+    JIRA
+    LINEAR
+}
+
+enum IntegrationStatus {
+    CONNECTED
+    DISCONNECTED
+    ERROR
+}
+
+model CustomTheme {
+    id                 String   @id @default(cuid())
+    user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+    userId             String   @unique
+    primaryColor       String?
+    secondaryColor     String?
+    backgroundColor    String?
+    surfaceColor       String?
+    textPrimaryColor   String?
+    textSecondaryColor String?
+    fontFamily         String?
+    headingFontFamily  String?
+    borderRadius       Float?
+    density            Int?
+    configJson         Json?
+    createdAt          DateTime @default(now())
+    updatedAt          DateTime @updatedAt
+}
+
+model Project {
+    id          String        @id @default(cuid())
+    user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+    userId      String
+    title       String
+    description String?
+    status      ProjectStatus @default(ACTIVE)
+    startedAt   DateTime?
+    endedAt     DateTime?
+    metadata    Json?
+    createdAt   DateTime      @default(now())
+    updatedAt   DateTime      @updatedAt
+
+    transcripts Transcript[]
+    tasks       Task[]
+
+    @@index([userId])
+    @@index([status])
+    @@map("projects")
+}
+
+model Transcript {
+    id         String           @id @default(cuid())
+    user       User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+    userId     String
+    project    Project?         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+    projectId  String?
+    title      String?
+    source     TranscriptSource @default(MANUAL)
+    language   String?
+    summary    String?
+    transcript String?
+    rawUrl     String?
+    metadata   Json?
+    recordedAt DateTime?
+    createdAt  DateTime         @default(now())
+    updatedAt  DateTime         @updatedAt
+
+    taskLinks TaskTranscriptLink[]
+
+    @@index([projectId])
+    @@index([source])
+}
+
+model Task {
+    id                 String       @id @default(cuid())
+    project            Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+    projectId          String
+    title              String
+    description        String?
+    summary            String?
+    acceptanceCriteria String?
+    status             TaskStatus   @default(BACKLOG)
+    priority           TaskPriority @default(MEDIUM)
+    lane               String?      @db.VarChar(64)
+    position           Int          @default(0)
+    canvasX            Float?       @map("canvas_x")
+    canvasY            Float?       @map("canvas_y")
+    canvasWidth        Float?       @map("canvas_width")
+    canvasHeight       Float?       @map("canvas_height")
+    startDate          DateTime?
+    dueDate            DateTime?
+    completedAt        DateTime?
+    estimatedMinutes   Int?
+    actualMinutes      Int?
+    metadata           Json?
+    assignee           User?        @relation("TaskAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+    assigneeId         String?
+    createdAt          DateTime     @default(now())
+    updatedAt          DateTime     @updatedAt
+
+    dependencies    TaskDependency[]     @relation("TaskDependencyDependants")
+    dependants      TaskDependency[]     @relation("TaskDependencyDependencies")
+    transcriptLinks TaskTranscriptLink[]
+
+    @@index([projectId])
+    @@index([status])
+    @@index([lane, position])
+    @@index([assigneeId])
+}
+
+model TaskDependency {
+    id              String         @id @default(cuid())
+    task            Task           @relation("TaskDependencyDependencies", fields: [taskId], references: [id], onDelete: Cascade)
+    taskId          String
+    dependsOn       Task           @relation("TaskDependencyDependants", fields: [dependsOnTaskId], references: [id], onDelete: Cascade)
+    dependsOnTaskId String
+    type            DependencyType @default(BLOCKS)
+    createdAt       DateTime       @default(now())
+
+    @@unique([taskId, dependsOnTaskId])
+}
+
+model TaskTranscriptLink {
+    task         Task       @relation(fields: [taskId], references: [id], onDelete: Cascade)
+    taskId       String
+    transcript   Transcript @relation(fields: [transcriptId], references: [id], onDelete: Cascade)
+    transcriptId String
+    relevance    Float?
+
+    @@id([taskId, transcriptId])
+}
+
+model Context {
+    id          String        @id @default(cuid())
+    user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+    userId      String
+    name        String        @db.VarChar(120)
+    description String?       @db.Text
+    color       String?       @db.VarChar(24)
+    metadata    Json?
+    files       ContextFile[]
+    createdAt   DateTime      @default(now())
+    updatedAt   DateTime      @updatedAt
+
+    @@index([userId, name])
+}
+
+model ContextFile {
+    id         String   @id @default(cuid())
+    context    Context  @relation(fields: [contextId], references: [id], onDelete: Cascade)
+    contextId  String
+    bucketPath String   @db.VarChar(255)
+    fileName   String   @db.VarChar(180)
+    mimeType   String   @db.VarChar(128)
+    sizeBytes  Int      @default(0)
+    metadata   Json?
+    createdAt  DateTime @default(now())
+
+    @@index([contextId])
+}
+
+enum ChatRole {
+    USER
+    ASSISTANT
+}
+
+model ChatThread {
+    id         String   @id @default(cuid())
+    user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+    userId     String
+    title      String   @default("New Chat")
+    contextIds String[] // IDs of Contexts active for this thread
+    englishLevel String? // Optional level of English for the assistant
+    createdAt  DateTime @default(now())
+    updatedAt  DateTime @updatedAt
+
+    messages ChatMessage[]
+
+    @@index([userId])
+}
+
+model ChatMessage {
+    id        String     @id @default(cuid())
+    thread    ChatThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+    threadId  String
+    role      ChatRole
+    content   String     @db.Text
+    createdAt DateTime   @default(now())
+
+    @@index([threadId])
+}
+
+model SlideTemplate {
+    id              String            @id @default(cuid())
+    userId          String
+    user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+    name            String            @db.VarChar(120)
+    description     String?           @db.Text
+    primaryColor    String?           @db.VarChar(24)
+    secondaryColor  String?           @db.VarChar(24)
+    backgroundColor String?           @db.VarChar(24)
+    headingFont     String?           @db.VarChar(80)
+    bodyFont        String?           @db.VarChar(80)
+    logoUrl         String?           @db.Text
+    slideTypes      SlideTypeConfig[]
+    presentations   Presentation[]
+    createdAt       DateTime          @default(now())
+    updatedAt       DateTime          @updatedAt
+
+    @@index([userId])
+}
+
+model SlideTypeConfig {
+    id               String        @id @default(cuid())
+    templateId       String
+    template         SlideTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+    slideTypeKey     String        @db.VarChar(64)
+    displayName      String        @db.VarChar(120)
+    description      String?       @db.Text
+    parametersSchema Json
+    position         Int           @default(0)
+    createdAt        DateTime      @default(now())
+
+    @@index([templateId])
+}
+
+model Presentation {
+    id         String        @id @default(cuid())
+    userId     String
+    templateId String
+    template   SlideTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+    title      String
+    slidesJson Json
+    contextIds String[]
+    status     String        @default("DRAFT") @db.VarChar(24)
+    createdAt  DateTime      @default(now())
+    updatedAt  DateTime      @updatedAt
+}

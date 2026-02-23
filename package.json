@@ -1,0 +1,65 @@
+{
+  "name": "plan-ai",
+  "version": "1.0.0",
+  "description": "Plan AI – AI-assisted meeting planning & execution platform by Blueberrybytes",
+  "main": "index.js",
+  "engines": {
+    "node": "20.19.3"
+  },
+  "scripts": {
+    "clean:install": "rm -rf node_modules && rm -rf yarn.lock && yarn install && cd backend && rm -rf node_modules && rm -rf yarn.lock && yarn install && cd ../frontend && rm -rf node_modules && rm -rf yarn.lock && yarn install && cd ../recorder && rm -rf node_modules && rm -rf yarn.lock && yarn install",
+    "update": "cd backend && yarn generate:swagger && yarn prisma:migrate && echo 'Waiting 10 seconds for server to be ready...' && sleep 10 && cd ../frontend && yarn generate:types:local && yarn prisma:generate",
+    "prepare": "husky",
+    "docker": "cd backend && docker compose up -d && cd ..",
+    "install:all": "yarn && cd backend && yarn && cd ../frontend && yarn && cd ../recorder && yarn",
+    "dev:recorder": "cd recorder && yarn dev",
+    "package:recorder": "cd recorder && yarn package",
+    "dev": "concurrently --kill-others-on-fail --prefix-colors \"bgBlue.bold,bgGreen.bold\" --prefix \"[{name}]\" --names \"frontend,backend\" \"cd frontend && yarn start\" \"cd backend && yarn dev\"",
+    "kill-ports": "echo 'Killing ports 3000, 8080...' && lsof -ti:3000 | xargs -r kill -9 && lsof -ti:8080 | xargs -r kill -9 && echo 'All ports killed successfully!'",
+    "lint": "yarn lint:backend && yarn lint:frontend",
+    "lint:backend": "yarn --cwd backend lint",
+    "lint:frontend": "yarn --cwd frontend lint",
+    "lint:fix": "yarn --cwd backend lint:fix && yarn --cwd frontend lint:fix",
+    "format": "yarn --cwd backend format && yarn --cwd frontend format",
+    "test:backend": "yarn --cwd backend test",
+    "test:frontend": "yarn --cwd frontend test",
+    "test:coverage": "yarn --cwd backend test:coverage && yarn --cwd frontend test:coverage",
+    "coverage": "yarn --cwd backend test:coverage && yarn --cwd frontend test:coverage"
+  },
+  "keywords": [
+    "plan-ai",
+    "ai",
+    "ai-jira",
+    "meeting-notes",
+    "openai",
+    "firebase",
+    "typescript",
+    "blueberrybytes"
+  ],
+  "author": "Xavier Masleszkiewicz",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^22.15.17",
+    "concurrently": "^9.2.1",
+    "env-cmd": "^10.1.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^15.2.2",
+    "prettier": "^3.5.3",
+    "ts-node": "^10.9.2"
+  },
+  "dependencies": {
+    "http-server": "^14.1.1",
+    "zod": "^3.24.4"
+  },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx,json,md,css,scss,yml,yaml}": [
+      "prettier --write"
+    ],
+    "backend/src/**/*.{ts,tsx}": [
+      "yarn --cwd backend lint:fix"
+    ],
+    "frontend/src/**/*.{ts,tsx,js,jsx}": [
+      "yarn --cwd frontend lint:fix"
+    ]
+  }
+}

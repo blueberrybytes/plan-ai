@@ -1,0 +1,38 @@
+services:
+  db:
+    image: postgres:16
+    container_name: plan-ai-db
+    environment:
+      POSTGRES_USER: planai
+      POSTGRES_DB: planai_db
+      POSTGRES_PASSWORD: planai123
+    ports:
+      - "5432:5432"
+    volumes:
+      - plan-ai-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bbb -d bbb_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  qdrant:
+    image: qdrant/qdrant:v1.15
+    container_name: plan-ai-qdrant
+    #environment:
+    # Use env var if provided, fall back to test value
+    # QDRANT__SERVICE__API_KEY: planai123
+    ports:
+      - "6333:6333" # REST
+      - "6334:6334" # gRPC (optional)
+    volumes:
+      - qdrant-storage:/qdrant/storage
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:6333/ready || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  plan-ai-db-data:
+  qdrant-storage:

@@ -1,0 +1,5 @@
+
+
+echo "Running lint-staged..."
+npx lint-staged
+npm run format

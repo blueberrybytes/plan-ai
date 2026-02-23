@@ -1,0 +1,846 @@
+{
+  "login": {
+    "title": "Inicia sesión en {{productName}}",
+    "subtitle": "Revisa tareas generadas por IA, repasa resúmenes de actas y mantén tus tableros sincronizados.",
+    "form": {
+      "emailLabel": "Correo electrónico",
+      "passwordLabel": "Contraseña",
+      "signIn": "Iniciar sesión",
+      "signingIn": "Iniciando sesión..."
+    },
+    "errors": {
+      "emailRequired": "El correo electrónico es obligatorio",
+      "emailInvalid": "Introduce una dirección de correo válida",
+      "passwordRequired": "La contraseña es obligatoria",
+      "passwordLength": "La contraseña debe tener al menos 6 caracteres",
+      "sessionExpired": "Su sesión ha expirado. Por favor, inicie sesión de nuevo."
+    },
+    "alerts": {
+      "verificationTitle": "Verificación de correo requerida",
+      "verificationBody": "Enviamos un correo de verificación a {{email}}. Verifica tu correo y vuelve a iniciar sesión.",
+      "defaultEmailPlaceholder": "tu correo"
+    },
+    "oauth": {
+      "divider": "O",
+      "google": "Continuar con Google",
+      "microsoft": "Continuar con Microsoft"
+    },
+    "links": {
+      "forgotPassword": "¿Olvidaste tu contraseña?",
+      "signup": "¿No tienes cuenta? Regístrate"
+    },
+    "legal": {
+      "agreePrefix": "Al iniciar sesión aceptas nuestros",
+      "terms": "Términos de servicio",
+      "privacy": "Política de privacidad",
+      "dataDeletion": "Eliminación de datos",
+      "and": "y"
+    }
+  },
+  "confirmDeletionDialog": {
+    "title": "Confirmar eliminación",
+    "descriptionFallback": "Esta acción no se puede deshacer.",
+    "emailFallback": "Valor desconocido",
+    "buttons": {
+      "cancel": "Cancelar",
+      "confirm": "Eliminar",
+      "processing": "Eliminando..."
+    }
+  },
+  "signUp": {
+    "title": "Crea tu espacio de trabajo en {{productName}}",
+    "subtitle": "Deja que la IA convierta cada conversación en tareas, prioridades y tableros que tu equipo confía.",
+    "divider": "O",
+    "form": {
+      "confirmPasswordLabel": "Confirmar contraseña",
+      "showPasswordAria": "mostrar u ocultar contraseña"
+    },
+    "errors": {
+      "confirmRequired": "Confirma tu contraseña",
+      "confirmMismatch": "Las contraseñas no coinciden"
+    },
+    "buttons": {
+      "submit": "Registrarse",
+      "creating": "Creando cuenta..."
+    },
+    "links": {
+      "loginPrompt": "¿Ya tienes cuenta? Inicia sesión"
+    }
+  },
+  "home": {
+    "heading": "Bienvenido de nuevo",
+    "subheading": "Tu workspace de IA — sesiones, tareas, slides y chat, todo en un solo lugar.",
+    "fallbackProjectTitle": "tus proyectos",
+    "greeting": {
+      "morning": "Buenos días",
+      "afternoon": "Buenas tardes",
+      "evening": "Buenas noches"
+    },
+    "stats": {
+      "activeProjects": {
+        "label": "Proyectos",
+        "cta": "Ver proyectos"
+      },
+      "transcriptsProcessed": {
+        "label": "Transcripciones procesadas",
+        "cta": "Transcripciones recientes"
+      },
+      "openTasks": {
+        "label": "Tareas abiertas",
+        "cta": "Ver tablero"
+      },
+      "presentations": {
+        "label": "Presentaciones",
+        "cta": "Ver slides"
+      }
+    },
+    "quickActions": {
+      "heading": "Acciones rápidas",
+      "newSession": {
+        "title": "Nuevo proyecto",
+        "description": "Sube una transcripción y genera tareas automáticamente con IA."
+      },
+      "createSlides": {
+        "title": "Crear slides",
+        "description": "Genera una presentación con tu marca a partir de cualquier prompt o contexto."
+      },
+      "chat": {
+        "title": "Chat con IA",
+        "description": "Chatea con tus sesiones, contextos y conocimiento del workspace."
+      },
+      "contexts": {
+        "title": "Gestionar contextos",
+        "description": "Sube archivos y documentos para enriquecer el contenido generado por IA."
+      }
+    },
+    "activity": {
+      "heading": "Actividad reciente"
+    },
+    "presentations": {
+      "heading": "Presentaciones recientes",
+      "loading": "Cargando presentaciones…",
+      "viewAll": "Ver todas las presentaciones"
+    },
+    "emptyState": {
+      "title": "Tu workspace está listo",
+      "description": "Empieza creando un proyecto para procesar una transcripción, o genera directamente un slide deck con IA.",
+      "newSession": "Nuevo proyecto",
+      "createSlides": "Crear slides"
+    },
+    "transcripts": {
+      "title": "Transcripciones recientes",
+      "subtitle": "Subidas recientes de {{session}}",
+      "viewAll": "Ver todas",
+      "loading": "Cargando transcripciones…",
+      "error": "No se pudieron cargar las transcripciones.",
+      "empty": "Aún no hay transcripciones. Sube la primera conversación para generar tareas.",
+      "recorded": "Grabado",
+      "summaryChip": "Resumen"
+    },
+    "tasks": {
+      "title": "Tareas prioritarias",
+      "subtitle": "Obtenidas de {{session}}",
+      "openBoard": "Abrir tablero",
+      "loading": "Cargando tareas…",
+      "error": "No se pudieron cargar las tareas.",
+      "empty": "Aún no hay tareas. Sube o crea una transcripción para generar pendientes.",
+      "updated": "Actualizado {{timestamp}}"
+    }
+  },
+  "profile": {
+    "heading": "Perfil",
+    "description": "Gestiona tu cuenta de Plan AI y el historial de tu espacio de trabajo.",
+    "role": {
+      "loading": "Cargando...",
+      "error": "No se pudo cargar el rol",
+      "retry": "Reintentar",
+      "notAvailable": "No disponible"
+    },
+    "alerts": {
+      "loading": "Cargando la información de tu perfil…",
+      "refreshError": "No pudimos actualizar los datos. Se muestra la información en caché."
+    },
+    "sections": {
+      "info": "Información del perfil",
+      "workspaceFootprint": "Huella del espacio de trabajo",
+      "workspaceDescription": "La ingesta de transcripciones, las sugerencias de tareas y los temas personalizados dependen de este perfil. El borrado total elimina todos los tableros y artefactos asociados.",
+      "integrations": "Integraciones conectadas"
+    },
+    "info": {
+      "email": "Correo electrónico",
+      "userId": "ID de usuario",
+      "accountCreated": "Cuenta creada",
+      "lastSignIn": "Último acceso",
+      "role": "Rol"
+    },
+    "language": {
+      "label": "Idioma",
+      "options": {
+        "en": "Inglés",
+        "es": "Español"
+      }
+    },
+    "chat": {
+      "englishLevel": {
+        "label": "Nivel de Inglés",
+        "options": {
+          "beginner": "Principiante",
+          "intermediate": "Intermedio",
+          "advanced": "Avanzado",
+          "native": "Nativo"
+        }
+      }
+    },
+    "buttons": {
+      "logout": "Cerrar sesión",
+      "deleteAccount": "Eliminar cuenta"
+    },
+    "integrations": {
+      "loading": "Cargando integraciones…",
+      "error": "No se pueden cargar las integraciones ahora mismo.",
+      "retry": "Reintentar",
+      "notLinked": "Sin enlace",
+      "empty": "Aún no hay integraciones conectadas."
+    },
+    "errors": {
+      "deleteAccount": "No se pudo eliminar tu cuenta. Inténtalo de nuevo."
+    }
+  },
+  "chat": {
+    "heading": "Chat con Contexto",
+    "sidebar": {
+      "newChat": "Nuevo Chat",
+      "emptyList": "Aún no hay chats",
+      "edit": "Editar",
+      "delete": "Eliminar",
+      "confirmDelete": "¿Estás seguro de que deseas eliminar este chat? Esta acción no se puede deshacer."
+    },
+    "placeholders": {
+      "typeMessage": "Escribe un mensaje...",
+      "selectChat": "Selecciona un chat de la barra lateral o comienza uno nuevo",
+      "emptyStateTitle": "Comienza una nueva conversación",
+      "emptyStateSubtitle": "Chatea con tu código o documentación usando Plan AI."
+    },
+    "buttons": {
+      "send": "Enviar",
+      "start": "Iniciar Chat",
+      "cancel": "Cancelar",
+      "delete": "Eliminar"
+    },
+    "dialog": {
+      "title": "Seleccionar Contextos",
+      "description": "Elige qué contextos debe referenciar la IA para este chat.",
+      "placeholder": "Seleccionar contextos",
+      "noContexts": "Aún no has creado contextos. Los contextos permiten a la IA responder basándose en tus documentos.",
+      "createContext": "Crea tu primer Contexto"
+    },
+    "window": {
+      "viewFullScreen": "Ver en pantalla completa",
+      "exportChat": "Exportar historial de chat"
+    },
+    "messages": {
+      "chatCreated": "Chat creado con éxito",
+      "chatUpdated": "Chat actualizado con éxito",
+      "chatDeleted": "Chat eliminado con éxito",
+      "saveError": "Error al guardar el chat",
+      "deleteError": "Error al eliminar el chat"
+    },
+    "fields": {
+      "title": "Título del Chat"
+    }
+  },
+  "contexts": {
+    "heading": "Contextos",
+    "description": "Gestiona espacios de conocimiento que potencian tu planificación asistida por IA. Mantén todo organizado con archivos, metadatos y colores.",
+    "buttons": {
+      "create": "Crear contexto",
+      "creating": "Creando...",
+      "edit": "Editar contexto",
+      "saving": "Guardando...",
+      "upload": "Subir archivo",
+      "uploading": "Subiendo...",
+      "view": "Ver",
+      "back": "Volver a contextos",
+      "cancel": "Cancelar",
+      "delete": "Eliminar contexto"
+    },
+    "list": {
+      "label": "TUS CONTEXTOS",
+      "emptyTitle": "Aún no hay contextos",
+      "selectPrompt": "Selecciona un contexto",
+      "count": "{{count}} contexto",
+      "count_plural": "{{count}} contextos",
+      "emptyDescription": "Todavía no has creado contextos. Usa el botón de arriba para agregar uno.",
+      "error": "No se pudieron cargar los contextos. Actualiza la página."
+    },
+    "placeholders": {
+      "selectContext": "Selecciona un contexto de la lista para ver sus detalles.",
+      "missingDescription": "No se proporcionó una descripción para este contexto.",
+      "noFiles": "Todavía no hay archivos subidos. Sube documentos, hojas de cálculo u otros recursos a este contexto.",
+      "supportedTypes": "Tipos compatibles: {{types}}"
+    },
+    "info": {
+      "updated": "Actualizado {{timestamp}}",
+      "untitled": "Contexto sin nombre"
+    },
+    "files": {
+      "title": "Archivos",
+      "count": "{{count}} archivo",
+      "count_plural": "{{count}} archivos",
+      "uploaded": "Subido {{timestamp}}",
+      "renameAria": "Renombrar archivo",
+      "deleteAria": "Eliminar archivo"
+    },
+    "dialog": {
+      "title": {
+        "create": "Crear contexto",
+        "edit": "Editar contexto",
+        "delete": "Eliminar contexto"
+      },
+      "deleteWarning": "¿Seguro que quieres eliminar \"{{name}}\"? Se borrarán todos sus archivos y no se puede deshacer.",
+      "primary": {
+        "create": "Crear",
+        "save": "Guardar",
+        "creating": "Creando...",
+        "saving": "Guardando..."
+      },
+      "fields": {
+        "name": "Nombre",
+        "description": "Descripción",
+        "color": "Color"
+      }
+    },
+    "messages": {
+      "nameRequired": "El nombre es obligatorio",
+      "createSuccess": "Contexto creado con éxito",
+      "createError": "No se pudo crear el contexto. Inténtalo de nuevo.",
+      "updateSuccess": "Contexto actualizado con éxito",
+      "updateError": "No se pudo actualizar el contexto. Inténtalo de nuevo.",
+      "unsupportedFile": "Tipo de archivo no compatible. Tipos permitidos: {{types}}.",
+      "uploadSuccess": "Archivo subido",
+      "uploadError": "No se pudo subir el archivo. Inténtalo de nuevo.",
+      "deleteSuccess": "Archivo eliminado",
+      "deleteError": "No se pudo eliminar el archivo. Inténtalo de nuevo.",
+      "contextError": "No se pudo cargar el contexto. Prueba a actualizar la página.",
+      "deleteContextSuccess": "Contexto eliminado",
+      "deleteContextError": "No se pudo eliminar el contexto. Inténtalo de nuevo."
+    }
+  },
+  "integrationsPage": {
+    "heading": "Integraciones",
+    "description": "Conecta herramientas externas para sincronizar tareas y actualizaciones de proyectos en Plan AI.",
+    "notSignedIn": "Debes iniciar sesión para administrar integraciones.",
+    "genericNotConnected": "{{provider}} todavía no está conectado.",
+    "statusAlert": {
+      "success": "La integración se completó correctamente.",
+      "error": "No se pudo completar la integración. Inténtalo de nuevo."
+    },
+    "loading": "Cargando integraciones…",
+    "buttons": {
+      "retry": "Reintentar"
+    },
+    "errors": {
+      "cannotLoad": "No se puede cargar el estado de las integraciones.",
+      "jiraAuthStart": "No se pudo iniciar la autorización con Jira. Inténtalo de nuevo.",
+      "jiraAuthFlow": "No se pudo iniciar el flujo OAuth de Jira. Vuelve a intentarlo."
+    },
+    "connect": {
+      "redirecting": "Redirigiendo…"
+    },
+    "comingSoonFallback": "La integración de {{provider}} llegará pronto. ¡Mantente al tanto!",
+    "providers": {
+      "jira": {
+        "label": "Jira",
+        "description": "Conecta tu cuenta de Atlassian Jira Cloud para sincronizar proyectos y enviar tareas directamente a tableros de Jira.",
+        "connectCta": "Conectar Jira",
+        "comingSoonMessage": "La integración con Jira llegará pronto. ¡Mantente al tanto!",
+        "notConnected": "Jira aún no está conectado."
+      },
+      "linear": {
+        "label": "Linear",
+        "description": "Conecta tu espacio de trabajo de Linear para gestionar issues y tareas junto a las sesiones de Plan AI.",
+        "connectCta": "Conectar Linear",
+        "comingSoonMessage": "La integración con Linear llegará pronto. ¡Mantente al tanto!",
+        "notConnected": "Linear aún no está conectado."
+      }
+    },
+    "connectedDetails": {
+      "linkedAccount": "ID de cuenta vinculada: {{accountId}}",
+      "connectedOn": "Conectado el {{timestamp}}",
+      "expiresOn": "El token expira el {{timestamp}}",
+      "refreshToken": "Token de actualización: {{status}}",
+      "refreshAvailable": "Disponible",
+      "refreshUnavailable": "No disponible",
+      "unknownAccount": "Desconocido"
+    }
+  },
+  "landingPage": {
+    "header": {
+      "signIn": "Iniciar sesión",
+      "signUp": "Registro gratuito"
+    },
+    "hero": {
+      "badge": "Impulsado por BlueBerryBytes",
+      "title": "De reunión a listo — en segundos",
+      "subtitle": "Plan AI convierte transcripciones en tareas, tableros kanban, presentaciones generadas por IA y chat contextual. Todo el stack de entrega, potenciado por IA.",
+      "cta": "Empieza gratis",
+      "ctaSecondary": "Iniciar sesión"
+    },
+    "stats": {
+      "faster": "planificación más rápida",
+      "aiPowered": "impulsado por IA",
+      "manualWork": "limpieza manual de notas"
+    },
+    "features": {
+      "heading": "Todo lo que tu equipo necesita, sin lo que no",
+      "subheading": "Una plataforma que toma el resultado de tus reuniones y lo convierte en trabajo estructurado y accionable.",
+      "items": {
+        "transcript": {
+          "title": "Ingesta de transcripciones",
+          "description": "Sube transcripciones o notas de reuniones. Plan AI detecta oradores, decisiones y acciones en segundos."
+        },
+        "tasks": {
+          "title": "Generación de tareas con IA",
+          "description": "Genera tareas priorizadas con responsables, fechas límite y contexto completo de la reunión — sin esfuerzo manual."
+        },
+        "boards": {
+          "title": "Tableros y cronogramas",
+          "description": "Alterna entre kanban, diagramas de dependencias y vistas de roadmap para mantener cada proyecto alineado."
+        },
+        "slides": {
+          "title": "Presentaciones con IA",
+          "description": "Genera presentaciones con tu marca a partir de cualquier prompt o contexto — elige tu tema y deja que la IA haga el resto."
+        },
+        "chat": {
+          "title": "Chat contextual con IA",
+          "description": "Haz preguntas sobre tus sesiones, tareas y archivos de contexto. Tu asistente de IA conoce todo tu workspace."
+        },
+        "insights": {
+          "title": "Insights de entrega",
+          "description": "Detecta bloqueos temprano con seguimiento de dependencias, burn-up reports y resúmenes para stakeholders."
+        }
+      }
+    },
+    "howItWorks": {
+      "heading": "Funcionando en 3 pasos",
+      "steps": {
+        "1": {
+          "title": "Conecta y sube",
+          "description": "Inicia sesión con Google o email. Sube transcripciones o archivos de contexto para que Plan AI tenga el panorama completo."
+        },
+        "2": {
+          "title": "Deja que la IA trabaje",
+          "description": "Plan AI extrae tareas, construye tableros y genera presentaciones automáticamente. Sin plantillas que rellenar."
+        },
+        "3": {
+          "title": "Entrega más rápido",
+          "description": "Revisa, ajusta y envía tareas a Jira o Linear. Comparte presentaciones. Chatea con tu contexto. Mantente desbloqueado."
+        }
+      }
+    },
+    "checklist": {
+      "noSetup": "Sin configuración",
+      "googleLogin": "Inicia sesión con Google",
+      "freeTier": "Gratis para empezar",
+      "allInOne": "Tareas, slides y chat en un solo lugar"
+    },
+    "cta": {
+      "title": "Deja de limpiar notas de reuniones",
+      "subtitle": "Únete a los equipos que usan Plan AI para reducir la carga de planificación y entregar más rápido. Empezar tarda 10 segundos.",
+      "button": "Empieza gratis"
+    },
+    "footer": {
+      "copyright": "© {{year}} BlueberryBytes {{productName}}. Todos los derechos reservados.",
+      "privacy": "Política de privacidad",
+      "dataDeletion": "Eliminación de datos",
+      "terms": "Términos de servicio"
+    }
+  },
+  "projectDetails": {
+    "breadcrumbs": {
+      "aria": "Navegación de migas de pan",
+      "home": "Inicio",
+      "sessions": "Sesiones",
+      "fallback": "Sesión"
+    },
+    "subtitle": "Revisa los metadatos de la sesión y supervisa su estado.",
+    "buttons": {
+      "refresh": "Actualizar",
+      "moreInfo": "Más información",
+      "addTranscript": "Generar tareas",
+      "export": "Exportar",
+      "refreshTasks": "Actualizar tareas",
+      "createTask": "Crear tarea"
+    },
+    "sections": {
+      "actions": "Acciones de la sesión",
+      "tasksOverviewTitle": "Resumen de tareas",
+      "tasksOverviewDescription": "Visualiza el trabajo con un tablero kanban o un diagrama de dependencias. Los detalles y transcripciones viven en la página de información."
+    },
+    "tabs": {
+      "aria": "Vista de tareas de la sesión",
+      "board": "Tablero",
+      "diagram": "Diagrama de dependencias",
+      "timeline": "Cronograma"
+    },
+    "messages": {
+      "noTasks": "Aún no hay tareas. Crea tareas para poblar el tablero.",
+      "sessionNotFound": "Sesión no encontrada.",
+      "deleteSuccess": "Tarea eliminada",
+      "deleteError": "No se pudo eliminar la tarea. Inténtalo de nuevo.",
+      "tasksErrorFallback": "No se pudieron cargar las tareas.",
+      "tasksErrorStatus": "Error de tareas {{status}}",
+      "unexpectedError": "Ocurrió un error inesperado."
+    },
+    "dialogs": {
+      "deleteTask": {
+        "title": "Eliminar tarea",
+        "entityFallback": "Tarea seleccionada",
+        "description": "Eliminar esta tarea la quitará de la sesión y desvinculará cualquier dependencia.",
+        "additionalWarning": "Esta acción no se puede deshacer.",
+        "confirm": "Eliminar tarea"
+      }
+    }
+  },
+  "projectInfo": {
+    "breadcrumbs": {
+      "aria": "Navegación de migas de pan",
+      "sessions": "Sesiones",
+      "workspace": "Espacio de trabajo de la sesión",
+      "info": "Información"
+    },
+    "buttons": {
+      "backToWorkspace": "Volver al espacio de trabajo",
+      "refresh": "Actualizar",
+      "refreshTranscripts": "Actualizar lista"
+    },
+    "sections": {
+      "transcriptsTitle": "Transcripciones",
+      "transcriptsDescription": "Revisa las transcripciones capturadas y su metadata.",
+      "metadataLabel": "Metadatos"
+    },
+    "meta": {
+      "created": "Creado",
+      "updated": "Actualizado",
+      "started": "Iniciado",
+      "ended": "Finalizado"
+    },
+    "table": {
+      "title": "Título",
+      "source": "Fuente",
+      "recorded": "Grabado",
+      "created": "Creado",
+      "summary": "Resumen",
+      "untitled": "Transcripción sin título",
+      "noSummary": "Sin resumen",
+      "missing": "—"
+    },
+    "messages": {
+      "sessionErrorFallback": "No se pudo cargar la sesión.",
+      "sessionErrorStatus": "Error de sesión {{status}}",
+      "transcriptsErrorFallback": "No se pudieron cargar las transcripciones.",
+      "transcriptsErrorStatus": "Error de transcripciones {{status}}",
+      "sessionNotFound": "Sesión no encontrada.",
+      "noTranscripts": "Aún no se han capturado transcripciones para esta sesión.",
+      "noMetadata": "No se proporcionaron metadatos."
+    }
+  },
+  "projectTranscriptDetail": {
+    "breadcrumbs": {
+      "aria": "Navegación de migas de pan",
+      "sessions": "Sesiones",
+      "workspace": "Espacio de trabajo de la sesión",
+      "info": "Información",
+      "transcript": "Transcripción"
+    },
+    "buttons": {
+      "backToInfo": "Volver a información",
+      "refresh": "Actualizar"
+    },
+    "meta": {
+      "recorded": "Grabado",
+      "created": "Creado",
+      "updated": "Actualizado"
+    },
+    "sections": {
+      "summary": "Resumen",
+      "transcript": "Transcripción",
+      "metadata": "Metadatos"
+    },
+    "table": {
+      "missing": "—",
+      "noSummary": "Sin resumen"
+    },
+    "messages": {
+      "sessionErrorFallback": "No se pudo cargar la sesión.",
+      "sessionErrorStatus": "Error de sesión {{status}}",
+      "transcriptErrorFallback": "No se pudo cargar la transcripción.",
+      "transcriptErrorStatus": "Error de transcripción {{status}}",
+      "transcriptNotFound": "Transcripción no encontrada.",
+      "untitled": "Transcripción sin título",
+      "noText": "No hay texto de transcripción disponible.",
+      "noMetadata": "No se proporcionaron metadatos.",
+      "metadataError": "No se pueden mostrar los metadatos."
+    }
+  },
+  "sidebarLayout": {
+    "nav": {
+      "home": "Inicio",
+      "chat": "Chat",
+      "sessions": "Sesiones",
+      "contexts": "Contextos",
+      "slides": "Diapositivas",
+      "integrations": "Integraciones",
+      "recordings": "Grabaciones"
+    },
+    "tooltip": {
+      "expand": "Expandir barra lateral",
+      "collapse": "Contraer barra lateral"
+    },
+    "profile": {
+      "fallbackName": "Perfil",
+      "fallbackEmail": "Ver perfil"
+    }
+  },
+  "errorFallback": {
+    "title": "Algo salió mal.",
+    "reload": "Recargar página"
+  },
+  "deleteAccountDialog": {
+    "title": "Confirma la eliminación de la cuenta",
+    "description": "Esto eliminará permanentemente tu cuenta de Plan AI, incluyendo el historial de transcripciones, tareas generadas y temas personalizados. Esta acción no se puede deshacer.",
+    "confirmPrompt": "Para continuar, confirma que deseas eliminar la cuenta asociada con:",
+    "emailFallback": "Correo desconocido",
+    "buttons": {
+      "cancel": "Cancelar",
+      "confirm": "Eliminar cuenta",
+      "deleting": "Eliminando..."
+    }
+  },
+  "forgotPassword": {
+    "heading": "Restablece tu acceso a {{productName}}",
+    "description": "Introduce el correo asociado a tu espacio de trabajo y te enviaremos pasos para volver a tus tableros impulsados por transcripciones.",
+    "success": "Si existe una cuenta con este correo, recibirás instrucciones para restablecer la contraseña en breve.",
+    "buttons": {
+      "submit": "Restablecer contraseña",
+      "submitting": "Enviando..."
+    },
+    "links": {
+      "backToSignIn": "Volver a iniciar sesión"
+    }
+  },
+  "common": {
+    "buttons": {
+      "viewAll": "Ver todas",
+      "viewBoard": "Ver tablero",
+      "save": "Guardar",
+      "cancel": "Cancelar"
+    },
+    "labels": {
+      "summary": "Resumen",
+      "recorded": "Grabado",
+      "updated": "Actualizado {{timestamp}}"
+    }
+  },
+  "projectTranscriptDialog": {
+    "title": "Generar tareas",
+    "modeLabel": "Seleccionar método de entrada",
+    "uploadLabel": "Subir archivos (PDF / DOCX)",
+    "manualLabel": "Pegar texto de transcripción",
+    "personaLabel": "Persona de Análisis con IA",
+    "personaPlaceholder": "Seleccionar persona",
+    "personas": {
+      "SECRETARY": {
+        "name": "Secretario",
+        "description": "Precisión extrema. Solo extrae tareas mencionadas explícitamente. Sin generación técnica."
+      },
+      "ARCHITECT": {
+        "name": "Arquitecto",
+        "description": "Descomposición técnica. Divide objetivos de alto nivel en tareas técnicas detalladas usando el contexto del código."
+      },
+      "PRODUCT_MANAGER": {
+        "name": "Gerente de Producto",
+        "description": "Lente de stakeholders. Convierte objetivos en historias de usuario y conjuntos de características."
+      },
+      "DEVELOPER": {
+        "name": "Desarrollador",
+        "description": "Enfoque en implementación. Crea tareas específicas de codificación, pruebas y refactorización."
+      }
+    },
+    "fields": {
+      "title": "Título",
+      "recordedAt": "Grabado el",
+      "language": "Idioma",
+      "summary": "Resumen",
+      "metadata": "Metadatos (JSON)",
+      "contexts": "Contextos relacionados",
+      "contextsPlaceholder": "Selecciona contextos para enriquecer el análisis",
+      "noContexts": "No hay contextos disponibles",
+      "objective": "Objetivo Principal (Prompt)",
+      "objectivePlaceholder": "ej. Crear 3 tareas críticas para los cambios en el flujo de inicio de sesión...",
+      "content": "Contenido de la transcripción",
+      "contentPlaceholder": "Pega o escribe el texto de la transcripción aquí"
+    },
+    "buttons": {
+      "selectFiles": "Seleccionar archivos",
+      "cancel": "Cancelar",
+      "save": "Guardar transcripción",
+      "saving": "Guardando..."
+    },
+    "messages": {
+      "noFiles": "No hay archivos seleccionados aún.",
+      "formats": "Formatos aceptados: PDF, DOCX",
+      "selectFileError": "Por favor, selecciona al menos un archivo PDF o DOCX para subir.",
+      "unsupportedError": "Solo se admiten archivos PDF y DOCX.",
+      "contentError": "Por favor, proporciona el contenido de la transcripción o un objetivo.",
+      "metadataError": "Los metadatos deben ser un JSON válido.",
+      "success": "Transcripción creada con éxito.",
+      "processing": "Analizando transcripción, por favor espera...",
+      "processingWait": "Estamos extrayendo el texto y analizando tu transcripción con IA. Esto puede tardar un momento para archivos grandes."
+    }
+  },
+  "chatContextDialog": {
+    "englishLevelLabel": "Nivel de Inglés",
+    "englishLevels": {
+      "Beginner": "Principiante",
+      "Intermediate": "Intermedio",
+      "Advanced": "Avanzado",
+      "Native": "Nativo"
+    }
+  },
+  "slides": {
+    "title": "Diapositivas",
+    "catalogSubtitle": "Explora los tipos de diapositiva disponibles",
+    "actions": {
+      "createSlides": "Crear Diapositivas",
+      "viewSlideTypes": "Ver Tipos de Diapositiva",
+      "createTheme": "Crear Tema",
+      "viewThemes": "Ver Temas",
+      "back": "Volver"
+    },
+    "slideTypesPage": {
+      "title": "Tipos de Diapositiva"
+    },
+    "themes": {
+      "title": "Temas",
+      "create": "Crear Tema",
+      "empty": "Aún no hay temas. Crea uno para empezar.",
+      "loading": "Cargando temas...",
+      "deleteConfirm": "¿Estás seguro de que deseas eliminar este tema?",
+      "form": {
+        "name": "Nombre del Tema",
+        "colors": "Colores",
+        "primaryColor": "Primario",
+        "secondaryColor": "Secundario",
+        "backgroundColor": "Fondo",
+        "typography": "Tipografía",
+        "headingFont": "Fuente de Título",
+        "bodyFont": "Fuente de Cuerpo",
+        "presets": "Preajustes",
+        "save": "Guardar Tema",
+        "saving": "Guardando..."
+      }
+    },
+    "create": {
+      "title": "Crear Presentación",
+      "subtitle": "Elige un tema y describe lo que quieres. La IA decidirá la estructura, cantidad de diapositivas y contenido.",
+      "selectTheme": "Tema",
+      "selectContexts": "Contextos (opcional)",
+      "contextsHelper": "Selecciona contextos para enriquecer la presentación con tus datos vía RAG",
+      "presentationTitle": "Título (opcional)",
+      "titleHelper": "Déjalo vacío y la IA generará uno",
+      "prompt": "¿De qué debería tratar esta presentación?",
+      "promptPlaceholder": "ej., Crear una actualización de estado del proyecto con resumen del equipo, métricas del Q1 y hoja de ruta",
+      "generate": "Generar con IA",
+      "generating": "Generando...",
+      "error": "Error al generar la presentación. Inténtalo de nuevo.",
+      "themePreview": "Vista previa — {{name}}",
+      "previewTitle": "Tu Presentación",
+      "previewSubtitle": "El contenido generado por IA aparecerá aquí",
+      "tone": "Tono",
+      "toneDefault": "Automático",
+      "tones": {
+        "professional": "Profesional",
+        "casual": "Casual",
+        "formal": "Formal",
+        "inspirational": "Inspirador",
+        "technical": "Técnico",
+        "persuasive": "Persuasivo"
+      },
+      "audience": "Audiencia",
+      "audienceDefault": "Automático",
+      "audiences": {
+        "executives": "Ejecutivos",
+        "team": "Equipo",
+        "clients": "Clientes",
+        "investors": "Inversores",
+        "students": "Estudiantes",
+        "general": "Público General"
+      },
+      "selectThemePrompt": "Selecciona un tema para ver la vista previa",
+      "numSlides": "Número de diapositivas",
+      "numSlidesHelper": "Deja en 'IA decide' para que la IA elija la cantidad ideal (máx. 15)",
+      "numSlidesAI": "IA decide"
+    },
+    "templates": {
+      "title": "Plantillas",
+      "create": "Nueva Plantilla",
+      "edit": "Editar Plantilla",
+      "delete": "Eliminar Plantilla",
+      "deleteConfirm": "¿Estás seguro de que deseas eliminar esta plantilla?",
+      "empty": "Aún no hay plantillas. Crea una para empezar.",
+      "form": {
+        "name": "Nombre de la Plantilla",
+        "description": "Descripción",
+        "primaryColor": "Color Primario",
+        "secondaryColor": "Color Secundario",
+        "backgroundColor": "Color de Fondo",
+        "headingFont": "Fuente de Título",
+        "bodyFont": "Fuente de Cuerpo",
+        "logoUrl": "URL del Logo",
+        "slideTypes": "Tipos de Diapositiva",
+        "addSlideType": "Agregar Tipo de Diapositiva",
+        "save": "Guardar Plantilla",
+        "saving": "Guardando...",
+        "cancel": "Cancelar"
+      }
+    },
+    "presentations": {
+      "title": "Presentaciones",
+      "loading": "Cargando presentaciones...",
+      "generate": "Generar Presentación",
+      "delete": "Eliminar",
+      "deleteConfirm": "¿Estás seguro de que deseas eliminar esta presentación?",
+      "empty": "Aún no hay presentaciones. Genera una desde una plantilla.",
+      "emptyTitle": "Aún no hay presentaciones",
+      "emptyDescription": "Genera tu primer slide deck con IA en segundos. Elige un tema, añade contexto y deja que Gemini haga el resto.",
+      "emptyCtaPrimary": "Generar presentación",
+      "emptyCtaSecondary": "Ver tipos de slides",
+      "generating": "Generando presentación...",
+      "form": {
+        "template": "Plantilla",
+        "contexts": "Contextos",
+        "prompt": "Describe lo que deseas en la presentación",
+        "title": "Título de la Presentación (opcional)",
+        "generate": "Generar",
+        "cancel": "Cancelar"
+      }
+    },
+    "slideTypes": {
+      "title_only": "Diapositiva de Título",
+      "text_block": "Bloque de Texto",
+      "text_image": "Texto + Imagen",
+      "bullet_list": "Lista de Puntos",
+      "two_columns": "Dos Columnas",
+      "team_grid": "Miembros del Equipo",
+      "showcase": "Exhibición",
+      "stats": "Estadísticas Clave"
+    }
+  },
+  "notFound": {
+    "title": "Página no encontrada",
+    "heading": "¡Vaya! Página no encontrada",
+    "description": "La página que buscas no existe o ha sido movida.",
+    "backToHome": "Volver al inicio"
+  }
+}

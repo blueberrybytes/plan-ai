@@ -1,0 +1,10 @@
+node_modules/
+dist/
+
+beapolo-dev-e15e8703c4a6.json
+
+.env
+.env.local
+.env.development
+.env.production
+coverage

@@ -1,0 +1,846 @@
+{
+  "login": {
+    "title": "Sign in to {{productName}}",
+    "subtitle": "Revisit AI-generated tasks, review transcript highlights, and keep your delivery boards in sync.",
+    "form": {
+      "emailLabel": "Email Address",
+      "passwordLabel": "Password",
+      "signIn": "Sign In",
+      "signingIn": "Signing in..."
+    },
+    "errors": {
+      "emailRequired": "Email is required",
+      "emailInvalid": "Please enter a valid email address",
+      "passwordRequired": "Password is required",
+      "passwordLength": "Password must be at least 6 characters",
+      "sessionExpired": "Your session has expired. Please sign in again."
+    },
+    "alerts": {
+      "verificationTitle": "Email verification required",
+      "verificationBody": "We sent a verification email to {{email}}. Please verify your email and then sign in.",
+      "defaultEmailPlaceholder": "your email"
+    },
+    "oauth": {
+      "divider": "OR",
+      "google": "Continue with Google",
+      "microsoft": "Continue with Microsoft"
+    },
+    "links": {
+      "forgotPassword": "Forgot password?",
+      "signup": "Don't have an account? Sign Up"
+    },
+    "legal": {
+      "agreePrefix": "By signing in, you agree to our",
+      "terms": "Terms of Service",
+      "privacy": "Privacy Policy",
+      "dataDeletion": "Data Deletion",
+      "and": "and"
+    }
+  },
+  "confirmDeletionDialog": {
+    "title": "Confirm deletion",
+    "descriptionFallback": "This action cannot be undone.",
+    "emailFallback": "Unknown value",
+    "buttons": {
+      "cancel": "Cancel",
+      "confirm": "Delete",
+      "processing": "Deleting..."
+    }
+  },
+  "signUp": {
+    "title": "Create your {{productName}} workspace",
+    "subtitle": "Let AI map every conversation into tasks, priorities, and delivery boards your team trusts.",
+    "divider": "OR",
+    "form": {
+      "confirmPasswordLabel": "Confirm Password",
+      "showPasswordAria": "toggle password visibility"
+    },
+    "errors": {
+      "confirmRequired": "Please confirm your password",
+      "confirmMismatch": "Passwords do not match"
+    },
+    "buttons": {
+      "submit": "Sign Up",
+      "creating": "Creating account..."
+    },
+    "links": {
+      "loginPrompt": "Already have an account? Sign In"
+    }
+  },
+  "home": {
+    "heading": "Welcome back",
+    "subheading": "Your AI workspace — sessions, tasks, slides, and chat, all in one place.",
+    "fallbackProjectTitle": "your projects",
+    "greeting": {
+      "morning": "Good morning",
+      "afternoon": "Good afternoon",
+      "evening": "Good evening"
+    },
+    "stats": {
+      "activeProjects": {
+        "label": "Projects",
+        "cta": "View projects"
+      },
+      "transcriptsProcessed": {
+        "label": "Transcripts processed",
+        "cta": "Recent transcripts"
+      },
+      "openTasks": {
+        "label": "Open tasks",
+        "cta": "View board"
+      },
+      "presentations": {
+        "label": "Presentations",
+        "cta": "View slides"
+      }
+    },
+    "quickActions": {
+      "heading": "Quick Actions",
+      "newSession": {
+        "title": "New project",
+        "description": "Upload a transcript and automatically generate AI tasks."
+      },
+      "createSlides": {
+        "title": "Create slides",
+        "description": "Generate a branded presentation from any prompt or context."
+      },
+      "chat": {
+        "title": "AI chat",
+        "description": "Chat with your sessions, contexts, and workspace knowledge."
+      },
+      "contexts": {
+        "title": "Manage contexts",
+        "description": "Upload files and documents to enrich AI-generated content."
+      }
+    },
+    "activity": {
+      "heading": "Recent activity"
+    },
+    "presentations": {
+      "heading": "Recent presentations",
+      "loading": "Loading presentations…",
+      "viewAll": "View all presentations"
+    },
+    "emptyState": {
+      "title": "Your workspace is ready",
+      "description": "Start by creating a project to process a transcript, or jump straight into generating an AI slide deck.",
+      "newSession": "New project",
+      "createSlides": "Create Slides"
+    },
+    "transcripts": {
+      "title": "Recent transcripts",
+      "subtitle": "Latest uploads from {{session}}",
+      "viewAll": "View all",
+      "loading": "Loading transcripts…",
+      "error": "Failed to load transcripts.",
+      "empty": "No transcripts yet. Upload the first conversation to generate action items.",
+      "recorded": "Recorded",
+      "summaryChip": "Summary"
+    },
+    "tasks": {
+      "title": "Priority tasks",
+      "subtitle": "Pulled from {{session}}",
+      "openBoard": "Open board",
+      "loading": "Loading tasks…",
+      "error": "Failed to load tasks.",
+      "empty": "No tasks yet. Upload or create a transcript to generate follow-up items.",
+      "updated": "Updated {{timestamp}}"
+    }
+  },
+  "profile": {
+    "heading": "Profile",
+    "description": "Manage your Plan AI account and workspace footprint.",
+    "role": {
+      "loading": "Loading...",
+      "error": "Failed to load role",
+      "retry": "Retry",
+      "notAvailable": "Not available"
+    },
+    "alerts": {
+      "loading": "Loading your profile information…",
+      "refreshError": "We could not refresh your profile details. Cached information is shown below."
+    },
+    "sections": {
+      "info": "Profile information",
+      "workspaceFootprint": "Workspace footprint",
+      "workspaceDescription": "Transcript ingestion, AI task suggestions, and custom themes are tied to this profile. A full delete removes all associated boards and artifacts.",
+      "integrations": "Connected integrations"
+    },
+    "info": {
+      "email": "Email",
+      "userId": "User ID",
+      "accountCreated": "Account created",
+      "lastSignIn": "Last sign-in",
+      "role": "Role"
+    },
+    "language": {
+      "label": "Language",
+      "options": {
+        "en": "English",
+        "es": "Spanish"
+      }
+    },
+    "chat": {
+      "englishLevel": {
+        "label": "Level of English",
+        "options": {
+          "beginner": "Beginner",
+          "intermediate": "Intermediate",
+          "advanced": "Advanced",
+          "native": "Native"
+        }
+      }
+    },
+    "buttons": {
+      "logout": "Logout",
+      "deleteAccount": "Delete account"
+    },
+    "integrations": {
+      "loading": "Loading integrations…",
+      "error": "Unable to load integrations right now.",
+      "retry": "Retry",
+      "notLinked": "Not linked",
+      "empty": "No integrations connected yet."
+    },
+    "errors": {
+      "deleteAccount": "Unable to delete your account. Please try again."
+    }
+  },
+  "chat": {
+    "heading": "Chat with Context",
+    "sidebar": {
+      "newChat": "New Chat",
+      "emptyList": "No chats yet",
+      "edit": "Edit",
+      "delete": "Delete",
+      "confirmDelete": "Are you sure you want to delete this chat? This action cannot be undone."
+    },
+    "placeholders": {
+      "typeMessage": "Type a message...",
+      "selectChat": "Select a chat from the sidebar or start a new one",
+      "emptyStateTitle": "Start a new conversation",
+      "emptyStateSubtitle": "Chat with your codebase or documentation using Plan AI."
+    },
+    "buttons": {
+      "send": "Send",
+      "start": "Start Chat",
+      "cancel": "Cancel",
+      "delete": "Delete"
+    },
+    "dialog": {
+      "title": "Select Contexts",
+      "description": "Choose which contexts the AI should reference for this chat.",
+      "placeholder": "Select contexts",
+      "noContexts": "You haven't created any contexts yet. Contexts allow the AI to answer based on your documents.",
+      "createContext": "Create your first Context"
+    },
+    "window": {
+      "viewFullScreen": "View full screen",
+      "exportChat": "Export chat history"
+    },
+    "messages": {
+      "chatCreated": "Chat created successfully",
+      "chatUpdated": "Chat updated successfully",
+      "chatDeleted": "Chat deleted successfully",
+      "saveError": "Failed to save chat",
+      "deleteError": "Failed to delete chat"
+    },
+    "fields": {
+      "title": "Chat Title"
+    }
+  },
+  "contexts": {
+    "heading": "Contexts",
+    "description": "Manage knowledge spaces that power your AI-assisted planning. Keep them organized with files, metadata, and colors.",
+    "buttons": {
+      "create": "Create context",
+      "creating": "Creating...",
+      "edit": "Edit context",
+      "saving": "Saving...",
+      "upload": "Upload file",
+      "uploading": "Uploading...",
+      "view": "View",
+      "back": "Back to contexts",
+      "cancel": "Cancel",
+      "delete": "Delete context"
+    },
+    "list": {
+      "label": "YOUR CONTEXTS",
+      "emptyTitle": "No contexts yet",
+      "selectPrompt": "Select a context",
+      "count": "{{count}} context",
+      "count_plural": "{{count}} contexts",
+      "emptyDescription": "Contexts serve as knowledge bases for your AI. By uploading documents (PDFs, text files, etc.) to a Context, you enable the AI to provide answers grounded in your specific data. Create one above to get started.",
+      "error": "Failed to load contexts. Please refresh the page."
+    },
+    "placeholders": {
+      "selectContext": "Select a context from the list to see its details.",
+      "missingDescription": "No description provided for this context.",
+      "noFiles": "No files uploaded yet. Upload documents, spreadsheets, or other resources to this context.",
+      "supportedTypes": "Supported types: {{types}}"
+    },
+    "info": {
+      "updated": "Updated {{timestamp}}",
+      "untitled": "Untitled context"
+    },
+    "files": {
+      "title": "Files",
+      "count": "{{count}} file",
+      "count_plural": "{{count}} files",
+      "uploaded": "Uploaded {{timestamp}}",
+      "renameAria": "Rename file",
+      "deleteAria": "Delete file"
+    },
+    "dialog": {
+      "title": {
+        "create": "Create context",
+        "edit": "Edit context",
+        "delete": "Delete context"
+      },
+      "deleteWarning": "Are you sure you want to delete \"{{name}}\"? This will remove all its files and cannot be undone.",
+      "primary": {
+        "create": "Create",
+        "save": "Save",
+        "creating": "Creating...",
+        "saving": "Saving..."
+      },
+      "fields": {
+        "name": "Name",
+        "description": "Description",
+        "color": "Color"
+      }
+    },
+    "messages": {
+      "nameRequired": "Name is required",
+      "createSuccess": "Context created successfully",
+      "createError": "Failed to create context. Please try again.",
+      "updateSuccess": "Context updated successfully",
+      "updateError": "Failed to update context. Please try again.",
+      "unsupportedFile": "Unsupported file type. Supported types: {{types}}.",
+      "uploadSuccess": "File uploaded",
+      "uploadError": "Failed to upload file. Please try again.",
+      "deleteSuccess": "File deleted",
+      "deleteError": "Failed to delete file. Please try again.",
+      "contextError": "Failed to load context. Please try refreshing the page.",
+      "deleteContextSuccess": "Context deleted",
+      "deleteContextError": "Failed to delete context. Please try again."
+    }
+  },
+  "integrationsPage": {
+    "heading": "Integrations",
+    "description": "Connect external tools to streamline how Plan AI syncs tasks and project updates.",
+    "notSignedIn": "You must be signed in to manage integrations.",
+    "genericNotConnected": "{{provider}} is not connected yet.",
+    "statusAlert": {
+      "success": "Integration completed successfully.",
+      "error": "Failed to complete integration. Please try again."
+    },
+    "loading": "Loading integrations…",
+    "buttons": {
+      "retry": "Retry"
+    },
+    "errors": {
+      "cannotLoad": "Unable to load integrations status.",
+      "jiraAuthStart": "Unable to start Jira authorization. Please try again.",
+      "jiraAuthFlow": "Failed to initiate Jira OAuth flow. Please retry."
+    },
+    "connect": {
+      "redirecting": "Redirecting…"
+    },
+    "comingSoonFallback": "{{provider}} integration is coming soon. Stay tuned!",
+    "providers": {
+      "jira": {
+        "label": "Jira",
+        "description": "Connect your Atlassian Jira Cloud account to sync projects and push action items directly to Jira boards.",
+        "connectCta": "Connect Jira",
+        "comingSoonMessage": "Jira integration is coming soon. Stay tuned!",
+        "notConnected": "Jira is not connected yet."
+      },
+      "linear": {
+        "label": "Linear",
+        "description": "Connect your Linear workspace to manage product issues and tasks alongside Plan AI sessions.",
+        "connectCta": "Connect Linear",
+        "comingSoonMessage": "Linear integration is coming soon. Stay tuned!",
+        "notConnected": "Linear is not connected yet."
+      }
+    },
+    "connectedDetails": {
+      "linkedAccount": "Linked account ID: {{accountId}}",
+      "connectedOn": "Connected on {{timestamp}}",
+      "expiresOn": "Access token expires on {{timestamp}}",
+      "refreshToken": "Refresh token: {{status}}",
+      "refreshAvailable": "Available",
+      "refreshUnavailable": "Not available",
+      "unknownAccount": "Unknown"
+    }
+  },
+  "landingPage": {
+    "header": {
+      "signIn": "Sign In",
+      "signUp": "Sign Up Free"
+    },
+    "hero": {
+      "badge": "Powered by BlueBerryBytes",
+      "title": "From meeting to done — in seconds",
+      "subtitle": "Plan AI turns transcripts into tasks, kanban boards, AI-generated slide decks, and contextual chat. The entire delivery stack, powered by AI.",
+      "cta": "Start for free",
+      "ctaSecondary": "Sign in"
+    },
+    "stats": {
+      "faster": "faster planning",
+      "aiPowered": "AI-powered",
+      "manualWork": "manual note cleanup"
+    },
+    "features": {
+      "heading": "Everything your team needs, nothing it doesn't",
+      "subheading": "One platform that takes your raw meeting output and turns it into structured, actionable work.",
+      "items": {
+        "transcript": {
+          "title": "Transcript intake",
+          "description": "Drop raw meeting transcripts or notes. Plan AI auto-detects speakers, decisions, and action items in seconds."
+        },
+        "tasks": {
+          "title": "AI task generation",
+          "description": "Generate scoped, prioritized tasks with owners, due dates, and full meeting context — zero manual effort."
+        },
+        "boards": {
+          "title": "Boards & timelines",
+          "description": "Switch between kanban, dependency diagrams, and roadmap views to keep every project aligned."
+        },
+        "slides": {
+          "title": "AI slide decks",
+          "description": "Generate beautiful, branded presentations from any prompt or context — choose your theme and let AI do the rest."
+        },
+        "chat": {
+          "title": "Contextual AI chat",
+          "description": "Ask questions about your sessions, tasks, and context files. Your AI assistant knows your entire workspace."
+        },
+        "insights": {
+          "title": "Delivery insights",
+          "description": "Spot blockers early with dependency tracking, burn-up reports, and stakeholder digests."
+        }
+      }
+    },
+    "howItWorks": {
+      "heading": "Up and running in 3 steps",
+      "steps": {
+        "1": {
+          "title": "Connect & upload",
+          "description": "Sign in with Google or email. Upload meeting transcripts or context files to give Plan AI the full picture."
+        },
+        "2": {
+          "title": "Let AI do the work",
+          "description": "Plan AI extracts tasks, builds boards, and generates slides automatically. No templates to fill, no config to touch."
+        },
+        "3": {
+          "title": "Ship faster",
+          "description": "Review, adjust, and push tasks to Jira or Linear. Share slide decks. Chat with your context. Stay unblocked."
+        }
+      }
+    },
+    "checklist": {
+      "noSetup": "No setup required",
+      "googleLogin": "Sign in with Google",
+      "freeTier": "Free to start",
+      "allInOne": "Tasks, slides & chat in one place"
+    },
+    "cta": {
+      "title": "Stop cleaning up meeting notes",
+      "subtitle": "Join teams using Plan AI to cut planning overhead and ship faster. It takes 10 seconds to get started.",
+      "button": "Get started for free"
+    },
+    "footer": {
+      "copyright": "© {{year}} BlueberryBytes {{productName}}. All rights reserved.",
+      "privacy": "Privacy Policy",
+      "dataDeletion": "Data Deletion",
+      "terms": "Terms of Service"
+    }
+  },
+  "projectDetails": {
+    "breadcrumbs": {
+      "aria": "Breadcrumb navigation",
+      "home": "Home",
+      "sessions": "Projects",
+      "fallback": "Project"
+    },
+    "subtitle": "Review session metadata and track its status.",
+    "buttons": {
+      "refresh": "Refresh",
+      "moreInfo": "More info",
+      "addTranscript": "Generate tasks",
+      "export": "Export",
+      "refreshTasks": "Refresh tasks",
+      "createTask": "Create task"
+    },
+    "sections": {
+      "actions": "Project actions",
+      "tasksOverviewTitle": "Tasks Overview",
+      "tasksOverviewDescription": "Visualise work with a kanban board or dependency diagram. Session details and transcripts live in the info page."
+    },
+    "tabs": {
+      "aria": "Project task view",
+      "board": "Board",
+      "diagram": "Dependency diagram",
+      "timeline": "Timeline"
+    },
+    "messages": {
+      "noTasks": "No tasks yet. Create tasks to populate the board.",
+      "projectNotFound": "Project not found.",
+      "deleteSuccess": "Task deleted",
+      "deleteError": "Failed to delete task. Please try again.",
+      "tasksErrorFallback": "Failed to load tasks.",
+      "tasksErrorStatus": "Tasks error {{status}}",
+      "unexpectedError": "An unexpected error occurred."
+    },
+    "dialogs": {
+      "deleteTask": {
+        "title": "Delete task",
+        "entityFallback": "Selected task",
+        "description": "Deleting this task will remove it from the session and unlink any dependencies.",
+        "additionalWarning": "This action cannot be undone.",
+        "confirm": "Delete task"
+      }
+    }
+  },
+  "projectInfo": {
+    "breadcrumbs": {
+      "aria": "Breadcrumb navigation",
+      "sessions": "Projects",
+      "workspace": "Project workspace",
+      "info": "Information"
+    },
+    "buttons": {
+      "backToWorkspace": "Back to workspace",
+      "refresh": "Refresh",
+      "refreshTranscripts": "Refresh list"
+    },
+    "sections": {
+      "transcriptsTitle": "Transcripts",
+      "transcriptsDescription": "Review captured transcripts and their metadata.",
+      "metadataLabel": "Metadata"
+    },
+    "meta": {
+      "created": "Created",
+      "updated": "Updated",
+      "started": "Started",
+      "ended": "Ended"
+    },
+    "table": {
+      "title": "Title",
+      "source": "Source",
+      "recorded": "Recorded",
+      "created": "Created",
+      "summary": "Summary",
+      "untitled": "Untitled transcript",
+      "noSummary": "No summary",
+      "missing": "—"
+    },
+    "messages": {
+      "projectErrorFallback": "Failed to load project.",
+      "projectErrorStatus": "Project error {{status}}",
+      "transcriptsErrorFallback": "Failed to load transcripts.",
+      "transcriptsErrorStatus": "Transcripts error {{status}}",
+      "projectNotFound": "Project not found.",
+      "noTranscripts": "No transcripts have been captured for this session yet.",
+      "noMetadata": "No metadata provided."
+    }
+  },
+  "projectTranscriptDetail": {
+    "breadcrumbs": {
+      "aria": "Breadcrumb navigation",
+      "sessions": "Projects",
+      "workspace": "Project workspace",
+      "info": "Information",
+      "transcript": "Transcript"
+    },
+    "buttons": {
+      "backToInfo": "Back to info",
+      "refresh": "Refresh"
+    },
+    "meta": {
+      "recorded": "Recorded",
+      "created": "Created",
+      "updated": "Updated"
+    },
+    "sections": {
+      "summary": "Summary",
+      "transcript": "Transcript",
+      "metadata": "Metadata"
+    },
+    "table": {
+      "missing": "—",
+      "noSummary": "No summary"
+    },
+    "messages": {
+      "projectErrorFallback": "Failed to load project.",
+      "projectErrorStatus": "Project error {{status}}",
+      "transcriptErrorFallback": "Failed to load transcript.",
+      "transcriptErrorStatus": "Transcript error {{status}}",
+      "transcriptNotFound": "Transcript not found.",
+      "untitled": "Untitled transcript",
+      "noText": "No transcript text available.",
+      "noMetadata": "No metadata provided.",
+      "metadataError": "Unable to display metadata."
+    }
+  },
+  "sidebarLayout": {
+    "nav": {
+      "home": "Home",
+      "chat": "Chat",
+      "sessions": "Projects",
+      "contexts": "Contexts",
+      "slides": "Slides",
+      "integrations": "Integrations",
+      "recordings": "Recordings"
+    },
+    "tooltip": {
+      "expand": "Expand sidebar",
+      "collapse": "Collapse sidebar"
+    },
+    "profile": {
+      "fallbackName": "Profile",
+      "fallbackEmail": "View profile"
+    }
+  },
+  "errorFallback": {
+    "title": "Something went wrong.",
+    "reload": "Reload Page"
+  },
+  "deleteAccountDialog": {
+    "title": "Confirm account deletion",
+    "description": "This will permanently remove your Plan AI account, including transcript history, generated tasks, and custom themes. This action cannot be undone.",
+    "confirmPrompt": "To continue, confirm you want to delete the account associated with:",
+    "emailFallback": "Unknown email",
+    "buttons": {
+      "cancel": "Cancel",
+      "confirm": "Delete account",
+      "deleting": "Deleting..."
+    }
+  },
+  "forgotPassword": {
+    "heading": "Reset your {{productName}} access",
+    "description": "Enter the email tied to your workspace and we'll send steps to get you back to your transcript-driven boards.",
+    "success": "If an account exists with this email, you will receive password reset instructions shortly.",
+    "buttons": {
+      "submit": "Reset password",
+      "submitting": "Submitting..."
+    },
+    "links": {
+      "backToSignIn": "Back to Sign In"
+    }
+  },
+  "common": {
+    "buttons": {
+      "viewAll": "View all",
+      "viewBoard": "View board",
+      "save": "Save",
+      "cancel": "Cancel"
+    },
+    "labels": {
+      "summary": "Summary",
+      "recorded": "Recorded",
+      "updated": "Updated {{timestamp}}"
+    }
+  },
+  "projectTranscriptDialog": {
+    "title": "Generate tasks",
+    "modeLabel": "Select input method",
+    "uploadLabel": "Upload files (PDF / DOCX)",
+    "manualLabel": "Paste transcript text",
+    "personaLabel": "AI Analysis Persona",
+    "personaPlaceholder": "Select persona",
+    "personas": {
+      "SECRETARY": {
+        "name": "Secretary",
+        "description": "Extreme precision. Only extract tasks explicitly mentioned. No technical generation."
+      },
+      "ARCHITECT": {
+        "name": "Architect",
+        "description": "Technical decomposition. Breakdown high-level goals into detailed technical tasks using codebase context."
+      },
+      "PRODUCT_MANAGER": {
+        "name": "Product Manager",
+        "description": "Stakeholder lens. Turn goals into user stories, roadmap items, and feature sets."
+      },
+      "DEVELOPER": {
+        "name": "Developer",
+        "description": "Implementation focused. Create specific coding, testing, and refactoring tasks."
+      }
+    },
+    "fields": {
+      "title": "Title",
+      "recordedAt": "Recorded at",
+      "language": "Language",
+      "summary": "Summary",
+      "metadata": "Metadata (JSON)",
+      "contexts": "Related contexts",
+      "contextsPlaceholder": "Select contexts to enrich analysis",
+      "noContexts": "No contexts available",
+      "objective": "Main Objective (Prompt)",
+      "objectivePlaceholder": "e.g. Create 3 critical tasks for the login flow changes...",
+      "content": "Transcript content",
+      "contentPlaceholder": "Paste or type transcript text here"
+    },
+    "buttons": {
+      "selectFiles": "Select files",
+      "cancel": "Cancel",
+      "save": "Save transcript",
+      "saving": "Saving..."
+    },
+    "messages": {
+      "noFiles": "No files selected yet.",
+      "formats": "Accepted formats: PDF, DOCX",
+      "selectFileError": "Please select at least one PDF or DOCX file to upload.",
+      "unsupportedError": "Only PDF and DOCX files are supported.",
+      "contentError": "Please provide either transcript content or an objective.",
+      "metadataError": "Metadata must be valid JSON.",
+      "success": "Transcript created successfully.",
+      "processing": "Analyzing transcript, please wait...",
+      "processingWait": "We are extracting text and analyzing your transcript with AI. This may take a moment for larger files."
+    }
+  },
+  "chatContextDialog": {
+    "englishLevelLabel": "Level of English",
+    "englishLevels": {
+      "Beginner": "Beginner",
+      "Intermediate": "Intermediate",
+      "Advanced": "Advanced",
+      "Native": "Native"
+    }
+  },
+  "slides": {
+    "title": "Slides",
+    "catalogSubtitle": "Browse available slide types and preview them",
+    "actions": {
+      "createSlides": "Create Slides",
+      "viewSlideTypes": "View Slide Types",
+      "createTheme": "Create Theme",
+      "viewThemes": "View Themes",
+      "back": "Back"
+    },
+    "slideTypesPage": {
+      "title": "Slide Types"
+    },
+    "themes": {
+      "title": "Themes",
+      "create": "Create Theme",
+      "empty": "No themes yet. Create one to get started.",
+      "loading": "Loading themes...",
+      "deleteConfirm": "Are you sure you want to delete this theme?",
+      "form": {
+        "name": "Theme Name",
+        "colors": "Colors",
+        "primaryColor": "Primary",
+        "secondaryColor": "Secondary",
+        "backgroundColor": "Background",
+        "typography": "Typography",
+        "headingFont": "Heading Font",
+        "bodyFont": "Body Font",
+        "presets": "Presets",
+        "save": "Save Theme",
+        "saving": "Saving..."
+      }
+    },
+    "create": {
+      "title": "Create Presentation",
+      "subtitle": "Choose a theme and describe what you want. The AI will decide the structure, slide count, and content.",
+      "selectTheme": "Theme",
+      "selectContexts": "Contexts (optional)",
+      "contextsHelper": "Select contexts to enrich the presentation with your data via RAG",
+      "presentationTitle": "Title (optional)",
+      "titleHelper": "Leave empty and the AI will generate one",
+      "prompt": "What should this presentation be about?",
+      "promptPlaceholder": "e.g., Create a project status update with team overview, Q1 metrics, and next quarter roadmap",
+      "generate": "Generate with AI",
+      "generating": "Generating...",
+      "error": "Failed to generate presentation. Please try again.",
+      "themePreview": "Preview — {{name}}",
+      "previewTitle": "Your Presentation",
+      "previewSubtitle": "AI-generated content will appear here",
+      "tone": "Tone",
+      "toneDefault": "Auto",
+      "tones": {
+        "professional": "Professional",
+        "casual": "Casual",
+        "formal": "Formal",
+        "inspirational": "Inspirational",
+        "technical": "Technical",
+        "persuasive": "Persuasive"
+      },
+      "audience": "Audience",
+      "audienceDefault": "Auto",
+      "audiences": {
+        "executives": "Executives",
+        "team": "Team Members",
+        "clients": "Clients",
+        "investors": "Investors",
+        "students": "Students",
+        "general": "General Public"
+      },
+      "selectThemePrompt": "Select a theme to see a preview",
+      "numSlides": "Number of slides",
+      "numSlidesHelper": "Leave on AI decides to let the AI choose the ideal slide count (max 15)",
+      "numSlidesAI": "AI decides"
+    },
+    "templates": {
+      "title": "Templates",
+      "create": "New Template",
+      "edit": "Edit Template",
+      "delete": "Delete Template",
+      "deleteConfirm": "Are you sure you want to delete this template?",
+      "empty": "No templates yet. Create one to get started.",
+      "form": {
+        "name": "Template Name",
+        "description": "Description",
+        "primaryColor": "Primary Color",
+        "secondaryColor": "Secondary Color",
+        "backgroundColor": "Background Color",
+        "headingFont": "Heading Font",
+        "bodyFont": "Body Font",
+        "logoUrl": "Logo URL",
+        "slideTypes": "Slide Types",
+        "addSlideType": "Add Slide Type",
+        "save": "Save Template",
+        "saving": "Saving...",
+        "cancel": "Cancel"
+      }
+    },
+    "presentations": {
+      "title": "Presentations",
+      "loading": "Loading presentations...",
+      "generate": "Generate Presentation",
+      "delete": "Delete",
+      "deleteConfirm": "Are you sure you want to delete this presentation?",
+      "empty": "No presentations yet. Generate one from a template.",
+      "emptyTitle": "No presentations yet",
+      "emptyDescription": "Generate your first AI-powered slide deck in seconds. Pick a theme, add some context, and let Gemini do the rest.",
+      "emptyCtaPrimary": "Generate presentation",
+      "emptyCtaSecondary": "Browse slide types",
+      "generating": "Generating presentation...",
+      "form": {
+        "template": "Template",
+        "contexts": "Contexts",
+        "prompt": "Describe what you want in the presentation",
+        "title": "Presentation Title (optional)",
+        "generate": "Generate",
+        "cancel": "Cancel"
+      }
+    },
+    "slideTypes": {
+      "title_only": "Title Slide",
+      "text_block": "Text Block",
+      "text_image": "Text + Image",
+      "bullet_list": "Bullet List",
+      "two_columns": "Two Columns",
+      "team_grid": "Team Members",
+      "showcase": "Showcase",
+      "stats": "Key Stats"
+    }
+  },
+  "notFound": {
+    "title": "Page Not Found",
+    "heading": "Oops! Page not found",
+    "description": "The page you are looking for doesn't exist or has been moved.",
+    "backToHome": "Back to Home"
+  }
+}
