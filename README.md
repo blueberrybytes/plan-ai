@@ -47,7 +47,8 @@ graph TD
 | Layer          | Tech                                                                                                      |
 | -------------- | --------------------------------------------------------------------------------------------------------- |
 | Recorder       | Electron, React 18, Vite, Swift (`ScreenCaptureKit`), Material UI                                         |
-| Frontend       | React 18, TypeScript 5.7, MUI v6, RTK Query, Redux Saga, redux-persist, i18next, react-router-dom v6      |
+| Web App        | React 18, TypeScript 5.7, MUI v6, RTK Query, Redux Saga, redux-persist, i18next, react-router-dom v6      |
+| Landing Page   | Next.js App Router, React 19, Tailwind CSS v4, Lucide React                                               |
 | Backend        | Node.js 20, Express 4, TSOA 6, Prisma 6, Zod, Helmet, Vitest                                              |
 | Data & storage | PostgreSQL 16, Qdrant v1.15, Firebase Storage                                                             |
 | AI             | OpenRouter (Gemini 2.0 Flash `google/gemini-2.0-flash-001`), OpenAI embeddings (`text-embedding-3-small`) |
@@ -152,6 +153,7 @@ This regenerates TSOA routes, the Prisma client, and the frontend `api.d.ts` typ
 
 ```
 plan-ai/
+├── landing/             # Next.js Public Landing Page (Downloads & Marketing)
 ├── recorder/            # Electron macOS Recorder app (React + Swift + Vite)
 ├── backend/
 │   ├── src/
@@ -269,13 +271,18 @@ Supported slide types: `title_only`, `text_block`, `text_image`, `bullet_list`, 
    cd backend && yarn build
    # serve dist/ with your runtime of choice (Docker / PM2 / Fly.io / Railway)
    ```
-4. **Build frontend**:
+4. **Build the web app (frontend)**:
    ```bash
    cd frontend && yarn build
    # serve build/ via Nginx, Vercel, Netlify, or a CDN
    ```
-5. Set `FRONTEND_URL` on the backend to your deployed frontend origin.
-6. Run `yarn update` if you changed the Prisma schema or controllers before building.
+5. **Build the landing page**:
+   ```bash
+   cd landing && yarn pages:build
+   # serve .vercel/output/static via Cloudflare Pages
+   ```
+6. Set `FRONTEND_URL` on the backend to your deployed frontend origin.
+7. Run `yarn update` if you changed the Prisma schema or controllers before building.
 
 The repo ships a `Dockerfile` for each package. The backend image installs FFmpeg for video processing.
 
