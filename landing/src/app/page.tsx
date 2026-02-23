@@ -20,10 +20,16 @@ export default function Home() {
               Plan <span className="text-[#4361EE]">AI</span>
             </span>
           </div>
-          <nav>
+          <nav className="flex items-center gap-3">
+            <a
+              href="#download"
+              className="text-sm font-semibold text-white/80 hover:text-white transition-colors hover:bg-white/5 rounded-lg px-4 py-2"
+            >
+              Download Recorder
+            </a>
             <a
               href="https://plan-ai.blueberrybytes.com"
-              className="text-sm font-semibold text-white/80 hover:text-white transition-colors border border-white/15 hover:border-white/30 hover:bg-white/5 rounded-lg px-4 py-2"
+              className="text-sm font-semibold bg-[#4361EE] hover:bg-[#2d4cdd] text-white transition-colors rounded-lg px-4 py-2"
             >
               Open Web App
             </a>
@@ -32,7 +38,10 @@ export default function Home() {
       </header>
 
       {/* Hero Section */}
-      <section className="grow flex flex-col items-center justify-center px-6 py-20 lg:py-32 text-center">
+      <section
+        id="download"
+        className="grow flex flex-col items-center justify-center px-6 py-20 lg:py-32 text-center"
+      >
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#4361EE]/10 text-[#4361EE] text-sm font-medium mb-8 border border-[#4361EE]/20">
           <Activity size={16} />
           <span>Capture meetings seamlessly</span>
