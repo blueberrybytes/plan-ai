@@ -14,16 +14,16 @@ Try the live app at [plan-ai.blueberrybytes.com](https://plan-ai.blueberrybytes.
 
 ## What it does
 
-| Capability                    | Description                                                                                                                                             |
-| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Native macOS recorder**     | Native Electron desktop app capturing system audio and microphone via `ScreenCaptureKit` to seamlessly record and upload meetings.                      |
-| **Transcript ingestion**      | Upload PDFs, DOCX, or raw text. AI auto-detects speakers, decisions, and action items.                                                                  |
-| **AI task generation**        | Scoped, prioritised tasks with owners, due dates, and full meeting context — zero manual effort.                                                        |
-| **Kanban boards & timelines** | Switch between kanban, dependency diagrams, and roadmap views.                                                                                          |
-| **AI slide decks**            | Generate branded presentations from any prompt or context file. Pick a theme, choose a slide count (or let AI decide, up to 15), and stream the result. |
-| **Contextual RAG chat**       | Ask questions across all your sessions, transcripts, and uploaded files. Gemini retrieves up to 500 relevant chunks per query.                          |
-| **Context library**           | Upload PDFs, Word docs, or text files as reusable context for slide generation and chat.                                                                |
-| **Jira & Linear integration** | Push tasks directly from the board to your issue tracker.                                                                                               |
+| Capability                    | Description                                                                                                                                                        |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Native macOS recorder**     | Native Electron desktop app capturing system audio and microphone via `ScreenCaptureKit` to seamlessly record and upload meetings. The recorder is not open source |
+| **Transcript ingestion**      | Upload PDFs, DOCX, or raw text. AI auto-detects speakers, decisions, and action items.                                                                             |
+| **AI task generation**        | Scoped, prioritised tasks with owners, due dates, and full meeting context — zero manual effort.                                                                   |
+| **Kanban boards & timelines** | Switch between kanban, dependency diagrams, and roadmap views.                                                                                                     |
+| **AI slide decks**            | Generate branded presentations from any prompt or context file. Pick a theme, choose a slide count (or let AI decide, up to 15), and stream the result.            |
+| **Contextual RAG chat**       | Ask questions across all your sessions, transcripts, and uploaded files. Gemini retrieves up to 500 relevant chunks per query.                                     |
+| **Context library**           | Upload PDFs, Word docs, or text files as reusable context for slide generation and chat.                                                                           |
+| **Jira & Linear integration** | Push tasks directly from the board to your issue tracker.                                                                                                          |
 
 ---
 
