@@ -1,9 +1,17 @@
 import React from "react";
-import { Download, MonitorPlay, Mic, ListTodo, Activity } from "lucide-react";
+import {
+  Download,
+  MonitorPlay,
+  Mic,
+  ListTodo,
+  Activity,
+  ArrowRight,
+  BrainCircuit,
+} from "lucide-react";
 
 export default function Home() {
   return (
-    <main className="flex-grow flex flex-col">
+    <main className="grow flex flex-col">
       {/* Header */}
       <header className="border-b border-white/10 bg-[#161920]/80 backdrop-blur-md sticky top-0 z-50 transition-all">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
@@ -24,7 +32,7 @@ export default function Home() {
       </header>
 
       {/* Hero Section */}
-      <section className="flex-grow flex flex-col items-center justify-center px-6 py-20 lg:py-32 text-center">
+      <section className="grow flex flex-col items-center justify-center px-6 py-20 lg:py-32 text-center">
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#4361EE]/10 text-[#4361EE] text-sm font-medium mb-8 border border-[#4361EE]/20">
           <Activity size={16} />
           <span>Capture meetings seamlessly</span>
@@ -86,6 +94,31 @@ export default function Home() {
               description="Uploads transcripts directly to your Plan-AI workspace to auto-detect speakers, decisions, and action items."
             />
           </div>
+        </div>
+      </section>
+
+      {/* About Plan AI SaaS */}
+      <section className="py-24 px-6">
+        <div className="max-w-4xl mx-auto text-center">
+          <div className="inline-flex items-center justify-center p-4 bg-[#4361EE]/10 rounded-full mb-6">
+            <BrainCircuit size={40} className="text-[#4361EE]" />
+          </div>
+          <h2 className="font-jakarta text-3xl md:text-5xl font-bold tracking-tight mb-6 text-white">
+            Powered by the <span className="text-gradient">Plan AI</span> Ecosystem
+          </h2>
+          <p className="text-lg md:text-xl text-[#94a3b8] mb-12 font-inter leading-relaxed">
+            The recorder is just the beginning. All audio and transcripts are seamlessly synced to
+            the
+            <strong> Plan AI Web Platform</strong>. Our AI analyzes your meetings to auto-generate
+            tickets, assign developers, and manage your entire agile workflow—all in one place.
+          </p>
+          <a
+            href="https://plan-ai.blueberrybytes.com"
+            className="inline-flex items-center justify-center gap-2 bg-[#161920] border border-[#4361EE]/50 hover:border-[#4361EE] text-white rounded-xl px-8 py-4 font-semibold hover:bg-[#4361EE]/10 transition-all shadow-[0_4px_20px_rgba(67,97,238,0.15)] hover:shadow-[0_8px_32px_rgba(67,97,238,0.3)]"
+          >
+            Access the Web Platform
+            <ArrowRight size={20} />
+          </a>
         </div>
       </section>
 
