@@ -59,7 +59,7 @@ export default function Home() {
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4 w-full sm:w-auto">
           {/* Mac Download */}
           <a
-            href="https://firebasestorage.googleapis.com/v0/b/plan-ai-211b8.firebasestorage.app/o/packages%2FPlan-AI-Recorder.dmg?alt=media"
+            href="https://firebasestorage.googleapis.com/v0/b/plan-ai-211b8.firebasestorage.app/o/packages%2FPlan%20AI%20Recorder-1.0.0-arm64.dmg?alt=media"
             className="flex items-center justify-center gap-2 w-full sm:w-[220px] bg-primary-gradient text-white rounded-xl px-6 py-4 font-semibold shadow-[0_4px_20px_rgba(67,97,238,0.3)] hover:shadow-[0_8px_24px_rgba(67,97,238,0.4)] transition-all hover:-translate-y-0.5"
           >
             <Download size={20} />
@@ -71,7 +71,7 @@ export default function Home() {
 
           {/* Windows Download */}
           <a
-            href="https://firebasestorage.googleapis.com/v0/b/plan-ai-211b8.firebasestorage.app/o/packages%2FPlan-AI-Recorder.exe?alt=media"
+            href="https://firebasestorage.googleapis.com/v0/b/plan-ai-211b8.firebasestorage.app/o/packages%2FPlan%20AI%20Recorder%20Setup%201.0.0.exe?alt=media"
             className="flex items-center justify-center gap-2 w-full sm:w-[220px] bg-[#1e293b] border border-white/10 hover:border-white/20 text-white rounded-xl px-6 py-4 font-semibold hover:bg-[#334155] transition-all"
           >
             <Download size={20} />
