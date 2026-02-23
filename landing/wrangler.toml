@@ -1,0 +1,12 @@
+name = "plan-ai-website"
+compatibility_date = "2024-09-23"
+compatibility_flags = ["nodejs_compat"]
+pages_build_output_dir = ".vercel/output/static"
+
+# [site] is not supported for Pages, removing it.
+
+[env.production]
+name = "plan-ai-website"
+
+[env.preview]
+name = "plan-ai-website-preview"

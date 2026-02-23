@@ -1,0 +1,40 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    background-color: #0b0d11; /* Deep Charcoal from plan-ai */
+    color: #f8fafc; /* plan-ai text.primary */
+    font-feature-settings:
+      "rlig" 1,
+      "calt" 1;
+    scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
+  }
+
+  body::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  body::-webkit-scrollbar-thumb {
+    background-color: rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+  }
+}
+
+@layer utilities {
+  .text-gradient {
+    background: linear-gradient(135deg, #4361ee 0%, #7c9fff 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .bg-primary-gradient {
+    background: linear-gradient(135deg, #4361ee 0%, #2d4cdd 100%);
+  }
+
+  .bg-primary-gradient:hover {
+    background: linear-gradient(135deg, #6e85f2 0%, #4361ee 100%);
+  }
+}
