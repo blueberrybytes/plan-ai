@@ -590,6 +590,7 @@
       "sessions": "Sesiones",
       "contexts": "Contextos",
       "slides": "Diapositivas",
+      "documents": "Documentos",
       "integrations": "Integraciones",
       "recordings": "Grabaciones"
     },
@@ -630,6 +631,10 @@
     }
   },
   "common": {
+    "back": "Volver",
+    "next": "Siguiente",
+    "save": "Guardar",
+    "cancel": "Cancelar",
     "buttons": {
       "viewAll": "Ver todas",
       "viewBoard": "Ver tablero",
@@ -640,6 +645,81 @@
       "summary": "Resumen",
       "recorded": "Grabado",
       "updated": "Actualizado {{timestamp}}"
+    }
+  },
+  "docs": {
+    "title": "Documentos",
+    "listTitle": "Tus Documentos",
+    "deleteConfirm": "¿Seguro que deseas eliminar este documento?",
+    "actions": {
+      "create": "Crear Documento",
+      "createTheme": "Crear Tema",
+      "viewThemes": "Ver Temas"
+    },
+    "empty": {
+      "title": "Aún no hay documentos",
+      "description": "Genera tu primer documento con IA a partir de tus contextos y transcripciones.",
+      "cta": "Crear Documento"
+    },
+    "create": {
+      "title": "Crear Documento",
+      "steps": {
+        "content": "Contenido",
+        "sources": "Fuentes",
+        "theme": "Tema"
+      },
+      "titleLabel": "Título del documento",
+      "titlePlaceholder": "ej. Resumen Estrategia Q1",
+      "promptLabel": "¿De qué debe tratar este documento?",
+      "promptPlaceholder": "ej. Escribe una hoja de ruta detallada para el Q2 basada en nuestras notas de reunión...",
+      "sourcesHint": "Selecciona contextos y transcripciones como entrada para la generación de IA.",
+      "contextsLabel": "Contextos",
+      "transcriptsLabel": "Transcripciones",
+      "themeLabel": "Tema",
+      "noTheme": "Sin tema",
+      "generate": "Generar con IA"
+    },
+    "view": {
+      "generating": "Generando...",
+      "saved": "Guardado",
+      "editMode": "Editar",
+      "previewMode": "Vista previa",
+      "makePublic": "Hacer público",
+      "makePrivate": "Hacer privado",
+      "export": "Exportar",
+      "exportPdf": "Exportar como PDF",
+      "exportMarkdown": "Descargar Markdown",
+      "exportGdoc": "Descargar para Google Docs (.docx)",
+      "publicUrl": "URL pública",
+      "notFound": "Documento no encontrado o no es público.",
+      "sharedVia": "Compartido vía Plan AI"
+    }
+  },
+  "docThemes": {
+    "title": "Temas de Documentos",
+    "deleteConfirm": "¿Seguro que deseas eliminar este tema?",
+    "empty": "Aún no hay temas.",
+    "actions": {
+      "create": "Crear Tema"
+    },
+    "create": {
+      "title": "Crear Tema"
+    },
+    "edit": {
+      "title": "Editar Tema"
+    },
+    "form": {
+      "name": "Nombre del Tema",
+      "fonts": "Fuentes",
+      "headingFont": "Fuente de Título",
+      "bodyFont": "Fuente de Cuerpo",
+      "colors": "Colores",
+      "primaryColor": "Primario",
+      "accentColor": "Acento",
+      "backgroundColor": "Fondo",
+      "textColor": "Texto",
+      "preview": "Vista Previa",
+      "presets": "Comenzar desde un preset"
     }
   },
   "projectTranscriptDialog": {

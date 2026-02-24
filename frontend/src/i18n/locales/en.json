@@ -590,6 +590,7 @@
       "sessions": "Projects",
       "contexts": "Contexts",
       "slides": "Slides",
+      "documents": "Documents",
       "integrations": "Integrations",
       "recordings": "Recordings"
     },
@@ -630,6 +631,10 @@
     }
   },
   "common": {
+    "back": "Back",
+    "next": "Next",
+    "save": "Save",
+    "cancel": "Cancel",
     "buttons": {
       "viewAll": "View all",
       "viewBoard": "View board",
@@ -640,6 +645,81 @@
       "summary": "Summary",
       "recorded": "Recorded",
       "updated": "Updated {{timestamp}}"
+    }
+  },
+  "docs": {
+    "title": "Documents",
+    "listTitle": "Your Documents",
+    "deleteConfirm": "Are you sure you want to delete this document?",
+    "actions": {
+      "create": "Create Document",
+      "createTheme": "Create Theme",
+      "viewThemes": "View Themes"
+    },
+    "empty": {
+      "title": "No documents yet",
+      "description": "Generate your first AI-powered document from your contexts and transcripts.",
+      "cta": "Create Document"
+    },
+    "create": {
+      "title": "Create Document",
+      "steps": {
+        "content": "Content",
+        "sources": "Sources",
+        "theme": "Theme"
+      },
+      "titleLabel": "Document title",
+      "titlePlaceholder": "e.g. Q1 Strategy Overview",
+      "promptLabel": "What should this document be about?",
+      "promptPlaceholder": "e.g. Write a detailed product roadmap for Q2 based on our meeting notes...",
+      "sourcesHint": "Select contexts and transcripts to include as input for AI generation.",
+      "contextsLabel": "Contexts",
+      "transcriptsLabel": "Transcripts",
+      "themeLabel": "Theme",
+      "noTheme": "No theme",
+      "generate": "Generate with AI"
+    },
+    "view": {
+      "generating": "Generating...",
+      "saved": "Saved",
+      "editMode": "Edit",
+      "previewMode": "Preview",
+      "makePublic": "Make public",
+      "makePrivate": "Make private",
+      "export": "Export",
+      "exportPdf": "Export as PDF",
+      "exportMarkdown": "Download Markdown",
+      "exportGdoc": "Download for Google Docs (.docx)",
+      "publicUrl": "Public URL",
+      "notFound": "Document not found or not public.",
+      "sharedVia": "Shared via Plan AI"
+    }
+  },
+  "docThemes": {
+    "title": "Document Themes",
+    "deleteConfirm": "Are you sure you want to delete this theme?",
+    "empty": "No themes yet.",
+    "actions": {
+      "create": "Create Theme"
+    },
+    "create": {
+      "title": "Create Theme"
+    },
+    "edit": {
+      "title": "Edit Theme"
+    },
+    "form": {
+      "name": "Theme Name",
+      "fonts": "Fonts",
+      "headingFont": "Heading Font",
+      "bodyFont": "Body Font",
+      "colors": "Colors",
+      "primaryColor": "Primary",
+      "accentColor": "Accent",
+      "backgroundColor": "Background",
+      "textColor": "Text",
+      "preview": "Live Preview",
+      "presets": "Start from a preset"
     }
   },
   "projectTranscriptDialog": {

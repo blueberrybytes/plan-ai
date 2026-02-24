@@ -24,6 +24,7 @@ import {
   Chat as ChatIcon,
   Slideshow as SlideshowIcon,
   Mic as MicIcon,
+  Article as ArticleIcon,
 } from "@mui/icons-material";
 import { NavLink, useLocation } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
@@ -71,6 +72,11 @@ const navItems: NavItem[] = [
     labelKey: "sidebarLayout.nav.slides",
     path: "/slides",
     icon: <SlideshowIcon fontSize="small" />,
+  },
+  {
+    labelKey: "sidebarLayout.nav.documents",
+    path: "/docs",
+    icon: <ArticleIcon fontSize="small" />,
   },
   {
     labelKey: "sidebarLayout.nav.integrations",

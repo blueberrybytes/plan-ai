@@ -67,6 +67,8 @@ model User {
     integrations    UserIntegration[]
     threads         ChatThread[]
     slideTemplates  SlideTemplate[]
+    docThemes       DocTheme[]
+    documents       DocDocument[]
 }
 
 model UserIntegration {
@@ -327,4 +329,42 @@ model Presentation {
     status     String        @default("DRAFT") @db.VarChar(24)
     createdAt  DateTime      @default(now())
     updatedAt  DateTime      @updatedAt
+}
+
+model DocTheme {
+    id              String        @id @default(cuid())
+    userId          String
+    user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+    name            String        @db.VarChar(120)
+    headingFont     String        @default("Inter") @db.VarChar(80)
+    bodyFont        String        @default("Inter") @db.VarChar(80)
+    primaryColor    String        @default("#4361EE") @db.VarChar(24)
+    accentColor     String        @default("#7c3aed") @db.VarChar(24)
+    backgroundColor String        @default("#ffffff") @db.VarChar(24)
+    textColor       String        @default("#0f172a") @db.VarChar(24)
+    createdAt       DateTime      @default(now())
+    updatedAt       DateTime      @updatedAt
+    documents       DocDocument[]
+
+    @@index([userId])
+}
+
+model DocDocument {
+    id            String    @id @default(cuid())
+    userId        String
+    user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+    themeId       String?
+    theme         DocTheme? @relation(fields: [themeId], references: [id], onDelete: SetNull)
+    title         String
+    content       String    @db.Text
+    status        String    @default("DRAFT") @db.VarChar(24)
+    isPublic      Boolean   @default(false)
+    contextIds    String[]
+    transcriptIds String[]
+    prompt        String?   @db.Text
+    createdAt     DateTime  @default(now())
+    updatedAt     DateTime  @updatedAt
+
+    @@index([userId])
+    @@index([isPublic])
 }

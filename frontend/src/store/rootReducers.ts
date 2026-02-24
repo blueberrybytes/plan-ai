@@ -12,6 +12,8 @@ import { integrationApi } from "./apis/integrationApi";
 import { chatApi } from "./apis/chatApi";
 import { slideApi } from "./apis/slideApi";
 import { transcriptApi } from "./apis/transcriptApi";
+import { docApi } from "./apis/docApi";
+import { docThemeApi } from "./apis/docThemeApi";
 
 // Define the combined reducers
 const appReducers = combineReducers({
@@ -26,6 +28,8 @@ const appReducers = combineReducers({
   [chatApi.reducerPath]: chatApi.reducer,
   [slideApi.reducerPath]: slideApi.reducer,
   [transcriptApi.reducerPath]: transcriptApi.reducer,
+  [docApi.reducerPath]: docApi.reducer,
+  [docThemeApi.reducerPath]: docThemeApi.reducer,
 });
 
 // Create a root reducer that can handle the reset action

@@ -14,6 +14,8 @@ import { integrationApi } from "./apis/integrationApi";
 import { chatApi } from "./apis/chatApi";
 import { slideApi } from "./apis/slideApi";
 import { transcriptApi } from "./apis/transcriptApi";
+import { docApi } from "./apis/docApi";
+import { docThemeApi } from "./apis/docThemeApi";
 
 const migrations = {
   1: (state: any) => {
@@ -57,6 +59,8 @@ const store = configureStore({
       chatApi.middleware,
       slideApi.middleware,
       transcriptApi.middleware,
+      docApi.middleware,
+      docThemeApi.middleware,
     ),
 });
 

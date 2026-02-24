@@ -796,6 +796,85 @@
 				"type": "object",
 				"additionalProperties": false
 			},
+			"PublicDocTheme": {
+				"properties": {
+					"id": {
+						"type": "string"
+					},
+					"name": {
+						"type": "string"
+					},
+					"primaryColor": {
+						"type": "string"
+					},
+					"accentColor": {
+						"type": "string"
+					},
+					"backgroundColor": {
+						"type": "string"
+					},
+					"textColor": {
+						"type": "string"
+					},
+					"headingFont": {
+						"type": "string"
+					},
+					"bodyFont": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"id",
+					"name",
+					"primaryColor",
+					"accentColor",
+					"backgroundColor",
+					"textColor",
+					"headingFont",
+					"bodyFont"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"PublicDocResponse": {
+				"properties": {
+					"id": {
+						"type": "string"
+					},
+					"title": {
+						"type": "string"
+					},
+					"content": {
+						"type": "string"
+					},
+					"theme": {
+						"allOf": [
+							{
+								"$ref": "#/components/schemas/PublicDocTheme"
+							}
+						],
+						"nullable": true
+					},
+					"createdAt": {
+						"type": "string",
+						"format": "date-time"
+					},
+					"updatedAt": {
+						"type": "string",
+						"format": "date-time"
+					}
+				},
+				"required": [
+					"id",
+					"title",
+					"content",
+					"theme",
+					"createdAt",
+					"updatedAt"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
 			"_36_Enums.ProjectStatus": {
 				"type": "string",
 				"enum": [
@@ -2003,6 +2082,282 @@
 				],
 				"type": "object"
 			},
+			"DocThemeResponse": {
+				"properties": {
+					"id": {
+						"type": "string"
+					},
+					"userId": {
+						"type": "string"
+					},
+					"name": {
+						"type": "string"
+					},
+					"headingFont": {
+						"type": "string"
+					},
+					"bodyFont": {
+						"type": "string"
+					},
+					"primaryColor": {
+						"type": "string"
+					},
+					"accentColor": {
+						"type": "string"
+					},
+					"backgroundColor": {
+						"type": "string"
+					},
+					"textColor": {
+						"type": "string"
+					},
+					"createdAt": {
+						"type": "string",
+						"format": "date-time"
+					},
+					"updatedAt": {
+						"type": "string",
+						"format": "date-time"
+					}
+				},
+				"required": [
+					"id",
+					"userId",
+					"name",
+					"headingFont",
+					"bodyFont",
+					"primaryColor",
+					"accentColor",
+					"backgroundColor",
+					"textColor",
+					"createdAt",
+					"updatedAt"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"CreateDocThemeInput": {
+				"properties": {
+					"name": {
+						"type": "string"
+					},
+					"headingFont": {
+						"type": "string"
+					},
+					"bodyFont": {
+						"type": "string"
+					},
+					"primaryColor": {
+						"type": "string"
+					},
+					"accentColor": {
+						"type": "string"
+					},
+					"backgroundColor": {
+						"type": "string"
+					},
+					"textColor": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"name"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"Partial_CreateDocThemeInput_": {
+				"properties": {
+					"name": {
+						"type": "string"
+					},
+					"headingFont": {
+						"type": "string"
+					},
+					"bodyFont": {
+						"type": "string"
+					},
+					"primaryColor": {
+						"type": "string"
+					},
+					"accentColor": {
+						"type": "string"
+					},
+					"backgroundColor": {
+						"type": "string"
+					},
+					"textColor": {
+						"type": "string"
+					}
+				},
+				"type": "object",
+				"description": "Make all properties in T optional"
+			},
+			"DocThemeSummary": {
+				"properties": {
+					"id": {
+						"type": "string"
+					},
+					"name": {
+						"type": "string"
+					},
+					"primaryColor": {
+						"type": "string"
+					},
+					"accentColor": {
+						"type": "string"
+					},
+					"backgroundColor": {
+						"type": "string"
+					},
+					"textColor": {
+						"type": "string"
+					},
+					"headingFont": {
+						"type": "string"
+					},
+					"bodyFont": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"id",
+					"name",
+					"primaryColor",
+					"accentColor",
+					"backgroundColor",
+					"textColor",
+					"headingFont",
+					"bodyFont"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"DocDocumentResponse": {
+				"properties": {
+					"id": {
+						"type": "string"
+					},
+					"userId": {
+						"type": "string"
+					},
+					"title": {
+						"type": "string"
+					},
+					"content": {
+						"type": "string"
+					},
+					"status": {
+						"type": "string"
+					},
+					"isPublic": {
+						"type": "boolean"
+					},
+					"contextIds": {
+						"items": {
+							"type": "string"
+						},
+						"type": "array"
+					},
+					"transcriptIds": {
+						"items": {
+							"type": "string"
+						},
+						"type": "array"
+					},
+					"prompt": {
+						"type": "string",
+						"nullable": true
+					},
+					"themeId": {
+						"type": "string",
+						"nullable": true
+					},
+					"theme": {
+						"allOf": [
+							{
+								"$ref": "#/components/schemas/DocThemeSummary"
+							}
+						],
+						"nullable": true
+					},
+					"createdAt": {
+						"type": "string",
+						"format": "date-time"
+					},
+					"updatedAt": {
+						"type": "string",
+						"format": "date-time"
+					}
+				},
+				"required": [
+					"id",
+					"userId",
+					"title",
+					"content",
+					"status",
+					"isPublic",
+					"contextIds",
+					"transcriptIds",
+					"prompt",
+					"themeId",
+					"theme",
+					"createdAt",
+					"updatedAt"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"CreateDocInput": {
+				"properties": {
+					"title": {
+						"type": "string"
+					},
+					"prompt": {
+						"type": "string"
+					},
+					"contextIds": {
+						"items": {
+							"type": "string"
+						},
+						"type": "array"
+					},
+					"transcriptIds": {
+						"items": {
+							"type": "string"
+						},
+						"type": "array"
+					},
+					"themeId": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"title",
+					"prompt"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"UpdateDocInput": {
+				"properties": {
+					"title": {
+						"type": "string"
+					},
+					"content": {
+						"type": "string"
+					},
+					"themeId": {
+						"type": "string",
+						"nullable": true
+					},
+					"isPublic": {
+						"type": "boolean"
+					}
+				},
+				"type": "object",
+				"additionalProperties": false
+			},
 			"ContextFileResponse": {
 				"properties": {
 					"id": {
@@ -2400,10 +2755,10 @@
 					"surfaceColor": {
 						"type": "string"
 					},
-					"backgroundColor": {
+					"secondaryColor": {
 						"type": "string"
 					},
-					"secondaryColor": {
+					"backgroundColor": {
 						"type": "string"
 					},
 					"primaryColor": {
@@ -2433,8 +2788,8 @@
 					"textSecondaryColor",
 					"textPrimaryColor",
 					"surfaceColor",
-					"backgroundColor",
 					"secondaryColor",
+					"backgroundColor",
 					"primaryColor",
 					"updatedAt",
 					"createdAt",
@@ -3128,6 +3483,37 @@
 					{
 						"in": "path",
 						"name": "presentationId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				]
+			}
+		},
+		"/api/public/documents/{id}": {
+			"get": {
+				"operationId": "GetPublicDoc",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/PublicDocResponse"
+								}
+							}
+						}
+					}
+				},
+				"tags": [
+					"Public Documents"
+				],
+				"security": [],
+				"parameters": [
+					{
+						"in": "path",
+						"name": "id",
 						"required": true,
 						"schema": {
 							"type": "string"
@@ -4390,6 +4776,370 @@
 				],
 				"security": [],
 				"parameters": []
+			}
+		},
+		"/api/doc-themes": {
+			"get": {
+				"operationId": "List",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"items": {
+										"$ref": "#/components/schemas/DocThemeResponse"
+									},
+									"type": "array"
+								}
+							}
+						}
+					}
+				},
+				"tags": [
+					"Doc Themes"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": []
+			},
+			"post": {
+				"operationId": "Create",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/DocThemeResponse"
+								}
+							}
+						}
+					}
+				},
+				"tags": [
+					"Doc Themes"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": [],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/CreateDocThemeInput"
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/doc-themes/{id}": {
+			"get": {
+				"operationId": "GetById",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/DocThemeResponse"
+								}
+							}
+						}
+					}
+				},
+				"tags": [
+					"Doc Themes"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": [
+					{
+						"in": "path",
+						"name": "id",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				]
+			},
+			"put": {
+				"operationId": "Update",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/DocThemeResponse"
+								}
+							}
+						}
+					}
+				},
+				"tags": [
+					"Doc Themes"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": [
+					{
+						"in": "path",
+						"name": "id",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/Partial_CreateDocThemeInput_"
+							}
+						}
+					}
+				}
+			},
+			"delete": {
+				"operationId": "Delete",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"success": {
+											"type": "boolean"
+										}
+									},
+									"required": [
+										"success"
+									],
+									"type": "object"
+								}
+							}
+						}
+					}
+				},
+				"tags": [
+					"Doc Themes"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": [
+					{
+						"in": "path",
+						"name": "id",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				]
+			}
+		},
+		"/api/documents": {
+			"get": {
+				"operationId": "List",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"items": {
+										"$ref": "#/components/schemas/DocDocumentResponse"
+									},
+									"type": "array"
+								}
+							}
+						}
+					}
+				},
+				"tags": [
+					"Documents"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": []
+			},
+			"post": {
+				"operationId": "Create",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/DocDocumentResponse"
+								}
+							}
+						}
+					}
+				},
+				"tags": [
+					"Documents"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": [],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/CreateDocInput"
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/documents/{id}": {
+			"get": {
+				"operationId": "GetById",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/DocDocumentResponse"
+								}
+							}
+						}
+					}
+				},
+				"tags": [
+					"Documents"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": [
+					{
+						"in": "path",
+						"name": "id",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				]
+			},
+			"patch": {
+				"operationId": "Update",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/DocDocumentResponse"
+								}
+							}
+						}
+					}
+				},
+				"tags": [
+					"Documents"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": [
+					{
+						"in": "path",
+						"name": "id",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/UpdateDocInput"
+							}
+						}
+					}
+				}
+			},
+			"delete": {
+				"operationId": "Delete",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"success": {
+											"type": "boolean"
+										}
+									},
+									"required": [
+										"success"
+									],
+									"type": "object"
+								}
+							}
+						}
+					}
+				},
+				"tags": [
+					"Documents"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": [
+					{
+						"in": "path",
+						"name": "id",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				]
 			}
 		},
 		"/api/contexts": {

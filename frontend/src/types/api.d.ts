@@ -149,6 +149,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/public/documents/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetPublicDoc"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/projects": {
         parameters: {
             query?: never;
@@ -436,6 +452,70 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/api/doc-themes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["List"];
+        put?: never;
+        post: operations["Create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/doc-themes/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetById"];
+        put: operations["Update"];
+        post?: never;
+        delete: operations["Delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/documents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["List"];
+        put?: never;
+        post: operations["Create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/documents/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetById"];
+        put?: never;
+        post?: never;
+        delete: operations["Delete"];
+        options?: never;
+        head?: never;
+        patch: operations["Update"];
         trace?: never;
     };
     "/api/contexts": {
@@ -878,6 +958,26 @@ export interface components {
             userId: string;
             id: string;
         };
+        PublicDocTheme: {
+            id: string;
+            name: string;
+            primaryColor: string;
+            accentColor: string;
+            backgroundColor: string;
+            textColor: string;
+            headingFont: string;
+            bodyFont: string;
+        };
+        PublicDocResponse: {
+            id: string;
+            title: string;
+            content: string;
+            theme: components["schemas"]["PublicDocTheme"] | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
         /** @enum {string} */
         "_36_Enums.ProjectStatus": "ACTIVE" | "COMPLETED" | "ARCHIVED";
         ProjectStatus: components["schemas"]["_36_Enums.ProjectStatus"];
@@ -1193,6 +1293,80 @@ export interface components {
             /** Format: double */
             status: number;
         };
+        DocThemeResponse: {
+            id: string;
+            userId: string;
+            name: string;
+            headingFont: string;
+            bodyFont: string;
+            primaryColor: string;
+            accentColor: string;
+            backgroundColor: string;
+            textColor: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        CreateDocThemeInput: {
+            name: string;
+            headingFont?: string;
+            bodyFont?: string;
+            primaryColor?: string;
+            accentColor?: string;
+            backgroundColor?: string;
+            textColor?: string;
+        };
+        /** @description Make all properties in T optional */
+        Partial_CreateDocThemeInput_: {
+            name?: string;
+            headingFont?: string;
+            bodyFont?: string;
+            primaryColor?: string;
+            accentColor?: string;
+            backgroundColor?: string;
+            textColor?: string;
+        };
+        DocThemeSummary: {
+            id: string;
+            name: string;
+            primaryColor: string;
+            accentColor: string;
+            backgroundColor: string;
+            textColor: string;
+            headingFont: string;
+            bodyFont: string;
+        };
+        DocDocumentResponse: {
+            id: string;
+            userId: string;
+            title: string;
+            content: string;
+            status: string;
+            isPublic: boolean;
+            contextIds: string[];
+            transcriptIds: string[];
+            prompt: string | null;
+            themeId: string | null;
+            theme: components["schemas"]["DocThemeSummary"] | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        CreateDocInput: {
+            title: string;
+            prompt: string;
+            contextIds?: string[];
+            transcriptIds?: string[];
+            themeId?: string;
+        };
+        UpdateDocInput: {
+            title?: string;
+            content?: string;
+            themeId?: string | null;
+            isPublic?: boolean;
+        };
         ContextFileResponse: {
             id: string;
             fileName: string;
@@ -1297,8 +1471,8 @@ export interface components {
             textSecondaryColor: string;
             textPrimaryColor: string;
             surfaceColor: string;
-            backgroundColor: string;
             secondaryColor: string;
+            backgroundColor: string;
             primaryColor: string;
             /** Format: date-time */
             updatedAt: string;
@@ -1706,6 +1880,28 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PublicPresentationResponse"];
+                };
+            };
+        };
+    };
+    GetPublicDoc: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicDocResponse"];
                 };
             };
         };
@@ -2419,6 +2615,238 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["GenericResponse"];
+                };
+            };
+        };
+    };
+    List: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DocThemeResponse"][];
+                };
+            };
+        };
+    };
+    Create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateDocThemeInput"];
+            };
+        };
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DocThemeResponse"];
+                };
+            };
+        };
+    };
+    GetById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DocThemeResponse"];
+                };
+            };
+        };
+    };
+    Update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Partial_CreateDocThemeInput_"];
+            };
+        };
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DocThemeResponse"];
+                };
+            };
+        };
+    };
+    Delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        success: boolean;
+                    };
+                };
+            };
+        };
+    };
+    List: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DocDocumentResponse"][];
+                };
+            };
+        };
+    };
+    Create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateDocInput"];
+            };
+        };
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DocDocumentResponse"];
+                };
+            };
+        };
+    };
+    GetById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DocDocumentResponse"];
+                };
+            };
+        };
+    };
+    Delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        success: boolean;
+                    };
+                };
+            };
+        };
+    };
+    Update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateDocInput"];
+            };
+        };
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DocDocumentResponse"];
                 };
             };
         };

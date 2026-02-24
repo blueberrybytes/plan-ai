@@ -35,6 +35,12 @@ import SlideView from "./pages/SlideView";
 import PublicSlideView from "./pages/PublicSlideView";
 import DesktopCallback from "./pages/DesktopCallback";
 import NotFound from "./pages/NotFound";
+import Docs from "./pages/Docs";
+import DocCreate from "./pages/DocCreate";
+import DocView from "./pages/DocView";
+import DocThemes from "./pages/DocThemes";
+import DocThemeCreate from "./pages/DocThemeCreate";
+import PublicDocView from "./pages/PublicDocView";
 import "./App.css";
 import "./i18n";
 import { useGetCurrentUserQuery } from "./store/apis/authApi";
@@ -110,6 +116,12 @@ const AppContent: React.FC = () => {
           <Route path="/slides/create" element={<SlideCreate />} />
           <Route path="/slides/view/:presentationId" element={<SlideView />} />
           <Route path="/slides/:presentationId" element={<SlideView />} />
+          <Route path="/docs" element={<Docs />} />
+          <Route path="/docs/create" element={<DocCreate />} />
+          <Route path="/docs/view/:id" element={<DocView />} />
+          <Route path="/docs/themes" element={<DocThemes />} />
+          <Route path="/docs/themes/create" element={<DocThemeCreate />} />
+          <Route path="/docs/themes/:id/edit" element={<DocThemeCreate />} />
         </Route>
 
         {/* Catch-all Not Found Route */}
@@ -152,6 +164,9 @@ const AppRoutes: React.FC = () => {
 
             {/* Public Presentation View */}
             <Route path="/p/:presentationId" element={<PublicSlideView />} />
+
+            {/* Public Document View */}
+            <Route path="/doc/public/:id" element={<PublicDocView />} />
 
             {/* Desktop app auth handoff — opened by the Electron recorder in system browser */}
             <Route path="/auth/desktop" element={<DesktopCallback />} />
