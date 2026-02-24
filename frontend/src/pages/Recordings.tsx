@@ -19,6 +19,7 @@ import {
   useDeleteTranscriptMutation,
 } from "../store/apis/transcriptApi";
 import SidebarLayout from "../components/layout/SidebarLayout";
+import PageHeader from "../components/layout/PageHeader";
 import { useNavigate } from "react-router-dom";
 
 const Recordings: React.FC = () => {
@@ -30,11 +31,6 @@ const Recordings: React.FC = () => {
     pageSize: 20,
     source: "RECORDING",
   });
-  console.log("data", data);
-  console.log("isLoading", isLoading);
-  console.log("error", error);
-  console.log("refetch", refetch);
-  console.log("isFetching", isFetching);
   const [deleteTranscript] = useDeleteTranscriptMutation();
 
   const handleDelete = async (id: string) => {
@@ -68,26 +64,16 @@ const Recordings: React.FC = () => {
   return (
     <SidebarLayout>
       <Box sx={{ p: { xs: 2, md: 4 }, maxWidth: 1200, mx: "auto" }}>
-        <Stack
-          direction="row"
-          justifyContent="space-between"
-          alignItems="flex-start"
-          sx={{ mb: 4 }}
-        >
-          <Box>
-            <Stack direction="row" alignItems="center" spacing={2} sx={{ mb: 1 }}>
-              <Typography variant="h4" fontWeight={800}>
-                {t("sidebarLayout.nav.recordings")}
-              </Typography>
-              <IconButton onClick={() => refetch()} disabled={isLoading || isFetching}>
-                <RefreshIcon />
-              </IconButton>
-            </Stack>
-            <Typography color="text.secondary">
-              Manage your global standalone recordings and transcripts.
-            </Typography>
-          </Box>
-        </Stack>
+        <PageHeader
+          title={t("sidebarLayout.nav.recordings")}
+          subtitle={t("recordings.subtitle")}
+          icon={<MicIcon />}
+          actions={
+            <IconButton onClick={() => refetch()} disabled={isLoading || isFetching}>
+              <RefreshIcon />
+            </IconButton>
+          }
+        />
 
         {transcripts.length === 0 ? (
           <Card sx={{ textAlign: "center", py: 8 }}>

@@ -649,6 +649,7 @@
   },
   "docs": {
     "title": "Documents",
+    "subtitle": "AI-generated documents ready to share, export, or publish.",
     "listTitle": "Your Documents",
     "deleteConfirm": "Are you sure you want to delete this document?",
     "actions": {
@@ -697,6 +698,7 @@
   },
   "docThemes": {
     "title": "Document Themes",
+    "subtitle": "Customize fonts and colors for your AI-generated documents.",
     "deleteConfirm": "Are you sure you want to delete this theme?",
     "empty": "No themes yet.",
     "actions": {
@@ -916,6 +918,9 @@
       "showcase": "Showcase",
       "stats": "Key Stats"
     }
+  },
+  "recordings": {
+    "subtitle": "Your captured recordings and standalone transcripts."
   },
   "notFound": {
     "title": "Page Not Found",

@@ -8,7 +8,6 @@ import {
   Grid,
   IconButton,
   Skeleton,
-  Chip,
 } from "@mui/material";
 import {
   Add as AddIcon,
@@ -18,22 +17,16 @@ import {
   Visibility as VisibilityIcon,
   Language as LanguageIcon,
   AutoAwesome as AutoAwesomeIcon,
-  Schedule as ScheduleIcon,
 } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import SidebarLayout from "../components/layout/SidebarLayout";
+import PageHeader from "../components/layout/PageHeader";
 import {
   useGetDocsQuery,
   useDeleteDocMutation,
   type DocDocumentResponse,
 } from "../store/apis/docApi";
-
-const statusColor = (status: string) => {
-  if (status === "GENERATING") return "warning";
-  if (status === "DRAFT") return "default";
-  return "success";
-};
 
 const Docs: React.FC = () => {
   const { t } = useTranslation();
@@ -51,40 +44,29 @@ const Docs: React.FC = () => {
   return (
     <SidebarLayout>
       <Box sx={{ p: { xs: 2, md: 4 }, maxWidth: 1200, mx: "auto" }}>
-        {/* Header */}
-        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 4 }}>
-          <Typography variant="h4" fontWeight={700}>
-            {t("docs.title")}
-          </Typography>
-        </Box>
-
-        {/* Action Buttons */}
-        <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap", mb: 5 }}>
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            size="large"
-            onClick={() => navigate("/docs/create")}
-          >
-            {t("docs.actions.create")}
-          </Button>
-          <Button
-            variant="outlined"
-            startIcon={<AddIcon />}
-            size="large"
-            onClick={() => navigate("/docs/themes/create")}
-          >
-            {t("docs.actions.createTheme")}
-          </Button>
-          <Button
-            variant="outlined"
-            startIcon={<PaletteIcon />}
-            size="large"
-            onClick={() => navigate("/docs/themes")}
-          >
-            {t("docs.actions.viewThemes")}
-          </Button>
-        </Box>
+        <PageHeader
+          title={t("docs.title")}
+          subtitle={t("docs.subtitle")}
+          icon={<ArticleIcon />}
+          actions={
+            <>
+              <Button
+                variant="outlined"
+                startIcon={<PaletteIcon />}
+                onClick={() => navigate("/docs/themes")}
+              >
+                {t("docs.actions.viewThemes")}
+              </Button>
+              <Button
+                variant="contained"
+                startIcon={<AddIcon />}
+                onClick={() => navigate("/docs/create")}
+              >
+                {t("docs.actions.create")}
+              </Button>
+            </>
+          }
+        />
 
         {/* Documents List */}
         <Typography variant="h5" fontWeight={600} sx={{ mb: 2 }}>
@@ -176,15 +158,6 @@ const Docs: React.FC = () => {
                       <Typography variant="h6" fontWeight={600} noWrap>
                         {doc.title}
                       </Typography>
-                    </Box>
-                    <Box sx={{ display: "flex", gap: 1, mb: 1.5, alignItems: "center" }}>
-                      <Chip
-                        label={doc.status}
-                        size="small"
-                        color={statusColor(doc.status) as "warning" | "default" | "success"}
-                        icon={doc.status === "GENERATING" ? <ScheduleIcon /> : undefined}
-                      />
-                      {doc.theme && <Chip label={doc.theme.name} size="small" variant="outlined" />}
                     </Box>
                     <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
                       {new Date(doc.updatedAt).toLocaleDateString()}

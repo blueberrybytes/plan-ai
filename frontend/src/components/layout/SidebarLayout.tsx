@@ -325,7 +325,72 @@ const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children, fullHeight = fa
           },
         }}
       >
-        {children}
+        {/* Ambient orbs — decorative only, pointer-events:none */}
+        <Box
+          aria-hidden="true"
+          sx={{
+            position: "absolute",
+            inset: 0,
+            overflow: "hidden",
+            pointerEvents: "none",
+            zIndex: 0,
+          }}
+        >
+          {/* Primary orb — top right */}
+          <Box
+            sx={{
+              position: "absolute",
+              top: "-10%",
+              right: "-5%",
+              width: 600,
+              height: 600,
+              borderRadius: "50%",
+              background:
+                "radial-gradient(circle, rgba(67,97,238,0.13) 0%, rgba(67,97,238,0.04) 45%, transparent 70%)",
+              animation: "orb-drift 18s ease-in-out infinite alternate",
+              "@keyframes orb-drift": {
+                "0%": { transform: "translate(0, 0) scale(1)" },
+                "50%": { transform: "translate(-40px, 30px) scale(1.06)" },
+                "100%": { transform: "translate(-20px, 60px) scale(0.97)" },
+              },
+            }}
+          />
+          {/* Secondary orb — bottom left */}
+          <Box
+            sx={{
+              position: "absolute",
+              bottom: "-15%",
+              left: "-5%",
+              width: 480,
+              height: 480,
+              borderRadius: "50%",
+              background:
+                "radial-gradient(circle, rgba(167,139,250,0.10) 0%, rgba(167,139,250,0.03) 45%, transparent 70%)",
+              animation: "orb-drift-b 22s ease-in-out infinite alternate",
+              "@keyframes orb-drift-b": {
+                "0%": { transform: "translate(0, 0) scale(1)" },
+                "50%": { transform: "translate(30px, -40px) scale(1.08)" },
+                "100%": { transform: "translate(50px, -20px) scale(0.95)" },
+              },
+            }}
+          />
+          {/* Tiny accent orb — mid-left */}
+          <Box
+            sx={{
+              position: "absolute",
+              top: "40%",
+              left: "20%",
+              width: 220,
+              height: 220,
+              borderRadius: "50%",
+              background: "radial-gradient(circle, rgba(16,185,129,0.06) 0%, transparent 70%)",
+              animation: "orb-drift 28s ease-in-out infinite alternate-reverse",
+            }}
+          />
+        </Box>
+
+        {/* Page content sits above orbs */}
+        <Box sx={{ position: "relative", zIndex: 1, height: "100%" }}>{children}</Box>
       </Box>
     </Box>
   );

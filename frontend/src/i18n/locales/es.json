@@ -649,6 +649,7 @@
   },
   "docs": {
     "title": "Documentos",
+    "subtitle": "Documentos generados por IA listos para compartir, exportar o publicar.",
     "listTitle": "Tus Documentos",
     "deleteConfirm": "¿Seguro que deseas eliminar este documento?",
     "actions": {
@@ -697,6 +698,7 @@
   },
   "docThemes": {
     "title": "Temas de Documentos",
+    "subtitle": "Personaliza fuentes y colores para tus documentos generados por IA.",
     "deleteConfirm": "¿Seguro que deseas eliminar este tema?",
     "empty": "Aún no hay temas.",
     "actions": {
@@ -916,6 +918,9 @@
       "showcase": "Exhibición",
       "stats": "Estadísticas Clave"
     }
+  },
+  "recordings": {
+    "subtitle": "Tus grabaciones capturadas y transcripciones independientes."
   },
   "notFound": {
     "title": "Página no encontrada",

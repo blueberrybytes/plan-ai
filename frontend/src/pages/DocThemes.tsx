@@ -15,10 +15,12 @@ import {
   Edit as EditIcon,
   Delete as DeleteIcon,
   ArrowBack as ArrowBackIcon,
+  Palette as PaletteIcon,
 } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import SidebarLayout from "../components/layout/SidebarLayout";
+import PageHeader from "../components/layout/PageHeader";
 import {
   useGetDocThemesQuery,
   useDeleteDocThemeMutation,
@@ -44,18 +46,20 @@ const DocThemes: React.FC = () => {
         <Button startIcon={<ArrowBackIcon />} onClick={() => navigate("/docs")} sx={{ mb: 3 }}>
           {t("common.back")}
         </Button>
-        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 4 }}>
-          <Typography variant="h4" fontWeight={700}>
-            {t("docThemes.title")}
-          </Typography>
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={() => navigate("/docs/themes/create")}
-          >
-            {t("docThemes.actions.create")}
-          </Button>
-        </Box>
+        <PageHeader
+          title={t("docThemes.title")}
+          subtitle={t("docThemes.subtitle")}
+          icon={<PaletteIcon />}
+          actions={
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={() => navigate("/docs/themes/create")}
+            >
+              {t("docThemes.actions.create")}
+            </Button>
+          }
+        />
 
         {isLoading ? (
           <Grid container spacing={2}>
