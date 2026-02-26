@@ -2,19 +2,19 @@
 # yarn lockfile v1
 
 
-"@ai-sdk/gateway@3.0.50":
-  version "3.0.50"
-  resolved "https://registry.yarnpkg.com/@ai-sdk/gateway/-/gateway-3.0.50.tgz#6d3206c453c30a569428fe7c23937b44c80dbd49"
-  integrity sha512-Jdd1a8VgbD7l7r+COj0h5SuaYRfPvOJ/AO6l0OrmTPEcI2MUQPr3C4JttfpNkcheEN+gOdy0CtZWuG17bW2fjw==
+"@ai-sdk/gateway@3.0.55":
+  version "3.0.55"
+  resolved "https://registry.yarnpkg.com/@ai-sdk/gateway/-/gateway-3.0.55.tgz#0a74425037ed39756ce59b153235bf3ba13cd43a"
+  integrity sha512-7xMeTJnCjwRwXKVCiv4Ly4qzWvDuW3+W1WIV0X1EFu6W83d4mEhV9bFArto10MeTw40ewuDjrbrZd21mXKohkw==
   dependencies:
     "@ai-sdk/provider" "3.0.8"
     "@ai-sdk/provider-utils" "4.0.15"
     "@vercel/oidc" "3.1.0"
 
-"@ai-sdk/openai@^3.0.30":
-  version "3.0.30"
-  resolved "https://registry.yarnpkg.com/@ai-sdk/openai/-/openai-3.0.30.tgz#42354aba7649c9a027ee9141300444ae60869240"
-  integrity sha512-YDht3t7TDyWKP+JYZp20VuYqSjyF2brHYh47GGFDUPf2wZiqNQ263ecL+quar2bP3GZ3BeQA8f0m2B7UwLPR+g==
+"@ai-sdk/openai@^3.0.34":
+  version "3.0.34"
+  resolved "https://registry.yarnpkg.com/@ai-sdk/openai/-/openai-3.0.34.tgz#6be14692b700e80703d700ebd24b09a260673c67"
+  integrity sha512-rnSsjV7cqIUcYdHgTcXRvN+xn0+wv/DB/U1SCxCVOKDsD9xaNgDjQTuMeJ+dUTzpH4Gn+XS0dJQELCWVIFYQVg==
   dependencies:
     "@ai-sdk/provider" "3.0.8"
     "@ai-sdk/provider-utils" "4.0.15"
@@ -1806,12 +1806,12 @@ agent-base@^7.1.2:
   resolved "https://registry.yarnpkg.com/agent-base/-/agent-base-7.1.4.tgz#e3cd76d4c548ee895d3c3fd8dc1f6c5b9032e7a8"
   integrity sha512-MnA+YT8fwfJPgBx3m60MNqakm30XOkyIoH1y6huTQvC0PwZG7ki8NacLBcrPbNoo8vEZy7Jpuk7+jMO+CUovTQ==
 
-ai@^6.0.91:
-  version "6.0.91"
-  resolved "https://registry.yarnpkg.com/ai/-/ai-6.0.91.tgz#f934c5e2ebc1ce055ac4b4d96f3227156e35b607"
-  integrity sha512-k1/8BusZMhYVxxLZt0BUZzm9HVDCCh117nyWfWUx5xjR2+tWisJbXgysL7EBMq2lgyHwgpA1jDR3tVjWSdWZXw==
+ai@^6.0.101:
+  version "6.0.101"
+  resolved "https://registry.yarnpkg.com/ai/-/ai-6.0.101.tgz#ddfc38440085efbd89624b52911d4dbef2a3fd6f"
+  integrity sha512-Ur/NgbgOp1rdhyDiKDk6EOpSgd1g5ADlbcD1cjQJtQsnmhEngz3Rf8nK5JetDh0vnbLy2aEBpaQeL+zvLRWuaA==
   dependencies:
-    "@ai-sdk/gateway" "3.0.50"
+    "@ai-sdk/gateway" "3.0.55"
     "@ai-sdk/provider" "3.0.8"
     "@ai-sdk/provider-utils" "4.0.15"
     "@opentelemetry/api" "1.9.0"
@@ -5743,11 +5743,6 @@ yocto-queue@^0.1.0:
   version "0.1.0"
   resolved "https://registry.yarnpkg.com/yocto-queue/-/yocto-queue-0.1.0.tgz#0294eb3dee05028d31ee1a5fa2c556a6aaf10a1b"
   integrity sha512-rVksvsnNCdJ/ohGc6xgPwyN8eheCxsiLM8mxuE/t/mOVqJewPuO1miLpTHQiRgTKCLexL4MeAFVagts7HmNZ2Q==
-
-zod@^3.23.8:
-  version "3.25.76"
-  resolved "https://registry.yarnpkg.com/zod/-/zod-3.25.76.tgz#26841c3f6fd22a6a2760e7ccb719179768471e34"
-  integrity sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ==
 
 "zod@^3.25.76 || ^4":
   version "4.1.12"

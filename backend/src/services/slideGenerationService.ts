@@ -22,7 +22,7 @@ const generateObjectLoose = generateObject as unknown as (args: {
 // Schema for a single generated slide
 const GeneratedSlideSchema = z.object({
   slideTypeKey: z.string(),
-  parameters: z.record(z.unknown()),
+  parameters: z.record(z.string(), z.unknown()),
 });
 
 // Schema for the full AI output

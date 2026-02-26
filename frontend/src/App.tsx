@@ -49,6 +49,7 @@ import AuthenticatedRoute from "./routes/AuthenticatedRoute";
 import UnauthenticatedRoute from "./routes/UnauthenticatedRoute";
 import store, { persistor } from "./store/store";
 import theme from "./theme/theme";
+import FloatingAssistant from "./components/chat/FloatingAssistant";
 
 // Internal component that handles API calls after auth is initialized
 const AppContent: React.FC = () => {
@@ -124,9 +125,11 @@ const AppContent: React.FC = () => {
           <Route path="/docs/themes/:id/edit" element={<DocThemeCreate />} />
         </Route>
 
-        {/* Catch-all Not Found Route */}
         <Route path="*" element={<NotFound />} />
       </Routes>
+
+      {/* Global AI Assistant Floating Action Button */}
+      <FloatingAssistant />
     </>
   );
 };

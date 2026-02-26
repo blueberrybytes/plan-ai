@@ -12,6 +12,7 @@ import { RegisterRoutes } from "./routes/routes";
 import chatRouter from "./routes/chatRouter";
 import { initializeContextVectorStore } from "./vector/contextFileVectorService";
 
+console.log("Server starting...");
 const app = express();
 const PORT = EnvUtils.get("PORT") || 8080;
 const QDRANT_URL = EnvUtils.get("QDRANT_URL") || "http://127.0.0.1:6333";

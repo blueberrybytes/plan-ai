@@ -7,6 +7,7 @@ import prisma from "../prisma/prismaClient";
 import { authenticateUser, AuthenticatedRequest } from "../middleware/authMiddleware";
 import { queryContexts } from "../vector/contextFileVectorService";
 import { logger } from "../utils/logger";
+import { assistantChatService } from "../services/assistantService";
 
 const router = Router();
 
@@ -149,5 +150,39 @@ ${contextText}
     }
   },
 );
+
+// POST /api/chat/assistant/stream
+router.post("/assistant/stream", authenticateUser, async (req: AuthenticatedRequest, res) => {
+  console.log("[ChatRouter] Assistant Stream requested");
+  try {
+    if (!req.user) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { firebaseUid: req.user.uid },
+    });
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const { messages } = req.body;
+
+    console.log("[ChatRouter] Assistant Stream requested with DB user:", user.id);
+    console.log("[ChatRouter] Incoming body messages:", JSON.stringify(messages, null, 2));
+
+    if (!messages || !Array.isArray(messages)) {
+      return res.status(400).json({ message: "Invalid messages format" });
+    }
+
+    const result = await assistantChatService.handleAssistantStream(messages, user.id);
+
+    return result.pipeUIMessageStreamToResponse(res);
+  } catch (error) {
+    logger.error("Assistant Streaming error", error);
+    return res.status(500).json({ message: "Assistant Streaming failed" });
+  }
+});
 
 export default router;
