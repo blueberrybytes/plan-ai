@@ -21,10 +21,11 @@ import {
   ChevronLeft as ChevronLeftIcon,
   ChevronRight as ChevronRightIcon,
   IntegrationInstructions as IntegrationInstructionsIcon,
-  Chat as ChatIcon,
   Slideshow as SlideshowIcon,
   Mic as MicIcon,
   Article as ArticleIcon,
+  AutoAwesome as AutoAwesomeIcon,
+  Chat as ChatIcon,
 } from "@mui/icons-material";
 import { NavLink, useLocation } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
@@ -47,7 +48,12 @@ type NavItem = {
 };
 
 const navItems: NavItem[] = [
-  { labelKey: "sidebarLayout.nav.home", path: "/home", icon: <DashboardIcon fontSize="small" /> },
+  { labelKey: "sidebarLayout.nav.home", path: "/home", icon: <AutoAwesomeIcon fontSize="small" /> },
+  {
+    labelKey: "sidebarLayout.nav.dashboard",
+    path: "/dashboard",
+    icon: <DashboardIcon fontSize="small" />,
+  },
   {
     labelKey: "sidebarLayout.nav.sessions",
     path: "/projects",

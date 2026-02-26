@@ -42,7 +42,7 @@ import { selectUser } from "../store/slices/auth/authSelector";
 type ProjectResponse = components["schemas"]["ProjectResponse"];
 type TranscriptResponse = components["schemas"]["TranscriptResponse"];
 
-const Home: React.FC = () => {
+const Dashboard: React.FC = () => {
   const { t } = useTranslation();
   const user = useSelector(selectUser);
 
@@ -569,4 +569,4 @@ const Home: React.FC = () => {
   );
 };
 
-export default Home;
+export default Dashboard;

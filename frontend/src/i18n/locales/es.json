@@ -586,6 +586,7 @@
   "sidebarLayout": {
     "nav": {
       "home": "Inicio",
+      "dashboard": "Panel de control",
       "chat": "Chat",
       "sessions": "Sesiones",
       "contexts": "Contextos",

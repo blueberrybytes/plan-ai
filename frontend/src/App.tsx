@@ -10,7 +10,8 @@ import NavigationProvider from "./providers/NavigationProvider";
 import FirebaseAuthProvider, { useAuth } from "./providers/FirebaseAuthProvider";
 import TokenRefreshProvider from "./providers/TokenRefreshProvider";
 import Login from "./pages/Login";
-import Home from "./pages/Home";
+import Dashboard from "./pages/Dashboard";
+import ChatHome from "./pages/ChatHome";
 import LandingPage from "./pages/LandingPage";
 import SignUp from "./pages/SignUp";
 import ForgotPassword from "./pages/ForgotPassword";
@@ -91,7 +92,8 @@ const AppContent: React.FC = () => {
       <Routes>
         {/* Authenticated routes */}
         <Route element={<AuthenticatedRoute />}>
-          <Route path="/home" element={<Home />} />
+          <Route path="/home" element={<ChatHome />} />
+          <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/projects" element={<Projects />} />
           <Route path="/projects/:projectId" element={<ProjectDetails />} />
           <Route path="/projects/:projectId/info" element={<ProjectInfo />} />

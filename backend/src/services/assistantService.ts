@@ -1,6 +1,8 @@
 import { createOpenRouter } from "@openrouter/ai-sdk-provider";
 import { streamText, convertToModelMessages, UIMessage, stepCountIs } from "ai";
 import { z } from "zod";
+import fs from "fs";
+import path from "path";
 import EnvUtils from "../utils/EnvUtils";
 import prisma from "../prisma/prismaClient";
 
@@ -12,6 +14,14 @@ export class AssistantChatService {
 
   public async handleAssistantStream(messages: UIMessage[], userId: string) {
     try {
+      const knowledgeBasePath = path.join(__dirname, "../knowledge/plan_ai_overview.md");
+      let planAiKnowledge = "";
+      try {
+        planAiKnowledge = fs.readFileSync(knowledgeBasePath, "utf-8");
+      } catch (e) {
+        console.warn("[AssistantService] Could not read plan_ai_overview.md", e);
+      }
+
       const systemPrompt = `You are Plan AI Assistant, a helpful AI integrated directly into the workspace via a Floating Action Button.
 You help the user navigate the app, find information, manage the system, and execute quick actions.
 You have access to tools to create entities and fetch data. If the user asks you to do something that a tool can handle, ALWAYS use the tool.
@@ -33,6 +43,11 @@ Available Pages to Navigate To or Link To:
 - Integrations: /integrations
 - Settings / Profile: /profile
 - Plan AI Chat: /chat
+
+---
+Plan AI Knowledge Base Context:
+${planAiKnowledge}
+
 `;
 
       const model = this.openrouter(this.modelName);
