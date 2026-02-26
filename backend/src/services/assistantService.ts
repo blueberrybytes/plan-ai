@@ -1,5 +1,5 @@
 import { createOpenRouter } from "@openrouter/ai-sdk-provider";
-import { streamText, convertToModelMessages, UIMessage } from "ai";
+import { streamText, convertToModelMessages, UIMessage, stepCountIs } from "ai";
 import { z } from "zod";
 import EnvUtils from "../utils/EnvUtils";
 import prisma from "../prisma/prismaClient";
@@ -36,6 +36,7 @@ Available Pages to Navigate To:
         model,
         system: systemPrompt,
         messages: await convertToModelMessages(messages),
+        stopWhen: stepCountIs(5),
         tools: {
           navigate: {
             description: "Navigate the user to a specific page in the application.",
