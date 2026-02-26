@@ -14,17 +14,20 @@ import { Send as SendIcon, AutoAwesome as AutoAwesomeIcon } from "@mui/icons-mat
 import SidebarLayout from "../components/layout/SidebarLayout";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport, UIMessage } from "ai";
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
 import { RootState } from "../store/store";
+import { setChatHomeMessages } from "../store/slices/chatHome/chatHomeSlice";
 import { useNavigate } from "react-router-dom";
 import MarkdownRenderer from "../components/common/MarkdownRenderer";
 
 const ChatHome: React.FC = () => {
   const token = useSelector((state: RootState) => state.auth.user?.token);
+  const initialChatMessages = useSelector((state: RootState) => state.chatHome.messages);
+  const dispatch = useDispatch();
   const navigate = useNavigate();
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const { messages, sendMessage, status } = useChat({
+  const { messages, sendMessage, setMessages, status } = useChat({
     transport: new DefaultChatTransport({
       api: `${process.env.REACT_APP_API_BACKEND_URL || ""}/api/chat/assistant/stream`,
       headers: {
@@ -40,6 +43,12 @@ const ChatHome: React.FC = () => {
       }
     },
   });
+
+  console.log("[ChatHome] Render. useChat messages length:", messages?.length);
+  console.log("[ChatHome] Render. initialChatMessages length:", initialChatMessages?.length);
+  if (messages?.length > 0) {
+    console.log("[ChatHome] First message structure:", messages[0]);
+  }
 
   const isLoading = status === "streaming" || status === "submitted";
 
@@ -59,6 +68,37 @@ const ChatHome: React.FC = () => {
   const handleSuggestionClick = (prompt: string) => {
     sendMessage({ text: prompt });
   };
+
+  const hasInitialized = useRef(false);
+  const isInitialMount = useRef(true);
+
+  useEffect(() => {
+    if (!hasInitialized.current) {
+      if (initialChatMessages && initialChatMessages.length > 0) {
+        setMessages(initialChatMessages);
+      }
+      if (initialChatMessages !== undefined) {
+        hasInitialized.current = true;
+      }
+    }
+  }, [initialChatMessages, setMessages]);
+
+  useEffect(() => {
+    // Prevent wiping the Redux store with the initial empty array on mount
+    if (isInitialMount.current && messages.length === 0) {
+      isInitialMount.current = false;
+      return;
+    }
+    isInitialMount.current = false;
+
+    // Deep clone the messages so Redux doesn't freeze the Vercel AI SDK's internal objects
+    try {
+      const clonedMessages = JSON.parse(JSON.stringify(messages));
+      dispatch(setChatHomeMessages(clonedMessages));
+    } catch (e) {
+      console.error("Failed to clone messages before dispatch:", e);
+    }
+  }, [messages, dispatch]);
 
   useEffect(() => {
     if (messagesEndRef.current) {

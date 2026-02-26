@@ -2,6 +2,7 @@
 import { combineReducers } from "@reduxjs/toolkit";
 import authReducer from "./slices/auth/authSlice";
 import appReducer from "./slices/app/appSlice";
+import chatHomeReducer from "./slices/chatHome/chatHomeSlice";
 import { resetStore } from "./actions";
 import { authApi } from "./apis/authApi";
 import { projectApi } from "./apis/projectApi";
@@ -19,6 +20,7 @@ import { docThemeApi } from "./apis/docThemeApi";
 const appReducers = combineReducers({
   app: appReducer,
   auth: authReducer,
+  chatHome: chatHomeReducer,
   [authApi.reducerPath]: authApi.reducer,
   [projectApi.reducerPath]: projectApi.reducer,
   [accountApi.reducerPath]: accountApi.reducer,
