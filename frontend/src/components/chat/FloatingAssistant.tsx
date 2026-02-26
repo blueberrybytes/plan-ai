@@ -11,7 +11,12 @@ import {
   CircularProgress,
   Divider,
 } from "@mui/material";
-import { Chat as ChatIcon, Close as CloseIcon, Send as SendIcon } from "@mui/icons-material";
+import {
+  Chat as ChatIcon,
+  Close as CloseIcon,
+  Send as SendIcon,
+  Remove as RemoveIcon,
+} from "@mui/icons-material";
 import { useChat } from "@ai-sdk/react";
 import { UIMessage, DefaultChatTransport } from "ai";
 import { useSelector } from "react-redux";
@@ -32,7 +37,8 @@ export interface Message {
 }
 
 export const FloatingAssistant: React.FC = () => {
-  const [anchorEl, setAnchorEl] = useState<HTMLButtonElement | null>(null);
+  const [isOpen, setIsOpen] = useState(false);
+  const anchorRef = useRef<HTMLButtonElement | null>(null);
   const token = useSelector((state: RootState) => state.auth.user?.token);
   const navigate = useNavigate();
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -73,12 +79,12 @@ export const FloatingAssistant: React.FC = () => {
     setInput("");
   };
 
-  const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
-    setAnchorEl(event.currentTarget);
+  const handleClick = () => {
+    setIsOpen(!isOpen);
   };
 
   const handleClose = () => {
-    setAnchorEl(null);
+    setIsOpen(false);
   };
 
   useEffect(() => {
@@ -87,8 +93,7 @@ export const FloatingAssistant: React.FC = () => {
     }
   }, [messages]);
 
-  const open = Boolean(anchorEl);
-  const id = open ? "assistant-popover" : undefined;
+  const id = isOpen ? "assistant-popover" : undefined;
 
   return (
     <>
@@ -96,6 +101,7 @@ export const FloatingAssistant: React.FC = () => {
         color="primary"
         aria-label="chat"
         onClick={handleClick}
+        ref={anchorRef}
         sx={{
           position: "fixed",
           bottom: 24,
@@ -108,9 +114,15 @@ export const FloatingAssistant: React.FC = () => {
 
       <Popover
         id={id}
-        open={open}
-        anchorEl={anchorEl}
-        onClose={handleClose}
+        open={isOpen}
+        anchorEl={anchorRef.current}
+        onClose={(event, reason) => {
+          if (reason !== "backdropClick") {
+            handleClose();
+          }
+        }}
+        disableAutoFocus
+        disableEnforceFocus
         anchorOrigin={{
           vertical: "top",
           horizontal: "left", // Popover opens above and to the left of the button
@@ -122,15 +134,18 @@ export const FloatingAssistant: React.FC = () => {
         sx={{
           mt: -2,
           mr: 2,
+          pointerEvents: "none",
         }}
       >
         <Paper
+          elevation={8}
           sx={{
             width: 350,
             height: 500,
             display: "flex",
             flexDirection: "column",
             overflow: "hidden",
+            pointerEvents: "auto",
           }}
         >
           {/* Header */}
@@ -148,7 +163,7 @@ export const FloatingAssistant: React.FC = () => {
               Plan AI Assistant
             </Typography>
             <IconButton size="small" onClick={handleClose} sx={{ color: "inherit" }}>
-              <CloseIcon />
+              <RemoveIcon />
             </IconButton>
           </Box>
 
