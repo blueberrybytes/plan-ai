@@ -4,6 +4,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
+import { Link as RouterLink } from "react-router-dom";
 
 interface MarkdownRendererProps {
   content: string;
@@ -76,6 +77,23 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content, sx }) => {
               <code className={className} {...props}>
                 {children}
               </code>
+            );
+          },
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          a({ href, children, ...props }: any) {
+            // If the link is internal (starts with /), use React Router
+            if (href && href.startsWith("/")) {
+              return (
+                <RouterLink to={href} {...props}>
+                  {children}
+                </RouterLink>
+              );
+            }
+            // For external links, use a standard anchor tag with target="_blank"
+            return (
+              <a href={href} target="_blank" rel="noopener noreferrer" {...props}>
+                {children}
+              </a>
             );
           },
         }}
