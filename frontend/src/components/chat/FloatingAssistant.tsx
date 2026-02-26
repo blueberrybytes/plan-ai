@@ -11,12 +11,7 @@ import {
   CircularProgress,
   Divider,
 } from "@mui/material";
-import {
-  Chat as ChatIcon,
-  Close as CloseIcon,
-  Send as SendIcon,
-  Remove as RemoveIcon,
-} from "@mui/icons-material";
+import { Chat as ChatIcon, Send as SendIcon, Remove as RemoveIcon } from "@mui/icons-material";
 import { useChat } from "@ai-sdk/react";
 import { UIMessage, DefaultChatTransport } from "ai";
 import { useSelector } from "react-redux";
