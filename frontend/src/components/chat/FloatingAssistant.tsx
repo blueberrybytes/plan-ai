@@ -44,7 +44,6 @@ export const FloatingAssistant: React.FC = () => {
         Authorization: `Bearer ${token}`,
       },
     }),
-    sendAutomaticallyWhen: () => true,
     onToolCall: ({ toolCall }: { toolCall: any }) => {
       console.log("toolCall", toolCall);
       if (toolCall.toolName === "navigate") {
