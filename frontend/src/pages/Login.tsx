@@ -65,12 +65,19 @@ export default function Login() {
   // Parse URL parameters for Desktop Auth OOB flow
   const isDesktopAuth = new URLSearchParams(window.location.search).get("desktop_auth") === "true";
   const localPort = new URLSearchParams(window.location.search).get("local_port");
+  const desktopParams = isDesktopAuth
+    ? `?desktop_auth=true${localPort ? `&local_port=${localPort}` : ""}`
+    : "";
 
   // Redirect if user is already logged in
   useEffect(() => {
     if (user) {
-      if (isDesktopAuth && localPort) {
-        navigate(`/auth/desktop?local_port=${localPort}`);
+      if (isDesktopAuth) {
+        if (localPort) {
+          navigate(`/auth/desktop?local_port=${localPort}`);
+        } else {
+          navigate(`/auth/desktop`);
+        }
       } else {
         navigate("/home");
       }
@@ -332,7 +339,7 @@ export default function Login() {
               <Typography
                 variant="body2"
                 component={Link}
-                to="/forgot-password"
+                to={`/forgot-password${desktopParams}`}
                 color="primary"
                 sx={{ textDecoration: "none" }}
               >
@@ -343,7 +350,7 @@ export default function Login() {
               <Typography
                 variant="body2"
                 component={Link}
-                to="/signup"
+                to={`/signup${desktopParams}`}
                 color="primary"
                 sx={{ textDecoration: "none" }}
               >

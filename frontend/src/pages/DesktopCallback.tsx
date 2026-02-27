@@ -5,29 +5,24 @@ import { useAuth } from "../providers/FirebaseAuthProvider";
 import { auth } from "../firebase/firebase";
 import { onAuthStateChanged } from "firebase/auth";
 import { useLazyGetDesktopTokenQuery } from "../store/apis/authApi";
-import { useSelector } from "react-redux";
-import { selectErrorSession } from "../store/slices/auth/authSelector";
 
 /**
  * /auth/desktop?local_port=4321 — opened by the Plan AI Recorder (Electron app)
  * via shell.openExternal() in the system browser.
  *
- * When local_port is provided (dev mode), the token is delivered via a GET request
- * to the Electron app's local HTTP server instead of the custom protocol (which is
- * unreliable for unpackaged Electron apps on macOS).
+ * This acts strictly as a silent bridge. By the time the user arrives here, they
+ * have already authenticated on the main /login page.
  *
  * Flow:
- *  1. Electron opens this page with ?local_port=4321
- *  2. If user is logged in → fetch custom token
- *     a. Dev (local_port present) → GET http://localhost:4321/auth?token=...
- *     b. Prod (no local_port)     → redirect to blueberrybytes-recorder://auth?token=...
- *  3. If not logged in → redirect to /login?next=/auth/desktop
+ *  1. Login.tsx successfully authenticates via Popup/Email -> redirects here
+ *  2. We wait for `firebaseUser` to hydrate in the state
+ *  3. We wait for `userDb` to populate (guarantees backend registration is complete)
+ *  4. We fetch the Custom Firebase Desktop Token from the backend
+ *  5. We safely deliver the token to Electron via http://localhost:4321/auth?token=...
  */
 const DesktopCallback: React.FC = () => {
   const { isAuthInitialized } = useAuth();
 
-  // Make firebaseUser reactive to auth state changes so the component re-renders
-  // after a popup OAuth flow completes successfully.
   const [firebaseUser, setFirebaseUser] = useState(auth.currentUser);
   useEffect(() => {
     return onAuthStateChanged(auth, (user) => {
@@ -38,79 +33,93 @@ const DesktopCallback: React.FC = () => {
   const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
   const [errorMsg, setErrorMsg] = useState<string>("");
 
-  const errorSession = useSelector(selectErrorSession);
-
-  // Read local_port and provider from URL
   const localPort = new URLSearchParams(window.location.search).get("local_port");
-  const provider = new URLSearchParams(window.location.search).get("provider");
 
   const [triggerGetDesktopToken, { data, error }] = useLazyGetDesktopTokenQuery();
 
   const cancelAuth = useCallback(() => {
     if (localPort) {
       navigator.sendBeacon(`http://localhost:${localPort}/auth-cancel`);
-      window.close(); // Attempt to close if it's a popup or child window
+      window.setTimeout(() => window.close(), 100);
     }
     setStatus("error");
     setErrorMsg("Authentication was cancelled.");
   }, [localPort]);
 
-  // If OAuth gets manually closed by the user or an error occurs during this attempt
   useEffect(() => {
-    // Only cancel if an error arrives AFTER we actually started the login attempt
-    if (errorSession && localPort) {
-      console.error(
-        "[DesktopCallback] Cancellation triggered by Redux sessionError:",
-        errorSession,
-      );
-      cancelAuth();
+    if (!isAuthInitialized) {
+      console.log("[DesktopCallback] Waiting for auth to initialize...");
+      return;
     }
-  }, [cancelAuth, errorSession, localPort]);
-
-  useEffect(() => {
-    if (!isAuthInitialized) return;
+    if (status !== "loading") {
+      console.log("[DesktopCallback] Status is not loading, skipping...");
+      return;
+    }
 
     if (!firebaseUser) {
-      // If no valid session is present, bounce them back to the login screen with the local_port intact
+      console.log("[DesktopCallback] No firebase user found, redirecting to login...");
+      // If we landed here without an active session somehow, bump them back to the login screen
       if (localPort) {
+        console.log("[DesktopCallback] Redirecting to login with local port...");
         window.location.href = `/login?desktop_auth=true&local_port=${localPort}`;
       } else {
+        console.log("[DesktopCallback] Redirecting to login...");
         window.location.href = `/login`;
       }
       return;
     }
 
-    // If authenticated, trigger the custom token fetch for the desktop app
-    console.log("[DesktopCallback] Triggering token fetch for user:", firebaseUser.uid);
-    triggerGetDesktopToken();
-  }, [isAuthInitialized, firebaseUser, triggerGetDesktopToken, provider, localPort]);
+    // Use a resilient async polling loop.
+    // If the user just logged in via Google Popup, sessionSaga is still concurrently creating them
+    // in the backend postgres DB. The /desktop-token endpoint requires that DB record to exist.
+    // So we poll up to 10 seconds to give sessionSaga time to finish.
+    // If the user was ALREADY logged in from hours ago, this will succeed on the 1st attempt.
+    const attemptFetch = async () => {
+      console.log("[DesktopCallback] Triggering token fetch for user:", firebaseUser.uid);
+      for (let i = 0; i < 10; i++) {
+        try {
+          // Unwrapping allows us to catch the RTK Query error properly
+          await triggerGetDesktopToken().unwrap();
+          return; // Success! The data useEffect below will handle the rest.
+        } catch (err) {
+          console.warn(
+            `[DesktopCallback] Token fetch attempt ${i + 1} failed (waiting for backend DB sync). Retrying...`,
+            err,
+          );
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+        }
+      }
+      console.log("[DesktopCallback] Failed to generate desktop auth token. Backend sync timeout.");
+      setStatus("error");
+      setErrorMsg("Failed to generate desktop auth token. Backend sync timeout.");
+    };
+
+    attemptFetch();
+  }, [isAuthInitialized, firebaseUser, triggerGetDesktopToken, localPort, status]);
 
   useEffect(() => {
-    console.log("[DesktopCallback] Token Fetch Data Updated:", {
-      hasData: !!data,
-      hasToken: !!data?.data?.customToken,
-      localPort,
-    });
-    if (!data?.data?.customToken) return;
+    if (!data?.data?.customToken) {
+      console.log("[DesktopCallback] No custom token received, waiting...");
+      return;
+    }
 
     const token = data.data.customToken;
 
     if (localPort) {
-      // Dev mode: deliver token via local HTTP server — bypass unreliable OS protocol dispatch
+      console.log("[DesktopCallback] Delivering token via local HTTP server...");
+      // Dev mode: deliver token via local HTTP server
       const url = `http://localhost:${localPort}/auth?token=${encodeURIComponent(token)}`;
-      console.log("[DesktopCallback] Attempting to navigate to local port URL:", url);
-      // Change the browser location so Electron catches the 'will-navigate' event
-      // This solves the CORS/Mixed Content block that happens if we use fetch() or Image()
       try {
         window.location.href = url;
-        console.log("[DesktopCallback] Successfully executed window.location.href");
+        setStatus("success");
+        console.log("[DesktopCallback] Token delivered successfully.");
       } catch (e) {
         console.error("[DesktopCallback] Failed to execute window.location.href:", e);
       }
     } else {
-      // Prod mode: use custom protocol
-      console.log("[DesktopCallback] Attempting to navigate to custom protocol");
+      // Prod mode: deliver via custom protocol handler
       try {
+        console.log("[DesktopCallback] Delivering token via custom protocol handler...");
         window.location.href = `blueberrybytes-recorder://auth?token=${encodeURIComponent(token)}`;
         setStatus("success");
       } catch (e) {
@@ -121,6 +130,7 @@ const DesktopCallback: React.FC = () => {
 
   useEffect(() => {
     if (error) {
+      console.log("[DesktopCallback] Error generating desktop auth token:", error);
       setStatus("error");
       setErrorMsg("Failed to generate desktop auth token. Please try again.");
     }
@@ -141,9 +151,10 @@ const DesktopCallback: React.FC = () => {
             <CircularProgress />
             <Typography variant="h6">Connecting to Plan AI Recorder…</Typography>
             <Typography variant="body2" color="text.secondary">
-              Signing you in to the desktop app. You can close this tab once done.
+              Handing off your credentials securely to the desktop app. You can close this tab once
+              done.
             </Typography>
-            {localPort && provider && (
+            {localPort && (
               <Button variant="text" color="error" onClick={cancelAuth} sx={{ mt: 2 }}>
                 Cancel
               </Button>
@@ -155,7 +166,7 @@ const DesktopCallback: React.FC = () => {
             <CheckCircleOutlineIcon sx={{ fontSize: 56, color: "success.main" }} />
             <Typography variant="h6">You&apos;re signed in!</Typography>
             <Typography variant="body2" color="text.secondary">
-              Return to the Plan AI Recorder app. You can close this tab.
+              Return to the Plan AI Recorder app. You can close this tab safely.
             </Typography>
           </>
         )}

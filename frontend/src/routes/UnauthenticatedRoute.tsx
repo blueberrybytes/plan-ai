@@ -22,7 +22,19 @@ const UnauthenticatedRoute: React.FC = () => {
     }
   }, [dispatch, errorSession]);
 
-  return !user || !user.emailVerified ? <Outlet /> : <Navigate to="/home" replace />;
+  if (user && user.emailVerified) {
+    const isDesktopAuth =
+      new URLSearchParams(window.location.search).get("desktop_auth") === "true";
+    const localPort = new URLSearchParams(window.location.search).get("local_port");
+
+    if (isDesktopAuth) {
+      const desktopUrl = localPort ? `/auth/desktop?local_port=${localPort}` : "/auth/desktop";
+      return <Navigate to={desktopUrl} replace />;
+    }
+    return <Navigate to="/home" replace />;
+  }
+
+  return <Outlet />;
 };
 
 export default UnauthenticatedRoute;
