@@ -1,8 +1,9 @@
-import React, { useEffect, useState } from "react";
-import { Box, CircularProgress, Typography, Alert, Stack } from "@mui/material";
+import React, { useEffect, useState, useCallback } from "react";
+import { Box, CircularProgress, Typography, Alert, Stack, Button } from "@mui/material";
 import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
 import { useAuth } from "../providers/FirebaseAuthProvider";
 import { auth } from "../firebase/firebase";
+import { signOut } from "firebase/auth";
 import { useLazyGetDesktopTokenQuery } from "../store/apis/authApi";
 import { useDispatch, useSelector } from "react-redux";
 import { loginApple, loginGoogle, loginMicrosoft } from "../store/slices/auth/authSlice";
@@ -39,19 +40,56 @@ const DesktopCallback: React.FC = () => {
 
   const [triggerGetDesktopToken, { data, error }] = useLazyGetDesktopTokenQuery();
 
+  const cancelAuth = useCallback(() => {
+    if (localPort) {
+      navigator.sendBeacon(`http://localhost:${localPort}/auth-cancel`);
+      window.close(); // Attempt to close if it's a popup or child window
+    }
+    setStatus("error");
+    setErrorMsg("Authentication was cancelled.");
+  }, [localPort]);
+
   // If OAuth gets manually closed by the user or an error occurs
   useEffect(() => {
     if (errorSession && localPort) {
-      // Send cancel signal to the Electron app listening on local server
-      const img = new Image();
-      img.src = `http://localhost:${localPort}/auth-cancel`;
-      setStatus("error");
-      setErrorMsg(errorSession.message || "Authentication was cancelled or failed.");
+      cancelAuth();
     }
-  }, [errorSession, localPort]);
+  }, [cancelAuth, errorSession, localPort]);
+
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      if (event.data?.type === "OAUTH_POPUP_CLOSED") {
+        setTimeout(() => {
+          setStatus((currentStatus) => {
+            if (currentStatus === "loading") {
+              if (localPort) {
+                navigator.sendBeacon(`http://localhost:${localPort}/auth-cancel`);
+                window.close();
+              }
+              setErrorMsg("Authentication was cancelled.");
+              return "error";
+            }
+            return currentStatus;
+          });
+        }, 1500);
+      }
+    };
+    window.addEventListener("message", handleMessage);
+    return () => window.removeEventListener("message", handleMessage);
+  }, [localPort]);
 
   useEffect(() => {
     if (!isAuthInitialized) return;
+
+    // Force sign out if the requested provider doesn't match current user's provider
+    if (firebaseUser && provider) {
+      const userProviderIds = firebaseUser.providerData.map((p) => p.providerId);
+      if (!userProviderIds.some((id) => id.includes(provider))) {
+        signOut(auth);
+        return; // Wait for logout
+      }
+    }
+
     if (!firebaseUser) {
       if (provider) {
         if (provider === "apple") dispatch(loginApple());
@@ -116,6 +154,11 @@ const DesktopCallback: React.FC = () => {
             <Typography variant="body2" color="text.secondary">
               Signing you in to the desktop app. You can close this tab once done.
             </Typography>
+            {localPort && provider && (
+              <Button variant="text" color="error" onClick={cancelAuth} sx={{ mt: 2 }}>
+                Cancel
+              </Button>
+            )}
           </>
         )}
         {status === "success" && (
