@@ -183,34 +183,71 @@ export class TranscriptsController extends Controller {
     @Request() request: AuthenticatedRequest,
     @Body() body: CreateStandaloneTranscriptBody,
   ): Promise<ApiResponse<StandaloneTranscriptResponse>> {
-    const user = await this.getAuthorizedUser(request);
+    try {
+      const user = await this.getAuthorizedUser(request);
 
-    let transcript: Transcript;
+      let transcript: Transcript;
 
-    if (body.content) {
-      const contextPrompt = await this.buildContextPrompt(user.id, body.contextIds ?? []);
-      const result = await projectTranscriptService.createStandaloneTranscript({
-        userId: user.id,
-        content: body.content,
-        title: body.title ?? undefined,
-        source: body.source,
-        recordedAt: body.recordedAt ?? null,
-        metadata: body.metadata,
-        contextPrompt,
-        contextIds: body.contextIds,
-        persona: body.persona,
-        objective: body.objective,
-        englishLevel: body.englishLevel,
-      });
-      transcript = result.transcript;
-    } else {
-      transcript = await transcriptCrudService.createTranscriptForUser(user.id, body);
+      if (!body.content) {
+        // Empty transcript (just metadata creation)
+        transcript = await transcriptCrudService.createTranscriptForUser(user.id, body);
+      } else {
+        const contextPrompt = await this.buildContextPrompt(user.id, body.contextIds ?? []);
+
+        if (body.projectId) {
+          // Security check: ensure user has access to this project
+          const project = await prisma.project.findUnique({
+            where: { id: body.projectId, userId: user.id },
+          });
+
+          if (!project) {
+            this.setStatus(404);
+            throw { status: 404, message: "Project not found or unauthorized to attach." };
+          }
+
+          // Trigger the powerful Gemini Task Generation Pipeline for this Project
+          const result = await projectTranscriptService.createTranscriptForProject({
+            projectId: body.projectId,
+            userId: user.id,
+            content: body.content,
+            title: body.title ?? undefined,
+            source: body.source,
+            recordedAt: body.recordedAt ?? null,
+            metadata: body.metadata,
+            contextPrompt,
+            contextIds: body.contextIds,
+            persona: body.persona,
+            objective: body.objective,
+            englishLevel: body.englishLevel,
+          });
+          transcript = result.transcript;
+        } else {
+          // No project selected. Just generate a general summary/analysis (Standalone).
+          const result = await projectTranscriptService.createStandaloneTranscript({
+            userId: user.id,
+            content: body.content,
+            title: body.title ?? undefined,
+            source: body.source,
+            recordedAt: body.recordedAt ?? null,
+            metadata: body.metadata,
+            contextPrompt,
+            contextIds: body.contextIds,
+            persona: body.persona,
+            objective: body.objective,
+            englishLevel: body.englishLevel,
+          });
+          transcript = result.transcript;
+        }
+      }
+
+      return {
+        status: 201,
+        data: this.mapTranscriptResponse(transcript),
+      };
+    } catch (error) {
+      console.error("[ERROR] Failed to create transcript:", error);
+      throw error;
     }
-
-    return {
-      status: 201,
-      data: this.mapTranscriptResponse(transcript),
-    };
   }
 
   @Get("{id}")

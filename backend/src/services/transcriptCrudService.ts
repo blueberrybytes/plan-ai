@@ -73,9 +73,8 @@ export class TranscriptCrudService {
 
     const where: Prisma.TranscriptWhereInput = {
       userId,
-      // If projectId is provided, filter by it. Wait, the frontend might omit it asking for global.
-      // Global transcripts MUST have projectId: null.
-      projectId: options.projectId ? options.projectId : null,
+      // If projectId is provided, filter by it. If undefined, return all transcripts.
+      ...(options.projectId !== undefined ? { projectId: options.projectId } : {}),
       ...(options.source ? { source: options.source } : {}),
     };
 
