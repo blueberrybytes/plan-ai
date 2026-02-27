@@ -4,6 +4,9 @@ import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
 import { useAuth } from "../providers/FirebaseAuthProvider";
 import { auth } from "../firebase/firebase";
 import { useLazyGetDesktopTokenQuery } from "../store/apis/authApi";
+import { useDispatch, useSelector } from "react-redux";
+import { loginApple, loginGoogle, loginMicrosoft } from "../store/slices/auth/authSlice";
+import { selectErrorSession } from "../store/slices/auth/authSelector";
 
 /**
  * /auth/desktop?local_port=4321 — opened by the Plan AI Recorder (Electron app)
@@ -27,14 +30,36 @@ const DesktopCallback: React.FC = () => {
   const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
   const [errorMsg, setErrorMsg] = useState<string>("");
 
-  // Read local_port from URL — present when opened by the Electron dev build
+  const dispatch = useDispatch();
+  const errorSession = useSelector(selectErrorSession);
+
+  // Read local_port and provider from URL
   const localPort = new URLSearchParams(window.location.search).get("local_port");
+  const provider = new URLSearchParams(window.location.search).get("provider");
 
   const [triggerGetDesktopToken, { data, error }] = useLazyGetDesktopTokenQuery();
+
+  // If OAuth gets manually closed by the user or an error occurs
+  useEffect(() => {
+    if (errorSession && localPort) {
+      // Send cancel signal to the Electron app listening on local server
+      const img = new Image();
+      img.src = `http://localhost:${localPort}/auth-cancel`;
+      setStatus("error");
+      setErrorMsg(errorSession.message || "Authentication was cancelled or failed.");
+    }
+  }, [errorSession, localPort]);
 
   useEffect(() => {
     if (!isAuthInitialized) return;
     if (!firebaseUser) {
+      if (provider) {
+        if (provider === "apple") dispatch(loginApple());
+        else if (provider === "google") dispatch(loginGoogle());
+        else if (provider === "microsoft") dispatch(loginMicrosoft());
+        return; // wait for login to complete
+      }
+
       const next = encodeURIComponent(window.location.pathname + window.location.search);
       window.location.href = `/login?next=${next}`;
       return;
@@ -42,7 +67,7 @@ const DesktopCallback: React.FC = () => {
 
     // If authenticated, trigger the token fetch
     triggerGetDesktopToken();
-  }, [isAuthInitialized, firebaseUser, triggerGetDesktopToken]);
+  }, [isAuthInitialized, firebaseUser, triggerGetDesktopToken, provider, dispatch]);
 
   useEffect(() => {
     if (!data?.data?.customToken) return;
