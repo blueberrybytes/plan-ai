@@ -62,12 +62,20 @@ export default function Login() {
     dispatch(setIsLoading(false));
   }, [dispatch]);
 
+  // Parse URL parameters for Desktop Auth OOB flow
+  const isDesktopAuth = new URLSearchParams(window.location.search).get("desktop_auth") === "true";
+  const localPort = new URLSearchParams(window.location.search).get("local_port");
+
   // Redirect if user is already logged in
   useEffect(() => {
     if (user) {
-      navigate("/home");
+      if (isDesktopAuth && localPort) {
+        navigate(`/auth/desktop?local_port=${localPort}`);
+      } else {
+        navigate("/home");
+      }
     }
-  }, [user, navigate]);
+  }, [user, navigate, isDesktopAuth, localPort]);
 
   // Handle error from Redux
   useEffect(() => {

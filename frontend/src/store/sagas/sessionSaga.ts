@@ -371,8 +371,10 @@ function* loginGoogleFunc(): Generator<any, void, any> {
   try {
     console.log("Starting Google login process");
     const provider = new GoogleAuthProvider();
+
     const result: UserCredential = yield call(signInWithPopup, auth, provider);
     const user = result.user;
+
     console.log("Google login successful, user:", user.uid, user.email);
 
     // Get the ID token

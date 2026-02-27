@@ -20,13 +20,9 @@ const QDRANT_URL = EnvUtils.get("QDRANT_URL") || "http://127.0.0.1:6333";
 // Middlewares
 app.use(
   cors({
-    origin: (origin, callback) => {
-      // Allow any origin dynamically to support credentials: true
-      callback(null, true);
-    },
-    credentials: true,
+    origin: "*", // allow all
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization", "x-admin-key", "X-Current-Path"],
+    allowedHeaders: "*", // allow all headers
   }),
 );
 app.use(bodyParser.urlencoded({ limit: "50mb", extended: true }));

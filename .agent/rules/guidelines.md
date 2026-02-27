@@ -7,6 +7,7 @@ trigger: always_on
 ## Browser
 
 Do not use your browser to check. Only do code
+Do not run servers. I run them not you.
 
 ## Core Principles
 

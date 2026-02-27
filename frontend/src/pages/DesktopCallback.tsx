@@ -3,15 +3,9 @@ import { Box, CircularProgress, Typography, Alert, Stack, Button } from "@mui/ma
 import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
 import { useAuth } from "../providers/FirebaseAuthProvider";
 import { auth } from "../firebase/firebase";
-import { signOut, onAuthStateChanged } from "firebase/auth";
+import { onAuthStateChanged } from "firebase/auth";
 import { useLazyGetDesktopTokenQuery } from "../store/apis/authApi";
-import { useDispatch, useSelector } from "react-redux";
-import {
-  loginApple,
-  loginGoogle,
-  loginMicrosoft,
-  clearSessionError,
-} from "../store/slices/auth/authSlice";
+import { useSelector } from "react-redux";
 import { selectErrorSession } from "../store/slices/auth/authSelector";
 
 /**
@@ -44,9 +38,7 @@ const DesktopCallback: React.FC = () => {
   const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
   const [errorMsg, setErrorMsg] = useState<string>("");
 
-  const dispatch = useDispatch();
   const errorSession = useSelector(selectErrorSession);
-  const [hasStartedLogin, setHasStartedLogin] = useState(false);
 
   // Read local_port and provider from URL
   const localPort = new URLSearchParams(window.location.search).get("local_port");
@@ -66,80 +58,32 @@ const DesktopCallback: React.FC = () => {
   // If OAuth gets manually closed by the user or an error occurs during this attempt
   useEffect(() => {
     // Only cancel if an error arrives AFTER we actually started the login attempt
-    if (hasStartedLogin && errorSession && localPort) {
+    if (errorSession && localPort) {
       console.error(
         "[DesktopCallback] Cancellation triggered by Redux sessionError:",
         errorSession,
       );
       cancelAuth();
     }
-  }, [cancelAuth, errorSession, localPort, hasStartedLogin]);
-
-  useEffect(() => {
-    const handleMessage = (event: MessageEvent) => {
-      if (event.data?.type === "OAUTH_POPUP_CLOSED") {
-        setTimeout(() => {
-          // If the popup closed but Firebase successfully authenticated the user,
-          // do not trigger the cancellation fallback! Wait for the custom token fetch.
-          if (auth.currentUser) {
-            console.log(
-              "[DesktopCallback] Popup closed on SUCCESS (auth.currentUser found). Will not cancel.",
-            );
-            return;
-          }
-
-          console.log("[DesktopCallback] Popup closed and no user found. Cancelling auth flow.");
-          setStatus((currentStatus) => {
-            if (currentStatus === "loading") {
-              if (localPort) {
-                navigator.sendBeacon(`http://localhost:${localPort}/auth-cancel`);
-                window.close();
-              }
-              setErrorMsg("Authentication was cancelled.");
-              return "error";
-            }
-            return currentStatus;
-          });
-        }, 3000);
-      }
-    };
-    window.addEventListener("message", handleMessage);
-    return () => window.removeEventListener("message", handleMessage);
-  }, [localPort]);
+  }, [cancelAuth, errorSession, localPort]);
 
   useEffect(() => {
     if (!isAuthInitialized) return;
 
-    // Force sign out if the requested provider doesn't match current user's provider
-    if (firebaseUser && provider) {
-      const userProviderIds = firebaseUser.providerData.map((p) => p.providerId);
-      if (!userProviderIds.some((id) => id.includes(provider))) {
-        signOut(auth);
-        return; // Wait for logout
-      }
-    }
-
     if (!firebaseUser) {
-      if (provider) {
-        setHasStartedLogin(true);
-        dispatch(clearSessionError()); // wipe the slate clean immediately
-
-        if (provider === "apple") dispatch(loginApple());
-        else if (provider === "google") dispatch(loginGoogle());
-        else if (provider === "microsoft") dispatch(loginMicrosoft());
-        return; // wait for login to complete
+      // If no valid session is present, bounce them back to the login screen with the local_port intact
+      if (localPort) {
+        window.location.href = `/login?desktop_auth=true&local_port=${localPort}`;
+      } else {
+        window.location.href = `/login`;
       }
-
-      // If no provider is in the URL, this shouldn't be loaded without a session.
-      const next = encodeURIComponent(window.location.pathname + window.location.search);
-      window.location.href = `/login?next=${next}`;
       return;
     }
 
-    // If authenticated, trigger the token fetch
+    // If authenticated, trigger the custom token fetch for the desktop app
     console.log("[DesktopCallback] Triggering token fetch for user:", firebaseUser.uid);
     triggerGetDesktopToken();
-  }, [isAuthInitialized, firebaseUser, triggerGetDesktopToken, provider, dispatch]);
+  }, [isAuthInitialized, firebaseUser, triggerGetDesktopToken, provider, localPort]);
 
   useEffect(() => {
     console.log("[DesktopCallback] Token Fetch Data Updated:", {
