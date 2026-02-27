@@ -21,7 +21,8 @@ Try the live app at [plan-ai.blueberrybytes.com](https://plan-ai.blueberrybytes.
 | **AI task generation**        | Scoped, prioritised tasks with owners, due dates, and full meeting context — zero manual effort.                                                                   |
 | **Kanban boards & timelines** | Switch between kanban, dependency diagrams, and roadmap views.                                                                                                     |
 | **AI slide decks**            | Generate branded presentations from any prompt or context file. Pick a theme, choose a slide count (or let AI decide, up to 15), and stream the result.            |
-| **Contextual RAG chat**       | Ask questions across all your sessions, transcripts, and uploaded files. Gemini retrieves up to 500 relevant chunks per query.                                     |
+| **Contextual RAG chat**       | A dedicated `/home` chat dashboard to query up to 500 relevant chunks across sessions, transcripts, and a global backend knowledge base.                           |
+| **Floating assistant**        | An omnipresent floating chat window for quick actions, navigation help, and on-demand contextual queries without losing your place.                                |
 | **Context library**           | Upload PDFs, Word docs, or text files as reusable context for slide generation and chat.                                                                           |
 | **Jira & Linear integration** | Push tasks directly from the board to your issue tracker.                                                                                                          |
 
@@ -63,6 +64,8 @@ graph TD
 ![Plan AI dashboard](./images/img1.png)
 
 ![Plan AI contexts view](./images/img2.png)
+
+![Plan AI contexts view](./images/img3.png)
 
 ---
 
@@ -247,12 +250,14 @@ Supported slide types: `title_only`, `text_block`, `text_image`, `bullet_list`, 
 - Optional `numSlides` parameter (1–15); defaults to AI-chosen slide count
 - Falls back to `generateObject()` if streaming fails
 
-### RAG chat
+### RAG chat & Knowledge Base
 
 - Embeddings: OpenAI `text-embedding-3-small` via LangChain
 - Vector store: Qdrant (`context_files` collection)
+- System Context: The AI model ingests a global `plan_ai_overview.md` file from the backend to deeply understand the application's capabilities.
 - Retrieves up to **500 chunks** for chat queries, up to **1 000 chunks** for transcript task extraction
 - Context IDs passed per thread; each message triggers a fresh vector search
+- Accessible via a dedicated ChatGPT-like Home page and a globally available Floating Assistant.
 
 ### Task extraction
 
