@@ -7,17 +7,16 @@
 		"requestBodies": {},
 		"responses": {},
 		"schemas": {
-			"_36_Enums.TranscriptSource": {
+			"_36_Enums.ProjectStatus": {
 				"type": "string",
 				"enum": [
-					"MANUAL",
-					"RECORDING",
-					"UPLOAD",
-					"IMPORTED"
+					"ACTIVE",
+					"COMPLETED",
+					"ARCHIVED"
 				]
 			},
-			"TranscriptSource": {
-				"$ref": "#/components/schemas/_36_Enums.TranscriptSource"
+			"ProjectStatus": {
+				"$ref": "#/components/schemas/_36_Enums.ProjectStatus"
 			},
 			"JsonValue": {
 				"anyOf": [
@@ -52,6 +51,914 @@
 			"JsonArray": {
 				"description": "From https://github.com/sindresorhus/type-fest/\r\nMatches a JSON array.",
 				"properties": {},
+				"type": "object",
+				"additionalProperties": false
+			},
+			"ProjectResponse": {
+				"properties": {
+					"id": {
+						"type": "string"
+					},
+					"title": {
+						"type": "string"
+					},
+					"description": {
+						"type": "string",
+						"nullable": true
+					},
+					"status": {
+						"$ref": "#/components/schemas/ProjectStatus"
+					},
+					"startedAt": {
+						"type": "string",
+						"format": "date-time",
+						"nullable": true
+					},
+					"endedAt": {
+						"type": "string",
+						"format": "date-time",
+						"nullable": true
+					},
+					"metadata": {
+						"allOf": [
+							{
+								"$ref": "#/components/schemas/JsonValue"
+							}
+						],
+						"nullable": true
+					},
+					"createdAt": {
+						"type": "string",
+						"format": "date-time"
+					},
+					"updatedAt": {
+						"type": "string",
+						"format": "date-time"
+					}
+				},
+				"required": [
+					"id",
+					"title",
+					"description",
+					"status",
+					"startedAt",
+					"endedAt",
+					"metadata",
+					"createdAt",
+					"updatedAt"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"ProjectListResponse": {
+				"properties": {
+					"projects": {
+						"items": {
+							"$ref": "#/components/schemas/ProjectResponse"
+						},
+						"type": "array"
+					},
+					"total": {
+						"type": "number",
+						"format": "double"
+					}
+				},
+				"required": [
+					"projects",
+					"total"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"ApiResponse_ProjectListResponse_": {
+				"properties": {
+					"message": {
+						"type": "string"
+					},
+					"data": {
+						"allOf": [
+							{
+								"$ref": "#/components/schemas/ProjectListResponse"
+							}
+						],
+						"nullable": true
+					},
+					"status": {
+						"type": "number",
+						"format": "double"
+					}
+				},
+				"required": [
+					"data",
+					"status"
+				],
+				"type": "object"
+			},
+			"_36_Enums.TranscriptSource": {
+				"type": "string",
+				"enum": [
+					"MANUAL",
+					"RECORDING",
+					"UPLOAD",
+					"IMPORTED"
+				]
+			},
+			"TranscriptSource": {
+				"$ref": "#/components/schemas/_36_Enums.TranscriptSource"
+			},
+			"TranscriptResponse": {
+				"properties": {
+					"id": {
+						"type": "string"
+					},
+					"projectId": {
+						"type": "string",
+						"nullable": true
+					},
+					"userId": {
+						"type": "string"
+					},
+					"title": {
+						"type": "string",
+						"nullable": true
+					},
+					"source": {
+						"$ref": "#/components/schemas/TranscriptSource"
+					},
+					"language": {
+						"type": "string",
+						"nullable": true
+					},
+					"summary": {
+						"type": "string",
+						"nullable": true
+					},
+					"transcript": {
+						"type": "string",
+						"nullable": true
+					},
+					"recordedAt": {
+						"type": "string",
+						"format": "date-time",
+						"nullable": true
+					},
+					"metadata": {
+						"allOf": [
+							{
+								"$ref": "#/components/schemas/JsonValue"
+							}
+						],
+						"nullable": true
+					},
+					"createdAt": {
+						"type": "string",
+						"format": "date-time"
+					},
+					"updatedAt": {
+						"type": "string",
+						"format": "date-time"
+					}
+				},
+				"required": [
+					"id",
+					"projectId",
+					"userId",
+					"title",
+					"source",
+					"language",
+					"summary",
+					"transcript",
+					"recordedAt",
+					"metadata",
+					"createdAt",
+					"updatedAt"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"_36_Enums.TaskStatus": {
+				"type": "string",
+				"enum": [
+					"COMPLETED",
+					"ARCHIVED",
+					"BACKLOG",
+					"IN_PROGRESS",
+					"BLOCKED"
+				]
+			},
+			"TaskStatus": {
+				"$ref": "#/components/schemas/_36_Enums.TaskStatus"
+			},
+			"_36_Enums.TaskPriority": {
+				"type": "string",
+				"enum": [
+					"LOW",
+					"MEDIUM",
+					"HIGH",
+					"URGENT"
+				]
+			},
+			"TaskPriority": {
+				"$ref": "#/components/schemas/_36_Enums.TaskPriority"
+			},
+			"TaskResponse": {
+				"properties": {
+					"id": {
+						"type": "string"
+					},
+					"projectId": {
+						"type": "string"
+					},
+					"title": {
+						"type": "string"
+					},
+					"description": {
+						"type": "string",
+						"nullable": true
+					},
+					"summary": {
+						"type": "string",
+						"nullable": true
+					},
+					"acceptanceCriteria": {
+						"type": "string",
+						"nullable": true
+					},
+					"status": {
+						"$ref": "#/components/schemas/TaskStatus"
+					},
+					"priority": {
+						"$ref": "#/components/schemas/TaskPriority"
+					},
+					"dueDate": {
+						"type": "string",
+						"format": "date-time",
+						"nullable": true
+					},
+					"dependencies": {
+						"items": {
+							"type": "string"
+						},
+						"type": "array"
+					},
+					"createdAt": {
+						"type": "string",
+						"format": "date-time"
+					},
+					"updatedAt": {
+						"type": "string",
+						"format": "date-time"
+					}
+				},
+				"required": [
+					"id",
+					"projectId",
+					"title",
+					"description",
+					"summary",
+					"acceptanceCriteria",
+					"status",
+					"priority",
+					"dueDate",
+					"dependencies",
+					"createdAt",
+					"updatedAt"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"TranscriptTaskInsight": {
+				"properties": {
+					"title": {
+						"type": "string"
+					},
+					"description": {
+						"type": "string"
+					},
+					"priority": {
+						"$ref": "#/components/schemas/TaskPriority"
+					},
+					"status": {
+						"$ref": "#/components/schemas/TaskStatus"
+					},
+					"dueDate": {
+						"type": "string",
+						"nullable": true
+					}
+				},
+				"required": [
+					"title"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"TranscriptAnalysisResponse": {
+				"properties": {
+					"language": {
+						"type": "string"
+					},
+					"summary": {
+						"type": "string",
+						"nullable": true
+					},
+					"tasks": {
+						"items": {
+							"$ref": "#/components/schemas/TranscriptTaskInsight"
+						},
+						"type": "array"
+					}
+				},
+				"required": [
+					"language",
+					"summary",
+					"tasks"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"CreateTranscriptResponse": {
+				"properties": {
+					"transcript": {
+						"$ref": "#/components/schemas/TranscriptResponse"
+					},
+					"tasks": {
+						"items": {
+							"$ref": "#/components/schemas/TaskResponse"
+						},
+						"type": "array"
+					},
+					"analysis": {
+						"$ref": "#/components/schemas/TranscriptAnalysisResponse"
+					}
+				},
+				"required": [
+					"transcript",
+					"tasks",
+					"analysis"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"ApiResponse_CreateTranscriptResponse_": {
+				"properties": {
+					"message": {
+						"type": "string"
+					},
+					"data": {
+						"allOf": [
+							{
+								"$ref": "#/components/schemas/CreateTranscriptResponse"
+							}
+						],
+						"nullable": true
+					},
+					"status": {
+						"type": "number",
+						"format": "double"
+					}
+				},
+				"required": [
+					"data",
+					"status"
+				],
+				"type": "object"
+			},
+			"TranscriptListResponse": {
+				"properties": {
+					"transcripts": {
+						"items": {
+							"$ref": "#/components/schemas/TranscriptResponse"
+						},
+						"type": "array"
+					},
+					"total": {
+						"type": "number",
+						"format": "double"
+					}
+				},
+				"required": [
+					"transcripts",
+					"total"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"ApiResponse_TranscriptListResponse_": {
+				"properties": {
+					"message": {
+						"type": "string"
+					},
+					"data": {
+						"allOf": [
+							{
+								"$ref": "#/components/schemas/TranscriptListResponse"
+							}
+						],
+						"nullable": true
+					},
+					"status": {
+						"type": "number",
+						"format": "double"
+					}
+				},
+				"required": [
+					"data",
+					"status"
+				],
+				"type": "object"
+			},
+			"ImportTranscriptRequest": {
+				"properties": {
+					"transcriptId": {
+						"type": "string"
+					},
+					"contextIds": {
+						"items": {
+							"type": "string"
+						},
+						"type": "array"
+					},
+					"persona": {
+						"type": "string",
+						"enum": [
+							"SECRETARY",
+							"ARCHITECT",
+							"PRODUCT_MANAGER",
+							"DEVELOPER"
+						]
+					},
+					"objective": {
+						"type": "string"
+					},
+					"englishLevel": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"transcriptId"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"ApiResponse_TranscriptResponse_": {
+				"properties": {
+					"message": {
+						"type": "string"
+					},
+					"data": {
+						"allOf": [
+							{
+								"$ref": "#/components/schemas/TranscriptResponse"
+							}
+						],
+						"nullable": true
+					},
+					"status": {
+						"type": "number",
+						"format": "double"
+					}
+				},
+				"required": [
+					"data",
+					"status"
+				],
+				"type": "object"
+			},
+			"InputJsonValue": {
+				"anyOf": [
+					{
+						"type": "string"
+					},
+					{
+						"type": "number",
+						"format": "double"
+					},
+					{
+						"type": "boolean"
+					},
+					{
+						"$ref": "#/components/schemas/InputJsonObject"
+					},
+					{
+						"$ref": "#/components/schemas/InputJsonArray"
+					},
+					{
+						"properties": {},
+						"type": "object"
+					}
+				],
+				"description": "Matches any valid value that can be used as an input for operations like\r\ncreate and update as the value of a JSON field. Unlike \\`JsonValue\\`, this\r\ntype allows read-only arrays and read-only object properties and disallows\r\n\\`null\\` at the top level.\r\n\r\n\\`null\\` cannot be used as the value of a JSON field because its meaning\r\nwould be ambiguous. Use \\`Prisma.JsonNull\\` to store the JSON null value or\r\n\\`Prisma.DbNull\\` to clear the JSON value and set the field to the database\r\nNULL value instead."
+			},
+			"InputJsonObject": {
+				"properties": {},
+				"additionalProperties": {
+					"$ref": "#/components/schemas/InputJsonValue"
+				},
+				"type": "object",
+				"description": "Matches a JSON object.\r\nUnlike \\`JsonObject\\`, this type allows undefined and read-only properties."
+			},
+			"InputJsonArray": {
+				"description": "Matches a JSON array.\r\nUnlike \\`JsonArray\\`, readonly arrays are assignable to this type.",
+				"properties": {},
+				"type": "object",
+				"additionalProperties": false
+			},
+			"ManualTranscriptRequest": {
+				"properties": {
+					"title": {
+						"type": "string",
+						"nullable": true
+					},
+					"source": {
+						"$ref": "#/components/schemas/TranscriptSource"
+					},
+					"language": {
+						"type": "string",
+						"nullable": true
+					},
+					"summary": {
+						"type": "string",
+						"nullable": true
+					},
+					"content": {
+						"type": "string",
+						"nullable": true
+					},
+					"recordedAt": {
+						"type": "string",
+						"format": "date-time",
+						"nullable": true
+					},
+					"metadata": {
+						"allOf": [
+							{
+								"$ref": "#/components/schemas/InputJsonValue"
+							}
+						],
+						"nullable": true
+					}
+				},
+				"type": "object",
+				"additionalProperties": false
+			},
+			"UpdateTranscriptRequest": {
+				"properties": {
+					"title": {
+						"type": "string",
+						"nullable": true
+					},
+					"source": {
+						"$ref": "#/components/schemas/TranscriptSource"
+					},
+					"language": {
+						"type": "string",
+						"nullable": true
+					},
+					"summary": {
+						"type": "string",
+						"nullable": true
+					},
+					"transcript": {
+						"type": "string",
+						"nullable": true
+					},
+					"recordedAt": {
+						"type": "string",
+						"format": "date-time",
+						"nullable": true
+					},
+					"metadata": {
+						"allOf": [
+							{
+								"$ref": "#/components/schemas/InputJsonValue"
+							}
+						],
+						"nullable": true
+					}
+				},
+				"type": "object",
+				"additionalProperties": false
+			},
+			"ApiResponse_null_": {
+				"properties": {
+					"message": {
+						"type": "string"
+					},
+					"data": {
+						"anyOf": [],
+						"nullable": true
+					},
+					"status": {
+						"type": "number",
+						"format": "double"
+					}
+				},
+				"required": [
+					"data",
+					"status"
+				],
+				"type": "object"
+			},
+			"TaskListResponse": {
+				"properties": {
+					"tasks": {
+						"items": {
+							"$ref": "#/components/schemas/TaskResponse"
+						},
+						"type": "array"
+					},
+					"total": {
+						"type": "number",
+						"format": "double"
+					}
+				},
+				"required": [
+					"tasks",
+					"total"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"ApiResponse_TaskListResponse_": {
+				"properties": {
+					"message": {
+						"type": "string"
+					},
+					"data": {
+						"allOf": [
+							{
+								"$ref": "#/components/schemas/TaskListResponse"
+							}
+						],
+						"nullable": true
+					},
+					"status": {
+						"type": "number",
+						"format": "double"
+					}
+				},
+				"required": [
+					"data",
+					"status"
+				],
+				"type": "object"
+			},
+			"ApiResponse_TaskResponse_": {
+				"properties": {
+					"message": {
+						"type": "string"
+					},
+					"data": {
+						"allOf": [
+							{
+								"$ref": "#/components/schemas/TaskResponse"
+							}
+						],
+						"nullable": true
+					},
+					"status": {
+						"type": "number",
+						"format": "double"
+					}
+				},
+				"required": [
+					"data",
+					"status"
+				],
+				"type": "object"
+			},
+			"CreateTaskRequest": {
+				"properties": {
+					"title": {
+						"type": "string"
+					},
+					"description": {
+						"type": "string",
+						"nullable": true
+					},
+					"summary": {
+						"type": "string",
+						"nullable": true
+					},
+					"acceptanceCriteria": {
+						"type": "string",
+						"nullable": true
+					},
+					"status": {
+						"$ref": "#/components/schemas/TaskStatus"
+					},
+					"priority": {
+						"$ref": "#/components/schemas/TaskPriority"
+					},
+					"dueDate": {
+						"type": "string",
+						"format": "date-time",
+						"nullable": true,
+						"description": "Format: date-time"
+					},
+					"metadata": {
+						"allOf": [
+							{
+								"$ref": "#/components/schemas/InputJsonValue"
+							}
+						],
+						"nullable": true
+					},
+					"dependencyTaskIds": {
+						"items": {
+							"type": "string"
+						},
+						"type": "array"
+					}
+				},
+				"required": [
+					"title"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"UpdateTaskRequest": {
+				"properties": {
+					"title": {
+						"type": "string"
+					},
+					"description": {
+						"type": "string",
+						"nullable": true
+					},
+					"summary": {
+						"type": "string",
+						"nullable": true
+					},
+					"acceptanceCriteria": {
+						"type": "string",
+						"nullable": true
+					},
+					"status": {
+						"$ref": "#/components/schemas/TaskStatus"
+					},
+					"priority": {
+						"$ref": "#/components/schemas/TaskPriority"
+					},
+					"dueDate": {
+						"type": "string",
+						"format": "date-time",
+						"nullable": true,
+						"description": "Format: date-time"
+					},
+					"metadata": {
+						"allOf": [
+							{
+								"$ref": "#/components/schemas/InputJsonValue"
+							}
+						],
+						"nullable": true
+					},
+					"dependencyTaskIds": {
+						"items": {
+							"type": "string"
+						},
+						"type": "array"
+					}
+				},
+				"type": "object",
+				"additionalProperties": false
+			},
+			"ApiResponse_ProjectResponse_": {
+				"properties": {
+					"message": {
+						"type": "string"
+					},
+					"data": {
+						"allOf": [
+							{
+								"$ref": "#/components/schemas/ProjectResponse"
+							}
+						],
+						"nullable": true
+					},
+					"status": {
+						"type": "number",
+						"format": "double"
+					}
+				},
+				"required": [
+					"data",
+					"status"
+				],
+				"type": "object"
+			},
+			"CreateProjectRequest": {
+				"properties": {
+					"title": {
+						"type": "string"
+					},
+					"description": {
+						"type": "string"
+					},
+					"status": {
+						"$ref": "#/components/schemas/ProjectStatus"
+					},
+					"startedAt": {
+						"type": "string",
+						"format": "date-time",
+						"nullable": true
+					},
+					"metadata": {
+						"allOf": [
+							{
+								"$ref": "#/components/schemas/InputJsonValue"
+							}
+						],
+						"nullable": true
+					}
+				},
+				"required": [
+					"title"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"UpdateProjectRequest": {
+				"properties": {
+					"title": {
+						"type": "string"
+					},
+					"description": {
+						"type": "string",
+						"nullable": true
+					},
+					"status": {
+						"$ref": "#/components/schemas/ProjectStatus"
+					},
+					"startedAt": {
+						"type": "string",
+						"format": "date-time",
+						"nullable": true
+					},
+					"endedAt": {
+						"type": "string",
+						"format": "date-time",
+						"nullable": true
+					},
+					"metadata": {
+						"allOf": [
+							{
+								"$ref": "#/components/schemas/InputJsonValue"
+							}
+						],
+						"nullable": true
+					}
+				},
+				"type": "object",
+				"additionalProperties": false
+			},
+			"CreateTranscriptRequest": {
+				"properties": {
+					"content": {
+						"type": "string"
+					},
+					"objective": {
+						"type": "string"
+					},
+					"title": {
+						"type": "string"
+					},
+					"source": {
+						"$ref": "#/components/schemas/TranscriptSource"
+					},
+					"recordedAt": {
+						"type": "string",
+						"format": "date-time",
+						"nullable": true
+					},
+					"metadata": {
+						"allOf": [
+							{
+								"$ref": "#/components/schemas/InputJsonValue"
+							}
+						],
+						"nullable": true
+					},
+					"contextIds": {
+						"items": {
+							"type": "string"
+						},
+						"type": "array"
+					},
+					"persona": {
+						"type": "string",
+						"enum": [
+							"SECRETARY",
+							"ARCHITECT",
+							"PRODUCT_MANAGER",
+							"DEVELOPER"
+						]
+					},
+					"englishLevel": {
+						"type": "string"
+					}
+				},
 				"type": "object",
 				"additionalProperties": false
 			},
@@ -106,6 +1013,12 @@
 					"updatedAt": {
 						"type": "string",
 						"format": "date-time"
+					},
+					"tasks": {
+						"items": {
+							"$ref": "#/components/schemas/TaskResponse"
+						},
+						"type": "array"
 					}
 				},
 				"required": [
@@ -192,45 +1105,6 @@
 					"status"
 				],
 				"type": "object"
-			},
-			"InputJsonValue": {
-				"anyOf": [
-					{
-						"type": "string"
-					},
-					{
-						"type": "number",
-						"format": "double"
-					},
-					{
-						"type": "boolean"
-					},
-					{
-						"$ref": "#/components/schemas/InputJsonObject"
-					},
-					{
-						"$ref": "#/components/schemas/InputJsonArray"
-					},
-					{
-						"properties": {},
-						"type": "object"
-					}
-				],
-				"description": "Matches any valid value that can be used as an input for operations like\r\ncreate and update as the value of a JSON field. Unlike \\`JsonValue\\`, this\r\ntype allows read-only arrays and read-only object properties and disallows\r\n\\`null\\` at the top level.\r\n\r\n\\`null\\` cannot be used as the value of a JSON field because its meaning\r\nwould be ambiguous. Use \\`Prisma.JsonNull\\` to store the JSON null value or\r\n\\`Prisma.DbNull\\` to clear the JSON value and set the field to the database\r\nNULL value instead."
-			},
-			"InputJsonObject": {
-				"properties": {},
-				"additionalProperties": {
-					"$ref": "#/components/schemas/InputJsonValue"
-				},
-				"type": "object",
-				"description": "Matches a JSON object.\r\nUnlike \\`JsonObject\\`, this type allows undefined and read-only properties."
-			},
-			"InputJsonArray": {
-				"description": "Matches a JSON array.\r\nUnlike \\`JsonArray\\`, readonly arrays are assignable to this type.",
-				"properties": {},
-				"type": "object",
-				"additionalProperties": false
 			},
 			"CreateStandaloneTranscriptBody": {
 				"properties": {
@@ -872,874 +1746,6 @@
 					"createdAt",
 					"updatedAt"
 				],
-				"type": "object",
-				"additionalProperties": false
-			},
-			"_36_Enums.ProjectStatus": {
-				"type": "string",
-				"enum": [
-					"ACTIVE",
-					"COMPLETED",
-					"ARCHIVED"
-				]
-			},
-			"ProjectStatus": {
-				"$ref": "#/components/schemas/_36_Enums.ProjectStatus"
-			},
-			"ProjectResponse": {
-				"properties": {
-					"id": {
-						"type": "string"
-					},
-					"title": {
-						"type": "string"
-					},
-					"description": {
-						"type": "string",
-						"nullable": true
-					},
-					"status": {
-						"$ref": "#/components/schemas/ProjectStatus"
-					},
-					"startedAt": {
-						"type": "string",
-						"format": "date-time",
-						"nullable": true
-					},
-					"endedAt": {
-						"type": "string",
-						"format": "date-time",
-						"nullable": true
-					},
-					"metadata": {
-						"allOf": [
-							{
-								"$ref": "#/components/schemas/JsonValue"
-							}
-						],
-						"nullable": true
-					},
-					"createdAt": {
-						"type": "string",
-						"format": "date-time"
-					},
-					"updatedAt": {
-						"type": "string",
-						"format": "date-time"
-					}
-				},
-				"required": [
-					"id",
-					"title",
-					"description",
-					"status",
-					"startedAt",
-					"endedAt",
-					"metadata",
-					"createdAt",
-					"updatedAt"
-				],
-				"type": "object",
-				"additionalProperties": false
-			},
-			"ProjectListResponse": {
-				"properties": {
-					"projects": {
-						"items": {
-							"$ref": "#/components/schemas/ProjectResponse"
-						},
-						"type": "array"
-					},
-					"total": {
-						"type": "number",
-						"format": "double"
-					}
-				},
-				"required": [
-					"projects",
-					"total"
-				],
-				"type": "object",
-				"additionalProperties": false
-			},
-			"ApiResponse_ProjectListResponse_": {
-				"properties": {
-					"message": {
-						"type": "string"
-					},
-					"data": {
-						"allOf": [
-							{
-								"$ref": "#/components/schemas/ProjectListResponse"
-							}
-						],
-						"nullable": true
-					},
-					"status": {
-						"type": "number",
-						"format": "double"
-					}
-				},
-				"required": [
-					"data",
-					"status"
-				],
-				"type": "object"
-			},
-			"TranscriptResponse": {
-				"properties": {
-					"id": {
-						"type": "string"
-					},
-					"projectId": {
-						"type": "string",
-						"nullable": true
-					},
-					"userId": {
-						"type": "string"
-					},
-					"title": {
-						"type": "string",
-						"nullable": true
-					},
-					"source": {
-						"$ref": "#/components/schemas/TranscriptSource"
-					},
-					"language": {
-						"type": "string",
-						"nullable": true
-					},
-					"summary": {
-						"type": "string",
-						"nullable": true
-					},
-					"transcript": {
-						"type": "string",
-						"nullable": true
-					},
-					"recordedAt": {
-						"type": "string",
-						"format": "date-time",
-						"nullable": true
-					},
-					"metadata": {
-						"allOf": [
-							{
-								"$ref": "#/components/schemas/JsonValue"
-							}
-						],
-						"nullable": true
-					},
-					"createdAt": {
-						"type": "string",
-						"format": "date-time"
-					},
-					"updatedAt": {
-						"type": "string",
-						"format": "date-time"
-					}
-				},
-				"required": [
-					"id",
-					"projectId",
-					"userId",
-					"title",
-					"source",
-					"language",
-					"summary",
-					"transcript",
-					"recordedAt",
-					"metadata",
-					"createdAt",
-					"updatedAt"
-				],
-				"type": "object",
-				"additionalProperties": false
-			},
-			"_36_Enums.TaskStatus": {
-				"type": "string",
-				"enum": [
-					"COMPLETED",
-					"ARCHIVED",
-					"BACKLOG",
-					"IN_PROGRESS",
-					"BLOCKED"
-				]
-			},
-			"TaskStatus": {
-				"$ref": "#/components/schemas/_36_Enums.TaskStatus"
-			},
-			"_36_Enums.TaskPriority": {
-				"type": "string",
-				"enum": [
-					"LOW",
-					"MEDIUM",
-					"HIGH",
-					"URGENT"
-				]
-			},
-			"TaskPriority": {
-				"$ref": "#/components/schemas/_36_Enums.TaskPriority"
-			},
-			"TaskResponse": {
-				"properties": {
-					"id": {
-						"type": "string"
-					},
-					"projectId": {
-						"type": "string"
-					},
-					"title": {
-						"type": "string"
-					},
-					"description": {
-						"type": "string",
-						"nullable": true
-					},
-					"summary": {
-						"type": "string",
-						"nullable": true
-					},
-					"acceptanceCriteria": {
-						"type": "string",
-						"nullable": true
-					},
-					"status": {
-						"$ref": "#/components/schemas/TaskStatus"
-					},
-					"priority": {
-						"$ref": "#/components/schemas/TaskPriority"
-					},
-					"dueDate": {
-						"type": "string",
-						"format": "date-time",
-						"nullable": true
-					},
-					"dependencies": {
-						"items": {
-							"type": "string"
-						},
-						"type": "array"
-					},
-					"createdAt": {
-						"type": "string",
-						"format": "date-time"
-					},
-					"updatedAt": {
-						"type": "string",
-						"format": "date-time"
-					}
-				},
-				"required": [
-					"id",
-					"projectId",
-					"title",
-					"description",
-					"summary",
-					"acceptanceCriteria",
-					"status",
-					"priority",
-					"dueDate",
-					"dependencies",
-					"createdAt",
-					"updatedAt"
-				],
-				"type": "object",
-				"additionalProperties": false
-			},
-			"TranscriptTaskInsight": {
-				"properties": {
-					"title": {
-						"type": "string"
-					},
-					"description": {
-						"type": "string"
-					},
-					"priority": {
-						"$ref": "#/components/schemas/TaskPriority"
-					},
-					"status": {
-						"$ref": "#/components/schemas/TaskStatus"
-					},
-					"dueDate": {
-						"type": "string",
-						"nullable": true
-					}
-				},
-				"required": [
-					"title"
-				],
-				"type": "object",
-				"additionalProperties": false
-			},
-			"TranscriptAnalysisResponse": {
-				"properties": {
-					"language": {
-						"type": "string"
-					},
-					"summary": {
-						"type": "string",
-						"nullable": true
-					},
-					"tasks": {
-						"items": {
-							"$ref": "#/components/schemas/TranscriptTaskInsight"
-						},
-						"type": "array"
-					}
-				},
-				"required": [
-					"language",
-					"summary",
-					"tasks"
-				],
-				"type": "object",
-				"additionalProperties": false
-			},
-			"CreateTranscriptResponse": {
-				"properties": {
-					"transcript": {
-						"$ref": "#/components/schemas/TranscriptResponse"
-					},
-					"tasks": {
-						"items": {
-							"$ref": "#/components/schemas/TaskResponse"
-						},
-						"type": "array"
-					},
-					"analysis": {
-						"$ref": "#/components/schemas/TranscriptAnalysisResponse"
-					}
-				},
-				"required": [
-					"transcript",
-					"tasks",
-					"analysis"
-				],
-				"type": "object",
-				"additionalProperties": false
-			},
-			"ApiResponse_CreateTranscriptResponse_": {
-				"properties": {
-					"message": {
-						"type": "string"
-					},
-					"data": {
-						"allOf": [
-							{
-								"$ref": "#/components/schemas/CreateTranscriptResponse"
-							}
-						],
-						"nullable": true
-					},
-					"status": {
-						"type": "number",
-						"format": "double"
-					}
-				},
-				"required": [
-					"data",
-					"status"
-				],
-				"type": "object"
-			},
-			"TranscriptListResponse": {
-				"properties": {
-					"transcripts": {
-						"items": {
-							"$ref": "#/components/schemas/TranscriptResponse"
-						},
-						"type": "array"
-					},
-					"total": {
-						"type": "number",
-						"format": "double"
-					}
-				},
-				"required": [
-					"transcripts",
-					"total"
-				],
-				"type": "object",
-				"additionalProperties": false
-			},
-			"ApiResponse_TranscriptListResponse_": {
-				"properties": {
-					"message": {
-						"type": "string"
-					},
-					"data": {
-						"allOf": [
-							{
-								"$ref": "#/components/schemas/TranscriptListResponse"
-							}
-						],
-						"nullable": true
-					},
-					"status": {
-						"type": "number",
-						"format": "double"
-					}
-				},
-				"required": [
-					"data",
-					"status"
-				],
-				"type": "object"
-			},
-			"ImportTranscriptRequest": {
-				"properties": {
-					"transcriptId": {
-						"type": "string"
-					},
-					"contextIds": {
-						"items": {
-							"type": "string"
-						},
-						"type": "array"
-					},
-					"persona": {
-						"type": "string",
-						"enum": [
-							"SECRETARY",
-							"ARCHITECT",
-							"PRODUCT_MANAGER",
-							"DEVELOPER"
-						]
-					},
-					"objective": {
-						"type": "string"
-					},
-					"englishLevel": {
-						"type": "string"
-					}
-				},
-				"required": [
-					"transcriptId"
-				],
-				"type": "object",
-				"additionalProperties": false
-			},
-			"ApiResponse_TranscriptResponse_": {
-				"properties": {
-					"message": {
-						"type": "string"
-					},
-					"data": {
-						"allOf": [
-							{
-								"$ref": "#/components/schemas/TranscriptResponse"
-							}
-						],
-						"nullable": true
-					},
-					"status": {
-						"type": "number",
-						"format": "double"
-					}
-				},
-				"required": [
-					"data",
-					"status"
-				],
-				"type": "object"
-			},
-			"ManualTranscriptRequest": {
-				"properties": {
-					"title": {
-						"type": "string",
-						"nullable": true
-					},
-					"source": {
-						"$ref": "#/components/schemas/TranscriptSource"
-					},
-					"language": {
-						"type": "string",
-						"nullable": true
-					},
-					"summary": {
-						"type": "string",
-						"nullable": true
-					},
-					"content": {
-						"type": "string",
-						"nullable": true
-					},
-					"recordedAt": {
-						"type": "string",
-						"format": "date-time",
-						"nullable": true
-					},
-					"metadata": {
-						"allOf": [
-							{
-								"$ref": "#/components/schemas/InputJsonValue"
-							}
-						],
-						"nullable": true
-					}
-				},
-				"type": "object",
-				"additionalProperties": false
-			},
-			"UpdateTranscriptRequest": {
-				"properties": {
-					"title": {
-						"type": "string",
-						"nullable": true
-					},
-					"source": {
-						"$ref": "#/components/schemas/TranscriptSource"
-					},
-					"language": {
-						"type": "string",
-						"nullable": true
-					},
-					"summary": {
-						"type": "string",
-						"nullable": true
-					},
-					"transcript": {
-						"type": "string",
-						"nullable": true
-					},
-					"recordedAt": {
-						"type": "string",
-						"format": "date-time",
-						"nullable": true
-					},
-					"metadata": {
-						"allOf": [
-							{
-								"$ref": "#/components/schemas/InputJsonValue"
-							}
-						],
-						"nullable": true
-					}
-				},
-				"type": "object",
-				"additionalProperties": false
-			},
-			"ApiResponse_null_": {
-				"properties": {
-					"message": {
-						"type": "string"
-					},
-					"data": {
-						"anyOf": [],
-						"nullable": true
-					},
-					"status": {
-						"type": "number",
-						"format": "double"
-					}
-				},
-				"required": [
-					"data",
-					"status"
-				],
-				"type": "object"
-			},
-			"TaskListResponse": {
-				"properties": {
-					"tasks": {
-						"items": {
-							"$ref": "#/components/schemas/TaskResponse"
-						},
-						"type": "array"
-					},
-					"total": {
-						"type": "number",
-						"format": "double"
-					}
-				},
-				"required": [
-					"tasks",
-					"total"
-				],
-				"type": "object",
-				"additionalProperties": false
-			},
-			"ApiResponse_TaskListResponse_": {
-				"properties": {
-					"message": {
-						"type": "string"
-					},
-					"data": {
-						"allOf": [
-							{
-								"$ref": "#/components/schemas/TaskListResponse"
-							}
-						],
-						"nullable": true
-					},
-					"status": {
-						"type": "number",
-						"format": "double"
-					}
-				},
-				"required": [
-					"data",
-					"status"
-				],
-				"type": "object"
-			},
-			"ApiResponse_TaskResponse_": {
-				"properties": {
-					"message": {
-						"type": "string"
-					},
-					"data": {
-						"allOf": [
-							{
-								"$ref": "#/components/schemas/TaskResponse"
-							}
-						],
-						"nullable": true
-					},
-					"status": {
-						"type": "number",
-						"format": "double"
-					}
-				},
-				"required": [
-					"data",
-					"status"
-				],
-				"type": "object"
-			},
-			"CreateTaskRequest": {
-				"properties": {
-					"title": {
-						"type": "string"
-					},
-					"description": {
-						"type": "string",
-						"nullable": true
-					},
-					"summary": {
-						"type": "string",
-						"nullable": true
-					},
-					"acceptanceCriteria": {
-						"type": "string",
-						"nullable": true
-					},
-					"status": {
-						"$ref": "#/components/schemas/TaskStatus"
-					},
-					"priority": {
-						"$ref": "#/components/schemas/TaskPriority"
-					},
-					"dueDate": {
-						"type": "string",
-						"format": "date-time",
-						"nullable": true,
-						"description": "Format: date-time"
-					},
-					"metadata": {
-						"allOf": [
-							{
-								"$ref": "#/components/schemas/InputJsonValue"
-							}
-						],
-						"nullable": true
-					},
-					"dependencyTaskIds": {
-						"items": {
-							"type": "string"
-						},
-						"type": "array"
-					}
-				},
-				"required": [
-					"title"
-				],
-				"type": "object",
-				"additionalProperties": false
-			},
-			"UpdateTaskRequest": {
-				"properties": {
-					"title": {
-						"type": "string"
-					},
-					"description": {
-						"type": "string",
-						"nullable": true
-					},
-					"summary": {
-						"type": "string",
-						"nullable": true
-					},
-					"acceptanceCriteria": {
-						"type": "string",
-						"nullable": true
-					},
-					"status": {
-						"$ref": "#/components/schemas/TaskStatus"
-					},
-					"priority": {
-						"$ref": "#/components/schemas/TaskPriority"
-					},
-					"dueDate": {
-						"type": "string",
-						"format": "date-time",
-						"nullable": true,
-						"description": "Format: date-time"
-					},
-					"metadata": {
-						"allOf": [
-							{
-								"$ref": "#/components/schemas/InputJsonValue"
-							}
-						],
-						"nullable": true
-					},
-					"dependencyTaskIds": {
-						"items": {
-							"type": "string"
-						},
-						"type": "array"
-					}
-				},
-				"type": "object",
-				"additionalProperties": false
-			},
-			"ApiResponse_ProjectResponse_": {
-				"properties": {
-					"message": {
-						"type": "string"
-					},
-					"data": {
-						"allOf": [
-							{
-								"$ref": "#/components/schemas/ProjectResponse"
-							}
-						],
-						"nullable": true
-					},
-					"status": {
-						"type": "number",
-						"format": "double"
-					}
-				},
-				"required": [
-					"data",
-					"status"
-				],
-				"type": "object"
-			},
-			"CreateProjectRequest": {
-				"properties": {
-					"title": {
-						"type": "string"
-					},
-					"description": {
-						"type": "string"
-					},
-					"status": {
-						"$ref": "#/components/schemas/ProjectStatus"
-					},
-					"startedAt": {
-						"type": "string",
-						"format": "date-time",
-						"nullable": true
-					},
-					"metadata": {
-						"allOf": [
-							{
-								"$ref": "#/components/schemas/InputJsonValue"
-							}
-						],
-						"nullable": true
-					}
-				},
-				"required": [
-					"title"
-				],
-				"type": "object",
-				"additionalProperties": false
-			},
-			"UpdateProjectRequest": {
-				"properties": {
-					"title": {
-						"type": "string"
-					},
-					"description": {
-						"type": "string",
-						"nullable": true
-					},
-					"status": {
-						"$ref": "#/components/schemas/ProjectStatus"
-					},
-					"startedAt": {
-						"type": "string",
-						"format": "date-time",
-						"nullable": true
-					},
-					"endedAt": {
-						"type": "string",
-						"format": "date-time",
-						"nullable": true
-					},
-					"metadata": {
-						"allOf": [
-							{
-								"$ref": "#/components/schemas/InputJsonValue"
-							}
-						],
-						"nullable": true
-					}
-				},
-				"type": "object",
-				"additionalProperties": false
-			},
-			"CreateTranscriptRequest": {
-				"properties": {
-					"content": {
-						"type": "string"
-					},
-					"objective": {
-						"type": "string"
-					},
-					"title": {
-						"type": "string"
-					},
-					"source": {
-						"$ref": "#/components/schemas/TranscriptSource"
-					},
-					"recordedAt": {
-						"type": "string",
-						"format": "date-time",
-						"nullable": true
-					},
-					"metadata": {
-						"allOf": [
-							{
-								"$ref": "#/components/schemas/InputJsonValue"
-							}
-						],
-						"nullable": true
-					},
-					"contextIds": {
-						"items": {
-							"type": "string"
-						},
-						"type": "array"
-					},
-					"persona": {
-						"type": "string",
-						"enum": [
-							"SECRETARY",
-							"ARCHITECT",
-							"PRODUCT_MANAGER",
-							"DEVELOPER"
-						]
-					},
-					"englishLevel": {
-						"type": "string"
-					}
-				},
 				"type": "object",
 				"additionalProperties": false
 			},
@@ -2938,590 +2944,6 @@
 		"contact": {}
 	},
 	"paths": {
-		"/api/transcripts": {
-			"get": {
-				"operationId": "ListTranscripts",
-				"responses": {
-					"200": {
-						"description": "Ok",
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/ApiResponse_StandaloneTranscriptListResponse_"
-								}
-							}
-						}
-					}
-				},
-				"tags": [
-					"Transcripts"
-				],
-				"security": [
-					{
-						"ClientLevel": []
-					}
-				],
-				"parameters": [
-					{
-						"in": "query",
-						"name": "page",
-						"required": false,
-						"schema": {
-							"default": 1,
-							"format": "double",
-							"type": "number"
-						}
-					},
-					{
-						"in": "query",
-						"name": "pageSize",
-						"required": false,
-						"schema": {
-							"default": 20,
-							"format": "double",
-							"type": "number"
-						}
-					},
-					{
-						"in": "query",
-						"name": "source",
-						"required": false,
-						"schema": {
-							"$ref": "#/components/schemas/TranscriptSource"
-						}
-					}
-				]
-			},
-			"post": {
-				"operationId": "CreateTranscript",
-				"responses": {
-					"200": {
-						"description": "Ok",
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/ApiResponse_StandaloneTranscriptResponse_"
-								}
-							}
-						}
-					}
-				},
-				"tags": [
-					"Transcripts"
-				],
-				"security": [
-					{
-						"ClientLevel": []
-					}
-				],
-				"parameters": [],
-				"requestBody": {
-					"required": true,
-					"content": {
-						"application/json": {
-							"schema": {
-								"$ref": "#/components/schemas/CreateStandaloneTranscriptBody"
-							}
-						}
-					}
-				}
-			}
-		},
-		"/api/transcripts/{id}": {
-			"get": {
-				"operationId": "GetTranscript",
-				"responses": {
-					"200": {
-						"description": "Ok",
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/ApiResponse_StandaloneTranscriptResponse_"
-								}
-							}
-						}
-					}
-				},
-				"tags": [
-					"Transcripts"
-				],
-				"security": [
-					{
-						"ClientLevel": []
-					}
-				],
-				"parameters": [
-					{
-						"in": "path",
-						"name": "id",
-						"required": true,
-						"schema": {
-							"type": "string"
-						}
-					}
-				]
-			},
-			"put": {
-				"operationId": "UpdateTranscript",
-				"responses": {
-					"200": {
-						"description": "Ok",
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/ApiResponse_StandaloneTranscriptResponse_"
-								}
-							}
-						}
-					}
-				},
-				"tags": [
-					"Transcripts"
-				],
-				"security": [
-					{
-						"ClientLevel": []
-					}
-				],
-				"parameters": [
-					{
-						"in": "path",
-						"name": "id",
-						"required": true,
-						"schema": {
-							"type": "string"
-						}
-					}
-				],
-				"requestBody": {
-					"required": true,
-					"content": {
-						"application/json": {
-							"schema": {
-								"$ref": "#/components/schemas/UpdateTranscriptInput"
-							}
-						}
-					}
-				}
-			},
-			"delete": {
-				"operationId": "DeleteTranscript",
-				"responses": {
-					"200": {
-						"description": "Ok",
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/ApiResponse__success-boolean__"
-								}
-							}
-						}
-					}
-				},
-				"tags": [
-					"Transcripts"
-				],
-				"security": [
-					{
-						"ClientLevel": []
-					}
-				],
-				"parameters": [
-					{
-						"in": "path",
-						"name": "id",
-						"required": true,
-						"schema": {
-							"type": "string"
-						}
-					}
-				]
-			}
-		},
-		"/api/slide-templates": {
-			"get": {
-				"operationId": "ListTemplates",
-				"responses": {
-					"200": {
-						"description": "Ok",
-						"content": {
-							"application/json": {
-								"schema": {
-									"items": {
-										"$ref": "#/components/schemas/SlideTemplateResponse"
-									},
-									"type": "array"
-								}
-							}
-						}
-					}
-				},
-				"tags": [
-					"Slide Templates"
-				],
-				"security": [
-					{
-						"ClientLevel": []
-					}
-				],
-				"parameters": []
-			},
-			"post": {
-				"operationId": "CreateTemplate",
-				"responses": {
-					"200": {
-						"description": "Ok",
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/SlideTemplateResponse"
-								}
-							}
-						}
-					}
-				},
-				"tags": [
-					"Slide Templates"
-				],
-				"security": [
-					{
-						"ClientLevel": []
-					}
-				],
-				"parameters": [],
-				"requestBody": {
-					"required": true,
-					"content": {
-						"application/json": {
-							"schema": {
-								"$ref": "#/components/schemas/CreateTemplateRequest"
-							}
-						}
-					}
-				}
-			}
-		},
-		"/api/slide-templates/{templateId}": {
-			"get": {
-				"operationId": "GetTemplate",
-				"responses": {
-					"200": {
-						"description": "Ok",
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/SlideTemplateResponse"
-								}
-							}
-						}
-					}
-				},
-				"tags": [
-					"Slide Templates"
-				],
-				"security": [
-					{
-						"ClientLevel": []
-					}
-				],
-				"parameters": [
-					{
-						"in": "path",
-						"name": "templateId",
-						"required": true,
-						"schema": {
-							"type": "string"
-						}
-					}
-				]
-			},
-			"put": {
-				"operationId": "UpdateTemplate",
-				"responses": {
-					"200": {
-						"description": "Ok",
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/SlideTemplateResponse"
-								}
-							}
-						}
-					}
-				},
-				"tags": [
-					"Slide Templates"
-				],
-				"security": [
-					{
-						"ClientLevel": []
-					}
-				],
-				"parameters": [
-					{
-						"in": "path",
-						"name": "templateId",
-						"required": true,
-						"schema": {
-							"type": "string"
-						}
-					}
-				],
-				"requestBody": {
-					"required": true,
-					"content": {
-						"application/json": {
-							"schema": {
-								"$ref": "#/components/schemas/UpdateTemplateRequest"
-							}
-						}
-					}
-				}
-			},
-			"delete": {
-				"operationId": "DeleteTemplate",
-				"responses": {
-					"200": {
-						"description": "Ok",
-						"content": {
-							"application/json": {
-								"schema": {
-									"properties": {
-										"success": {
-											"type": "boolean"
-										}
-									},
-									"required": [
-										"success"
-									],
-									"type": "object"
-								}
-							}
-						}
-					}
-				},
-				"tags": [
-					"Slide Templates"
-				],
-				"security": [
-					{
-						"ClientLevel": []
-					}
-				],
-				"parameters": [
-					{
-						"in": "path",
-						"name": "templateId",
-						"required": true,
-						"schema": {
-							"type": "string"
-						}
-					}
-				]
-			}
-		},
-		"/api/session/login": {
-			"post": {
-				"operationId": "Login",
-				"responses": {
-					"200": {
-						"description": "Ok",
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/ApiResponse_UserResponse_"
-								}
-							}
-						}
-					},
-					"401": {
-						"description": "Unauthorized",
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/GenericResponse"
-								}
-							}
-						}
-					},
-					"500": {
-						"description": "Internal Server Error",
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/GenericResponse"
-								}
-							}
-						}
-					}
-				},
-				"description": "Login with Firebase token.\nVerifies the token and returns user information.\nCreates a new user if one doesn't exist with the given Firebase UID.",
-				"tags": [
-					"Session"
-				],
-				"security": [],
-				"parameters": [],
-				"requestBody": {
-					"required": true,
-					"content": {
-						"application/json": {
-							"schema": {
-								"properties": {
-									"token": {
-										"type": "string"
-									},
-									"uuid": {
-										"type": "string"
-									}
-								},
-								"required": [
-									"token",
-									"uuid"
-								],
-								"type": "object"
-							}
-						}
-					}
-				}
-			}
-		},
-		"/api/session/me": {
-			"get": {
-				"operationId": "GetCurrentUser",
-				"responses": {
-					"200": {
-						"description": "Ok",
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/ApiResponse_UserResponse_"
-								}
-							}
-						}
-					},
-					"401": {
-						"description": "Unauthorized",
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/GenericResponse"
-								}
-							}
-						}
-					},
-					"500": {
-						"description": "Internal Server Error",
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/GenericResponse"
-								}
-							}
-						}
-					}
-				},
-				"description": "Get current user information.\nRequires authentication.",
-				"tags": [
-					"Session"
-				],
-				"security": [
-					{
-						"ClientLevel": []
-					}
-				],
-				"parameters": []
-			}
-		},
-		"/api/session/desktop-token": {
-			"get": {
-				"operationId": "GetDesktopToken",
-				"responses": {
-					"200": {
-						"description": "Ok",
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/ApiResponse__customToken-string__"
-								}
-							}
-						}
-					}
-				},
-				"description": "Generate a Firebase Custom Token for the authenticated user.\nCalled by the web app after the user logs in, to hand off auth to the Electron desktop recorder.",
-				"tags": [
-					"Session"
-				],
-				"security": [
-					{
-						"ClientLevel": []
-					}
-				],
-				"parameters": []
-			}
-		},
-		"/api/public/presentations/{presentationId}": {
-			"get": {
-				"operationId": "GetPublicPresentation",
-				"responses": {
-					"200": {
-						"description": "Ok",
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/PublicPresentationResponse"
-								}
-							}
-						}
-					}
-				},
-				"description": "Get a presentation for public viewing.\nNo authentication required.",
-				"tags": [
-					"Public Presentations"
-				],
-				"security": [],
-				"parameters": [
-					{
-						"in": "path",
-						"name": "presentationId",
-						"required": true,
-						"schema": {
-							"type": "string"
-						}
-					}
-				]
-			}
-		},
-		"/api/public/documents/{id}": {
-			"get": {
-				"operationId": "GetPublicDoc",
-				"responses": {
-					"200": {
-						"description": "Ok",
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/PublicDocResponse"
-								}
-							}
-						}
-					}
-				},
-				"tags": [
-					"Public Documents"
-				],
-				"security": [],
-				"parameters": [
-					{
-						"in": "path",
-						"name": "id",
-						"required": true,
-						"schema": {
-							"type": "string"
-						}
-					}
-				]
-			}
-		},
 		"/api/projects": {
 			"get": {
 				"operationId": "ListSessions",
@@ -4364,6 +3786,590 @@
 					{
 						"in": "path",
 						"name": "projectId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				]
+			}
+		},
+		"/api/transcripts": {
+			"get": {
+				"operationId": "ListTranscripts",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiResponse_StandaloneTranscriptListResponse_"
+								}
+							}
+						}
+					}
+				},
+				"tags": [
+					"Transcripts"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": [
+					{
+						"in": "query",
+						"name": "page",
+						"required": false,
+						"schema": {
+							"default": 1,
+							"format": "double",
+							"type": "number"
+						}
+					},
+					{
+						"in": "query",
+						"name": "pageSize",
+						"required": false,
+						"schema": {
+							"default": 20,
+							"format": "double",
+							"type": "number"
+						}
+					},
+					{
+						"in": "query",
+						"name": "source",
+						"required": false,
+						"schema": {
+							"$ref": "#/components/schemas/TranscriptSource"
+						}
+					}
+				]
+			},
+			"post": {
+				"operationId": "CreateTranscript",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiResponse_StandaloneTranscriptResponse_"
+								}
+							}
+						}
+					}
+				},
+				"tags": [
+					"Transcripts"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": [],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/CreateStandaloneTranscriptBody"
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/transcripts/{id}": {
+			"get": {
+				"operationId": "GetTranscript",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiResponse_StandaloneTranscriptResponse_"
+								}
+							}
+						}
+					}
+				},
+				"tags": [
+					"Transcripts"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": [
+					{
+						"in": "path",
+						"name": "id",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				]
+			},
+			"put": {
+				"operationId": "UpdateTranscript",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiResponse_StandaloneTranscriptResponse_"
+								}
+							}
+						}
+					}
+				},
+				"tags": [
+					"Transcripts"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": [
+					{
+						"in": "path",
+						"name": "id",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/UpdateTranscriptInput"
+							}
+						}
+					}
+				}
+			},
+			"delete": {
+				"operationId": "DeleteTranscript",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiResponse__success-boolean__"
+								}
+							}
+						}
+					}
+				},
+				"tags": [
+					"Transcripts"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": [
+					{
+						"in": "path",
+						"name": "id",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				]
+			}
+		},
+		"/api/slide-templates": {
+			"get": {
+				"operationId": "ListTemplates",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"items": {
+										"$ref": "#/components/schemas/SlideTemplateResponse"
+									},
+									"type": "array"
+								}
+							}
+						}
+					}
+				},
+				"tags": [
+					"Slide Templates"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": []
+			},
+			"post": {
+				"operationId": "CreateTemplate",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/SlideTemplateResponse"
+								}
+							}
+						}
+					}
+				},
+				"tags": [
+					"Slide Templates"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": [],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/CreateTemplateRequest"
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/slide-templates/{templateId}": {
+			"get": {
+				"operationId": "GetTemplate",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/SlideTemplateResponse"
+								}
+							}
+						}
+					}
+				},
+				"tags": [
+					"Slide Templates"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": [
+					{
+						"in": "path",
+						"name": "templateId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				]
+			},
+			"put": {
+				"operationId": "UpdateTemplate",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/SlideTemplateResponse"
+								}
+							}
+						}
+					}
+				},
+				"tags": [
+					"Slide Templates"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": [
+					{
+						"in": "path",
+						"name": "templateId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/UpdateTemplateRequest"
+							}
+						}
+					}
+				}
+			},
+			"delete": {
+				"operationId": "DeleteTemplate",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"success": {
+											"type": "boolean"
+										}
+									},
+									"required": [
+										"success"
+									],
+									"type": "object"
+								}
+							}
+						}
+					}
+				},
+				"tags": [
+					"Slide Templates"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": [
+					{
+						"in": "path",
+						"name": "templateId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				]
+			}
+		},
+		"/api/session/login": {
+			"post": {
+				"operationId": "Login",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiResponse_UserResponse_"
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Unauthorized",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/GenericResponse"
+								}
+							}
+						}
+					},
+					"500": {
+						"description": "Internal Server Error",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/GenericResponse"
+								}
+							}
+						}
+					}
+				},
+				"description": "Login with Firebase token.\nVerifies the token and returns user information.\nCreates a new user if one doesn't exist with the given Firebase UID.",
+				"tags": [
+					"Session"
+				],
+				"security": [],
+				"parameters": [],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"properties": {
+									"token": {
+										"type": "string"
+									},
+									"uuid": {
+										"type": "string"
+									}
+								},
+								"required": [
+									"token",
+									"uuid"
+								],
+								"type": "object"
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/session/me": {
+			"get": {
+				"operationId": "GetCurrentUser",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiResponse_UserResponse_"
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Unauthorized",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/GenericResponse"
+								}
+							}
+						}
+					},
+					"500": {
+						"description": "Internal Server Error",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/GenericResponse"
+								}
+							}
+						}
+					}
+				},
+				"description": "Get current user information.\nRequires authentication.",
+				"tags": [
+					"Session"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": []
+			}
+		},
+		"/api/session/desktop-token": {
+			"get": {
+				"operationId": "GetDesktopToken",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiResponse__customToken-string__"
+								}
+							}
+						}
+					}
+				},
+				"description": "Generate a Firebase Custom Token for the authenticated user.\nCalled by the web app after the user logs in, to hand off auth to the Electron desktop recorder.",
+				"tags": [
+					"Session"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": []
+			}
+		},
+		"/api/public/presentations/{presentationId}": {
+			"get": {
+				"operationId": "GetPublicPresentation",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/PublicPresentationResponse"
+								}
+							}
+						}
+					}
+				},
+				"description": "Get a presentation for public viewing.\nNo authentication required.",
+				"tags": [
+					"Public Presentations"
+				],
+				"security": [],
+				"parameters": [
+					{
+						"in": "path",
+						"name": "presentationId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				]
+			}
+		},
+		"/api/public/documents/{id}": {
+			"get": {
+				"operationId": "GetPublicDoc",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/PublicDocResponse"
+								}
+							}
+						}
+					}
+				},
+				"tags": [
+					"Public Documents"
+				],
+				"security": [],
+				"parameters": [
+					{
+						"in": "path",
+						"name": "id",
 						"required": true,
 						"schema": {
 							"type": "string"

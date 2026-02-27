@@ -21,7 +21,9 @@ import {
   type TranscriptListOptions,
   type UpdateTranscriptInput,
 } from "../services/transcriptCrudService";
+import { type TaskWithRelations } from "../services/taskCrudService";
 import { projectTranscriptService } from "../services/projectTranscriptService";
+import { mapTaskResponse, type TaskResponse } from "./projectsModelController";
 
 interface StandaloneTranscriptResponse {
   id: string;
@@ -36,6 +38,7 @@ interface StandaloneTranscriptResponse {
   metadata: Prisma.JsonValue | null;
   createdAt: Date;
   updatedAt: Date;
+  tasks?: TaskResponse[];
 }
 
 interface StandaloneTranscriptListResponse {
@@ -260,9 +263,28 @@ export class TranscriptsController extends Controller {
 
     const transcript = await transcriptCrudService.getTranscriptForUser(user.id, id);
 
+    const rawTasks = await prisma.task.findMany({
+      where: {
+        transcriptLinks: {
+          some: { transcriptId: id },
+        },
+        project: { userId: user.id },
+      },
+      include: {
+        dependants: {
+          select: { dependsOnTaskId: true },
+        },
+      },
+    });
+
+    const mappedTasks = rawTasks.map((t) => mapTaskResponse(t as unknown as TaskWithRelations));
+
     return {
       status: 200,
-      data: this.mapTranscriptResponse(transcript),
+      data: {
+        ...this.mapTranscriptResponse(transcript),
+        tasks: mappedTasks,
+      },
     };
   }
 

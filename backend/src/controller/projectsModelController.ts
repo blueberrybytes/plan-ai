@@ -102,7 +102,7 @@ interface TranscriptResponse {
   createdAt: Date;
   updatedAt: Date;
 }
-interface TaskResponse {
+export interface TaskResponse {
   id: string;
   projectId: string;
   title: string;
@@ -199,6 +199,25 @@ interface UpdateTaskRequest {
   dueDate?: Date | null;
   metadata?: Prisma.InputJsonValue | null;
   dependencyTaskIds?: string[];
+}
+
+export function mapTaskResponse(
+  task: TaskWithRelations | (Task & { dependants?: { dependsOnTaskId: string }[] }),
+): TaskResponse {
+  return {
+    id: task.id,
+    projectId: task.projectId,
+    title: task.title,
+    description: task.description,
+    summary: task.summary,
+    acceptanceCriteria: task.acceptanceCriteria,
+    status: task.status,
+    priority: task.priority,
+    dueDate: task.dueDate,
+    dependencies: (task.dependants ?? []).map((dependency) => dependency.dependsOnTaskId),
+    createdAt: task.createdAt,
+    updatedAt: task.updatedAt,
+  };
 }
 
 @Route("api/projects")
@@ -410,7 +429,7 @@ export class ProjectsModelController extends Controller {
       message: "Transcript uploaded",
       data: {
         transcript: this.mapTranscriptResponse(result.transcript),
-        tasks: tasksWithRelations.map((task: TaskWithRelations) => this.mapTaskResponse(task)),
+        tasks: tasksWithRelations.map((task: TaskWithRelations) => mapTaskResponse(task)),
         analysis: this.mapTranscriptAnalysis(result.analysis),
       },
     };
@@ -499,7 +518,7 @@ export class ProjectsModelController extends Controller {
       message: "Recording imported and tasks generated",
       data: {
         transcript: this.mapTranscriptResponse(result.transcript),
-        tasks: tasksWithRelations.map((task: TaskWithRelations) => this.mapTaskResponse(task)),
+        tasks: tasksWithRelations.map((task: TaskWithRelations) => mapTaskResponse(task)),
         analysis: this.mapTranscriptAnalysis(result.analysis),
       },
     };
@@ -624,7 +643,7 @@ export class ProjectsModelController extends Controller {
     return {
       status: 200,
       data: {
-        tasks: resultTasks.map((task: Task) => this.mapTaskResponse(task)),
+        tasks: resultTasks.map((task) => mapTaskResponse(task as TaskWithRelations)),
         total,
       },
     };
@@ -644,7 +663,7 @@ export class ProjectsModelController extends Controller {
 
     return {
       status: 200,
-      data: this.mapTaskResponse(task),
+      data: mapTaskResponse(task),
     };
   }
 
@@ -674,7 +693,7 @@ export class ProjectsModelController extends Controller {
     return {
       status: 201,
       message: "Task created",
-      data: this.mapTaskResponse(task),
+      data: mapTaskResponse(task),
     };
   }
 
@@ -704,7 +723,7 @@ export class ProjectsModelController extends Controller {
     return {
       status: 200,
       message: "Task updated",
-      data: this.mapTaskResponse(task),
+      data: mapTaskResponse(task),
     };
   }
 
@@ -855,7 +874,7 @@ export class ProjectsModelController extends Controller {
       message: "Transcript created",
       data: {
         transcript: this.mapTranscriptResponse(result.transcript),
-        tasks: tasksWithRelations.map((task: TaskWithRelations) => this.mapTaskResponse(task)),
+        tasks: tasksWithRelations.map((task: TaskWithRelations) => mapTaskResponse(task)),
         analysis: this.mapTranscriptAnalysis(result.analysis),
       },
     };
@@ -950,25 +969,6 @@ export class ProjectsModelController extends Controller {
       metadata: transcript.metadata,
       createdAt: transcript.createdAt,
       updatedAt: transcript.updatedAt,
-    };
-  }
-
-  private mapTaskResponse(
-    task: TaskWithRelations | (Task & { dependants?: { dependsOnTaskId: string }[] }),
-  ): TaskResponse {
-    return {
-      id: task.id,
-      projectId: task.projectId,
-      title: task.title,
-      description: task.description,
-      summary: task.summary,
-      acceptanceCriteria: task.acceptanceCriteria,
-      status: task.status,
-      priority: task.priority,
-      dueDate: task.dueDate,
-      dependencies: (task.dependants ?? []).map((dependency) => dependency.dependsOnTaskId),
-      createdAt: task.createdAt,
-      updatedAt: task.updatedAt,
     };
   }
 

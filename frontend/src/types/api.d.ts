@@ -4,6 +4,150 @@
  */
 
 export interface paths {
+    "/api/projects": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ListSessions"];
+        put?: never;
+        post: operations["CreateSession"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/projects/{projectId}/transcripts/upload": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["UploadTranscript"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/projects/{projectId}/transcripts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ListProjectTranscripts"];
+        put?: never;
+        post: operations["CreateProjectTranscript"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/projects/{projectId}/transcripts/import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ImportProjectTranscript"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/projects/{projectId}/transcripts/{transcriptId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetProjectTranscript"];
+        put: operations["UpdateProjectTranscript"];
+        post?: never;
+        delete: operations["DeleteProjectTranscript"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/projects/{projectId}/transcripts/manual": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["CreateManualTranscript"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/projects/{projectId}/tasks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ListTasks"];
+        put?: never;
+        post: operations["CreateTask"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/projects/{projectId}/tasks/{taskId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetTask"];
+        put: operations["UpdateTask"];
+        post?: never;
+        delete: operations["DeleteTask"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/projects/{projectId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetSession"];
+        put: operations["UpdateSession"];
+        post?: never;
+        delete: operations["DeleteSession"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/transcripts": {
         parameters: {
             query?: never;
@@ -160,150 +304,6 @@ export interface paths {
         put?: never;
         post?: never;
         delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/projects": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["ListSessions"];
-        put?: never;
-        post: operations["CreateSession"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/projects/{projectId}/transcripts/upload": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["UploadTranscript"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/projects/{projectId}/transcripts": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["ListProjectTranscripts"];
-        put?: never;
-        post: operations["CreateProjectTranscript"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/projects/{projectId}/transcripts/import": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["ImportProjectTranscript"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/projects/{projectId}/transcripts/{transcriptId}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["GetProjectTranscript"];
-        put: operations["UpdateProjectTranscript"];
-        post?: never;
-        delete: operations["DeleteProjectTranscript"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/projects/{projectId}/transcripts/manual": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["CreateManualTranscript"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/projects/{projectId}/tasks": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["ListTasks"];
-        put?: never;
-        post: operations["CreateTask"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/projects/{projectId}/tasks/{taskId}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["GetTask"];
-        put: operations["UpdateTask"];
-        post?: never;
-        delete: operations["DeleteTask"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/projects/{projectId}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["GetSession"];
-        put: operations["UpdateSession"];
-        post?: never;
-        delete: operations["DeleteSession"];
         options?: never;
         head?: never;
         patch?: never;
@@ -729,8 +729,8 @@ export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
         /** @enum {string} */
-        "_36_Enums.TranscriptSource": "MANUAL" | "RECORDING" | "UPLOAD" | "IMPORTED";
-        TranscriptSource: components["schemas"]["_36_Enums.TranscriptSource"];
+        "_36_Enums.ProjectStatus": "ACTIVE" | "COMPLETED" | "ARCHIVED";
+        ProjectStatus: components["schemas"]["_36_Enums.ProjectStatus"];
         /**
          * @description From https://github.com/sindresorhus/type-fest/
          *     Matches any valid JSON value.
@@ -749,7 +749,36 @@ export interface components {
          *     Matches a JSON array.
          */
         JsonArray: Record<string, never>;
-        StandaloneTranscriptResponse: {
+        ProjectResponse: {
+            id: string;
+            title: string;
+            description: string | null;
+            status: components["schemas"]["ProjectStatus"];
+            /** Format: date-time */
+            startedAt: string | null;
+            /** Format: date-time */
+            endedAt: string | null;
+            metadata: components["schemas"]["JsonValue"] | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        ProjectListResponse: {
+            projects: components["schemas"]["ProjectResponse"][];
+            /** Format: double */
+            total: number;
+        };
+        ApiResponse_ProjectListResponse_: {
+            message?: string;
+            data: components["schemas"]["ProjectListResponse"] | null;
+            /** Format: double */
+            status: number;
+        };
+        /** @enum {string} */
+        "_36_Enums.TranscriptSource": "MANUAL" | "RECORDING" | "UPLOAD" | "IMPORTED";
+        TranscriptSource: components["schemas"]["_36_Enums.TranscriptSource"];
+        TranscriptResponse: {
             id: string;
             projectId: string | null;
             userId: string;
@@ -766,20 +795,74 @@ export interface components {
             /** Format: date-time */
             updatedAt: string;
         };
-        StandaloneTranscriptListResponse: {
-            transcripts: components["schemas"]["StandaloneTranscriptResponse"][];
-            /** Format: double */
-            total: number;
+        /** @enum {string} */
+        "_36_Enums.TaskStatus": "COMPLETED" | "ARCHIVED" | "BACKLOG" | "IN_PROGRESS" | "BLOCKED";
+        TaskStatus: components["schemas"]["_36_Enums.TaskStatus"];
+        /** @enum {string} */
+        "_36_Enums.TaskPriority": "LOW" | "MEDIUM" | "HIGH" | "URGENT";
+        TaskPriority: components["schemas"]["_36_Enums.TaskPriority"];
+        TaskResponse: {
+            id: string;
+            projectId: string;
+            title: string;
+            description: string | null;
+            summary: string | null;
+            acceptanceCriteria: string | null;
+            status: components["schemas"]["TaskStatus"];
+            priority: components["schemas"]["TaskPriority"];
+            /** Format: date-time */
+            dueDate: string | null;
+            dependencies: string[];
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
         };
-        ApiResponse_StandaloneTranscriptListResponse_: {
+        TranscriptTaskInsight: {
+            title: string;
+            description?: string;
+            priority?: components["schemas"]["TaskPriority"];
+            status?: components["schemas"]["TaskStatus"];
+            dueDate?: string | null;
+        };
+        TranscriptAnalysisResponse: {
+            language: string;
+            summary: string | null;
+            tasks: components["schemas"]["TranscriptTaskInsight"][];
+        };
+        CreateTranscriptResponse: {
+            transcript: components["schemas"]["TranscriptResponse"];
+            tasks: components["schemas"]["TaskResponse"][];
+            analysis: components["schemas"]["TranscriptAnalysisResponse"];
+        };
+        ApiResponse_CreateTranscriptResponse_: {
             message?: string;
-            data: components["schemas"]["StandaloneTranscriptListResponse"] | null;
+            data: components["schemas"]["CreateTranscriptResponse"] | null;
             /** Format: double */
             status: number;
         };
-        ApiResponse_StandaloneTranscriptResponse_: {
+        TranscriptListResponse: {
+            transcripts: components["schemas"]["TranscriptResponse"][];
+            /** Format: double */
+            total: number;
+        };
+        ApiResponse_TranscriptListResponse_: {
             message?: string;
-            data: components["schemas"]["StandaloneTranscriptResponse"] | null;
+            data: components["schemas"]["TranscriptListResponse"] | null;
+            /** Format: double */
+            status: number;
+        };
+        ImportTranscriptRequest: {
+            transcriptId: string;
+            contextIds?: string[];
+            /** @enum {string} */
+            persona?: "SECRETARY" | "ARCHITECT" | "PRODUCT_MANAGER" | "DEVELOPER";
+            objective?: string;
+            englishLevel?: string;
+        };
+        ApiResponse_TranscriptResponse_: {
+            message?: string;
+            data: components["schemas"]["TranscriptResponse"] | null;
             /** Format: double */
             status: number;
         };
@@ -807,6 +890,151 @@ export interface components {
          *     Unlike \`JsonArray\`, readonly arrays are assignable to this type.
          */
         InputJsonArray: Record<string, never>;
+        ManualTranscriptRequest: {
+            title?: string | null;
+            source?: components["schemas"]["TranscriptSource"];
+            language?: string | null;
+            summary?: string | null;
+            content?: string | null;
+            /** Format: date-time */
+            recordedAt?: string | null;
+            metadata?: components["schemas"]["InputJsonValue"] | null;
+        };
+        UpdateTranscriptRequest: {
+            title?: string | null;
+            source?: components["schemas"]["TranscriptSource"];
+            language?: string | null;
+            summary?: string | null;
+            transcript?: string | null;
+            /** Format: date-time */
+            recordedAt?: string | null;
+            metadata?: components["schemas"]["InputJsonValue"] | null;
+        };
+        ApiResponse_null_: {
+            message?: string;
+            data: unknown;
+            /** Format: double */
+            status: number;
+        };
+        TaskListResponse: {
+            tasks: components["schemas"]["TaskResponse"][];
+            /** Format: double */
+            total: number;
+        };
+        ApiResponse_TaskListResponse_: {
+            message?: string;
+            data: components["schemas"]["TaskListResponse"] | null;
+            /** Format: double */
+            status: number;
+        };
+        ApiResponse_TaskResponse_: {
+            message?: string;
+            data: components["schemas"]["TaskResponse"] | null;
+            /** Format: double */
+            status: number;
+        };
+        CreateTaskRequest: {
+            title: string;
+            description?: string | null;
+            summary?: string | null;
+            acceptanceCriteria?: string | null;
+            status?: components["schemas"]["TaskStatus"];
+            priority?: components["schemas"]["TaskPriority"];
+            /**
+             * Format: date-time
+             * @description Format: date-time
+             */
+            dueDate?: string | null;
+            metadata?: components["schemas"]["InputJsonValue"] | null;
+            dependencyTaskIds?: string[];
+        };
+        UpdateTaskRequest: {
+            title?: string;
+            description?: string | null;
+            summary?: string | null;
+            acceptanceCriteria?: string | null;
+            status?: components["schemas"]["TaskStatus"];
+            priority?: components["schemas"]["TaskPriority"];
+            /**
+             * Format: date-time
+             * @description Format: date-time
+             */
+            dueDate?: string | null;
+            metadata?: components["schemas"]["InputJsonValue"] | null;
+            dependencyTaskIds?: string[];
+        };
+        ApiResponse_ProjectResponse_: {
+            message?: string;
+            data: components["schemas"]["ProjectResponse"] | null;
+            /** Format: double */
+            status: number;
+        };
+        CreateProjectRequest: {
+            title: string;
+            description?: string;
+            status?: components["schemas"]["ProjectStatus"];
+            /** Format: date-time */
+            startedAt?: string | null;
+            metadata?: components["schemas"]["InputJsonValue"] | null;
+        };
+        UpdateProjectRequest: {
+            title?: string;
+            description?: string | null;
+            status?: components["schemas"]["ProjectStatus"];
+            /** Format: date-time */
+            startedAt?: string | null;
+            /** Format: date-time */
+            endedAt?: string | null;
+            metadata?: components["schemas"]["InputJsonValue"] | null;
+        };
+        CreateTranscriptRequest: {
+            content?: string;
+            objective?: string;
+            title?: string;
+            source?: components["schemas"]["TranscriptSource"];
+            /** Format: date-time */
+            recordedAt?: string | null;
+            metadata?: components["schemas"]["InputJsonValue"] | null;
+            contextIds?: string[];
+            /** @enum {string} */
+            persona?: "SECRETARY" | "ARCHITECT" | "PRODUCT_MANAGER" | "DEVELOPER";
+            englishLevel?: string;
+        };
+        StandaloneTranscriptResponse: {
+            id: string;
+            projectId: string | null;
+            userId: string;
+            title: string | null;
+            source: components["schemas"]["TranscriptSource"];
+            language: string | null;
+            summary: string | null;
+            transcript: string | null;
+            /** Format: date-time */
+            recordedAt: string | null;
+            metadata: components["schemas"]["JsonValue"] | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+            tasks?: components["schemas"]["TaskResponse"][];
+        };
+        StandaloneTranscriptListResponse: {
+            transcripts: components["schemas"]["StandaloneTranscriptResponse"][];
+            /** Format: double */
+            total: number;
+        };
+        ApiResponse_StandaloneTranscriptListResponse_: {
+            message?: string;
+            data: components["schemas"]["StandaloneTranscriptListResponse"] | null;
+            /** Format: double */
+            status: number;
+        };
+        ApiResponse_StandaloneTranscriptResponse_: {
+            message?: string;
+            data: components["schemas"]["StandaloneTranscriptResponse"] | null;
+            /** Format: double */
+            status: number;
+        };
         CreateStandaloneTranscriptBody: {
             projectId?: string | null;
             title?: string | null;
@@ -977,233 +1205,6 @@ export interface components {
             createdAt: string;
             /** Format: date-time */
             updatedAt: string;
-        };
-        /** @enum {string} */
-        "_36_Enums.ProjectStatus": "ACTIVE" | "COMPLETED" | "ARCHIVED";
-        ProjectStatus: components["schemas"]["_36_Enums.ProjectStatus"];
-        ProjectResponse: {
-            id: string;
-            title: string;
-            description: string | null;
-            status: components["schemas"]["ProjectStatus"];
-            /** Format: date-time */
-            startedAt: string | null;
-            /** Format: date-time */
-            endedAt: string | null;
-            metadata: components["schemas"]["JsonValue"] | null;
-            /** Format: date-time */
-            createdAt: string;
-            /** Format: date-time */
-            updatedAt: string;
-        };
-        ProjectListResponse: {
-            projects: components["schemas"]["ProjectResponse"][];
-            /** Format: double */
-            total: number;
-        };
-        ApiResponse_ProjectListResponse_: {
-            message?: string;
-            data: components["schemas"]["ProjectListResponse"] | null;
-            /** Format: double */
-            status: number;
-        };
-        TranscriptResponse: {
-            id: string;
-            projectId: string | null;
-            userId: string;
-            title: string | null;
-            source: components["schemas"]["TranscriptSource"];
-            language: string | null;
-            summary: string | null;
-            transcript: string | null;
-            /** Format: date-time */
-            recordedAt: string | null;
-            metadata: components["schemas"]["JsonValue"] | null;
-            /** Format: date-time */
-            createdAt: string;
-            /** Format: date-time */
-            updatedAt: string;
-        };
-        /** @enum {string} */
-        "_36_Enums.TaskStatus": "COMPLETED" | "ARCHIVED" | "BACKLOG" | "IN_PROGRESS" | "BLOCKED";
-        TaskStatus: components["schemas"]["_36_Enums.TaskStatus"];
-        /** @enum {string} */
-        "_36_Enums.TaskPriority": "LOW" | "MEDIUM" | "HIGH" | "URGENT";
-        TaskPriority: components["schemas"]["_36_Enums.TaskPriority"];
-        TaskResponse: {
-            id: string;
-            projectId: string;
-            title: string;
-            description: string | null;
-            summary: string | null;
-            acceptanceCriteria: string | null;
-            status: components["schemas"]["TaskStatus"];
-            priority: components["schemas"]["TaskPriority"];
-            /** Format: date-time */
-            dueDate: string | null;
-            dependencies: string[];
-            /** Format: date-time */
-            createdAt: string;
-            /** Format: date-time */
-            updatedAt: string;
-        };
-        TranscriptTaskInsight: {
-            title: string;
-            description?: string;
-            priority?: components["schemas"]["TaskPriority"];
-            status?: components["schemas"]["TaskStatus"];
-            dueDate?: string | null;
-        };
-        TranscriptAnalysisResponse: {
-            language: string;
-            summary: string | null;
-            tasks: components["schemas"]["TranscriptTaskInsight"][];
-        };
-        CreateTranscriptResponse: {
-            transcript: components["schemas"]["TranscriptResponse"];
-            tasks: components["schemas"]["TaskResponse"][];
-            analysis: components["schemas"]["TranscriptAnalysisResponse"];
-        };
-        ApiResponse_CreateTranscriptResponse_: {
-            message?: string;
-            data: components["schemas"]["CreateTranscriptResponse"] | null;
-            /** Format: double */
-            status: number;
-        };
-        TranscriptListResponse: {
-            transcripts: components["schemas"]["TranscriptResponse"][];
-            /** Format: double */
-            total: number;
-        };
-        ApiResponse_TranscriptListResponse_: {
-            message?: string;
-            data: components["schemas"]["TranscriptListResponse"] | null;
-            /** Format: double */
-            status: number;
-        };
-        ImportTranscriptRequest: {
-            transcriptId: string;
-            contextIds?: string[];
-            /** @enum {string} */
-            persona?: "SECRETARY" | "ARCHITECT" | "PRODUCT_MANAGER" | "DEVELOPER";
-            objective?: string;
-            englishLevel?: string;
-        };
-        ApiResponse_TranscriptResponse_: {
-            message?: string;
-            data: components["schemas"]["TranscriptResponse"] | null;
-            /** Format: double */
-            status: number;
-        };
-        ManualTranscriptRequest: {
-            title?: string | null;
-            source?: components["schemas"]["TranscriptSource"];
-            language?: string | null;
-            summary?: string | null;
-            content?: string | null;
-            /** Format: date-time */
-            recordedAt?: string | null;
-            metadata?: components["schemas"]["InputJsonValue"] | null;
-        };
-        UpdateTranscriptRequest: {
-            title?: string | null;
-            source?: components["schemas"]["TranscriptSource"];
-            language?: string | null;
-            summary?: string | null;
-            transcript?: string | null;
-            /** Format: date-time */
-            recordedAt?: string | null;
-            metadata?: components["schemas"]["InputJsonValue"] | null;
-        };
-        ApiResponse_null_: {
-            message?: string;
-            data: unknown;
-            /** Format: double */
-            status: number;
-        };
-        TaskListResponse: {
-            tasks: components["schemas"]["TaskResponse"][];
-            /** Format: double */
-            total: number;
-        };
-        ApiResponse_TaskListResponse_: {
-            message?: string;
-            data: components["schemas"]["TaskListResponse"] | null;
-            /** Format: double */
-            status: number;
-        };
-        ApiResponse_TaskResponse_: {
-            message?: string;
-            data: components["schemas"]["TaskResponse"] | null;
-            /** Format: double */
-            status: number;
-        };
-        CreateTaskRequest: {
-            title: string;
-            description?: string | null;
-            summary?: string | null;
-            acceptanceCriteria?: string | null;
-            status?: components["schemas"]["TaskStatus"];
-            priority?: components["schemas"]["TaskPriority"];
-            /**
-             * Format: date-time
-             * @description Format: date-time
-             */
-            dueDate?: string | null;
-            metadata?: components["schemas"]["InputJsonValue"] | null;
-            dependencyTaskIds?: string[];
-        };
-        UpdateTaskRequest: {
-            title?: string;
-            description?: string | null;
-            summary?: string | null;
-            acceptanceCriteria?: string | null;
-            status?: components["schemas"]["TaskStatus"];
-            priority?: components["schemas"]["TaskPriority"];
-            /**
-             * Format: date-time
-             * @description Format: date-time
-             */
-            dueDate?: string | null;
-            metadata?: components["schemas"]["InputJsonValue"] | null;
-            dependencyTaskIds?: string[];
-        };
-        ApiResponse_ProjectResponse_: {
-            message?: string;
-            data: components["schemas"]["ProjectResponse"] | null;
-            /** Format: double */
-            status: number;
-        };
-        CreateProjectRequest: {
-            title: string;
-            description?: string;
-            status?: components["schemas"]["ProjectStatus"];
-            /** Format: date-time */
-            startedAt?: string | null;
-            metadata?: components["schemas"]["InputJsonValue"] | null;
-        };
-        UpdateProjectRequest: {
-            title?: string;
-            description?: string | null;
-            status?: components["schemas"]["ProjectStatus"];
-            /** Format: date-time */
-            startedAt?: string | null;
-            /** Format: date-time */
-            endedAt?: string | null;
-            metadata?: components["schemas"]["InputJsonValue"] | null;
-        };
-        CreateTranscriptRequest: {
-            content?: string;
-            objective?: string;
-            title?: string;
-            source?: components["schemas"]["TranscriptSource"];
-            /** Format: date-time */
-            recordedAt?: string | null;
-            metadata?: components["schemas"]["InputJsonValue"] | null;
-            contextIds?: string[];
-            /** @enum {string} */
-            persona?: "SECRETARY" | "ARCHITECT" | "PRODUCT_MANAGER" | "DEVELOPER";
-            englishLevel?: string;
         };
         TemplateSubset: {
             name: string;
@@ -1525,387 +1526,6 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
-    ListTranscripts: {
-        parameters: {
-            query?: {
-                page?: number;
-                pageSize?: number;
-                source?: components["schemas"]["TranscriptSource"];
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Ok */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiResponse_StandaloneTranscriptListResponse_"];
-                };
-            };
-        };
-    };
-    CreateTranscript: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CreateStandaloneTranscriptBody"];
-            };
-        };
-        responses: {
-            /** @description Ok */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiResponse_StandaloneTranscriptResponse_"];
-                };
-            };
-        };
-    };
-    GetTranscript: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Ok */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiResponse_StandaloneTranscriptResponse_"];
-                };
-            };
-        };
-    };
-    UpdateTranscript: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["UpdateTranscriptInput"];
-            };
-        };
-        responses: {
-            /** @description Ok */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiResponse_StandaloneTranscriptResponse_"];
-                };
-            };
-        };
-    };
-    DeleteTranscript: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Ok */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiResponse__success-boolean__"];
-                };
-            };
-        };
-    };
-    ListTemplates: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Ok */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SlideTemplateResponse"][];
-                };
-            };
-        };
-    };
-    CreateTemplate: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CreateTemplateRequest"];
-            };
-        };
-        responses: {
-            /** @description Ok */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SlideTemplateResponse"];
-                };
-            };
-        };
-    };
-    GetTemplate: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                templateId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Ok */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SlideTemplateResponse"];
-                };
-            };
-        };
-    };
-    UpdateTemplate: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                templateId: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["UpdateTemplateRequest"];
-            };
-        };
-        responses: {
-            /** @description Ok */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SlideTemplateResponse"];
-                };
-            };
-        };
-    };
-    DeleteTemplate: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                templateId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Ok */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        success: boolean;
-                    };
-                };
-            };
-        };
-    };
-    Login: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": {
-                    token: string;
-                    uuid: string;
-                };
-            };
-        };
-        responses: {
-            /** @description Ok */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiResponse_UserResponse_"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["GenericResponse"];
-                };
-            };
-            /** @description Internal Server Error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["GenericResponse"];
-                };
-            };
-        };
-    };
-    GetCurrentUser: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Ok */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiResponse_UserResponse_"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["GenericResponse"];
-                };
-            };
-            /** @description Internal Server Error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["GenericResponse"];
-                };
-            };
-        };
-    };
-    GetDesktopToken: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Ok */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiResponse__customToken-string__"];
-                };
-            };
-        };
-    };
-    GetPublicPresentation: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                presentationId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Ok */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PublicPresentationResponse"];
-                };
-            };
-        };
-    };
-    GetPublicDoc: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Ok */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PublicDocResponse"];
-                };
-            };
-        };
-    };
     ListSessions: {
         parameters: {
             query?: {
@@ -2357,6 +1977,387 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ApiResponse_null_"];
+                };
+            };
+        };
+    };
+    ListTranscripts: {
+        parameters: {
+            query?: {
+                page?: number;
+                pageSize?: number;
+                source?: components["schemas"]["TranscriptSource"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_StandaloneTranscriptListResponse_"];
+                };
+            };
+        };
+    };
+    CreateTranscript: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateStandaloneTranscriptBody"];
+            };
+        };
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_StandaloneTranscriptResponse_"];
+                };
+            };
+        };
+    };
+    GetTranscript: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_StandaloneTranscriptResponse_"];
+                };
+            };
+        };
+    };
+    UpdateTranscript: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateTranscriptInput"];
+            };
+        };
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_StandaloneTranscriptResponse_"];
+                };
+            };
+        };
+    };
+    DeleteTranscript: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse__success-boolean__"];
+                };
+            };
+        };
+    };
+    ListTemplates: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SlideTemplateResponse"][];
+                };
+            };
+        };
+    };
+    CreateTemplate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateTemplateRequest"];
+            };
+        };
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SlideTemplateResponse"];
+                };
+            };
+        };
+    };
+    GetTemplate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                templateId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SlideTemplateResponse"];
+                };
+            };
+        };
+    };
+    UpdateTemplate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                templateId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateTemplateRequest"];
+            };
+        };
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SlideTemplateResponse"];
+                };
+            };
+        };
+    };
+    DeleteTemplate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                templateId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        success: boolean;
+                    };
+                };
+            };
+        };
+    };
+    Login: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    token: string;
+                    uuid: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_UserResponse_"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GenericResponse"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GenericResponse"];
+                };
+            };
+        };
+    };
+    GetCurrentUser: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_UserResponse_"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GenericResponse"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GenericResponse"];
+                };
+            };
+        };
+    };
+    GetDesktopToken: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse__customToken-string__"];
+                };
+            };
+        };
+    };
+    GetPublicPresentation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                presentationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicPresentationResponse"];
+                };
+            };
+        };
+    };
+    GetPublicDoc: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicDocResponse"];
                 };
             };
         };
