@@ -29,15 +29,22 @@ export const authSlice = createSlice({
     },
     loginEmail: (state: SessionStateType, action: PayloadAction<LoginEmail>) => {
       state.isLoading = true;
+      state.errorSession = null;
     },
     loginGoogle: (state: SessionStateType) => {
       state.isLoading = true;
+      state.errorSession = null;
     },
     loginApple: (state: SessionStateType) => {
       state.isLoading = true;
+      state.errorSession = null;
     },
     loginMicrosoft: (state: SessionStateType) => {
       state.isLoading = true;
+      state.errorSession = null;
+    },
+    clearSessionError: (state: SessionStateType) => {
+      state.errorSession = null;
     },
     loginSuccess: (state: SessionStateType, action: PayloadAction<UserApp>) => {
       state.isLoading = false;
@@ -86,6 +93,7 @@ export const {
   loginApple,
   loginSuccess,
   sessionError,
+  clearSessionError,
   signupEmail,
   forgotPassword,
   setAvatar,

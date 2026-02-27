@@ -3,10 +3,15 @@ import { Box, CircularProgress, Typography, Alert, Stack, Button } from "@mui/ma
 import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
 import { useAuth } from "../providers/FirebaseAuthProvider";
 import { auth } from "../firebase/firebase";
-import { signOut } from "firebase/auth";
+import { signOut, onAuthStateChanged } from "firebase/auth";
 import { useLazyGetDesktopTokenQuery } from "../store/apis/authApi";
 import { useDispatch, useSelector } from "react-redux";
-import { loginApple, loginGoogle, loginMicrosoft } from "../store/slices/auth/authSlice";
+import {
+  loginApple,
+  loginGoogle,
+  loginMicrosoft,
+  clearSessionError,
+} from "../store/slices/auth/authSlice";
 import { selectErrorSession } from "../store/slices/auth/authSelector";
 
 /**
@@ -26,13 +31,22 @@ import { selectErrorSession } from "../store/slices/auth/authSelector";
  */
 const DesktopCallback: React.FC = () => {
   const { isAuthInitialized } = useAuth();
-  const firebaseUser = auth.currentUser;
+
+  // Make firebaseUser reactive to auth state changes so the component re-renders
+  // after a popup OAuth flow completes successfully.
+  const [firebaseUser, setFirebaseUser] = useState(auth.currentUser);
+  useEffect(() => {
+    return onAuthStateChanged(auth, (user) => {
+      setFirebaseUser(user);
+    });
+  }, []);
 
   const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
   const [errorMsg, setErrorMsg] = useState<string>("");
 
   const dispatch = useDispatch();
   const errorSession = useSelector(selectErrorSession);
+  const [hasStartedLogin, setHasStartedLogin] = useState(false);
 
   // Read local_port and provider from URL
   const localPort = new URLSearchParams(window.location.search).get("local_port");
@@ -49,17 +63,32 @@ const DesktopCallback: React.FC = () => {
     setErrorMsg("Authentication was cancelled.");
   }, [localPort]);
 
-  // If OAuth gets manually closed by the user or an error occurs
+  // If OAuth gets manually closed by the user or an error occurs during this attempt
   useEffect(() => {
-    if (errorSession && localPort) {
+    // Only cancel if an error arrives AFTER we actually started the login attempt
+    if (hasStartedLogin && errorSession && localPort) {
+      console.error(
+        "[DesktopCallback] Cancellation triggered by Redux sessionError:",
+        errorSession,
+      );
       cancelAuth();
     }
-  }, [cancelAuth, errorSession, localPort]);
+  }, [cancelAuth, errorSession, localPort, hasStartedLogin]);
 
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
       if (event.data?.type === "OAUTH_POPUP_CLOSED") {
         setTimeout(() => {
+          // If the popup closed but Firebase successfully authenticated the user,
+          // do not trigger the cancellation fallback! Wait for the custom token fetch.
+          if (auth.currentUser) {
+            console.log(
+              "[DesktopCallback] Popup closed on SUCCESS (auth.currentUser found). Will not cancel.",
+            );
+            return;
+          }
+
+          console.log("[DesktopCallback] Popup closed and no user found. Cancelling auth flow.");
           setStatus((currentStatus) => {
             if (currentStatus === "loading") {
               if (localPort) {
@@ -71,7 +100,7 @@ const DesktopCallback: React.FC = () => {
             }
             return currentStatus;
           });
-        }, 1500);
+        }, 3000);
       }
     };
     window.addEventListener("message", handleMessage);
@@ -92,22 +121,32 @@ const DesktopCallback: React.FC = () => {
 
     if (!firebaseUser) {
       if (provider) {
+        setHasStartedLogin(true);
+        dispatch(clearSessionError()); // wipe the slate clean immediately
+
         if (provider === "apple") dispatch(loginApple());
         else if (provider === "google") dispatch(loginGoogle());
         else if (provider === "microsoft") dispatch(loginMicrosoft());
         return; // wait for login to complete
       }
 
+      // If no provider is in the URL, this shouldn't be loaded without a session.
       const next = encodeURIComponent(window.location.pathname + window.location.search);
       window.location.href = `/login?next=${next}`;
       return;
     }
 
     // If authenticated, trigger the token fetch
+    console.log("[DesktopCallback] Triggering token fetch for user:", firebaseUser.uid);
     triggerGetDesktopToken();
   }, [isAuthInitialized, firebaseUser, triggerGetDesktopToken, provider, dispatch]);
 
   useEffect(() => {
+    console.log("[DesktopCallback] Token Fetch Data Updated:", {
+      hasData: !!data,
+      hasToken: !!data?.data?.customToken,
+      localPort,
+    });
     if (!data?.data?.customToken) return;
 
     const token = data.data.customToken;
@@ -115,18 +154,24 @@ const DesktopCallback: React.FC = () => {
     if (localPort) {
       // Dev mode: deliver token via local HTTP server — bypass unreliable OS protocol dispatch
       const url = `http://localhost:${localPort}/auth?token=${encodeURIComponent(token)}`;
-      // Use an iframe to avoid CORS redirect issues; the server responds with close-tab HTML
-      const img = new Image();
-      img.src = url;
-      img.onload = () => setStatus("success");
-      img.onerror = () => {
-        // Image loads "error" for non-image responses but the request was made — success
-        setStatus("success");
-      };
+      console.log("[DesktopCallback] Attempting to navigate to local port URL:", url);
+      // Change the browser location so Electron catches the 'will-navigate' event
+      // This solves the CORS/Mixed Content block that happens if we use fetch() or Image()
+      try {
+        window.location.href = url;
+        console.log("[DesktopCallback] Successfully executed window.location.href");
+      } catch (e) {
+        console.error("[DesktopCallback] Failed to execute window.location.href:", e);
+      }
     } else {
       // Prod mode: use custom protocol
-      window.location.href = `blueberrybytes-recorder://auth?token=${encodeURIComponent(token)}`;
-      setStatus("success");
+      console.log("[DesktopCallback] Attempting to navigate to custom protocol");
+      try {
+        window.location.href = `blueberrybytes-recorder://auth?token=${encodeURIComponent(token)}`;
+        setStatus("success");
+      } catch (e) {
+        console.error("[DesktopCallback] Failed to execute custom protocol redirect:", e);
+      }
     }
   }, [data, localPort]);
 

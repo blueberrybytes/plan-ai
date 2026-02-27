@@ -65,6 +65,7 @@ const FirebaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           "/signup",
           "/forgot-password",
           "/delete-my-data",
+          "/auth/desktop",
         ];
 
         if (publicRoutes.includes(currentPath)) {
