@@ -17,12 +17,14 @@ import {
 import { Visibility, VisibilityOff } from "@mui/icons-material";
 import GoogleIcon from "../components/icons/GoogleIcon";
 import MicrosoftIcon from "../components/icons/MicrosoftIcon";
+import AppleIcon from "@mui/icons-material/Apple";
 import { useNavigate, Link } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import {
   signupEmail,
   loginGoogle,
   loginMicrosoft,
+  loginApple,
   setIsLoading,
 } from "../store/slices/auth/authSlice";
 import { selectErrorSession, selectIsLoading, selectUser } from "../store/slices/auth/authSelector";
@@ -142,6 +144,11 @@ export default function SignUp() {
 
     // Dispatch Microsoft login action to Redux
     dispatch(loginMicrosoft());
+  };
+
+  const handleAppleSignUp = () => {
+    setError(null);
+    dispatch(loginApple());
   };
 
   return (
@@ -312,6 +319,26 @@ export default function SignUp() {
             }}
           >
             {t("login.oauth.microsoft")}
+          </Button>
+
+          <Button
+            fullWidth
+            variant="outlined"
+            startIcon={<AppleIcon />}
+            onClick={handleAppleSignUp}
+            disabled={isLoading}
+            sx={{
+              mt: 1.5,
+              borderColor: "#000",
+              color: "#000",
+              backgroundColor: "#fff",
+              "&:hover": {
+                borderColor: "#000",
+                backgroundColor: "#f5f5f5",
+              },
+            }}
+          >
+            {t("login.oauth.apple", "Continue with Apple")}
           </Button>
 
           <Grid container justifyContent="center" sx={{ mt: 3 }}>

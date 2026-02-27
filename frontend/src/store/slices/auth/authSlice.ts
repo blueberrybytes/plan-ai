@@ -33,6 +33,9 @@ export const authSlice = createSlice({
     loginGoogle: (state: SessionStateType) => {
       state.isLoading = true;
     },
+    loginApple: (state: SessionStateType) => {
+      state.isLoading = true;
+    },
     loginMicrosoft: (state: SessionStateType) => {
       state.isLoading = true;
     },
@@ -80,6 +83,7 @@ export const {
   loginEmail,
   loginGoogle,
   loginMicrosoft,
+  loginApple,
   loginSuccess,
   sessionError,
   signupEmail,

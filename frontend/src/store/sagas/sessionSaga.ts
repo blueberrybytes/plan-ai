@@ -4,6 +4,7 @@ import {
   loginEmail,
   loginGoogle,
   loginMicrosoft,
+  loginApple,
   loginSuccess,
   sessionError,
   logout,
@@ -112,6 +113,97 @@ function* loginMicrosoftFunc(): Generator<any, void, any> {
       }
     } catch (apiError: any) {
       console.error("========== BACKEND LOGIN API CALL FAILED (MICROSOFT) ===========");
+      console.error("Error message:", apiError.message);
+      console.error("API response:", apiError.response?.data);
+      console.error("Request config:", apiError.config);
+      console.error("Status:", apiError.response?.status);
+      console.error("==================================================");
+
+      const appError: AppExceptionType = {
+        message: `Backend login failed: ${apiError.message}. Please try again or contact support.`,
+        cause: ErrorCause.UNKNOWN,
+      };
+      yield put(sessionError(appError));
+
+      yield loginStats(user);
+      yield put(loginSuccess(userApp));
+      yield call(refreshApiCachesAfterLogin);
+    }
+  } catch (error: any) {
+    const appError: AppExceptionType = {
+      message: error.message,
+      cause: ErrorCause.UNKNOWN,
+    };
+    yield put(sessionError(appError));
+  } finally {
+    yield put(setIsLoading(false));
+  }
+}
+
+// Worker saga for Apple login
+function* loginAppleFunc(): Generator<any, void, any> {
+  try {
+    console.log("Starting Apple login process");
+    const provider = new OAuthProvider("apple.com");
+    provider.addScope("email");
+    provider.addScope("name");
+    const result: UserCredential = yield call(signInWithPopup, auth, provider);
+    const user = result.user;
+    console.log("Apple login successful, user:", user.uid, user.email);
+
+    // Get the ID token
+    const token = yield call([user, user.getIdToken]);
+    console.log("Retrieved ID token, first 20 chars:", token.substring(0, 20) + "...");
+
+    const providerIds = user.providerData.map((provider) => provider.providerId);
+    console.log("Apple login provider IDs:", providerIds);
+    const emailVerified =
+      !!user.emailVerified || providerIds.some((providerId) => providerId !== "password");
+
+    const userApp: UserApp = {
+      email: user.email,
+      uid: user.uid,
+      creationTime: user.metadata.creationTime,
+      lastSignInTime: user.metadata.lastSignInTime,
+      token,
+      emailVerified,
+    };
+
+    // Backend login/register
+    console.log("Calling backend API to register/login user (Apple)");
+    const apiUrl = `${process.env.REACT_APP_API_BACKEND_URL || "http://localhost:8080"}/api/session/login`;
+    console.log("API URL:", apiUrl);
+
+    try {
+      console.log("About to make axios POST request to:", apiUrl);
+      console.log("Request payload:", {
+        token: token.substring(0, 20) + "...",
+        uuid: user.uid,
+      });
+
+      const response: ApiResponseUserResponse = yield call(axios.post, apiUrl, {
+        token,
+        uuid: user.uid,
+      });
+      console.log("Backend login successful (Apple), response:", response);
+
+      // Update Redux state
+      yield loginStats(user);
+      yield put(loginSuccess(userApp));
+
+      // Ensure all API caches are fresh after login
+      yield call(refreshApiCachesAfterLogin);
+
+      yield put(setIsLoading(false));
+
+      // Store user data from backend
+      if (response.data) {
+        const userData = mapApiUserToUserType(response.data);
+        yield put(setUserDb(userData));
+        console.log("User data saved to Redux store (Apple)");
+      }
+    } catch (apiError: any) {
+      console.error("========== BACKEND LOGIN API CALL FAILED (APPLE) ===========");
       console.error("Error message:", apiError.message);
       console.error("API response:", apiError.response?.data);
       console.error("Request config:", apiError.config);
@@ -554,6 +646,7 @@ export function* sessionSaga(): Generator<any, void, any> {
     takeLatest(loginEmail.type, loginEmailFunc),
     takeLatest(loginGoogle.type, loginGoogleFunc),
     takeLatest(loginMicrosoft.type, loginMicrosoftFunc),
+    takeLatest(loginApple.type, loginAppleFunc),
     takeLatest(signupEmail.type, signupEmailFunc),
     takeLatest(forgotPassword.type, forgotPasswordFunc),
     takeLatest(logout.type, logoutFunc),
