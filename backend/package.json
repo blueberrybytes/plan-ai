@@ -39,6 +39,7 @@
   },
   "dependencies": {
     "@ai-sdk/openai": "^3.0.34",
+    "@deepgram/sdk": "^4.11.3",
     "@google-cloud/logging": "^11.2.1",
     "@langchain/core": "^1.0.3",
     "@langchain/openai": "^1.0.0",
@@ -56,11 +57,13 @@
     "helmet": "^7.1.0",
     "mammoth": "^1.8.0",
     "multer": "^2.0.2",
+    "openai": "^6.25.0",
     "pdf-parse": "^1.1.1",
     "reflect-metadata": "^0.1.13",
     "swagger-ui-express": "^5.0.1",
     "tsoa": "^6.6.0",
-    "uuid": "^13.0.0"
+    "uuid": "^13.0.0",
+    "ws": "^8.19.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.9.0",
@@ -71,6 +74,7 @@
     "@types/pdf-parse": "^1.1.4",
     "@types/swagger-ui-express": "^4.1.8",
     "@types/uuid": "^11.0.0",
+    "@types/ws": "^8.18.1",
     "@typescript-eslint/eslint-plugin": "^8.8.0",
     "@typescript-eslint/parser": "^8.8.0",
     "@vitest/coverage-v8": "^4.0.15",

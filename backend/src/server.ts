@@ -11,6 +11,7 @@ import { logger } from "./utils/logger";
 import { RegisterRoutes } from "./routes/routes";
 import chatRouter from "./routes/chatRouter";
 import { initializeContextVectorStore } from "./vector/contextFileVectorService";
+import { setupAudioStream } from "./routes/audioStream";
 
 console.log("Server starting...");
 const app = express();
@@ -84,6 +85,9 @@ const startServer = async () => {
     console.log(`API Documentation available at http://localhost:${PORT}/api-docs`);
     console.log(`Qdrant dashboard at ${QDRANT_URL}/dashboard`);
   });
+
+  // Bind WebSocket server after the HTTP server starts listening
+  setupAudioStream(server!);
 };
 
 void startServer();
