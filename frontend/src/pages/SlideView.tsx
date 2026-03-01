@@ -27,16 +27,15 @@ const SlideView: React.FC = () => {
 
   // Poll every 2s if generating
   const { data: presentation, isLoading } = useGetPresentationQuery(presentationId || "", {
-    pollingInterval: 2000,
     skip: !presentationId,
-    selectFromResult: (result) => ({
-      ...result,
-      // Only poll if status is generating
-      pollingInterval:
-        result.data?.status === "GENERATING" || result.data?.status === "GENERATING_IMAGES"
-          ? 2000
-          : 0,
-    }),
+  });
+
+  const isGeneratingStatus =
+    presentation?.status === "GENERATING" || presentation?.status === "GENERATING_IMAGES";
+
+  useGetPresentationQuery(presentationId || "", {
+    skip: !presentationId || !isGeneratingStatus,
+    pollingInterval: 2000,
   });
 
   // RTK Query's pollingInterval in options is static usually, unless we force re-render.

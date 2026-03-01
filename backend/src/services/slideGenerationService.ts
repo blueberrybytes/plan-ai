@@ -1,44 +1,39 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { Presentation, Prisma } from "@prisma/client";
 import { createOpenRouter } from "@openrouter/ai-sdk-provider";
-import { generateObject, streamObject } from "ai";
-import { z, type ZodTypeAny } from "zod";
+import { generateObject } from "ai";
+import { z } from "zod";
 import EnvUtils from "../utils/EnvUtils";
 import { logger } from "../utils/logger";
 import prisma from "../prisma/prismaClient";
 import { queryContexts } from "../vector/contextFileVectorService";
 import { slideTemplateService, TemplateWithSlideTypes } from "./slideTemplateService";
-import { buildSlideTypeCatalog } from "./slideTypeRegistry";
+import { buildSlideTypeCatalog, getSlideTypeDefinition } from "./slideTypeRegistry";
 import { imageGenerationService } from "./imageGenerationService";
 
-// Loose wrapper around generateObject to handle type compatibility
-const generateObjectLoose = generateObject as unknown as (args: {
-  model: unknown;
-  schema: ZodTypeAny;
-  prompt: string;
-  temperature?: number;
-}) => Promise<{ object: unknown }>;
-
-// Schema for a single generated slide
-const GeneratedSlideSchema = z.object({
-  slideTypeKey: z.string(),
-  parameters: z.record(z.string(), z.unknown()),
+// Schema for the Pass 1 Outline strategy
+const SlideOutlineSchema = z.object({
+  title: z.string().describe("Overall presentation title"),
+  slides: z.array(
+    z.object({
+      slideTypeKey: z
+        .string()
+        .describe("Must exactly match an available slideTypeKey from the catalog"),
+      intent: z
+        .string()
+        .describe(
+          "Detailed instruction explaining what specific content should be written on this slide",
+        ),
+    }),
+  ),
 });
-
-// Schema for the full AI output
-const SlidePlanSchema = z.object({
-  title: z.string(),
-  slides: z.array(GeneratedSlideSchema),
-});
-
-type SlidePlan = z.infer<typeof SlidePlanSchema>;
 
 export class SlideGenerationService {
   private readonly openrouter = createOpenRouter({
     apiKey: EnvUtils.get("OPENROUTER_API_KEY"),
   });
 
-  private readonly modelName = "google/gemini-2.0-flash-001";
+  private readonly modelName = "google/gemini-2.5-pro";
 
   /**
    * Generate a presentation from a template, context, and user prompt.
@@ -119,84 +114,131 @@ export class SlideGenerationService {
         }
       }
 
-      // 2. Build Prompt
-      const aiPrompt = this.buildPrompt(template, contextText, userPrompt, numSlides);
+      const aiPrompt = this.buildOutlinePrompt(template, contextText, userPrompt, numSlides);
       const model = this.openrouter(this.modelName);
 
-      // 3. Stream Object
-      // Cast schema to any to avoid "Type instantiation is excessively deep" error with Zod
-      const schema = SlidePlanSchema as any;
+      // 3. Generate Object instead of streaming for schema reliability on complex nested objects
+      logger.info(`[Slide Gen Debug] Triggering generateObject to Google Gemini flash...`);
+      let slidePlan;
 
-      const { partialObjectStream } = await streamObject({
-        model,
-        schema,
-        prompt: aiPrompt,
-        temperature: 0.3,
-      });
-
-      let lastTitle = "";
-      let lastSlidesCount = 0;
-
-      for await (const partial of partialObjectStream) {
-        const typedPartial = partial as Partial<SlidePlan>;
-
-        // Update DB if we have significant changes
-        // e.g. title changed or new slide added
-        const slides = (typedPartial.slides as unknown[]) || [];
-        const title = typedPartial.title || "Untitled Presentation";
-
-        if (slides.length > lastSlidesCount || (title !== lastTitle && title.length > 5)) {
-          lastSlidesCount = slides.length;
-          lastTitle = title;
-
-          await prisma.presentation.update({
-            where: { id: presentationId },
-            data: {
-              title: title,
-              slidesJson: slides as Prisma.InputJsonValue,
-            },
+      const maxRetries = 3;
+      for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+          const generationResult = await generateObject({
+            model,
+            schema: SlideOutlineSchema,
+            prompt:
+              attempt > 1
+                ? aiPrompt +
+                  `\n\nCRITICAL FIX: Your previous JSON output was corrupted by an unterminated string or excessive unescaped newlines. You must strictly cap text length and format string values on a single line safely.`
+                : aiPrompt,
+            temperature: 0.3 + attempt * 0.1, // Slightly increase temp on retries to break out of deterministic failure loops
           });
+          slidePlan = generationResult.object;
+          break; // Success! Break out of the retry loop
+        } catch (genError) {
+          logger.warn(`[Slide Gen Debug] Attempt ${attempt}/${maxRetries} failed: `, genError);
+          if (attempt === maxRetries) {
+            logger.error(
+              `[Slide Gen Debug] CRITICAL MODEL EXPECTATION FAILURE after ${maxRetries} retries.`,
+            );
+            throw genError;
+          }
+          // Delay briefly before retrying
+          await new Promise((res) => setTimeout(res, 1500));
         }
       }
 
-      // 4. Finalize Generation
-      // Wait for the full object to be sure (the stream loop finishes when done)
-      // We need to re-fetch the "final" state from the stream generator if possible,
-      // or just trust the last partial. Use `object` promise from streamObject if needed,
-      // but here we consumed the stream.
+      const slidesOutline = slidePlan?.slides || [];
+      const title = slidePlan?.title || "Untitled Presentation";
 
-      // Let's get the final result using generateObject for safety?
-      // No, that doubles cost. We trust the last partial from the stream loop.
-      // Actually, `streamObject` provides a promise `object` that resolves to the final object.
-      // But we can't await it *while* iterating easily unless we run parallel.
-      // The `for await` loop finishes when the stream is done.
+      logger.info(
+        `[Slide Gen Debug] PASS 1 Complete. Generated ${slidesOutline.length} slide outlines.`,
+      );
 
-      // Update status to GENERATING_IMAGES
+      // Update DB with empty parameters for early UI indication
       await prisma.presentation.update({
         where: { id: presentationId },
-        data: { status: "GENERATING_IMAGES" },
+        data: {
+          title: title,
+          slidesJson: slidesOutline.map((s: any) => ({
+            slideTypeKey: s.slideTypeKey,
+            parameters: {},
+          })) as Prisma.InputJsonValue,
+        },
       });
 
-      // 5. Generate Images
-      // We need to get the final slides from DB or keep track
-      const finalPresentation = await this.getPresentationById(userId, presentationId);
-      const finalSlides = (finalPresentation.slidesJson as any[]) || [];
+      // 4. PASS 2: Concurrently generate specific parameters for each slide
+      logger.info(`[Slide Gen Debug] PASS 2: Generating Parameters concurrently...`);
+      const parameterPromises = slidesOutline.map(async (slideOutline: any, index: number) => {
+        const slideDef = getSlideTypeDefinition(slideOutline.slideTypeKey);
+        if (!slideDef) {
+          logger.warn(`[Slide Gen Debug] Unknown slide type: ${slideOutline.slideTypeKey}`);
+          return { slideTypeKey: slideOutline.slideTypeKey, parameters: {} };
+        }
 
-      if (finalSlides.length > 0) {
+        const slidePrompt = `You are filling in specific parameters for slide #${index + 1} of a presentation.
+Presentation Title: "${title}"
+Slide Type: "${slideDef.name}" (${slideOutline.slideTypeKey})
+Slide Intent: "${slideOutline.intent}"
+
+Template Brand Context: "${template.name}"
+${contextText ? `Source Context:\n${contextText}` : ""}
+
+Provide ONLY the required JSON parameters for this slide type matching the schema exactly. Keep text concise.`;
+
+        let parameters = {};
+        for (let attempt = 1; attempt <= 2; attempt++) {
+          try {
+            const slideGen = await generateObject({
+              model,
+              schema: slideDef.parametersSchema,
+              prompt: slidePrompt,
+              temperature: 0.2 + attempt * 0.1,
+            });
+            parameters = slideGen.object;
+            break; // Success
+          } catch {
+            logger.warn(
+              `[Slide Gen Debug] Slide ${index + 1} parameter generation attempt ${attempt} failed.`,
+            );
+          }
+        }
+
+        return { slideTypeKey: slideOutline.slideTypeKey, parameters };
+      });
+
+      const fullyPopulatedSlides = await Promise.all(parameterPromises);
+
+      logger.info(
+        `[Slide Gen Debug] PASS 2 Complete. ${fullyPopulatedSlides.length} fully structured slides built.`,
+      );
+
+      // 5. Finalize Generation
+      await prisma.presentation.update({
+        where: { id: presentationId },
+        data: {
+          slidesJson: fullyPopulatedSlides as Prisma.InputJsonValue,
+          status: "GENERATING_IMAGES",
+        },
+      });
+
+      // 6. Generate Images
+      if (fullyPopulatedSlides.length > 0) {
         await this.processSlideImages(
           userId,
           presentationId,
-          finalSlides as { slideTypeKey: string; parameters: Record<string, unknown> }[],
+          fullyPopulatedSlides as { slideTypeKey: string; parameters: Record<string, unknown> }[],
           template,
         );
       }
 
-      // 6. Complete
+      // 7. Complete
       await prisma.presentation.update({
         where: { id: presentationId },
         data: {
           status: "DRAFT",
-          slidesJson: finalSlides as Prisma.InputJsonValue,
+          slidesJson: fullyPopulatedSlides as Prisma.InputJsonValue,
         },
       });
 
@@ -293,7 +335,7 @@ export class SlideGenerationService {
     return updated;
   }
 
-  private buildPrompt(
+  private buildOutlinePrompt(
     template: TemplateWithSlideTypes,
     contextText: string,
     userPrompt: string,
@@ -306,7 +348,7 @@ export class SlideGenerationService {
       ? `5. Generate EXACTLY ${numSlides} slides (no more, no less). This is a strict requirement.`
       : `5. Aim for 6-12 slides unless the content requires more (maximum 15 slides).`;
 
-    return `You are a presentation architect. Your job is to create a structured slide deck.
+    return `You are a presentation architect. Your job is to create a slide-by-slide outline.
 
 ## Available Slide Types
 
@@ -314,13 +356,13 @@ ${catalog}
 
 ## Rules
 
-1. You MUST use ONLY slide types from the list above.
-2. Each slide's "parameters" MUST follow the constraints (max characters, max items).
-3. Choose slide types that best fit the content. Do NOT repeat the same type consecutively unless necessary.
-4. Keep text concise and impactful — presentations are visual, not essays.
+1. You MUST use ONLY slide type keys from the list above.
+2. Provide a clear "intent" for each slide so another AI can generate the precise text parameters later.
+3. Choose slide types that best fit the logical progression of the presentation.
+4. Do NOT repeat the same type consecutively unless necessary.
 ${slideCountInstruction}
 6. Start with a "title_only" slide and end with a "title_only" slide (as a closing slide).
-7. Return a JSON object with "title" (string) and "slides" (array of { slideTypeKey, parameters }).
+7. Return a strictly valid JSON object tracking the structure outline.
 
 ## Template Brand
 
@@ -334,24 +376,6 @@ ${contextText || "No additional context provided."}
 ## User Request
 
 ${userPrompt}`;
-  }
-
-  private async generateSlidePlan(prompt: string): Promise<SlidePlan> {
-    const model = this.openrouter(this.modelName);
-
-    try {
-      const { object } = await generateObjectLoose({
-        model,
-        schema: SlidePlanSchema as ZodTypeAny,
-        prompt,
-        temperature: 0.3,
-      });
-
-      return SlidePlanSchema.parse(object);
-    } catch (error) {
-      logger.error("Failed to generate slide plan with AI", error);
-      throw new Error("Failed to generate presentation content");
-    }
   }
 
   private async processSlideImages(
