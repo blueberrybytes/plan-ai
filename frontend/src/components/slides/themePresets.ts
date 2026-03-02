@@ -8,6 +8,8 @@ export interface ThemePreset {
   backgroundColor: string;
   headingFont: string;
   bodyFont: string;
+  backgroundStyle: "solid" | "gradient" | "mesh" | "minimal";
+  cardStyle: "flat" | "glass" | "outline";
 }
 
 export const THEME_PRESETS: ThemePreset[] = [
@@ -18,6 +20,8 @@ export const THEME_PRESETS: ThemePreset[] = [
     backgroundColor: "#0f172a",
     headingFont: "Inter",
     bodyFont: "Inter",
+    backgroundStyle: "mesh",
+    cardStyle: "glass",
   },
   {
     name: "Ocean Breeze",
@@ -26,6 +30,8 @@ export const THEME_PRESETS: ThemePreset[] = [
     backgroundColor: "#0c1222",
     headingFont: "Poppins",
     bodyFont: "Inter",
+    backgroundStyle: "gradient",
+    cardStyle: "glass",
   },
   {
     name: "Emerald Forest",
@@ -34,6 +40,8 @@ export const THEME_PRESETS: ThemePreset[] = [
     backgroundColor: "#0a1a14",
     headingFont: "Outfit",
     bodyFont: "Source Sans 3",
+    backgroundStyle: "solid",
+    cardStyle: "flat",
   },
   {
     name: "Sunset Glow",
@@ -42,6 +50,8 @@ export const THEME_PRESETS: ThemePreset[] = [
     backgroundColor: "#1a1008",
     headingFont: "Roboto",
     bodyFont: "Roboto",
+    backgroundStyle: "gradient",
+    cardStyle: "flat",
   },
   {
     name: "Rose Quartz",
@@ -50,6 +60,8 @@ export const THEME_PRESETS: ThemePreset[] = [
     backgroundColor: "#1a0a10",
     headingFont: "Playfair Display",
     bodyFont: "Lato",
+    backgroundStyle: "mesh",
+    cardStyle: "glass",
   },
   {
     name: "Arctic Blue",
@@ -58,6 +70,8 @@ export const THEME_PRESETS: ThemePreset[] = [
     backgroundColor: "#ffffff",
     headingFont: "Inter",
     bodyFont: "Inter",
+    backgroundStyle: "gradient",
+    cardStyle: "outline",
   },
   {
     name: "Corporate Clean",
@@ -66,6 +80,8 @@ export const THEME_PRESETS: ThemePreset[] = [
     backgroundColor: "#f8fafc",
     headingFont: "Roboto",
     bodyFont: "Open Sans",
+    backgroundStyle: "minimal",
+    cardStyle: "outline",
   },
   {
     name: "Warm Earth",
@@ -74,6 +90,8 @@ export const THEME_PRESETS: ThemePreset[] = [
     backgroundColor: "#fefce8",
     headingFont: "Merriweather",
     bodyFont: "Source Sans 3",
+    backgroundStyle: "solid",
+    cardStyle: "flat",
   },
   {
     name: "Neon Cyber",
@@ -82,6 +100,8 @@ export const THEME_PRESETS: ThemePreset[] = [
     backgroundColor: "#020617",
     headingFont: "Space Grotesk",
     bodyFont: "JetBrains Mono",
+    backgroundStyle: "mesh",
+    cardStyle: "outline",
   },
   {
     name: "Minimal Mono",
@@ -90,6 +110,8 @@ export const THEME_PRESETS: ThemePreset[] = [
     backgroundColor: "#fafafa",
     headingFont: "DM Sans",
     bodyFont: "DM Sans",
+    backgroundStyle: "minimal",
+    cardStyle: "flat",
   },
 ];
 

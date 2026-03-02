@@ -232,6 +232,8 @@ model SlideTemplate {
   backgroundColor String?           @db.VarChar(24)
   headingFont     String?           @db.VarChar(80)
   bodyFont        String?           @db.VarChar(80)
+  backgroundStyle String?           @db.VarChar(24)
+  cardStyle       String?           @db.VarChar(24)
   logoUrl         String?
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt

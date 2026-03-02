@@ -135,6 +135,9 @@ const SlideView: React.FC = () => {
         primary: template.primaryColor || "#6366f1",
         secondary: template.secondaryColor || "#a78bfa",
         background: template.backgroundColor || "#0f172a",
+        backgroundStyle:
+          (template.backgroundStyle as "solid" | "gradient" | "mesh" | "minimal") || undefined,
+        cardStyle: (template.cardStyle as "flat" | "glass" | "outline") || undefined,
       }
     : undefined;
 

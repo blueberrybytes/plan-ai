@@ -28,6 +28,8 @@ interface CreateTemplateRequest {
   backgroundColor?: string;
   headingFont?: string;
   bodyFont?: string;
+  backgroundStyle?: string;
+  cardStyle?: string;
   logoUrl?: string;
   slideTypes?: SlideTypeConfigInput[];
 }
@@ -40,6 +42,8 @@ interface UpdateTemplateRequest {
   backgroundColor?: string;
   headingFont?: string;
   bodyFont?: string;
+  backgroundStyle?: string;
+  cardStyle?: string;
   logoUrl?: string;
   slideTypes?: SlideTypeConfigInput[];
 }
@@ -54,6 +58,8 @@ interface SlideTemplateResponse {
   backgroundColor: string | null;
   headingFont: string | null;
   bodyFont: string | null;
+  backgroundStyle: string | null;
+  cardStyle: string | null;
   logoUrl: string | null;
   createdAt: Date;
   updatedAt: Date;

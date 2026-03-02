@@ -1091,6 +1091,8 @@ export interface components {
             backgroundColor: string | null;
             headingFont: string | null;
             bodyFont: string | null;
+            backgroundStyle: string | null;
+            cardStyle: string | null;
             logoUrl: string | null;
             /** Format: date-time */
             createdAt: string;
@@ -1114,6 +1116,8 @@ export interface components {
             backgroundColor?: string;
             headingFont?: string;
             bodyFont?: string;
+            backgroundStyle?: string;
+            cardStyle?: string;
             logoUrl?: string;
             slideTypes?: components["schemas"]["SlideTypeConfigInput"][];
         };
@@ -1125,6 +1129,8 @@ export interface components {
             backgroundColor?: string;
             headingFont?: string;
             bodyFont?: string;
+            backgroundStyle?: string;
+            cardStyle?: string;
             logoUrl?: string;
             slideTypes?: components["schemas"]["SlideTypeConfigInput"][];
         };
@@ -1214,6 +1220,8 @@ export interface components {
             backgroundColor: string | null;
             headingFont: string | null;
             bodyFont: string | null;
+            backgroundStyle: string | null;
+            cardStyle: string | null;
             logoUrl: string | null;
         };
         PresentationResponse: {

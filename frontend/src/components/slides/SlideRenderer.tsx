@@ -114,6 +114,8 @@ interface SlideFrameProps {
     primary?: string;
     secondary?: string;
     background?: string;
+    backgroundStyle?: "solid" | "gradient" | "mesh" | "minimal";
+    cardStyle?: "flat" | "glass" | "outline";
   };
   fonts?: {
     heading?: string;
@@ -124,13 +126,28 @@ interface SlideFrameProps {
 
 const SlideFrame: React.FC<SlideFrameProps> = ({ children, brandColors, fonts, scale = 1 }) => {
   const bg = brandColors?.background || "#0f172a";
+  const primary = brandColors?.primary || "#6366f1";
+  const secondary = brandColors?.secondary || "#a78bfa";
+  const bgStyle = brandColors?.backgroundStyle || "solid";
+
+  let backgroundCSS = bg;
+  if (bgStyle === "gradient") {
+    backgroundCSS = `linear-gradient(135deg, ${bg} 0%, rgba(0,0,0,0.8) 100%)`;
+  } else if (bgStyle === "mesh") {
+    backgroundCSS = `radial-gradient(at 0% 0%, ${primary}33 0px, transparent 50%), 
+                     radial-gradient(at 100% 100%, ${secondary}33 0px, transparent 50%), 
+                     ${bg}`;
+  } else if (bgStyle === "minimal") {
+    // A very subtle repeating grid pattern for minimal themes
+    backgroundCSS = `${bg} url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 0h40v40H0V0zm20 20h20v20H20V20zM0 20h20v20H0V20z' fill='%23ffffff' fill-opacity='0.02' fill-rule='evenodd'/%3E%3C/svg%3E")`;
+  }
 
   return (
     <Box
       sx={{
         width: 960 * scale,
         height: 540 * scale,
-        bgcolor: bg,
+        background: backgroundCSS,
         borderRadius: 2,
         overflow: "hidden",
         position: "relative",
@@ -139,6 +156,19 @@ const SlideFrame: React.FC<SlideFrameProps> = ({ children, brandColors, fonts, s
         transformOrigin: "top left",
       }}
     >
+      {/* Optional: Add a subtle animated grain overlay for mesh/gradient */}
+      {(bgStyle === "mesh" || bgStyle === "gradient") && (
+        <Box
+          sx={{
+            position: "absolute",
+            inset: 0,
+            opacity: 0.15,
+            pointerEvents: "none",
+            mixBlendMode: "overlay",
+            backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")`,
+          }}
+        />
+      )}
       <Box
         sx={{
           width: 960,
@@ -167,6 +197,8 @@ interface SlideProps {
     primary?: string;
     secondary?: string;
     background?: string;
+    backgroundStyle?: "solid" | "gradient" | "mesh" | "minimal";
+    cardStyle?: "flat" | "glass" | "outline";
   };
   fonts?: {
     heading?: string;
@@ -292,7 +324,13 @@ export const TextImageSlide: React.FC<SlideProps> = ({
 };
 
 // Bullet List
-export const BulletListSlide: React.FC<SlideProps> = ({ data = {}, brandColors, fonts, scale }) => {
+export const BulletListSlide: React.FC<SlideProps> = ({
+  data = {},
+  brandColors,
+  fonts,
+  scale,
+  animate,
+}) => {
   const primary = brandColors?.primary || "#6366f1";
   const rawBullets = data.bullets;
   let bullets: string[] = [];
@@ -306,7 +344,8 @@ export const BulletListSlide: React.FC<SlideProps> = ({ data = {}, brandColors, 
   }
   return (
     <SlideFrame brandColors={brandColors} fonts={fonts} scale={scale}>
-      <Typography
+      <AnimatedText
+        animate={animate}
         sx={{
           fontSize: 36,
           fontWeight: 700,
@@ -316,10 +355,19 @@ export const BulletListSlide: React.FC<SlideProps> = ({ data = {}, brandColors, 
         }}
       >
         {data.title as string}
-      </Typography>
+      </AnimatedText>
       <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
         {bullets.map((bullet, i) => (
-          <Box key={i} sx={{ display: "flex", alignItems: "flex-start", gap: 2 }}>
+          <Box
+            key={i}
+            sx={{
+              display: "flex",
+              alignItems: "flex-start",
+              gap: 2,
+              animation: animate ? `slideInUp 0.6s ease-out forwards ${0.2 + i * 0.1}s` : "none",
+              opacity: animate ? 0 : 1,
+            }}
+          >
             <Box
               sx={{
                 width: 8,
@@ -328,9 +376,12 @@ export const BulletListSlide: React.FC<SlideProps> = ({ data = {}, brandColors, 
                 bgcolor: primary,
                 mt: 1,
                 flexShrink: 0,
+                boxShadow: `0 0 10px ${primary}80`,
               }}
             />
-            <Typography sx={{ fontSize: 18, color: "#cbd5e1" }}>{bullet}</Typography>
+            <Typography sx={{ fontSize: 18, color: "#cbd5e1", lineHeight: 1.6 }}>
+              {bullet}
+            </Typography>
           </Box>
         ))}
       </Box>
@@ -339,11 +390,34 @@ export const BulletListSlide: React.FC<SlideProps> = ({ data = {}, brandColors, 
 };
 
 // Two Columns
-export const TwoColumnsSlide: React.FC<SlideProps> = ({ data = {}, brandColors, fonts, scale }) => {
+export const TwoColumnsSlide: React.FC<SlideProps> = ({
+  data = {},
+  brandColors,
+  fonts,
+  scale,
+  animate,
+}) => {
   const primary = brandColors?.primary || "#6366f1";
+  const cardBg =
+    brandColors?.cardStyle === "glass"
+      ? "rgba(255,255,255,0.03)"
+      : brandColors?.cardStyle === "outline"
+        ? "transparent"
+        : "rgba(0,0,0,0.2)";
+
+  const cardBorder =
+    brandColors?.cardStyle === "glass"
+      ? "1px solid rgba(255,255,255,0.1)"
+      : brandColors?.cardStyle === "outline"
+        ? `1px solid ${primary}40`
+        : "1px solid transparent";
+
+  const cardFilter = brandColors?.cardStyle === "glass" ? "blur(12px)" : "none";
+
   return (
     <SlideFrame brandColors={brandColors} fonts={fonts} scale={scale}>
-      <Typography
+      <AnimatedText
+        animate={animate}
         sx={{
           fontSize: 36,
           fontWeight: 700,
@@ -354,41 +428,49 @@ export const TwoColumnsSlide: React.FC<SlideProps> = ({ data = {}, brandColors, 
         }}
       >
         {data.title as string}
-      </Typography>
+      </AnimatedText>
       <Box sx={{ display: "flex", gap: 4 }}>
         <Box
           sx={{
             flex: 1,
-            p: 3,
-            borderRadius: 2,
-            bgcolor: "rgba(255,255,255,0.04)",
-            border: "1px solid rgba(255,255,255,0.08)",
+            p: 4,
+            borderRadius: 3,
+            bgcolor: cardBg,
+            border: cardBorder,
+            backdropFilter: cardFilter,
+            boxShadow: brandColors?.cardStyle === "glass" ? "0 8px 32px rgba(0,0,0,0.2)" : "none",
+            animation: animate ? `slideInUp 0.6s ease-out forwards 0.2s` : "none",
+            opacity: animate ? 0 : 1,
           }}
         >
           {data.leftTitle ? (
-            <Typography sx={{ fontSize: 20, fontWeight: 600, mb: 1.5, color: primary }}>
+            <Typography sx={{ fontSize: 22, fontWeight: 700, mb: 2, color: primary }}>
               {String(data.leftTitle)}
             </Typography>
           ) : null}
-          <Typography sx={{ fontSize: 15, lineHeight: 1.7, color: "#cbd5e1" }}>
+          <Typography sx={{ fontSize: 16, lineHeight: 1.7, color: "#e2e8f0" }}>
             {data.leftBody as string}
           </Typography>
         </Box>
         <Box
           sx={{
             flex: 1,
-            p: 3,
-            borderRadius: 2,
-            bgcolor: "rgba(255,255,255,0.04)",
-            border: "1px solid rgba(255,255,255,0.08)",
+            p: 4,
+            borderRadius: 3,
+            bgcolor: cardBg,
+            border: cardBorder,
+            backdropFilter: cardFilter,
+            boxShadow: brandColors?.cardStyle === "glass" ? "0 8px 32px rgba(0,0,0,0.2)" : "none",
+            animation: animate ? `slideInUp 0.6s ease-out forwards 0.3s` : "none",
+            opacity: animate ? 0 : 1,
           }}
         >
           {data.rightTitle ? (
-            <Typography sx={{ fontSize: 20, fontWeight: 600, mb: 1.5, color: primary }}>
+            <Typography sx={{ fontSize: 22, fontWeight: 700, mb: 2, color: primary }}>
               {String(data.rightTitle)}
             </Typography>
           ) : null}
-          <Typography sx={{ fontSize: 15, lineHeight: 1.7, color: "#cbd5e1" }}>
+          <Typography sx={{ fontSize: 16, lineHeight: 1.7, color: "#e2e8f0" }}>
             {data.rightBody as string}
           </Typography>
         </Box>
@@ -398,7 +480,13 @@ export const TwoColumnsSlide: React.FC<SlideProps> = ({ data = {}, brandColors, 
 };
 
 // Team Grid
-export const TeamGridSlide: React.FC<SlideProps> = ({ data = {}, brandColors, fonts, scale }) => {
+export const TeamGridSlide: React.FC<SlideProps> = ({
+  data = {},
+  brandColors,
+  fonts,
+  scale,
+  animate,
+}) => {
   const primary = brandColors?.primary || "#6366f1";
   const rawMembers = data.members;
   const members: { name: string; role: string; bio: string }[] = Array.isArray(rawMembers)
@@ -411,9 +499,26 @@ export const TeamGridSlide: React.FC<SlideProps> = ({ data = {}, brandColors, fo
         };
       })
     : [];
+  const cardBg =
+    brandColors?.cardStyle === "glass"
+      ? "rgba(255,255,255,0.03)"
+      : brandColors?.cardStyle === "outline"
+        ? "transparent"
+        : "rgba(0,0,0,0.2)";
+
+  const cardBorder =
+    brandColors?.cardStyle === "glass"
+      ? "1px solid rgba(255,255,255,0.1)"
+      : brandColors?.cardStyle === "outline"
+        ? `1px solid ${primary}40`
+        : "1px solid transparent";
+
+  const cardFilter = brandColors?.cardStyle === "glass" ? "blur(12px)" : "none";
+
   return (
     <SlideFrame brandColors={brandColors} fonts={fonts} scale={scale}>
-      <Typography
+      <AnimatedText
+        animate={animate}
         sx={{
           fontSize: 36,
           fontWeight: 700,
@@ -424,7 +529,7 @@ export const TeamGridSlide: React.FC<SlideProps> = ({ data = {}, brandColors, fo
         }}
       >
         {data.title as string}
-      </Typography>
+      </AnimatedText>
       <Box
         sx={{
           display: "grid",
@@ -437,35 +542,46 @@ export const TeamGridSlide: React.FC<SlideProps> = ({ data = {}, brandColors, fo
             key={i}
             sx={{
               textAlign: "center",
-              p: 2,
-              borderRadius: 2,
-              bgcolor: "rgba(255,255,255,0.04)",
-              border: "1px solid rgba(255,255,255,0.08)",
+              p: 3,
+              borderRadius: 3,
+              bgcolor: cardBg,
+              border: cardBorder,
+              backdropFilter: cardFilter,
+              boxShadow:
+                brandColors?.cardStyle === "glass" ? "0 8px 32px rgba(0,0,0,0.15)" : "none",
+              animation: animate ? `slideInUp 0.6s ease-out forwards ${0.2 + i * 0.1}s` : "none",
+              opacity: animate ? 0 : 1,
             }}
           >
             <Box
               sx={{
-                width: 56,
-                height: 56,
+                width: 64,
+                height: 64,
                 borderRadius: "50%",
-                bgcolor: primary,
+                background: `linear-gradient(135deg, ${primary}, #a78bfa)`,
+                backgroundSize: "200% 200%",
                 mx: "auto",
-                mb: 1.5,
+                mb: 2,
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                fontSize: 22,
-                fontWeight: 700,
+                fontSize: 24,
+                fontWeight: 800,
                 color: "#fff",
+                boxShadow: `0 4px 14px ${primary}60`,
               }}
             >
               {member.name.charAt(0)}
             </Box>
-            <Typography sx={{ fontSize: 16, fontWeight: 600, color: "#e2e8f0" }}>
+            <Typography sx={{ fontSize: 18, fontWeight: 700, color: "#fff" }}>
               {member.name}
             </Typography>
-            <Typography sx={{ fontSize: 13, color: primary, mb: 0.5 }}>{member.role}</Typography>
-            <Typography sx={{ fontSize: 12, color: "#64748b" }}>{member.bio}</Typography>
+            <Typography sx={{ fontSize: 14, color: primary, mb: 1, fontWeight: 500 }}>
+              {member.role}
+            </Typography>
+            <Typography sx={{ fontSize: 13, color: "#94a3b8", lineHeight: 1.5 }}>
+              {member.bio}
+            </Typography>
           </Box>
         ))}
       </Box>
@@ -474,11 +590,18 @@ export const TeamGridSlide: React.FC<SlideProps> = ({ data = {}, brandColors, fo
 };
 
 // Showcase
-export const ShowcaseSlide: React.FC<SlideProps> = ({ data = {}, brandColors, fonts, scale }) => {
+export const ShowcaseSlide: React.FC<SlideProps> = ({
+  data = {},
+  brandColors,
+  fonts,
+  scale,
+  animate,
+}) => {
   const primary = brandColors?.primary || "#6366f1";
   return (
     <SlideFrame brandColors={brandColors} fonts={fonts} scale={scale}>
-      <Typography
+      <AnimatedText
+        animate={animate}
         sx={{
           fontSize: 32,
           fontWeight: 700,
@@ -489,7 +612,7 @@ export const ShowcaseSlide: React.FC<SlideProps> = ({ data = {}, brandColors, fo
         }}
       >
         {data.title as string}
-      </Typography>
+      </AnimatedText>
       <Box
         sx={{
           flex: 1,
@@ -519,7 +642,13 @@ export const ShowcaseSlide: React.FC<SlideProps> = ({ data = {}, brandColors, fo
 };
 
 // Stats
-export const StatsSlide: React.FC<SlideProps> = ({ data = {}, brandColors, fonts, scale }) => {
+export const StatsSlide: React.FC<SlideProps> = ({
+  data = {},
+  brandColors,
+  fonts,
+  scale,
+  animate,
+}) => {
   const primary = brandColors?.primary || "#6366f1";
   const rawStats = data.stats;
   const stats: { label: string; value: string }[] = Array.isArray(rawStats)
@@ -528,25 +657,42 @@ export const StatsSlide: React.FC<SlideProps> = ({ data = {}, brandColors, fonts
         return { label: String(obj.label || ""), value: String(obj.value || "") };
       })
     : [];
+  const cardBg =
+    brandColors?.cardStyle === "glass"
+      ? "rgba(255,255,255,0.03)"
+      : brandColors?.cardStyle === "outline"
+        ? "transparent"
+        : "rgba(0,0,0,0.2)";
+
+  const cardBorder =
+    brandColors?.cardStyle === "glass"
+      ? "1px solid rgba(255,255,255,0.1)"
+      : brandColors?.cardStyle === "outline"
+        ? `1px solid ${primary}40`
+        : "1px solid transparent";
+
+  const cardFilter = brandColors?.cardStyle === "glass" ? "blur(12px)" : "none";
+
   return (
     <SlideFrame brandColors={brandColors} fonts={fonts} scale={scale}>
-      <Typography
+      <AnimatedText
+        animate={animate}
         sx={{
           fontSize: 36,
           fontWeight: 700,
-          mb: 5,
+          mb: 6,
           color: primary,
           textAlign: "center",
           fontFamily: `'${fonts?.heading || "Inter"}', sans-serif`,
         }}
       >
         {data.title as string}
-      </Typography>
+      </AnimatedText>
       <Box
         sx={{
           display: "grid",
           gridTemplateColumns: `repeat(${Math.min(stats.length, 4)}, 1fr)`,
-          gap: 3,
+          gap: 4,
         }}
       >
         {stats.map((stat, i) => (
@@ -554,25 +700,39 @@ export const StatsSlide: React.FC<SlideProps> = ({ data = {}, brandColors, fonts
             key={i}
             sx={{
               textAlign: "center",
-              p: 3,
-              borderRadius: 2,
-              bgcolor: "rgba(255,255,255,0.04)",
-              border: "1px solid rgba(255,255,255,0.08)",
+              p: 4,
+              borderRadius: 4,
+              bgcolor: cardBg,
+              border: cardBorder,
+              backdropFilter: cardFilter,
+              boxShadow:
+                brandColors?.cardStyle === "glass" ? "0 8px 32px rgba(0,0,0,0.15)" : "none",
+              animation: animate ? `slideInUp 0.6s ease-out forwards ${0.2 + i * 0.1}s` : "none",
+              opacity: animate ? 0 : 1,
             }}
           >
             <Typography
               sx={{
-                fontSize: 40,
+                fontSize: 48,
                 fontWeight: 800,
                 background: `linear-gradient(135deg, ${primary}, #a78bfa)`,
                 WebkitBackgroundClip: "text",
                 WebkitTextFillColor: "transparent",
-                mb: 0.5,
+                mb: 1,
+                lineHeight: 1.1,
               }}
             >
               {stat.value}
             </Typography>
-            <Typography sx={{ fontSize: 14, color: "#94a3b8", fontWeight: 500 }}>
+            <Typography
+              sx={{
+                fontSize: 15,
+                color: "#94a3b8",
+                fontWeight: 600,
+                letterSpacing: "0.05em",
+                textTransform: "uppercase",
+              }}
+            >
               {stat.label}
             </Typography>
           </Box>

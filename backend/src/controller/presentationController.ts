@@ -40,6 +40,8 @@ interface TemplateSubset {
   backgroundColor: string | null;
   headingFont: string | null;
   bodyFont: string | null;
+  backgroundStyle: string | null;
+  cardStyle: string | null;
   logoUrl: string | null;
 }
 

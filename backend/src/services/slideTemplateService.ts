@@ -19,6 +19,8 @@ export interface CreateTemplateInput {
   backgroundColor?: string | null;
   headingFont?: string | null;
   bodyFont?: string | null;
+  backgroundStyle?: string | null;
+  cardStyle?: string | null;
   logoUrl?: string | null;
   slideTypes?: SlideTypeConfigInput[];
 }
@@ -31,6 +33,8 @@ export interface UpdateTemplateInput {
   backgroundColor?: string | null;
   headingFont?: string | null;
   bodyFont?: string | null;
+  backgroundStyle?: string | null;
+  cardStyle?: string | null;
   logoUrl?: string | null;
   slideTypes?: SlideTypeConfigInput[];
 }

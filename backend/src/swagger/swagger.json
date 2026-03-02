@@ -1312,6 +1312,14 @@
 						"type": "string",
 						"nullable": true
 					},
+					"backgroundStyle": {
+						"type": "string",
+						"nullable": true
+					},
+					"cardStyle": {
+						"type": "string",
+						"nullable": true
+					},
 					"logoUrl": {
 						"type": "string",
 						"nullable": true
@@ -1341,6 +1349,8 @@
 					"backgroundColor",
 					"headingFont",
 					"bodyFont",
+					"backgroundStyle",
+					"cardStyle",
 					"logoUrl",
 					"createdAt",
 					"updatedAt",
@@ -1400,6 +1410,12 @@
 					"bodyFont": {
 						"type": "string"
 					},
+					"backgroundStyle": {
+						"type": "string"
+					},
+					"cardStyle": {
+						"type": "string"
+					},
 					"logoUrl": {
 						"type": "string"
 					},
@@ -1437,6 +1453,12 @@
 						"type": "string"
 					},
 					"bodyFont": {
+						"type": "string"
+					},
+					"backgroundStyle": {
+						"type": "string"
+					},
+					"cardStyle": {
 						"type": "string"
 					},
 					"logoUrl": {
@@ -1778,6 +1800,14 @@
 						"type": "string",
 						"nullable": true
 					},
+					"backgroundStyle": {
+						"type": "string",
+						"nullable": true
+					},
+					"cardStyle": {
+						"type": "string",
+						"nullable": true
+					},
 					"logoUrl": {
 						"type": "string",
 						"nullable": true
@@ -1791,6 +1821,8 @@
 					"backgroundColor",
 					"headingFont",
 					"bodyFont",
+					"backgroundStyle",
+					"cardStyle",
 					"logoUrl"
 				],
 				"type": "object",

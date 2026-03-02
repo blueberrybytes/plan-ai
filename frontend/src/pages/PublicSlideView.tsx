@@ -188,11 +188,15 @@ const PublicSlideView: React.FC = () => {
   const template = presentation.template;
   const brandColors = template
     ? {
-        primary: template.primaryColor || undefined,
-        secondary: template.secondaryColor || undefined,
-        background: template.backgroundColor || undefined,
+        primary: template.primaryColor || "#6366f1",
+        secondary: template.secondaryColor || "#a78bfa",
+        background: template.backgroundColor || "#0f172a",
+        backgroundStyle:
+          (template.backgroundStyle as "solid" | "gradient" | "mesh" | "minimal") || undefined,
+        cardStyle: (template.cardStyle as "flat" | "glass" | "outline") || undefined,
       }
     : undefined;
+
   const fonts = template
     ? {
         heading: template.headingFont || undefined,
