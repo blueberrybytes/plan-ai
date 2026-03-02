@@ -286,6 +286,7 @@ const SlideCreate: React.FC = () => {
                 {t("slides.create.themePreview", { name: selectedTemplate.name })}
               </Typography>
               <SlideRenderer
+                key={`title-${selectedTemplate?.id || "default"}`}
                 typeKey="title_only"
                 data={{
                   title: title || t("slides.create.previewTitle"),
@@ -306,7 +307,7 @@ const SlideCreate: React.FC = () => {
               >
                 {SLIDE_TYPES.slice(1, 5).map((st) => (
                   <SlideRenderer
-                    key={st.key}
+                    key={`${st.key}-${selectedTemplate?.id || "default"}`}
                     typeKey={st.key}
                     data={st.sampleData}
                     brandColors={brandColors}

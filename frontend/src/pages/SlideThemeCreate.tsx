@@ -216,7 +216,12 @@ const SlideThemeCreate: React.FC = () => {
               label="Card Style"
               fullWidth
               value={cardStyle}
-              onChange={(e) => setCardStyle(e.target.value as "flat" | "glass" | "outline")}
+              onChange={(e) => {
+                setCardStyle(e.target.value as "flat" | "glass" | "outline");
+                if (previewSlide === 0) {
+                  setPreviewSlide(7); // Switch to Stats slide to show the card effect
+                }
+              }}
             >
               <MenuItem value="flat">Flat</MenuItem>
               <MenuItem value="glass">Glassmorphism</MenuItem>
@@ -337,7 +342,7 @@ const SlideThemeCreate: React.FC = () => {
           }}
         >
           <SlideRenderer
-            key={currentSlideType.key}
+            key={`${currentSlideType.key}-${JSON.stringify(brandColors)}-${JSON.stringify(fonts)}`}
             typeKey={currentSlideType.key}
             data={currentSlideType.sampleData}
             brandColors={brandColors}
