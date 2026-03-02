@@ -5,7 +5,7 @@ import {
   ChevronLeft as ChevronLeftIcon,
   ChevronRight as ChevronRightIcon,
 } from "@mui/icons-material";
-import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import SidebarLayout from "../components/layout/SidebarLayout";
 import SlideRenderer from "../components/slides/SlideRenderer";
@@ -20,8 +20,6 @@ interface SlideData {
 const SlideView: React.FC = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const isStreaming = searchParams.get("streaming") === "true";
 
   const { presentationId } = useParams<{ presentationId: string }>();
 
@@ -233,12 +231,13 @@ const SlideView: React.FC = () => {
           {/* Slide */}
           {slide && (
             <SlideRenderer
+              key={currentSlide}
               typeKey={slide.slideTypeKey}
               data={slide.parameters}
               brandColors={brandColors}
               fonts={fonts}
               scale={0.85}
-              animate={isStreaming}
+              animate={true}
             />
           )}
 

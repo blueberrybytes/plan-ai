@@ -75,6 +75,15 @@ const SlideCreate: React.FC = () => {
         primary: selectedTemplate.primaryColor || "#6366f1",
         secondary: selectedTemplate.secondaryColor || "#a78bfa",
         background: selectedTemplate.backgroundColor || "#0f172a",
+        backgroundStyle:
+          (selectedTemplate.backgroundStyle as
+            | "solid"
+            | "gradient"
+            | "mesh"
+            | "minimal"
+            | undefined) || "solid",
+        cardStyle:
+          (selectedTemplate.cardStyle as "flat" | "glass" | "outline" | undefined) || "flat",
       }
     : undefined;
 

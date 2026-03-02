@@ -28,6 +28,10 @@ const SlideThemeCreate: React.FC = () => {
   const [primaryColor, setPrimaryColor] = useState("#6366f1");
   const [secondaryColor, setSecondaryColor] = useState("#a78bfa");
   const [backgroundColor, setBackgroundColor] = useState("#0f172a");
+  const [backgroundStyle, setBackgroundStyle] = useState<"solid" | "gradient" | "mesh" | "minimal">(
+    "solid",
+  );
+  const [cardStyle, setCardStyle] = useState<"flat" | "glass" | "outline">("flat");
   const [headingFont, setHeadingFont] = useState("Inter");
   const [bodyFont, setBodyFont] = useState("Inter");
   const [themeName, setThemeName] = useState("");
@@ -37,6 +41,8 @@ const SlideThemeCreate: React.FC = () => {
     setPrimaryColor(preset.primaryColor);
     setSecondaryColor(preset.secondaryColor);
     setBackgroundColor(preset.backgroundColor);
+    setBackgroundStyle(preset.backgroundStyle || "solid");
+    setCardStyle(preset.cardStyle || "flat");
     setHeadingFont(preset.headingFont);
     setBodyFont(preset.bodyFont);
     if (!themeName) setThemeName(preset.name);
@@ -50,6 +56,8 @@ const SlideThemeCreate: React.FC = () => {
         primaryColor,
         secondaryColor,
         backgroundColor,
+        backgroundStyle,
+        cardStyle,
         headingFont,
         bodyFont,
       }).unwrap();
@@ -64,6 +72,8 @@ const SlideThemeCreate: React.FC = () => {
     primary: primaryColor,
     secondary: secondaryColor,
     background: backgroundColor,
+    backgroundStyle,
+    cardStyle,
   };
   const currentSlideType = SLIDE_TYPES[previewSlide];
 
@@ -182,6 +192,38 @@ const SlideThemeCreate: React.FC = () => {
             </Box>
           </Box>
 
+          {/* Styles */}
+          <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 1 }}>
+            Styles
+          </Typography>
+          <Box sx={{ display: "flex", gap: 2, mb: 3 }}>
+            <TextField
+              select
+              label="Background Style"
+              fullWidth
+              value={backgroundStyle}
+              onChange={(e) =>
+                setBackgroundStyle(e.target.value as "solid" | "gradient" | "mesh" | "minimal")
+              }
+            >
+              <MenuItem value="solid">Solid</MenuItem>
+              <MenuItem value="gradient">Gradient</MenuItem>
+              <MenuItem value="mesh">Mesh Texture</MenuItem>
+              <MenuItem value="minimal">Minimal Grid</MenuItem>
+            </TextField>
+            <TextField
+              select
+              label="Card Style"
+              fullWidth
+              value={cardStyle}
+              onChange={(e) => setCardStyle(e.target.value as "flat" | "glass" | "outline")}
+            >
+              <MenuItem value="flat">Flat</MenuItem>
+              <MenuItem value="glass">Glassmorphism</MenuItem>
+              <MenuItem value="outline">Outline</MenuItem>
+            </TextField>
+          </Box>
+
           {/* Typography */}
           <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 1 }}>
             {t("slides.themes.form.typography")}
@@ -295,11 +337,13 @@ const SlideThemeCreate: React.FC = () => {
           }}
         >
           <SlideRenderer
+            key={currentSlideType.key}
             typeKey={currentSlideType.key}
             data={currentSlideType.sampleData}
             brandColors={brandColors}
             fonts={fonts}
             scale={0.75}
+            animate={true}
           />
 
           {/* Slide type switcher */}

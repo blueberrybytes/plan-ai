@@ -56,6 +56,10 @@ const SlideThemes: React.FC = () => {
                 primary: tmpl.primaryColor || "#6366f1",
                 secondary: tmpl.secondaryColor || "#a78bfa",
                 background: tmpl.backgroundColor || "#0f172a",
+                backgroundStyle:
+                  (tmpl.backgroundStyle as "solid" | "gradient" | "mesh" | "minimal" | undefined) ||
+                  "solid",
+                cardStyle: (tmpl.cardStyle as "flat" | "glass" | "outline" | undefined) || "flat",
               };
               return (
                 <Card key={tmpl.id} variant="outlined">
@@ -112,10 +116,12 @@ const SlideThemes: React.FC = () => {
                         <Grid item xs={12} sm={6} md={4} lg={3} key={st.key}>
                           <Box sx={{ transform: "scale(1)", transformOrigin: "top left" }}>
                             <SlideRenderer
+                              key={st.key}
                               typeKey={st.key}
                               data={st.sampleData}
                               brandColors={brandColors}
                               scale={0.28}
+                              animate={true}
                             />
                           </Box>
                           <Typography
