@@ -23,29 +23,9 @@ const SlideView: React.FC = () => {
 
   const { presentationId } = useParams<{ presentationId: string }>();
 
-  // Poll every 2s if generating
   const { data: presentation, isLoading } = useGetPresentationQuery(presentationId || "", {
     skip: !presentationId,
   });
-
-  const isGeneratingStatus =
-    presentation?.status === "GENERATING" || presentation?.status === "GENERATING_IMAGES";
-
-  useGetPresentationQuery(presentationId || "", {
-    skip: !presentationId || !isGeneratingStatus,
-    pollingInterval: 2000,
-  });
-
-  // RTK Query's pollingInterval in options is static usually, unless we force re-render.
-  // Actually, passing it as an option works if the component re-renders.
-  // But strictly, we might need a separate state or just rely on the hook update.
-  // Let's stick to the standard way:
-  /* 
-  const { data: presentation, isLoading } = useGetPresentationQuery(presentationId || "", {
-    pollingInterval: (presentation?.status === "GENERATING" || presentation?.status === "GENERATING_IMAGES") ? 2000 : 0,
-  });
-  */
-  // But `presentation` is from valid scope? Yes.
 
   const { data: template } = useGetTemplateQuery(presentation?.templateId || "", {
     skip: !presentation?.templateId,

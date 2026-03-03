@@ -70,21 +70,24 @@ export class SlideGenerationService {
       include: { template: true },
     });
 
-    // 3. Trigger background generation (Fire and forget)
-    // We don't await this so the API returns immediately.
-    this.generateSlidesBackground(
-      userId,
-      presentation.id,
-      template,
-      contextIds,
-      prompt,
-      clampedNumSlides,
-    ).catch((err) => {
-      logger.error(`Background generation failed for ${presentation.id}`, err);
-      this.updateStatus(userId, presentation.id, "FAILED");
-    });
+    // 3. Await generation synchronously
+    try {
+      await this.generateSlidesBackground(
+        userId,
+        presentation.id,
+        template,
+        contextIds,
+        prompt,
+        clampedNumSlides,
+      );
+    } catch (err) {
+      logger.error(`Generation failed for ${presentation.id}`, err);
+      // Status update is already handled inside generateSlidesBackground's catch block,
+      // but we throw here to fail the API request immediately.
+      throw new Error("Failed to generate presentation");
+    }
 
-    return presentation;
+    return this.getPresentationById(userId, presentation.id);
   }
 
   /**
@@ -249,6 +252,7 @@ Provide ONLY the required JSON parameters for this slide type matching the schem
         where: { id: presentationId },
         data: { status: "FAILED" },
       });
+      throw error;
     }
   }
 

@@ -63,7 +63,7 @@ const SlideCreate: React.FC = () => {
         title: title || undefined,
         numSlides: numSlides,
       }).unwrap();
-      navigate(`/slides/view/${result.id}?streaming=true`);
+      navigate(`/slides/view/${result.id}`);
       void result;
     } catch {
       setError(t("slides.create.error"));
