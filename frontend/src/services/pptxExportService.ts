@@ -106,11 +106,9 @@ export const exportToPptx = async (options: ExportOptions) => {
           color: "CBD5E1",
           valign: "middle",
         });
-        if (params.imageUrl || params.imageQuery) {
+        if (params.imageUrl) {
           slidePage.addImage({
-            path: (params.imageUrl as string)
-              ? (params.imageUrl as string)
-              : `https://image.pollinations.ai/prompt/${encodeURIComponent(String(params.imageQuery))}?width=800&height=600&nologo=true`,
+            path: params.imageUrl as string,
             x: 5.5,
             y: 1,
             w: 4,
@@ -255,11 +253,9 @@ export const exportToPptx = async (options: ExportOptions) => {
           bold: true,
           align: "center",
         });
-        if (params.imageUrl || params.imageQuery) {
+        if (params.imageUrl) {
           slidePage.addImage({
-            path: (params.imageUrl as string)
-              ? (params.imageUrl as string)
-              : `https://image.pollinations.ai/prompt/${encodeURIComponent(String(params.imageQuery))}?width=1200&height=600&nologo=true`,
+            path: params.imageUrl as string,
             x: 2,
             y: 1.2,
             w: 6,

@@ -308,11 +308,8 @@ export const TextImageSlide: React.FC<SlideProps> = ({
           }}
         >
           <SlideImage
-            src={
-              (data.imageUrl as string) ||
-              `https://image.pollinations.ai/prompt/${encodeURIComponent(String(data.imageQuery || "abstract background"))}?width=800&height=600&nologo=true`
-            }
-            alt={String(data.imageQuery || "Image")}
+            src={(data.imageUrl as string) || ""}
+            alt={String(data.imageQuery || "Featured Image")}
             query={String(data.imageQuery || "")}
             primary={primary}
             style={{ width: "100%", height: "100%", objectFit: "cover" }}
@@ -624,10 +621,7 @@ export const ShowcaseSlide: React.FC<SlideProps> = ({
         }}
       >
         <SlideImage
-          src={
-            (data.imageUrl as string) ||
-            `https://image.pollinations.ai/prompt/${encodeURIComponent(String(data.imageQuery || "professional showcase image"))}?width=1200&height=600&nologo=true`
-          }
+          src={(data.imageUrl as string) || ""}
           alt={String(data.imageQuery || "Featured Image")}
           query={String(data.imageQuery || "")}
           primary={primary}

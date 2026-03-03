@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Box,
   Typography,
@@ -12,6 +12,9 @@ import {
   Chip,
   CircularProgress,
   Alert,
+  Dialog,
+  DialogContent,
+  LinearProgress,
 } from "@mui/material";
 import { ArrowBack as ArrowBackIcon, AutoAwesome as AutoAwesomeIcon } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
@@ -25,6 +28,15 @@ import {
   SlideTemplateResponse,
 } from "../store/apis/slideApi";
 import { useListContextsQuery } from "../store/apis/contextApi";
+
+const LOADING_MESSAGES = [
+  "Analyzing your prompt...",
+  "Structuring the presentation outline...",
+  "Drafting slide content...",
+  "Applying brand styles...",
+  "Generating beautiful visuals...",
+  "Polishing final details...",
+];
 
 const SlideCreate: React.FC = () => {
   const { t } = useTranslation();
@@ -41,6 +53,18 @@ const SlideCreate: React.FC = () => {
   const [audience, setAudience] = useState("");
   const [numSlides, setNumSlides] = useState<number | undefined>(undefined);
   const [error, setError] = useState<string | null>(null);
+  const [loadingIndex, setLoadingIndex] = useState(0);
+
+  useEffect(() => {
+    if (!isLoading) {
+      setLoadingIndex(0);
+      return;
+    }
+    const interval = setInterval(() => {
+      setLoadingIndex((prev) => (prev + 1) % LOADING_MESSAGES.length);
+    }, 4500);
+    return () => clearInterval(interval);
+  }, [isLoading]);
 
   const contexts = contextsData?.data?.contexts ?? [];
   const selectedTemplate = templates.find(
@@ -330,6 +354,73 @@ const SlideCreate: React.FC = () => {
           )}
         </Box>
       </Box>
+
+      {/* Loading Dialog */}
+      <Dialog
+        open={isLoading}
+        PaperProps={{
+          sx: {
+            bgcolor: "background.paper",
+            backgroundImage: "none",
+            borderRadius: 3,
+            p: 2,
+            minWidth: 400,
+            boxShadow: "0 24px 64px rgba(0,0,0,0.6)",
+            border: "1px solid rgba(99,102,241,0.2)",
+          },
+        }}
+      >
+        <DialogContent sx={{ textAlign: "center", py: 4, px: 6 }}>
+          <Box sx={{ position: "relative", display: "inline-flex", mb: 4 }}>
+            <CircularProgress size={72} thickness={4} sx={{ color: "#6366f1" }} />
+            <Box
+              sx={{
+                top: 0,
+                left: 0,
+                bottom: 0,
+                right: 0,
+                position: "absolute",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <AutoAwesomeIcon sx={{ color: "#a78bfa", fontSize: 28 }} />
+            </Box>
+          </Box>
+          <Typography variant="h5" fontWeight={700} sx={{ mb: 1 }}>
+            {t("slides.create.generatingStatus", "Crafting Presentation")}
+          </Typography>
+          <Box sx={{ height: 24, mb: 4 }}>
+            <Typography
+              key={loadingIndex}
+              variant="body1"
+              sx={{
+                color: "#94a3b8",
+                "@keyframes fadeUp": {
+                  "0%": { opacity: 0, transform: "translateY(10px)" },
+                  "10%": { opacity: 1, transform: "translateY(0)" },
+                  "90%": { opacity: 1, transform: "translateY(0)" },
+                  "100%": { opacity: 0, transform: "translateY(-10px)" },
+                },
+                animation: "fadeUp 4.5s ease-in-out forwards",
+              }}
+            >
+              {LOADING_MESSAGES[loadingIndex]}
+            </Typography>
+          </Box>
+          <LinearProgress
+            sx={{
+              height: 6,
+              borderRadius: 3,
+              bgcolor: "rgba(99,102,241,0.1)",
+              "& .MuiLinearProgress-bar": {
+                bgcolor: "#6366f1",
+              },
+            }}
+          />
+        </DialogContent>
+      </Dialog>
     </SidebarLayout>
   );
 };
