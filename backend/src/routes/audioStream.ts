@@ -35,6 +35,7 @@ export function setupAudioStream(server: Server) {
     // 1. Authenticate the connection via the sec-websocket-protocol or query param
     const url = new URL(req.url || "", `http://${req.headers.host}`);
     const token = url.searchParams.get("token");
+    const language = url.searchParams.get("language");
 
     if (!token) {
       ws.send(
@@ -87,6 +88,11 @@ export function setupAudioStream(server: Server) {
           logger.info(`OpenAI Realtime [${source}] connection opened`);
           ws.send(JSON.stringify({ type: "ready", source }));
 
+          const transcriptionConfig: any = { model: "whisper-1" };
+          if (language) {
+            transcriptionConfig.language = language;
+          }
+
           aiWs.send({
             type: "session.update",
             session: {
@@ -94,7 +100,7 @@ export function setupAudioStream(server: Server) {
               output_modalities: ["text"],
               audio: {
                 input: {
-                  transcription: { model: "whisper-1" },
+                  transcription: transcriptionConfig,
                 },
               },
             } as any,
@@ -154,12 +160,12 @@ export function setupAudioStream(server: Server) {
 
     // Send synthetic keep-alives since OpenAI drops idle sockets
     const keepAliveInterval: NodeJS.Timeout = setInterval(() => {
-      console.log("Sending keep-alive to OpenAI [Dual]");
+      // console.log("Sending keep-alive to OpenAI [Dual]");
       if (openAiWsMic && openAiWsMic.socket.readyState === 1) {
-        openAiWsMic.send({ type: "input_audio_buffer.append", audio: "AAA=" } as any);
+        openAiWsMic.send({ type: "input_audio_buffer.commit" } as any);
       }
       if (openAiWsSys && openAiWsSys.socket.readyState === 1) {
-        openAiWsSys.send({ type: "input_audio_buffer.append", audio: "AAA=" } as any);
+        openAiWsSys.send({ type: "input_audio_buffer.commit" } as any);
       }
     }, 10 * 1000);
 
@@ -185,13 +191,40 @@ export function setupAudioStream(server: Server) {
 
         if (data.type === "input_audio") {
           const targetWs = data.source === "sys" ? openAiWsSys : openAiWsMic;
-          if (targetWs && targetWs.socket.readyState === 1) {
+          if (targetWs && targetWs.socket.readyState === 1 && data.audio) {
             // OPEN
             targetWs.send({
               type: "input_audio_buffer.append",
               audio: data.audio, // Must be raw base64 encoded pcm16
             } as any);
           }
+        }
+
+        if (data.type === "change_language") {
+          logger.info(`Updating OpenAI language to: ${data.language || "auto"}`);
+          const transcriptionConfig: any = { model: "whisper-1" };
+          if (data.language) {
+            transcriptionConfig.language = data.language;
+          }
+
+          const updateEvent = {
+            type: "session.update",
+            session: {
+              type: "realtime",
+              output_modalities: ["text"],
+              audio: {
+                input: {
+                  transcription: transcriptionConfig,
+                },
+              },
+            } as any,
+          };
+
+          if (openAiWsMic && openAiWsMic.socket.readyState === 1)
+            openAiWsMic.send(updateEvent as any);
+          if (openAiWsSys && openAiWsSys.socket.readyState === 1)
+            openAiWsSys.send(updateEvent as any);
+          return;
         }
       } catch (err) {
         logger.error("Failed to parse incoming WS message:", err);
