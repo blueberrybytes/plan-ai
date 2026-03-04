@@ -20,7 +20,6 @@ import {
   useUpdateProjectTaskMutation,
 } from "../../store/apis/projectApi";
 import { setToastMessage } from "../../store/slices/app/appSlice";
-import type { components } from "../../types/api";
 
 const TASK_STATUSES: TaskStatusSchema[] = [
   "BACKLOG",
@@ -50,7 +49,7 @@ type DependencyOption = {
 };
 
 type RichTask = TaskResponse & {
-  metadata?: components["schemas"]["InputJsonValue"] | null;
+  metadata?: Record<string, unknown> | null;
 };
 
 interface ProjectTaskFormDialogProps {
@@ -133,10 +132,10 @@ const ProjectTaskFormDialog: React.FC<ProjectTaskFormDialogProps> = ({
       return;
     }
 
-    let metadata: components["schemas"]["InputJsonValue"] | null | undefined;
+    let metadata: Record<string, unknown> | null | undefined;
     if (metadataText.trim().length > 0) {
       try {
-        metadata = JSON.parse(metadataText) as components["schemas"]["InputJsonValue"];
+        metadata = JSON.parse(metadataText);
       } catch (error) {
         console.error("Invalid metadata JSON", error);
         setFormError("Metadata must be valid JSON");

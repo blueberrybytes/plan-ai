@@ -3,7 +3,7 @@ import { AuthenticatedRequest } from "../middleware/authMiddleware";
 import prisma from "../prisma/prismaClient";
 import { firebaseAdmin } from "../firebase/firebaseAdmin";
 import { logger } from "../utils/logger";
-import { ApiResponse } from "./controllerTypes";
+import { ApiResponse, type TsoaJsonObject } from "./controllerTypes";
 import { customThemeService } from "../services/customThemeService";
 import type { CustomTheme, Prisma } from "@prisma/client";
 
@@ -18,7 +18,25 @@ interface UpdateCustomThemeRequest {
   headingFontFamily?: string | null;
   borderRadius?: number | null;
   density?: number | null;
-  configJson?: Prisma.JsonValue | null;
+  configJson?: TsoaJsonObject | null;
+}
+
+interface CustomThemeResponse {
+  id: string;
+  userId: string;
+  primaryColor: string | null;
+  secondaryColor: string | null;
+  backgroundColor: string | null;
+  surfaceColor: string | null;
+  textPrimaryColor: string | null;
+  textSecondaryColor: string | null;
+  fontFamily: string | null;
+  headingFontFamily: string | null;
+  borderRadius: number | null;
+  density: number | null;
+  configJson: TsoaJsonObject | null;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 @Route("account")
@@ -28,7 +46,7 @@ export class AccountController extends Controller {
   @Get("theme")
   public async getCustomTheme(
     @Request() request: AuthenticatedRequest,
-  ): Promise<ApiResponse<CustomTheme | null>> {
+  ): Promise<ApiResponse<CustomThemeResponse | null>> {
     try {
       const firebaseUid = request.user?.uid;
       if (!firebaseUid) {
@@ -54,7 +72,7 @@ export class AccountController extends Controller {
 
       return {
         status: 200,
-        data: theme,
+        data: theme ? this.mapCustomThemeResponse(theme) : null,
         message: "Theme retrieved successfully",
       };
     } catch (error) {
@@ -73,14 +91,14 @@ export class AccountController extends Controller {
   public async upsertCustomTheme(
     @Body() body: UpdateCustomThemeRequest,
     @Request() request: AuthenticatedRequest,
-  ): Promise<ApiResponse<CustomTheme>> {
+  ): Promise<ApiResponse<CustomThemeResponse>> {
     try {
       const firebaseUid = request.user?.uid;
       if (!firebaseUid) {
         this.setStatus(401);
         return {
           status: 401,
-          data: null as unknown as CustomTheme,
+          data: null as unknown as CustomThemeResponse,
           message: "User not authenticated",
         };
       }
@@ -90,7 +108,7 @@ export class AccountController extends Controller {
         this.setStatus(404);
         return {
           status: 404,
-          data: null as unknown as CustomTheme,
+          data: null as unknown as CustomThemeResponse,
           message: "User not found",
         };
       }
@@ -107,12 +125,13 @@ export class AccountController extends Controller {
         headingFontFamily: body.headingFontFamily ?? null,
         borderRadius: body.borderRadius ?? null,
         density: body.density ?? null,
-        configJson: body.configJson ?? null,
+        configJson:
+          body.configJson === undefined ? undefined : (body.configJson as Prisma.JsonValue | null),
       });
 
       return {
         status: 200,
-        data: theme,
+        data: this.mapCustomThemeResponse(theme),
         message: "Theme saved successfully",
       };
     } catch (error) {
@@ -120,10 +139,17 @@ export class AccountController extends Controller {
       this.setStatus(500);
       return {
         status: 500,
-        data: null as unknown as CustomTheme,
+        data: null as unknown as CustomThemeResponse,
         message: "Failed to save custom theme",
       };
     }
+  }
+
+  private mapCustomThemeResponse(theme: CustomTheme): CustomThemeResponse {
+    return {
+      ...theme,
+      configJson: theme.configJson as TsoaJsonObject | null,
+    };
   }
 
   /**

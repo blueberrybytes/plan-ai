@@ -40,7 +40,7 @@ import { setToastMessage } from "../../store/slices/app/appSlice";
 import { useListContextsQuery } from "../../store/apis/contextApi";
 import { useListGlobalTranscriptsQuery } from "../../store/apis/transcriptApi";
 
-type InputJsonValue = components["schemas"]["InputJsonValue"];
+type InputJsonValue = components["schemas"]["TsoaJsonObject"] | null;
 type ContextResponse = components["schemas"]["ContextResponse"];
 
 const formatDateForDateTimeInput = (date: Date) => {

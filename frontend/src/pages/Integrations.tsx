@@ -39,7 +39,7 @@ type ProviderConfig = {
   notConnectedKey?: string;
 };
 
-type UserIntegrationSummary = components["schemas"]["UserIntegrationSummary"];
+type UserIntegrationSummary = components["schemas"]["IntegrationSummaryResponse"];
 
 const PROVIDER_CONFIGS: ProviderConfig[] = [
   {

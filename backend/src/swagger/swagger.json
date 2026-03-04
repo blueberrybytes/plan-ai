@@ -18,8 +18,17 @@
 			"ProjectStatus": {
 				"$ref": "#/components/schemas/_36_Enums.ProjectStatus"
 			},
-			"JsonValue": {
+			"TsoaJsonObject": {
 				"anyOf": [
+					{
+						"properties": {},
+						"additionalProperties": {},
+						"type": "object"
+					},
+					{
+						"items": {},
+						"type": "array"
+					},
 					{
 						"type": "string"
 					},
@@ -29,30 +38,9 @@
 					},
 					{
 						"type": "boolean"
-					},
-					{
-						"$ref": "#/components/schemas/JsonObject"
-					},
-					{
-						"$ref": "#/components/schemas/JsonArray"
 					}
 				],
-				"nullable": true,
-				"description": "From https://github.com/sindresorhus/type-fest/\r\nMatches any valid JSON value."
-			},
-			"JsonObject": {
-				"properties": {},
-				"additionalProperties": {
-					"$ref": "#/components/schemas/JsonValue"
-				},
-				"type": "object",
-				"description": "From https://github.com/sindresorhus/type-fest/\r\nMatches a JSON object.\r\nThis type can be useful to enforce some input to be JSON-compatible or as a super-type to be extended from."
-			},
-			"JsonArray": {
-				"description": "From https://github.com/sindresorhus/type-fest/\r\nMatches a JSON array.",
-				"properties": {},
-				"type": "object",
-				"additionalProperties": false
+				"nullable": true
 			},
 			"ProjectResponse": {
 				"properties": {
@@ -82,7 +70,7 @@
 					"metadata": {
 						"allOf": [
 							{
-								"$ref": "#/components/schemas/JsonValue"
+								"$ref": "#/components/schemas/TsoaJsonObject"
 							}
 						],
 						"nullable": true
@@ -205,7 +193,7 @@
 					"metadata": {
 						"allOf": [
 							{
-								"$ref": "#/components/schemas/JsonValue"
+								"$ref": "#/components/schemas/TsoaJsonObject"
 							}
 						],
 						"nullable": true
@@ -524,45 +512,6 @@
 				],
 				"type": "object"
 			},
-			"InputJsonValue": {
-				"anyOf": [
-					{
-						"type": "string"
-					},
-					{
-						"type": "number",
-						"format": "double"
-					},
-					{
-						"type": "boolean"
-					},
-					{
-						"$ref": "#/components/schemas/InputJsonObject"
-					},
-					{
-						"$ref": "#/components/schemas/InputJsonArray"
-					},
-					{
-						"properties": {},
-						"type": "object"
-					}
-				],
-				"description": "Matches any valid value that can be used as an input for operations like\r\ncreate and update as the value of a JSON field. Unlike \\`JsonValue\\`, this\r\ntype allows read-only arrays and read-only object properties and disallows\r\n\\`null\\` at the top level.\r\n\r\n\\`null\\` cannot be used as the value of a JSON field because its meaning\r\nwould be ambiguous. Use \\`Prisma.JsonNull\\` to store the JSON null value or\r\n\\`Prisma.DbNull\\` to clear the JSON value and set the field to the database\r\nNULL value instead."
-			},
-			"InputJsonObject": {
-				"properties": {},
-				"additionalProperties": {
-					"$ref": "#/components/schemas/InputJsonValue"
-				},
-				"type": "object",
-				"description": "Matches a JSON object.\r\nUnlike \\`JsonObject\\`, this type allows undefined and read-only properties."
-			},
-			"InputJsonArray": {
-				"description": "Matches a JSON array.\r\nUnlike \\`JsonArray\\`, readonly arrays are assignable to this type.",
-				"properties": {},
-				"type": "object",
-				"additionalProperties": false
-			},
 			"ManualTranscriptRequest": {
 				"properties": {
 					"title": {
@@ -592,7 +541,7 @@
 					"metadata": {
 						"allOf": [
 							{
-								"$ref": "#/components/schemas/InputJsonValue"
+								"$ref": "#/components/schemas/TsoaJsonObject"
 							}
 						],
 						"nullable": true
@@ -630,7 +579,7 @@
 					"metadata": {
 						"allOf": [
 							{
-								"$ref": "#/components/schemas/InputJsonValue"
+								"$ref": "#/components/schemas/TsoaJsonObject"
 							}
 						],
 						"nullable": true
@@ -759,7 +708,7 @@
 					"metadata": {
 						"allOf": [
 							{
-								"$ref": "#/components/schemas/InputJsonValue"
+								"$ref": "#/components/schemas/TsoaJsonObject"
 							}
 						],
 						"nullable": true
@@ -809,7 +758,7 @@
 					"metadata": {
 						"allOf": [
 							{
-								"$ref": "#/components/schemas/InputJsonValue"
+								"$ref": "#/components/schemas/TsoaJsonObject"
 							}
 						],
 						"nullable": true
@@ -867,7 +816,7 @@
 					"metadata": {
 						"allOf": [
 							{
-								"$ref": "#/components/schemas/InputJsonValue"
+								"$ref": "#/components/schemas/TsoaJsonObject"
 							}
 						],
 						"nullable": true
@@ -904,7 +853,7 @@
 					"metadata": {
 						"allOf": [
 							{
-								"$ref": "#/components/schemas/InputJsonValue"
+								"$ref": "#/components/schemas/TsoaJsonObject"
 							}
 						],
 						"nullable": true
@@ -935,7 +884,7 @@
 					"metadata": {
 						"allOf": [
 							{
-								"$ref": "#/components/schemas/InputJsonValue"
+								"$ref": "#/components/schemas/TsoaJsonObject"
 							}
 						],
 						"nullable": true
@@ -1001,7 +950,7 @@
 					"metadata": {
 						"allOf": [
 							{
-								"$ref": "#/components/schemas/JsonValue"
+								"$ref": "#/components/schemas/TsoaJsonObject"
 							}
 						],
 						"nullable": true
@@ -1139,7 +1088,7 @@
 					"metadata": {
 						"allOf": [
 							{
-								"$ref": "#/components/schemas/InputJsonValue"
+								"$ref": "#/components/schemas/TsoaJsonObject"
 							}
 						],
 						"nullable": true
@@ -1170,7 +1119,7 @@
 				"type": "object",
 				"additionalProperties": false
 			},
-			"UpdateTranscriptInput": {
+			"UpdateStandaloneTranscriptBody": {
 				"properties": {
 					"title": {
 						"type": "string",
@@ -1194,7 +1143,7 @@
 					"metadata": {
 						"allOf": [
 							{
-								"$ref": "#/components/schemas/InputJsonValue"
+								"$ref": "#/components/schemas/TsoaJsonObject"
 							}
 						],
 						"nullable": true
@@ -1254,7 +1203,9 @@
 						"type": "string",
 						"nullable": true
 					},
-					"parametersSchema": {},
+					"parametersSchema": {
+						"$ref": "#/components/schemas/TsoaJsonObject"
+					},
 					"position": {
 						"type": "number",
 						"format": "double"
@@ -1359,7 +1310,7 @@
 				"type": "object",
 				"additionalProperties": false
 			},
-			"SlideTypeConfigInput": {
+			"SlideTypeConfigBody": {
 				"properties": {
 					"slideTypeKey": {
 						"type": "string"
@@ -1372,7 +1323,7 @@
 						"nullable": true
 					},
 					"parametersSchema": {
-						"$ref": "#/components/schemas/JsonValue"
+						"$ref": "#/components/schemas/TsoaJsonObject"
 					},
 					"position": {
 						"type": "number",
@@ -1421,7 +1372,7 @@
 					},
 					"slideTypes": {
 						"items": {
-							"$ref": "#/components/schemas/SlideTypeConfigInput"
+							"$ref": "#/components/schemas/SlideTypeConfigBody"
 						},
 						"type": "array"
 					}
@@ -1466,7 +1417,7 @@
 					},
 					"slideTypes": {
 						"items": {
-							"$ref": "#/components/schemas/SlideTypeConfigInput"
+							"$ref": "#/components/schemas/SlideTypeConfigBody"
 						},
 						"type": "array"
 					}
@@ -1595,66 +1546,27 @@
 				],
 				"type": "object"
 			},
-			"DefaultSelection_Prisma._36_PresentationPayload_": {
-				"properties": {
-					"updatedAt": {
-						"type": "string",
-						"format": "date-time"
-					},
-					"createdAt": {
-						"type": "string",
-						"format": "date-time"
-					},
-					"status": {
-						"type": "string"
-					},
-					"contextIds": {
-						"items": {
-							"type": "string"
-						},
-						"type": "array"
-					},
-					"slidesJson": {
-						"$ref": "#/components/schemas/JsonValue"
-					},
-					"title": {
-						"type": "string"
-					},
-					"templateId": {
-						"type": "string"
-					},
-					"userId": {
-						"type": "string"
-					},
-					"id": {
-						"type": "string"
-					}
-				},
-				"required": [
-					"updatedAt",
-					"createdAt",
-					"status",
-					"contextIds",
-					"slidesJson",
-					"title",
-					"templateId",
-					"userId",
-					"id"
-				],
-				"type": "object"
-			},
 			"PublicPresentationResponse": {
 				"properties": {
-					"updatedAt": {
-						"type": "string",
-						"format": "date-time"
-					},
-					"createdAt": {
-						"type": "string",
-						"format": "date-time"
-					},
-					"status": {
+					"id": {
 						"type": "string"
+					},
+					"userId": {
+						"type": "string"
+					},
+					"templateId": {
+						"type": "string"
+					},
+					"title": {
+						"type": "string"
+					},
+					"slidesJson": {
+						"allOf": [
+							{
+								"$ref": "#/components/schemas/TsoaJsonObject"
+							}
+						],
+						"nullable": true
 					},
 					"contextIds": {
 						"items": {
@@ -1662,32 +1574,28 @@
 						},
 						"type": "array"
 					},
-					"slidesJson": {
-						"$ref": "#/components/schemas/JsonValue"
-					},
-					"title": {
+					"status": {
 						"type": "string"
 					},
-					"templateId": {
-						"type": "string"
+					"createdAt": {
+						"type": "string",
+						"format": "date-time"
 					},
-					"userId": {
-						"type": "string"
-					},
-					"id": {
-						"type": "string"
+					"updatedAt": {
+						"type": "string",
+						"format": "date-time"
 					}
 				},
 				"required": [
-					"updatedAt",
-					"createdAt",
-					"status",
-					"contextIds",
-					"slidesJson",
-					"title",
-					"templateId",
+					"id",
 					"userId",
-					"id"
+					"templateId",
+					"title",
+					"slidesJson",
+					"contextIds",
+					"status",
+					"createdAt",
+					"updatedAt"
 				],
 				"type": "object",
 				"additionalProperties": false
@@ -1845,7 +1753,14 @@
 					"title": {
 						"type": "string"
 					},
-					"slidesJson": {},
+					"slidesJson": {
+						"allOf": [
+							{
+								"$ref": "#/components/schemas/TsoaJsonObject"
+							}
+						],
+						"nullable": true
+					},
 					"contextIds": {
 						"items": {
 							"type": "string"
@@ -1989,7 +1904,7 @@
 			"IntegrationStatus": {
 				"$ref": "#/components/schemas/_36_Enums.IntegrationStatus"
 			},
-			"UserIntegrationSummary": {
+			"IntegrationSummaryResponse": {
 				"properties": {
 					"id": {
 						"type": "string"
@@ -2011,7 +1926,7 @@
 					"metadata": {
 						"allOf": [
 							{
-								"$ref": "#/components/schemas/JsonValue"
+								"$ref": "#/components/schemas/TsoaJsonObject"
 							}
 						],
 						"nullable": true
@@ -2053,14 +1968,14 @@
 				"type": "object",
 				"additionalProperties": false
 			},
-			"ApiResponse_UserIntegrationSummary-Array_": {
+			"ApiResponse_IntegrationSummaryResponse-Array_": {
 				"properties": {
 					"message": {
 						"type": "string"
 					},
 					"data": {
 						"items": {
-							"$ref": "#/components/schemas/UserIntegrationSummary"
+							"$ref": "#/components/schemas/IntegrationSummaryResponse"
 						},
 						"type": "array",
 						"nullable": true
@@ -2076,7 +1991,7 @@
 				],
 				"type": "object"
 			},
-			"ApiResponse_UserIntegrationSummary-or-null_": {
+			"ApiResponse_IntegrationSummaryResponse-or-null_": {
 				"properties": {
 					"message": {
 						"type": "string"
@@ -2084,7 +1999,7 @@
 					"data": {
 						"allOf": [
 							{
-								"$ref": "#/components/schemas/UserIntegrationSummary"
+								"$ref": "#/components/schemas/IntegrationSummaryResponse"
 							}
 						],
 						"nullable": true
@@ -2453,7 +2368,7 @@
 					"metadata": {
 						"allOf": [
 							{
-								"$ref": "#/components/schemas/JsonValue"
+								"$ref": "#/components/schemas/TsoaJsonObject"
 							}
 						],
 						"nullable": true
@@ -2565,7 +2480,7 @@
 					"metadata": {
 						"allOf": [
 							{
-								"$ref": "#/components/schemas/InputJsonValue"
+								"$ref": "#/components/schemas/TsoaJsonObject"
 							}
 						],
 						"nullable": true
@@ -2593,7 +2508,7 @@
 					"metadata": {
 						"allOf": [
 							{
-								"$ref": "#/components/schemas/InputJsonValue"
+								"$ref": "#/components/schemas/TsoaJsonObject"
 							}
 						],
 						"nullable": true
@@ -2765,82 +2680,94 @@
 				],
 				"type": "object"
 			},
-			"DefaultSelection_Prisma._36_CustomThemePayload_": {
+			"CustomThemeResponse": {
 				"properties": {
-					"configJson": {
-						"$ref": "#/components/schemas/JsonValue"
-					},
-					"density": {
-						"type": "number",
-						"format": "double"
-					},
-					"borderRadius": {
-						"type": "number",
-						"format": "double"
-					},
-					"headingFontFamily": {
+					"id": {
 						"type": "string"
 					},
-					"fontFamily": {
-						"type": "string"
-					},
-					"textSecondaryColor": {
-						"type": "string"
-					},
-					"textPrimaryColor": {
-						"type": "string"
-					},
-					"surfaceColor": {
-						"type": "string"
-					},
-					"secondaryColor": {
-						"type": "string"
-					},
-					"backgroundColor": {
+					"userId": {
 						"type": "string"
 					},
 					"primaryColor": {
-						"type": "string"
-					},
-					"updatedAt": {
 						"type": "string",
-						"format": "date-time"
+						"nullable": true
+					},
+					"secondaryColor": {
+						"type": "string",
+						"nullable": true
+					},
+					"backgroundColor": {
+						"type": "string",
+						"nullable": true
+					},
+					"surfaceColor": {
+						"type": "string",
+						"nullable": true
+					},
+					"textPrimaryColor": {
+						"type": "string",
+						"nullable": true
+					},
+					"textSecondaryColor": {
+						"type": "string",
+						"nullable": true
+					},
+					"fontFamily": {
+						"type": "string",
+						"nullable": true
+					},
+					"headingFontFamily": {
+						"type": "string",
+						"nullable": true
+					},
+					"borderRadius": {
+						"type": "number",
+						"format": "double",
+						"nullable": true
+					},
+					"density": {
+						"type": "number",
+						"format": "double",
+						"nullable": true
+					},
+					"configJson": {
+						"allOf": [
+							{
+								"$ref": "#/components/schemas/TsoaJsonObject"
+							}
+						],
+						"nullable": true
 					},
 					"createdAt": {
 						"type": "string",
 						"format": "date-time"
 					},
-					"userId": {
-						"type": "string"
-					},
-					"id": {
-						"type": "string"
+					"updatedAt": {
+						"type": "string",
+						"format": "date-time"
 					}
 				},
 				"required": [
-					"configJson",
-					"density",
-					"borderRadius",
-					"headingFontFamily",
-					"fontFamily",
-					"textSecondaryColor",
-					"textPrimaryColor",
-					"surfaceColor",
+					"id",
+					"userId",
+					"primaryColor",
 					"secondaryColor",
 					"backgroundColor",
-					"primaryColor",
-					"updatedAt",
+					"surfaceColor",
+					"textPrimaryColor",
+					"textSecondaryColor",
+					"fontFamily",
+					"headingFontFamily",
+					"borderRadius",
+					"density",
+					"configJson",
 					"createdAt",
-					"userId",
-					"id"
+					"updatedAt"
 				],
-				"type": "object"
+				"type": "object",
+				"additionalProperties": false
 			},
-			"CustomTheme": {
-				"$ref": "#/components/schemas/DefaultSelection_Prisma._36_CustomThemePayload_",
-				"description": "Model CustomTheme"
-			},
-			"ApiResponse_CustomTheme-or-null_": {
+			"ApiResponse_CustomThemeResponse-or-null_": {
 				"properties": {
 					"message": {
 						"type": "string"
@@ -2848,7 +2775,7 @@
 					"data": {
 						"allOf": [
 							{
-								"$ref": "#/components/schemas/CustomTheme"
+								"$ref": "#/components/schemas/CustomThemeResponse"
 							}
 						],
 						"nullable": true
@@ -2864,7 +2791,7 @@
 				],
 				"type": "object"
 			},
-			"ApiResponse_CustomTheme_": {
+			"ApiResponse_CustomThemeResponse_": {
 				"properties": {
 					"message": {
 						"type": "string"
@@ -2872,7 +2799,7 @@
 					"data": {
 						"allOf": [
 							{
-								"$ref": "#/components/schemas/CustomTheme"
+								"$ref": "#/components/schemas/CustomThemeResponse"
 							}
 						],
 						"nullable": true
@@ -2935,7 +2862,7 @@
 					"configJson": {
 						"allOf": [
 							{
-								"$ref": "#/components/schemas/JsonValue"
+								"$ref": "#/components/schemas/TsoaJsonObject"
 							}
 						],
 						"nullable": true
@@ -4129,7 +4056,7 @@
 					"content": {
 						"application/json": {
 							"schema": {
-								"$ref": "#/components/schemas/UpdateTranscriptInput"
+								"$ref": "#/components/schemas/UpdateStandaloneTranscriptBody"
 							}
 						}
 					}
@@ -4900,7 +4827,7 @@
 						"content": {
 							"application/json": {
 								"schema": {
-									"$ref": "#/components/schemas/ApiResponse_UserIntegrationSummary-Array_"
+									"$ref": "#/components/schemas/ApiResponse_IntegrationSummaryResponse-Array_"
 								}
 							}
 						}
@@ -4926,7 +4853,7 @@
 						"content": {
 							"application/json": {
 								"schema": {
-									"$ref": "#/components/schemas/ApiResponse_UserIntegrationSummary-or-null_"
+									"$ref": "#/components/schemas/ApiResponse_IntegrationSummaryResponse-or-null_"
 								}
 							}
 						}
@@ -5968,7 +5895,7 @@
 						"content": {
 							"application/json": {
 								"schema": {
-									"$ref": "#/components/schemas/ApiResponse_CustomTheme-or-null_"
+									"$ref": "#/components/schemas/ApiResponse_CustomThemeResponse-or-null_"
 								}
 							}
 						}
@@ -5992,7 +5919,7 @@
 						"content": {
 							"application/json": {
 								"schema": {
-									"$ref": "#/components/schemas/ApiResponse_CustomTheme_"
+									"$ref": "#/components/schemas/ApiResponse_CustomThemeResponse_"
 								}
 							}
 						}

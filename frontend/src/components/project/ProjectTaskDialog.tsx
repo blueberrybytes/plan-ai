@@ -13,7 +13,7 @@ import {
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import type { TaskResponse, TaskPrioritySchema } from "../../store/apis/projectApi";
-import type { components } from "../../types/api";
+
 import MarkdownRenderer from "../common/MarkdownRenderer";
 
 interface ProjectTaskDialogProps {
@@ -41,7 +41,7 @@ const formatDateTime = (value: string | null) => {
 };
 
 type ExtendedTask = TaskResponse & {
-  metadata?: components["schemas"]["InputJsonValue"] | null;
+  metadata?: Record<string, unknown> | null;
   startDate?: string | null;
   completedAt?: string | null;
   estimatedMinutes?: number | null;

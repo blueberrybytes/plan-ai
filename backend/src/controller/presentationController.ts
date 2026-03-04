@@ -11,8 +11,10 @@ import {
   Security,
   Request,
 } from "tsoa";
+import { type Presentation, type SlideTemplate } from "@prisma/client";
 import prisma from "../prisma/prismaClient";
 import { type AuthenticatedRequest } from "../middleware/authMiddleware";
+import { type TsoaJsonObject } from "./controllerTypes";
 import { slideGenerationService } from "../services/slideGenerationService";
 
 interface GeneratePresentationRequest {
@@ -51,7 +53,7 @@ interface PresentationResponse {
   templateId: string;
   template?: TemplateSubset;
   title: string;
-  slidesJson: unknown;
+  slidesJson: TsoaJsonObject | null;
   contextIds: string[];
   status: string;
   createdAt: Date;
@@ -79,7 +81,7 @@ export class PresentationController extends Controller {
     );
 
     this.setStatus(201);
-    return presentation;
+    return this.mapPresentationResponse(presentation);
   }
 
   @Post("demo")
@@ -301,31 +303,7 @@ export class PresentationController extends Controller {
     });
 
     this.setStatus(201);
-    return {
-      id: presentation.id,
-      userId: presentation.userId,
-      templateId: presentation.templateId,
-      template: presentation.template
-        ? {
-            name: presentation.template.name,
-            description: presentation.template.description,
-            primaryColor: presentation.template.primaryColor,
-            secondaryColor: presentation.template.secondaryColor,
-            backgroundColor: presentation.template.backgroundColor,
-            headingFont: presentation.template.headingFont,
-            bodyFont: presentation.template.bodyFont,
-            backgroundStyle: presentation.template.backgroundStyle,
-            cardStyle: presentation.template.cardStyle,
-            logoUrl: presentation.template.logoUrl,
-          }
-        : undefined,
-      title: presentation.title,
-      slidesJson: presentation.slidesJson,
-      contextIds: presentation.contextIds,
-      status: presentation.status,
-      createdAt: presentation.createdAt,
-      updatedAt: presentation.updatedAt,
-    };
+    return this.mapPresentationResponse(presentation);
   }
 
   @Get("")
@@ -333,7 +311,8 @@ export class PresentationController extends Controller {
     @Request() request: AuthenticatedRequest,
   ): Promise<PresentationResponse[]> {
     const user = await this.resolveUser(request);
-    return slideGenerationService.listPresentations(user.id);
+    const presentations = await slideGenerationService.listPresentations(user.id);
+    return presentations.map((p) => this.mapPresentationResponse(p));
   }
 
   @Get("{presentationId}")
@@ -342,7 +321,8 @@ export class PresentationController extends Controller {
     @Request() request: AuthenticatedRequest,
   ): Promise<PresentationResponse> {
     const user = await this.resolveUser(request);
-    return slideGenerationService.getPresentationById(user.id, presentationId);
+    const presentation = await slideGenerationService.getPresentationById(user.id, presentationId);
+    return this.mapPresentationResponse(presentation);
   }
 
   @Delete("{presentationId}")
@@ -362,7 +342,12 @@ export class PresentationController extends Controller {
     @Request() request: AuthenticatedRequest,
   ): Promise<PresentationResponse> {
     const user = await this.resolveUser(request);
-    return slideGenerationService.updatePresentation(user.id, presentationId, body);
+    const presentation = await slideGenerationService.updatePresentation(
+      user.id,
+      presentationId,
+      body,
+    );
+    return this.mapPresentationResponse(presentation);
   }
 
   @Patch("{presentationId}/status")
@@ -372,7 +357,42 @@ export class PresentationController extends Controller {
     @Request() request: AuthenticatedRequest,
   ): Promise<PresentationResponse> {
     const user = await this.resolveUser(request);
-    return slideGenerationService.updateStatus(user.id, presentationId, body.status);
+    const presentation = await slideGenerationService.updateStatus(
+      user.id,
+      presentationId,
+      body.status,
+    );
+    return this.mapPresentationResponse(presentation);
+  }
+
+  private mapPresentationResponse(
+    presentation: Presentation & { template?: SlideTemplate | null },
+  ): PresentationResponse {
+    return {
+      id: presentation.id,
+      userId: presentation.userId,
+      templateId: presentation.templateId,
+      template: presentation.template
+        ? {
+            name: presentation.template.name,
+            description: presentation.template.description,
+            primaryColor: presentation.template.primaryColor,
+            secondaryColor: presentation.template.secondaryColor,
+            backgroundColor: presentation.template.backgroundColor,
+            headingFont: presentation.template.headingFont,
+            bodyFont: presentation.template.bodyFont,
+            backgroundStyle: presentation.template.backgroundStyle,
+            cardStyle: presentation.template.cardStyle,
+            logoUrl: presentation.template.logoUrl,
+          }
+        : undefined,
+      title: presentation.title,
+      slidesJson: presentation.slidesJson as TsoaJsonObject | null,
+      contextIds: presentation.contextIds,
+      status: presentation.status,
+      createdAt: presentation.createdAt,
+      updatedAt: presentation.updatedAt,
+    };
   }
 
   private async resolveUser(request: AuthenticatedRequest) {

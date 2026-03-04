@@ -25,7 +25,7 @@ import {
 import prisma from "../prisma/prismaClient";
 import { logger } from "../utils/logger";
 import type { AuthenticatedRequest } from "../middleware/authMiddleware";
-import type { ApiResponse } from "./controllerTypes";
+import { type ApiResponse, type TsoaJsonObject } from "./controllerTypes";
 import {
   projectTranscriptService,
   type TranscriptAnalysis,
@@ -49,7 +49,7 @@ interface ProjectResponse {
   status: ProjectStatus;
   startedAt: Date | null;
   endedAt: Date | null;
-  metadata: Prisma.JsonValue | null;
+  metadata: TsoaJsonObject | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -64,7 +64,7 @@ interface CreateProjectRequest {
   description?: string;
   status?: ProjectStatus;
   startedAt?: Date | null;
-  metadata?: Prisma.InputJsonValue | null;
+  metadata?: TsoaJsonObject | null;
 }
 
 interface UpdateProjectRequest {
@@ -73,7 +73,7 @@ interface UpdateProjectRequest {
   status?: ProjectStatus;
   startedAt?: Date | null;
   endedAt?: Date | null;
-  metadata?: Prisma.InputJsonValue | null;
+  metadata?: TsoaJsonObject | null;
 }
 
 interface CreateTranscriptRequest {
@@ -82,7 +82,7 @@ interface CreateTranscriptRequest {
   title?: string;
   source?: TranscriptSource;
   recordedAt?: Date | null;
-  metadata?: Prisma.InputJsonValue | null;
+  metadata?: TsoaJsonObject | null;
   contextIds?: string[];
   persona?: "SECRETARY" | "ARCHITECT" | "PRODUCT_MANAGER" | "DEVELOPER";
   englishLevel?: string;
@@ -98,7 +98,7 @@ interface TranscriptResponse {
   summary: string | null;
   transcript: string | null;
   recordedAt: Date | null;
-  metadata: Prisma.JsonValue | null;
+  metadata: TsoaJsonObject | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -162,7 +162,7 @@ interface ManualTranscriptRequest {
   summary?: string | null;
   content?: string | null;
   recordedAt?: Date | null;
-  metadata?: Prisma.InputJsonValue | null;
+  metadata?: TsoaJsonObject | null;
 }
 
 interface UpdateTranscriptRequest {
@@ -172,7 +172,7 @@ interface UpdateTranscriptRequest {
   summary?: string | null;
   transcript?: string | null;
   recordedAt?: Date | null;
-  metadata?: Prisma.InputJsonValue | null;
+  metadata?: TsoaJsonObject | null;
 }
 
 interface CreateTaskRequest {
@@ -184,7 +184,7 @@ interface CreateTaskRequest {
   priority?: TaskPriority;
   /** Format: date-time */
   dueDate?: Date | null;
-  metadata?: Prisma.InputJsonValue | null;
+  metadata?: TsoaJsonObject | null;
   dependencyTaskIds?: string[];
 }
 
@@ -197,7 +197,7 @@ interface UpdateTaskRequest {
   priority?: TaskPriority;
   /** Format: date-time */
   dueDate?: Date | null;
-  metadata?: Prisma.InputJsonValue | null;
+  metadata?: TsoaJsonObject | null;
   dependencyTaskIds?: string[];
 }
 
@@ -501,7 +501,10 @@ export class ProjectsModelController extends Controller {
       title: sourceTranscript.title ?? undefined,
       source: sourceTranscript.source,
       recordedAt: sourceTranscript.recordedAt,
-      metadata: sourceTranscript.metadata,
+      metadata:
+        sourceTranscript.metadata === null
+          ? null
+          : (sourceTranscript.metadata as Prisma.InputJsonValue),
       contextPrompt,
       contextIds: body.contextIds,
       persona: body.persona,
@@ -560,7 +563,7 @@ export class ProjectsModelController extends Controller {
       summary: body.summary ?? null,
       language: body.language ?? null,
       recordedAt: body.recordedAt ?? null,
-      metadata: body.metadata ?? null,
+      metadata: (body.metadata as Prisma.InputJsonValue) ?? null,
     };
     const transcript = await transcriptCrudService.createTranscriptForUser(user.id, input);
 
@@ -589,7 +592,7 @@ export class ProjectsModelController extends Controller {
       summary: body.summary,
       transcript: body.transcript,
       recordedAt: body.recordedAt,
-      metadata: body.metadata,
+      metadata: body.metadata === undefined ? undefined : (body.metadata as Prisma.InputJsonValue),
     });
 
     return {
@@ -686,7 +689,7 @@ export class ProjectsModelController extends Controller {
       status: body.status,
       priority: body.priority,
       dueDate: body.dueDate ?? null,
-      metadata: body.metadata ?? null,
+      metadata: (body.metadata as Prisma.InputJsonValue) ?? null,
       dependencyTaskIds: body.dependencyTaskIds,
     });
 
@@ -716,7 +719,7 @@ export class ProjectsModelController extends Controller {
       status: body.status,
       priority: body.priority,
       dueDate: body.dueDate,
-      metadata: body.metadata,
+      metadata: body.metadata as Prisma.InputJsonValue,
       dependencyTaskIds: body.dependencyTaskIds,
     });
 
@@ -775,7 +778,9 @@ export class ProjectsModelController extends Controller {
         description: body.description,
         status: body.status ?? ProjectStatus.ACTIVE,
         startedAt: body.startedAt ?? new Date(),
-        ...(body.metadata === undefined ? {} : { metadata: body.metadata ?? Prisma.JsonNull }),
+        ...(body.metadata === undefined
+          ? {}
+          : { metadata: (body.metadata as Prisma.InputJsonValue) ?? Prisma.JsonNull }),
       },
     });
 
@@ -803,7 +808,9 @@ export class ProjectsModelController extends Controller {
         status: body.status,
         startedAt: body.startedAt,
         endedAt: body.endedAt,
-        ...(body.metadata === undefined ? {} : { metadata: body.metadata ?? Prisma.JsonNull }),
+        ...(body.metadata === undefined
+          ? {}
+          : { metadata: (body.metadata as Prisma.InputJsonValue) ?? Prisma.JsonNull }),
       },
     });
 
@@ -857,7 +864,7 @@ export class ProjectsModelController extends Controller {
       title: body.title,
       source: body.source,
       recordedAt: body.recordedAt ?? null,
-      metadata: body.metadata,
+      metadata: body.metadata === undefined ? undefined : (body.metadata as Prisma.InputJsonValue),
       contextPrompt,
       contextIds: body.contextIds,
       persona: body.persona,
@@ -925,7 +932,7 @@ export class ProjectsModelController extends Controller {
     status: ProjectStatus;
     startedAt: Date | null;
     endedAt: Date | null;
-    metadata: Prisma.JsonValue | null;
+    metadata: TsoaJsonObject | null;
     createdAt: Date;
     updatedAt: Date;
   }): ProjectResponse {
@@ -952,7 +959,7 @@ export class ProjectsModelController extends Controller {
     summary: string | null;
     transcript: string | null;
     recordedAt: Date | null;
-    metadata: Prisma.JsonValue | null;
+    metadata: TsoaJsonObject | null;
     createdAt: Date;
     updatedAt: Date;
   }): TranscriptResponse {

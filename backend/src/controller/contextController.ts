@@ -14,7 +14,7 @@ import {
   Query,
 } from "tsoa";
 import type { AuthenticatedRequest } from "../middleware/authMiddleware";
-import type { ApiResponse } from "./controllerTypes";
+import { type ApiResponse, type TsoaJsonObject } from "./controllerTypes";
 import { contextService } from "../services/contextService";
 import prisma from "../prisma/prismaClient";
 import type { Prisma } from "@prisma/client";
@@ -49,7 +49,7 @@ interface ContextResponse {
   name: string;
   description: string | null;
   color: string | null;
-  metadata: Prisma.JsonValue | null;
+  metadata: TsoaJsonObject | null;
   files: ContextFileResponse[];
   createdAt: Date;
   updatedAt: Date;
@@ -63,14 +63,14 @@ interface CreateContextRequest {
   name: string;
   description?: string | null;
   color?: string | null;
-  metadata?: Prisma.InputJsonValue | null;
+  metadata?: TsoaJsonObject | null;
 }
 
 interface UpdateContextRequest {
   name?: string;
   description?: string | null;
   color?: string | null;
-  metadata?: Prisma.InputJsonValue | null;
+  metadata?: TsoaJsonObject | null;
 }
 
 @Route("api/contexts")
@@ -105,7 +105,7 @@ export class ContextController extends Controller {
       name: body.name,
       description: body.description ?? null,
       color: body.color ?? null,
-      metadata: body.metadata ?? null,
+      metadata: (body.metadata as Prisma.InputJsonValue) ?? null,
     });
 
     this.setStatus(201);
@@ -166,7 +166,7 @@ export class ContextController extends Controller {
       name: body.name,
       description: body.description,
       color: body.color,
-      metadata: body.metadata,
+      metadata: body.metadata as Prisma.InputJsonValue | undefined,
     });
 
     return {
@@ -242,7 +242,10 @@ export class ContextController extends Controller {
       file.mimetype,
     );
 
-    const metadataPayload = this.mergeMetadataWithPublicUrl(parsedMetadata, publicUrl);
+    const metadataPayload = this.mergeMetadataWithPublicUrl(
+      parsedMetadata as Prisma.InputJsonValue | undefined,
+      publicUrl,
+    );
 
     const contextFile = await contextService.attachFileToContext(user.id, contextId, {
       bucketPath: storagePath,
@@ -326,7 +329,7 @@ export class ContextController extends Controller {
     }
 
     try {
-      return JSON.parse(value) as Prisma.InputJsonValue;
+      return JSON.parse(value) as TsoaJsonObject;
     } catch (error) {
       console.error(error);
       this.setStatus(400);
@@ -342,7 +345,7 @@ export class ContextController extends Controller {
       name: context.name,
       description: context.description,
       color: context.color,
-      metadata: context.metadata,
+      metadata: context.metadata as TsoaJsonObject,
       createdAt: context.createdAt,
       updatedAt: context.updatedAt,
       files: context.files.map((file) => ({
@@ -359,7 +362,7 @@ export class ContextController extends Controller {
 
   private getPublicUrlForFile(file: {
     bucketPath: string;
-    metadata: Prisma.JsonValue | null;
+    metadata: TsoaJsonObject | null;
   }): string {
     if (file.metadata && typeof file.metadata === "object" && !Array.isArray(file.metadata)) {
       const maybeUrl = (file.metadata as Record<string, unknown>).publicUrl;

@@ -5,7 +5,7 @@ import { baseQueryWithReauth } from "../../utils/baseQuery";
 // Types from generated API
 export type SlideTemplateResponse = components["schemas"]["SlideTemplateResponse"];
 export type SlideTypeConfigResponse = components["schemas"]["SlideTypeConfigResponse"];
-export type SlideTypeConfigInput = components["schemas"]["SlideTypeConfigInput"];
+export type SlideTypeConfigInput = components["schemas"]["SlideTypeConfigBody"];
 export type CreateTemplateRequest = components["schemas"]["CreateTemplateRequest"];
 export type UpdateTemplateRequest = components["schemas"]["UpdateTemplateRequest"];
 export type PresentationResponse = components["schemas"]["PresentationResponse"];

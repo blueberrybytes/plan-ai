@@ -19,6 +19,15 @@ import {
   UpdateTemplateInput,
   SlideTypeConfigInput,
 } from "../services/slideTemplateService";
+import { type TsoaJsonObject } from "./controllerTypes";
+
+interface SlideTypeConfigBody {
+  slideTypeKey: string;
+  displayName: string;
+  description?: string | null;
+  parametersSchema: TsoaJsonObject;
+  position?: number;
+}
 
 interface CreateTemplateRequest {
   name: string;
@@ -31,7 +40,7 @@ interface CreateTemplateRequest {
   backgroundStyle?: string;
   cardStyle?: string;
   logoUrl?: string;
-  slideTypes?: SlideTypeConfigInput[];
+  slideTypes?: SlideTypeConfigBody[];
 }
 
 interface UpdateTemplateRequest {
@@ -45,7 +54,7 @@ interface UpdateTemplateRequest {
   backgroundStyle?: string;
   cardStyle?: string;
   logoUrl?: string;
-  slideTypes?: SlideTypeConfigInput[];
+  slideTypes?: SlideTypeConfigBody[];
 }
 
 interface SlideTemplateResponse {
@@ -72,7 +81,7 @@ interface SlideTypeConfigResponse {
   slideTypeKey: string;
   displayName: string;
   description: string | null;
-  parametersSchema: unknown;
+  parametersSchema: TsoaJsonObject;
   position: number;
   createdAt: Date;
 }
@@ -107,6 +116,7 @@ export class SlideTemplateController extends Controller {
     const input: CreateTemplateInput = {
       userId: user.id,
       ...body,
+      slideTypes: body.slideTypes as SlideTypeConfigInput[] | undefined,
     };
     this.setStatus(201);
     return slideTemplateService.createTemplate(input);
@@ -119,7 +129,10 @@ export class SlideTemplateController extends Controller {
     @Request() request: AuthenticatedRequest,
   ): Promise<SlideTemplateResponse> {
     const user = await this.resolveUser(request);
-    const input: UpdateTemplateInput = { ...body };
+    const input: UpdateTemplateInput = {
+      ...body,
+      slideTypes: body.slideTypes as SlideTypeConfigInput[] | undefined,
+    };
     return slideTemplateService.updateTemplate(user.id, templateId, input);
   }
 

@@ -2,10 +2,12 @@ import { createApi } from "@reduxjs/toolkit/query/react";
 import { baseQueryWithReauth } from "../../utils/baseQuery";
 import { components } from "../../types/api";
 
+export type IntegrationSummaryResponse = components["schemas"]["IntegrationSummaryResponse"];
+
 export type ApiResponseUserIntegrationSummaryList =
-  components["schemas"]["ApiResponse_UserIntegrationSummary-Array_"];
+  components["schemas"]["ApiResponse_IntegrationSummaryResponse-Array_"];
 export type ApiResponseUserIntegrationSummary =
-  components["schemas"]["ApiResponse_UserIntegrationSummary-or-null_"];
+  components["schemas"]["ApiResponse_IntegrationSummaryResponse-or-null_"];
 export type IntegrationProviderType = components["schemas"]["IntegrationProvider"];
 
 export const integrationApi = createApi({
@@ -22,7 +24,7 @@ export const integrationApi = createApi({
         const integrations = result?.data ?? [];
         return [
           { type: "Integration" as const, id: "LIST" },
-          ...integrations.map((integration) => ({
+          ...integrations.map((integration: IntegrationSummaryResponse) => ({
             type: "Integration" as const,
             id: integration?.provider ?? integration?.id,
           })),

@@ -795,24 +795,9 @@ export interface components {
         /** @enum {string} */
         "_36_Enums.ProjectStatus": "ACTIVE" | "COMPLETED" | "ARCHIVED";
         ProjectStatus: components["schemas"]["_36_Enums.ProjectStatus"];
-        /**
-         * @description From https://github.com/sindresorhus/type-fest/
-         *     Matches any valid JSON value.
-         */
-        JsonValue: (string | number | boolean | components["schemas"]["JsonObject"] | components["schemas"]["JsonArray"]) | null;
-        /**
-         * @description From https://github.com/sindresorhus/type-fest/
-         *     Matches a JSON object.
-         *     This type can be useful to enforce some input to be JSON-compatible or as a super-type to be extended from.
-         */
-        JsonObject: {
-            [key: string]: components["schemas"]["JsonValue"];
-        };
-        /**
-         * @description From https://github.com/sindresorhus/type-fest/
-         *     Matches a JSON array.
-         */
-        JsonArray: Record<string, never>;
+        TsoaJsonObject: ({
+            [key: string]: unknown;
+        } | unknown[] | string | number | boolean) | null;
         ProjectResponse: {
             id: string;
             title: string;
@@ -822,7 +807,7 @@ export interface components {
             startedAt: string | null;
             /** Format: date-time */
             endedAt: string | null;
-            metadata: components["schemas"]["JsonValue"] | null;
+            metadata: components["schemas"]["TsoaJsonObject"] | null;
             /** Format: date-time */
             createdAt: string;
             /** Format: date-time */
@@ -853,7 +838,7 @@ export interface components {
             transcript: string | null;
             /** Format: date-time */
             recordedAt: string | null;
-            metadata: components["schemas"]["JsonValue"] | null;
+            metadata: components["schemas"]["TsoaJsonObject"] | null;
             /** Format: date-time */
             createdAt: string;
             /** Format: date-time */
@@ -930,30 +915,6 @@ export interface components {
             /** Format: double */
             status: number;
         };
-        /**
-         * @description Matches any valid value that can be used as an input for operations like
-         *     create and update as the value of a JSON field. Unlike \`JsonValue\`, this
-         *     type allows read-only arrays and read-only object properties and disallows
-         *     \`null\` at the top level.
-         *
-         *     \`null\` cannot be used as the value of a JSON field because its meaning
-         *     would be ambiguous. Use \`Prisma.JsonNull\` to store the JSON null value or
-         *     \`Prisma.DbNull\` to clear the JSON value and set the field to the database
-         *     NULL value instead.
-         */
-        InputJsonValue: string | number | boolean | components["schemas"]["InputJsonObject"] | components["schemas"]["InputJsonArray"] | Record<string, never>;
-        /**
-         * @description Matches a JSON object.
-         *     Unlike \`JsonObject\`, this type allows undefined and read-only properties.
-         */
-        InputJsonObject: {
-            [key: string]: components["schemas"]["InputJsonValue"];
-        };
-        /**
-         * @description Matches a JSON array.
-         *     Unlike \`JsonArray\`, readonly arrays are assignable to this type.
-         */
-        InputJsonArray: Record<string, never>;
         ManualTranscriptRequest: {
             title?: string | null;
             source?: components["schemas"]["TranscriptSource"];
@@ -962,7 +923,7 @@ export interface components {
             content?: string | null;
             /** Format: date-time */
             recordedAt?: string | null;
-            metadata?: components["schemas"]["InputJsonValue"] | null;
+            metadata?: components["schemas"]["TsoaJsonObject"] | null;
         };
         UpdateTranscriptRequest: {
             title?: string | null;
@@ -972,7 +933,7 @@ export interface components {
             transcript?: string | null;
             /** Format: date-time */
             recordedAt?: string | null;
-            metadata?: components["schemas"]["InputJsonValue"] | null;
+            metadata?: components["schemas"]["TsoaJsonObject"] | null;
         };
         ApiResponse_null_: {
             message?: string;
@@ -1009,7 +970,7 @@ export interface components {
              * @description Format: date-time
              */
             dueDate?: string | null;
-            metadata?: components["schemas"]["InputJsonValue"] | null;
+            metadata?: components["schemas"]["TsoaJsonObject"] | null;
             dependencyTaskIds?: string[];
         };
         UpdateTaskRequest: {
@@ -1024,7 +985,7 @@ export interface components {
              * @description Format: date-time
              */
             dueDate?: string | null;
-            metadata?: components["schemas"]["InputJsonValue"] | null;
+            metadata?: components["schemas"]["TsoaJsonObject"] | null;
             dependencyTaskIds?: string[];
         };
         ApiResponse_ProjectResponse_: {
@@ -1039,7 +1000,7 @@ export interface components {
             status?: components["schemas"]["ProjectStatus"];
             /** Format: date-time */
             startedAt?: string | null;
-            metadata?: components["schemas"]["InputJsonValue"] | null;
+            metadata?: components["schemas"]["TsoaJsonObject"] | null;
         };
         UpdateProjectRequest: {
             title?: string;
@@ -1049,7 +1010,7 @@ export interface components {
             startedAt?: string | null;
             /** Format: date-time */
             endedAt?: string | null;
-            metadata?: components["schemas"]["InputJsonValue"] | null;
+            metadata?: components["schemas"]["TsoaJsonObject"] | null;
         };
         CreateTranscriptRequest: {
             content?: string;
@@ -1058,7 +1019,7 @@ export interface components {
             source?: components["schemas"]["TranscriptSource"];
             /** Format: date-time */
             recordedAt?: string | null;
-            metadata?: components["schemas"]["InputJsonValue"] | null;
+            metadata?: components["schemas"]["TsoaJsonObject"] | null;
             contextIds?: string[];
             /** @enum {string} */
             persona?: "SECRETARY" | "ARCHITECT" | "PRODUCT_MANAGER" | "DEVELOPER";
@@ -1075,7 +1036,7 @@ export interface components {
             transcript: string | null;
             /** Format: date-time */
             recordedAt: string | null;
-            metadata: components["schemas"]["JsonValue"] | null;
+            metadata: components["schemas"]["TsoaJsonObject"] | null;
             /** Format: date-time */
             createdAt: string;
             /** Format: date-time */
@@ -1108,20 +1069,20 @@ export interface components {
             summary?: string | null;
             /** Format: date-time */
             recordedAt?: string | null;
-            metadata?: components["schemas"]["InputJsonValue"] | null;
+            metadata?: components["schemas"]["TsoaJsonObject"] | null;
             contextIds?: string[];
             /** @enum {string} */
             persona?: "SECRETARY" | "ARCHITECT" | "PRODUCT_MANAGER" | "DEVELOPER";
             objective?: string | null;
             englishLevel?: string;
         };
-        UpdateTranscriptInput: {
+        UpdateStandaloneTranscriptBody: {
             title?: string | null;
             source?: components["schemas"]["TranscriptSource"];
             language?: string | null;
             summary?: string | null;
             transcript?: string | null;
-            metadata?: components["schemas"]["InputJsonValue"] | null;
+            metadata?: components["schemas"]["TsoaJsonObject"] | null;
             /** Format: date-time */
             recordedAt?: string | null;
         };
@@ -1139,7 +1100,7 @@ export interface components {
             slideTypeKey: string;
             displayName: string;
             description: string | null;
-            parametersSchema: unknown;
+            parametersSchema: components["schemas"]["TsoaJsonObject"];
             /** Format: double */
             position: number;
             /** Format: date-time */
@@ -1164,11 +1125,11 @@ export interface components {
             updatedAt: string;
             slideTypes: components["schemas"]["SlideTypeConfigResponse"][];
         };
-        SlideTypeConfigInput: {
+        SlideTypeConfigBody: {
             slideTypeKey: string;
             displayName: string;
             description?: string | null;
-            parametersSchema: components["schemas"]["JsonValue"];
+            parametersSchema: components["schemas"]["TsoaJsonObject"];
             /** Format: double */
             position?: number;
         };
@@ -1183,7 +1144,7 @@ export interface components {
             backgroundStyle?: string;
             cardStyle?: string;
             logoUrl?: string;
-            slideTypes?: components["schemas"]["SlideTypeConfigInput"][];
+            slideTypes?: components["schemas"]["SlideTypeConfigBody"][];
         };
         UpdateTemplateRequest: {
             name?: string;
@@ -1196,7 +1157,7 @@ export interface components {
             backgroundStyle?: string;
             cardStyle?: string;
             logoUrl?: string;
-            slideTypes?: components["schemas"]["SlideTypeConfigInput"][];
+            slideTypes?: components["schemas"]["SlideTypeConfigBody"][];
         };
         /** @enum {string} */
         "_36_Enums.Role": "ADMIN" | "CLIENT";
@@ -1230,31 +1191,18 @@ export interface components {
             /** Format: double */
             status: number;
         };
-        "DefaultSelection_Prisma._36_PresentationPayload_": {
-            /** Format: date-time */
-            updatedAt: string;
-            /** Format: date-time */
-            createdAt: string;
-            status: string;
-            contextIds: string[];
-            slidesJson: components["schemas"]["JsonValue"];
-            title: string;
-            templateId: string;
-            userId: string;
-            id: string;
-        };
         PublicPresentationResponse: {
-            /** Format: date-time */
-            updatedAt: string;
+            id: string;
+            userId: string;
+            templateId: string;
+            title: string;
+            slidesJson: components["schemas"]["TsoaJsonObject"] | null;
+            contextIds: string[];
+            status: string;
             /** Format: date-time */
             createdAt: string;
-            status: string;
-            contextIds: string[];
-            slidesJson: components["schemas"]["JsonValue"];
-            title: string;
-            templateId: string;
-            userId: string;
-            id: string;
+            /** Format: date-time */
+            updatedAt: string;
         };
         PublicDocTheme: {
             id: string;
@@ -1294,7 +1242,7 @@ export interface components {
             templateId: string;
             template?: components["schemas"]["TemplateSubset"];
             title: string;
-            slidesJson: unknown;
+            slidesJson: components["schemas"]["TsoaJsonObject"] | null;
             contextIds: string[];
             status: string;
             /** Format: date-time */
@@ -1332,13 +1280,13 @@ export interface components {
         /** @enum {string} */
         "_36_Enums.IntegrationStatus": "CONNECTED" | "DISCONNECTED" | "ERROR";
         IntegrationStatus: components["schemas"]["_36_Enums.IntegrationStatus"];
-        UserIntegrationSummary: {
+        IntegrationSummaryResponse: {
             id: string;
             provider: components["schemas"]["IntegrationProvider"];
             status: components["schemas"]["IntegrationStatus"];
             accountId: string | null;
             accountName: string | null;
-            metadata: components["schemas"]["JsonValue"] | null;
+            metadata: components["schemas"]["TsoaJsonObject"] | null;
             scope: string | null;
             /** Format: date-time */
             expiresAt: string | null;
@@ -1348,15 +1296,15 @@ export interface components {
             updatedAt: string;
             hasRefreshToken: boolean;
         };
-        "ApiResponse_UserIntegrationSummary-Array_": {
+        "ApiResponse_IntegrationSummaryResponse-Array_": {
             message?: string;
-            data: components["schemas"]["UserIntegrationSummary"][] | null;
+            data: components["schemas"]["IntegrationSummaryResponse"][] | null;
             /** Format: double */
             status: number;
         };
-        "ApiResponse_UserIntegrationSummary-or-null_": {
+        "ApiResponse_IntegrationSummaryResponse-or-null_": {
             message?: string;
-            data: components["schemas"]["UserIntegrationSummary"] | null;
+            data: components["schemas"]["IntegrationSummaryResponse"] | null;
             /** Format: double */
             status: number;
         };
@@ -1456,7 +1404,7 @@ export interface components {
             name: string;
             description: string | null;
             color: string | null;
-            metadata: components["schemas"]["JsonValue"] | null;
+            metadata: components["schemas"]["TsoaJsonObject"] | null;
             files: components["schemas"]["ContextFileResponse"][];
             /** Format: date-time */
             createdAt: string;
@@ -1482,13 +1430,13 @@ export interface components {
             name: string;
             description?: string | null;
             color?: string | null;
-            metadata?: components["schemas"]["InputJsonValue"] | null;
+            metadata?: components["schemas"]["TsoaJsonObject"] | null;
         };
         UpdateContextRequest: {
             name?: string;
             description?: string | null;
             color?: string | null;
-            metadata?: components["schemas"]["InputJsonValue"] | null;
+            metadata?: components["schemas"]["TsoaJsonObject"] | null;
         };
         /** @enum {string} */
         "_36_Enums.ChatRole": "USER" | "ASSISTANT";
@@ -1533,38 +1481,36 @@ export interface components {
             /** Format: double */
             status: number;
         };
-        "DefaultSelection_Prisma._36_CustomThemePayload_": {
-            configJson: components["schemas"]["JsonValue"];
+        CustomThemeResponse: {
+            id: string;
+            userId: string;
+            primaryColor: string | null;
+            secondaryColor: string | null;
+            backgroundColor: string | null;
+            surfaceColor: string | null;
+            textPrimaryColor: string | null;
+            textSecondaryColor: string | null;
+            fontFamily: string | null;
+            headingFontFamily: string | null;
             /** Format: double */
-            density: number;
+            borderRadius: number | null;
             /** Format: double */
-            borderRadius: number;
-            headingFontFamily: string;
-            fontFamily: string;
-            textSecondaryColor: string;
-            textPrimaryColor: string;
-            surfaceColor: string;
-            secondaryColor: string;
-            backgroundColor: string;
-            primaryColor: string;
-            /** Format: date-time */
-            updatedAt: string;
+            density: number | null;
+            configJson: components["schemas"]["TsoaJsonObject"] | null;
             /** Format: date-time */
             createdAt: string;
-            userId: string;
-            id: string;
+            /** Format: date-time */
+            updatedAt: string;
         };
-        /** @description Model CustomTheme */
-        CustomTheme: components["schemas"]["DefaultSelection_Prisma._36_CustomThemePayload_"];
-        "ApiResponse_CustomTheme-or-null_": {
+        "ApiResponse_CustomThemeResponse-or-null_": {
             message?: string;
-            data: components["schemas"]["CustomTheme"] | null;
+            data: components["schemas"]["CustomThemeResponse"] | null;
             /** Format: double */
             status: number;
         };
-        ApiResponse_CustomTheme_: {
+        ApiResponse_CustomThemeResponse_: {
             message?: string;
-            data: components["schemas"]["CustomTheme"] | null;
+            data: components["schemas"]["CustomThemeResponse"] | null;
             /** Format: double */
             status: number;
         };
@@ -1581,7 +1527,7 @@ export interface components {
             borderRadius?: number | null;
             /** Format: double */
             density?: number | null;
-            configJson?: components["schemas"]["JsonValue"] | null;
+            configJson?: components["schemas"]["TsoaJsonObject"] | null;
         };
         ApiResponse_boolean_: {
             message?: string;
@@ -2168,7 +2114,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["UpdateTranscriptInput"];
+                "application/json": components["schemas"]["UpdateStandaloneTranscriptBody"];
             };
         };
         responses: {
@@ -2690,7 +2636,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ApiResponse_UserIntegrationSummary-Array_"];
+                    "application/json": components["schemas"]["ApiResponse_IntegrationSummaryResponse-Array_"];
                 };
             };
         };
@@ -2712,7 +2658,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ApiResponse_UserIntegrationSummary-or-null_"];
+                    "application/json": components["schemas"]["ApiResponse_IntegrationSummaryResponse-or-null_"];
                 };
             };
         };
@@ -3358,7 +3304,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ApiResponse_CustomTheme-or-null_"];
+                    "application/json": components["schemas"]["ApiResponse_CustomThemeResponse-or-null_"];
                 };
             };
         };
@@ -3382,7 +3328,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ApiResponse_CustomTheme_"];
+                    "application/json": components["schemas"]["ApiResponse_CustomThemeResponse_"];
                 };
             };
         };

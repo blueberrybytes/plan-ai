@@ -15,7 +15,7 @@ export type UpdateContextRequest =
 export interface UploadContextFileArgs {
   contextId: string;
   file: File;
-  metadata?: components["schemas"]["InputJsonValue"] | null;
+  metadata?: components["schemas"]["TsoaJsonObject"] | null;
 }
 
 export interface DeleteContextFileArgs {

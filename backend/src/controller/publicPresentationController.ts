@@ -1,13 +1,18 @@
-/* eslint-disable @typescript-eslint/no-empty-object-type */
 import { Controller, Get, Route, Tags, Path } from "tsoa";
-import { slideGenerationService } from "../services/slideGenerationService";
 import { type Presentation } from "@prisma/client";
+import { slideGenerationService } from "../services/slideGenerationService";
+import { type TsoaJsonObject } from "./controllerTypes";
 
-// Define response type here or import from shared location.
-// For simplicity, we use the same structure as PresentationController's expectation
-// essentially ensuring we return minimal data needed for rendering.
-interface PublicPresentationResponse extends Presentation {
-  // Prisma types include all fields.
+interface PublicPresentationResponse {
+  id: string;
+  userId: string;
+  templateId: string;
+  title: string;
+  slidesJson: TsoaJsonObject | null;
+  contextIds: string[];
+  status: string;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 @Route("api/public/presentations")
@@ -21,6 +26,21 @@ export class PublicPresentationController extends Controller {
   public async getPublicPresentation(
     @Path() presentationId: string,
   ): Promise<PublicPresentationResponse> {
-    return slideGenerationService.getPublicPresentationById(presentationId);
+    const presentation = await slideGenerationService.getPublicPresentationById(presentationId);
+    return this.mapPublicPresentationResponse(presentation);
+  }
+
+  private mapPublicPresentationResponse(presentation: Presentation): PublicPresentationResponse {
+    return {
+      id: presentation.id,
+      userId: presentation.userId,
+      templateId: presentation.templateId,
+      title: presentation.title,
+      slidesJson: presentation.slidesJson as TsoaJsonObject | null,
+      contextIds: presentation.contextIds,
+      status: presentation.status,
+      createdAt: presentation.createdAt,
+      updatedAt: presentation.updatedAt,
+    };
   }
 }

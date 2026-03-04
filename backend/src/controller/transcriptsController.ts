@@ -15,11 +15,10 @@ import {
 import { Prisma, Transcript, TranscriptSource } from "@prisma/client";
 import prisma from "../prisma/prismaClient";
 import type { AuthenticatedRequest } from "../middleware/authMiddleware";
-import type { ApiResponse } from "./controllerTypes";
+import { type ApiResponse, type TsoaJsonObject } from "./controllerTypes";
 import {
   transcriptCrudService,
   type TranscriptListOptions,
-  type UpdateTranscriptInput,
 } from "../services/transcriptCrudService";
 import { type TaskWithRelations } from "../services/taskCrudService";
 import { projectTranscriptService } from "../services/projectTranscriptService";
@@ -35,7 +34,7 @@ interface StandaloneTranscriptResponse {
   summary: string | null;
   transcript: string | null;
   recordedAt: Date | null;
-  metadata: Prisma.JsonValue | null;
+  metadata: TsoaJsonObject | null;
   createdAt: Date;
   updatedAt: Date;
   tasks?: TaskResponse[];
@@ -54,11 +53,21 @@ interface CreateStandaloneTranscriptBody {
   language?: string | null;
   summary?: string | null;
   recordedAt?: Date | null;
-  metadata?: Prisma.InputJsonValue | null;
+  metadata?: TsoaJsonObject | null;
   contextIds?: string[];
   persona?: "SECRETARY" | "ARCHITECT" | "PRODUCT_MANAGER" | "DEVELOPER";
   objective?: string | null;
   englishLevel?: string;
+}
+
+interface UpdateStandaloneTranscriptBody {
+  title?: string | null;
+  source?: TranscriptSource;
+  language?: string | null;
+  summary?: string | null;
+  transcript?: string | null;
+  metadata?: TsoaJsonObject | null;
+  recordedAt?: Date | null;
 }
 
 @Route("api/transcripts")
@@ -85,7 +94,7 @@ export class TranscriptsController extends Controller {
       summary: t.summary,
       transcript: t.transcript,
       recordedAt: t.recordedAt,
-      metadata: t.metadata,
+      metadata: t.metadata as TsoaJsonObject,
       createdAt: t.createdAt,
       updatedAt: t.updatedAt,
     };
@@ -193,7 +202,11 @@ export class TranscriptsController extends Controller {
 
       if (!body.content) {
         // Empty transcript (just metadata creation)
-        transcript = await transcriptCrudService.createTranscriptForUser(user.id, body);
+        const transcriptInput = {
+          ...body,
+          metadata: body.metadata as Prisma.InputJsonValue | undefined,
+        };
+        transcript = await transcriptCrudService.createTranscriptForUser(user.id, transcriptInput);
       } else {
         const contextPrompt = await this.buildContextPrompt(user.id, body.contextIds ?? []);
 
@@ -216,7 +229,7 @@ export class TranscriptsController extends Controller {
             title: body.title ?? undefined,
             source: body.source,
             recordedAt: body.recordedAt ?? null,
-            metadata: body.metadata,
+            metadata: body.metadata as Prisma.InputJsonValue | undefined,
             contextPrompt,
             contextIds: body.contextIds,
             persona: body.persona,
@@ -232,7 +245,7 @@ export class TranscriptsController extends Controller {
             title: body.title ?? undefined,
             source: body.source,
             recordedAt: body.recordedAt ?? null,
-            metadata: body.metadata,
+            metadata: body.metadata as Prisma.InputJsonValue | undefined,
             contextPrompt,
             contextIds: body.contextIds,
             persona: body.persona,
@@ -293,11 +306,19 @@ export class TranscriptsController extends Controller {
   public async updateTranscript(
     @Request() request: AuthenticatedRequest,
     @Path() id: string,
-    @Body() body: UpdateTranscriptInput,
+    @Body() body: UpdateStandaloneTranscriptBody,
   ): Promise<ApiResponse<StandaloneTranscriptResponse>> {
     const user = await this.getAuthorizedUser(request);
 
-    const transcript = await transcriptCrudService.updateTranscriptForUser(user.id, id, body);
+    const updateInput = {
+      ...body,
+      metadata: body.metadata as Prisma.InputJsonValue | undefined,
+    };
+    const transcript = await transcriptCrudService.updateTranscriptForUser(
+      user.id,
+      id,
+      updateInput,
+    );
 
     return {
       status: 200,

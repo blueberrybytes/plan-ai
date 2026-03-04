@@ -93,22 +93,33 @@ const startServer = async () => {
 void startServer();
 
 // Handle graceful shutdown
-const closeServer = () => {
+const closeServer = (cb?: () => void) => {
   if (server) {
     server.close(() => {
       logger.info("HTTP server closed");
+      if (cb) cb();
     });
+  } else {
+    if (cb) cb();
   }
 };
 
+// nodemon restart signal
+process.once("SIGUSR2", () => {
+  logger.info("SIGUSR2 signal received: nodemon restart");
+  closeServer(() => {
+    process.kill(process.pid, "SIGUSR2");
+  });
+});
+
 process.on("SIGTERM", () => {
   logger.info("SIGTERM signal received: closing HTTP server");
-  closeServer();
+  closeServer(() => process.exit(0));
 });
 
 process.on("SIGINT", () => {
   logger.info("SIGINT signal received: closing HTTP server");
-  closeServer();
+  closeServer(() => process.exit(0));
 });
 
 // Catch unhandled Promise rejections and exceptions that might silently kill tasks

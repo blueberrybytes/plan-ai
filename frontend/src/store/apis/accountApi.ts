@@ -4,8 +4,9 @@ import { components } from "../../types/api";
 
 // Define API response types
 type ApiResponseBoolean = components["schemas"]["ApiResponse_boolean_"];
-type ApiResponseCustomThemeNullable = components["schemas"]["ApiResponse_CustomTheme-or-null_"];
-type ApiResponseCustomTheme = components["schemas"]["ApiResponse_CustomTheme_"];
+type ApiResponseCustomThemeNullable =
+  components["schemas"]["ApiResponse_CustomThemeResponse-or-null_"];
+type ApiResponseCustomTheme = components["schemas"]["ApiResponse_CustomThemeResponse_"];
 type UpdateCustomThemeRequest = components["schemas"]["UpdateCustomThemeRequest"];
 
 export const accountApi = createApi({

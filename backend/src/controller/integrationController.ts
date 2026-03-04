@@ -1,10 +1,24 @@
 import { Controller, Get, Path, Request, Route, Security, Tags } from "tsoa";
 import type { AuthenticatedRequest } from "../middleware/authMiddleware";
 import prisma from "../prisma/prismaClient";
-import type { ApiResponse } from "./controllerTypes";
+import { type ApiResponse, type TsoaJsonObject } from "./controllerTypes";
 import { integrationService } from "../services/integrationService";
 import type { UserIntegrationSummary } from "../services/integrationService";
-import { IntegrationProvider } from "@prisma/client";
+import { IntegrationProvider, IntegrationStatus } from "@prisma/client";
+
+interface IntegrationSummaryResponse {
+  id: string;
+  provider: IntegrationProvider;
+  status: IntegrationStatus;
+  accountId: string | null;
+  accountName: string | null;
+  metadata: TsoaJsonObject | null;
+  scope: string | null;
+  expiresAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+  hasRefreshToken: boolean;
+}
 
 @Route("api/integrations")
 @Tags("Integrations")
@@ -13,13 +27,13 @@ export class IntegrationController extends Controller {
   @Security("ClientLevel")
   public async listIntegrations(
     @Request() request: AuthenticatedRequest,
-  ): Promise<ApiResponse<UserIntegrationSummary[]>> {
+  ): Promise<ApiResponse<IntegrationSummaryResponse[]>> {
     const user = await this.getAuthorizedUser(request);
     const integrations = await integrationService.listIntegrationsForUser(user.id);
 
     return {
       status: 200,
-      data: integrations,
+      data: integrations.map((i) => this.mapIntegrationResponse(i)),
     };
   }
 
@@ -28,7 +42,7 @@ export class IntegrationController extends Controller {
   public async getIntegration(
     @Request() request: AuthenticatedRequest,
     @Path() provider: string,
-  ): Promise<ApiResponse<UserIntegrationSummary | null>> {
+  ): Promise<ApiResponse<IntegrationSummaryResponse | null>> {
     const user = await this.getAuthorizedUser(request);
     const providerEnum = this.parseProvider(provider);
 
@@ -54,7 +68,14 @@ export class IntegrationController extends Controller {
 
     return {
       status: 200,
-      data: integration,
+      data: this.mapIntegrationResponse(integration),
+    };
+  }
+
+  private mapIntegrationResponse(integration: UserIntegrationSummary): IntegrationSummaryResponse {
+    return {
+      ...integration,
+      metadata: integration.metadata as TsoaJsonObject | null,
     };
   }
 
