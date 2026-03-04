@@ -24,10 +24,14 @@ export interface DiagramAssistantTriggerRequest {
 }
 
 class DiagramGenerationService {
-  private openrouter = createOpenRouter({
-    apiKey: EnvUtils.get("OPENROUTER_API_KEY"),
-  });
   private modelName = "google/gemini-2.5-flash";
+
+  private getOpenRouterModel(modelName: string) {
+    const openrouter = createOpenRouter({
+      apiKey: EnvUtils.get("OPENROUTER_API_KEY"),
+    });
+    return openrouter(modelName);
+  }
 
   async triggerGeneration(request: DiagramGenerationRequest): Promise<void> {
     const { diagramId, userId, prompt, type, contextIds, transcriptIds } = request;
@@ -68,9 +72,9 @@ class DiagramGenerationService {
 
       logger.info(`Starting diagram generation for ${diagramId}`);
 
-      const model = this.openrouter(this.modelName);
+      const model = this.getOpenRouterModel(this.modelName);
 
-      const { textStream } = streamText({
+      const { textStream } = await streamText({
         model,
         system: systemPrompt,
         prompt: `User Request: ${prompt}`,
@@ -111,6 +115,10 @@ class DiagramGenerationService {
     const { diagramId, userId, instruction, currentCode, contextIds, transcriptIds } = request;
 
     try {
+      logger.info(
+        `[triggerImprovement] Started for diagram ${diagramId} with instruction: ${instruction}`,
+      );
+
       const rawContextData = await queryContexts(contextIds, instruction);
       let contextContent = "";
       if (rawContextData && rawContextData.length > 0) {
@@ -147,9 +155,11 @@ ${transcriptContent ? `## Source Transcripts\n${transcriptContent}` : ""}`;
 
       logger.info(`Starting diagram improvement for ${diagramId}`);
 
-      const model = this.openrouter(this.modelName);
+      const model = this.getOpenRouterModel(this.modelName);
 
-      const { textStream } = streamText({
+      logger.info(`[triggerImprovement] Initiating streamText request to AI model...`);
+
+      const { textStream } = await streamText({
         model,
         system: systemPrompt,
         prompt: `Please apply this instruction to the diagram: ${instruction}`,
@@ -166,6 +176,7 @@ ${transcriptContent ? `## Source Transcripts\n${transcriptContent}` : ""}`;
         });
       }
 
+      logger.info(`[triggerImprovement] Stream fully consumed. Updating diagram status to DRAFT.`);
       await prisma.diagram.update({
         where: { id: diagramId },
         data: {
@@ -176,7 +187,7 @@ ${transcriptContent ? `## Source Transcripts\n${transcriptContent}` : ""}`;
 
       logger.info(`Diagram improvement for ${diagramId} completed successfully.`);
     } catch (error) {
-      logger.error(`Diagram improvement failed for ${diagramId}`, error);
+      logger.error(`[triggerImprovement] Diagram improvement failed for ${diagramId}`, error);
       await prisma.diagram
         .update({ where: { id: diagramId }, data: { status: "FAILED" } })
         .catch(() => {});

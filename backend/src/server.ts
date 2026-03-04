@@ -110,3 +110,14 @@ process.on("SIGINT", () => {
   logger.info("SIGINT signal received: closing HTTP server");
   closeServer();
 });
+
+// Catch unhandled Promise rejections and exceptions that might silently kill tasks
+process.on("unhandledRejection", (reason, promise) => {
+  logger.error("Unhandled Rejection", { promise, reason });
+  console.error("UNHANDLED REJECTION:", reason);
+});
+
+process.on("uncaughtException", (error) => {
+  logger.error("Uncaught Exception:", error);
+  console.error("UNCAUGHT EXCEPTION:", error);
+});

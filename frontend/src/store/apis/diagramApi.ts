@@ -63,6 +63,18 @@ export const diagramApi = createApi({
         body,
       }),
       invalidatesTags: (_result, _error, { id }) => [{ type: "Diagrams", id }],
+      async onQueryStarted({ id }, { dispatch, queryFulfilled }) {
+        const patchResult = dispatch(
+          diagramApi.util.updateQueryData("getDiagram", id, (draft) => {
+            draft.status = "GENERATING";
+          }),
+        );
+        try {
+          await queryFulfilled;
+        } catch {
+          patchResult.undo();
+        }
+      },
     }),
   }),
 });

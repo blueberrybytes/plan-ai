@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { configureStore, Tuple } from "@reduxjs/toolkit";
+import { setupListeners } from "@reduxjs/toolkit/query/react";
 import createSagaMiddleware from "redux-saga";
 import { persistStore, persistReducer, createMigrate } from "redux-persist";
 import storage from "redux-persist/lib/storage"; // Defaults to localStorage for web
@@ -70,6 +71,9 @@ const store = configureStore({
 sagaMiddleware.run(rootSaga);
 // Configure persistor
 export const persistor = persistStore(store);
+
+// Enable RTK Query listener behavior (e.g. refetchOnFocus, refetchOnReconnect, pollingInterval)
+setupListeners(store.dispatch);
 
 export type RootState = ReturnType<typeof rootReducer>;
 export type AppDispatch = typeof store.dispatch;
