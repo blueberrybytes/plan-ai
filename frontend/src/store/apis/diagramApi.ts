@@ -5,7 +5,7 @@ import { baseQueryWithReauth } from "../../utils/baseQuery";
 export type DiagramResponse = components["schemas"]["DiagramResponse"];
 export type CreateDiagramRequest = components["schemas"]["CreateDiagramRequest"];
 export type UpdateDiagramRequest = components["schemas"]["UpdateDiagramRequest"];
-export type DiagramAssistantRequest = any; // components["schemas"]["DiagramAssistantRequest"];
+export type DiagramAssistantRequest = components["schemas"]["DiagramAssistantRequest"];
 export type DiagramListResponse = components["schemas"]["DiagramListResponse"];
 
 export const diagramApi = createApi({
