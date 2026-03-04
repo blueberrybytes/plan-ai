@@ -41,7 +41,22 @@ export const diagramApi = createApi({
         method: "PUT",
         body,
       }),
-      invalidatesTags: (_result, _error, { id }) => [{ type: "Diagrams", id }],
+      async onQueryStarted({ id }, { dispatch, queryFulfilled }) {
+        try {
+          const { data: updatedDiagram } = await queryFulfilled;
+          dispatch(
+            diagramApi.util.updateQueryData("getDiagram", id, (draft) => {
+              Object.assign(draft, updatedDiagram);
+            }),
+          );
+        } catch (error) {
+          console.error("Failed to update diagram", error);
+        }
+      },
+      invalidatesTags: (_result, _error, { id }) => [
+        { type: "Diagrams", id },
+        { type: "Diagrams", id: "LIST" },
+      ],
     }),
     deleteDiagram: builder.mutation<void, { id: string }>({
       query: ({ id }) => ({
