@@ -195,6 +195,8 @@ const DiagramView: React.FC = () => {
     }
   };
 
+  const currentThemeObj = THEME_PRESETS.find((t) => t.name === theme) || THEME_PRESETS[0];
+
   const handleDownloadPNG = async () => {
     setDownloadAnchorEl(null);
     const node = document.querySelector(".mermaid-container svg") as HTMLElement;
@@ -203,7 +205,7 @@ const DiagramView: React.FC = () => {
       // Scale up the PNG resolution 3x so it doesn't look tiny
       const scale = 3;
       const dataUrl = await toPng(node, {
-        backgroundColor: "#ffffff",
+        backgroundColor: currentThemeObj.backgroundColor,
         height: node.scrollHeight * scale,
         width: node.scrollWidth * scale,
         style: {
@@ -232,8 +234,8 @@ const DiagramView: React.FC = () => {
     // Clone the SVG node to dramatically alter it for standalone export
     const svgNode = originalSvgNode.cloneNode(true) as SVGSVGElement;
 
-    // Force a white background on the root node
-    svgNode.style.backgroundColor = "#ffffff";
+    // Force the correct theme background on the root node
+    svgNode.style.backgroundColor = currentThemeObj.backgroundColor;
 
     // Ensure the SVG has strict XML namespaces
     if (!svgNode.getAttribute("xmlns")) {
@@ -277,7 +279,7 @@ const DiagramView: React.FC = () => {
     const bgRect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
     bgRect.setAttribute("width", "100%");
     bgRect.setAttribute("height", "100%");
-    bgRect.setAttribute("fill", "#ffffff");
+    bgRect.setAttribute("fill", currentThemeObj.backgroundColor);
     svgNode.insertBefore(bgRect, svgNode.firstChild);
 
     const svgText = new XMLSerializer().serializeToString(svgNode);
