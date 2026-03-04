@@ -240,6 +240,39 @@ const DiagramView: React.FC = () => {
       svgNode.setAttribute("xmlns", "http://www.w3.org/2000/svg");
     }
 
+    // Embed all active computed CSS styles directly onto each element
+    // because external SVG viewers do not have access to the browser's stylesheet
+    const originalElements = originalSvgNode.querySelectorAll("*");
+    const clonedElements = svgNode.querySelectorAll("*");
+
+    for (let i = 0; i < originalElements.length; i++) {
+      const originalEl = originalElements[i];
+      const clonedEl = clonedElements[i] as HTMLElement;
+
+      const computedStyle = window.getComputedStyle(originalEl);
+
+      // Inline critical SVG styling properties
+      const stylesToInline = [
+        "fill",
+        "stroke",
+        "stroke-width",
+        "opacity",
+        "font-family",
+        "font-size",
+        "color",
+        "stroke-dasharray",
+        "marker-end",
+        "marker-start",
+      ];
+
+      for (const style of stylesToInline) {
+        const val = computedStyle.getPropertyValue(style);
+        if (val && val !== "none" && val !== "") {
+          clonedEl.style.setProperty(style, val);
+        }
+      }
+    }
+
     // Inject a hardcoded white background rect just in case the viewer ignores background-color CSS
     const bgRect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
     bgRect.setAttribute("width", "100%");
