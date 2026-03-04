@@ -112,7 +112,7 @@ const DiagramCreate: React.FC = () => {
       title: title || (isManual ? "New Manual Diagram" : "Untitled Diagram"),
       prompt: isManual ? "" : prompt,
       type: type as CreateDiagramRequest["type"],
-      theme,
+      theme: isManual ? "BlueBerryBytes" : theme,
       contextIds: isManual ? [] : contextIds,
       transcriptIds: isManual ? [] : transcriptIds,
       isManual,
@@ -173,20 +173,22 @@ const DiagramCreate: React.FC = () => {
         {/* Step 0: Diagram Type & Theme */}
         {activeStep === 0 && (
           <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
-            <FormControl fullWidth sx={{ mt: 2 }}>
-              <InputLabel>Diagram Theme</InputLabel>
-              <Select
-                value={theme}
-                label="Diagram Theme"
-                onChange={(e) => setTheme(e.target.value)}
-              >
-                {THEME_PRESETS.map((t) => (
-                  <MenuItem key={t.name} value={t.name}>
-                    {t.name}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
+            {!isManual && (
+              <FormControl fullWidth sx={{ mt: 2 }}>
+                <InputLabel>Diagram Theme</InputLabel>
+                <Select
+                  value={theme}
+                  label="Diagram Theme"
+                  onChange={(e) => setTheme(e.target.value)}
+                >
+                  {THEME_PRESETS.map((t) => (
+                    <MenuItem key={t.name} value={t.name}>
+                      {t.name}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            )}
 
             <Typography variant="h6" fontWeight={600} sx={{ mt: 2 }}>
               Select Diagram Type
