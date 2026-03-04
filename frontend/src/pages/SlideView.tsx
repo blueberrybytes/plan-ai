@@ -22,7 +22,6 @@ const SlideView: React.FC = () => {
   const navigate = useNavigate();
 
   const { presentationId } = useParams<{ presentationId: string }>();
-
   const { data: presentation, isLoading } = useGetPresentationQuery(presentationId || "", {
     skip: !presentationId,
   });

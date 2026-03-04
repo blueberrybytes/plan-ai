@@ -4446,6 +4446,32 @@
 				}
 			}
 		},
+		"/api/presentations/demo": {
+			"post": {
+				"operationId": "GenerateDemoPresentation",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/PresentationResponse"
+								}
+							}
+						}
+					}
+				},
+				"tags": [
+					"Presentations"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": []
+			}
+		},
 		"/api/presentations": {
 			"get": {
 				"operationId": "ListPresentations",

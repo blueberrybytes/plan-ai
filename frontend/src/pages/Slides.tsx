@@ -8,6 +8,7 @@ import {
   Grid,
   IconButton,
   Skeleton,
+  CircularProgress,
 } from "@mui/material";
 import {
   Add as AddIcon,
@@ -29,6 +30,7 @@ import SlideRenderer from "../components/slides/SlideRenderer";
 import {
   useGetPresentationsQuery,
   useDeletePresentationMutation,
+  useGenerateDemoPresentationMutation,
   type PresentationResponse,
 } from "../store/apis/slideApi";
 import { exportToPptx } from "../services/pptxExportService";
@@ -44,6 +46,7 @@ const Slides: React.FC = () => {
   const navigate = useNavigate();
   const { data: presentations = [], isLoading } = useGetPresentationsQuery();
   const [deletePresentation] = useDeletePresentationMutation();
+  const [generateDemo, { isLoading: isGeneratingDemo }] = useGenerateDemoPresentationMutation();
 
   const [editDialogOpen, setEditDialogOpen] = React.useState(false);
   const [selectedPresentation, setSelectedPresentation] =
@@ -57,6 +60,16 @@ const Slides: React.FC = () => {
   const handleDelete = async (id: string) => {
     if (window.confirm(t("slides.presentations.deleteConfirm"))) {
       await deletePresentation(id);
+    }
+  };
+
+  const handleGenerateDemo = async () => {
+    try {
+      const result = await generateDemo().unwrap();
+      navigate(`/slides/view/${result.id}`);
+    } catch (error) {
+      console.error("Failed to generate demo presentation:", error);
+      alert("Failed to generate demo slides.");
     }
   };
 
@@ -132,6 +145,25 @@ const Slides: React.FC = () => {
           >
             {t("slides.actions.viewThemes")}
           </Button>
+          {(process.env.REACT_APP_ENV === "development" ||
+            process.env.REACT_APP_ENV === "local") && (
+            <Button
+              variant="contained"
+              color="secondary"
+              startIcon={
+                isGeneratingDemo ? (
+                  <CircularProgress size={20} color="inherit" />
+                ) : (
+                  <AutoAwesomeIcon />
+                )
+              }
+              size="large"
+              onClick={handleGenerateDemo}
+              disabled={isGeneratingDemo}
+            >
+              {isGeneratingDemo ? "Generating..." : "Generate Demo Slides"}
+            </Button>
+          )}
         </Box>
 
         {/* Presentations List */}

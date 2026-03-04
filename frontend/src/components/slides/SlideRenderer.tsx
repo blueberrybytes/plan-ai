@@ -1,6 +1,30 @@
 import React, { useState } from "react";
-import { Box, Typography } from "@mui/material";
+import { Box, Typography, SxProps, Theme } from "@mui/material";
 import ImageIcon from "@mui/icons-material/Image";
+import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
+import TextFieldsIcon from "@mui/icons-material/TextFields";
+import DownloadIcon from "@mui/icons-material/Download";
+import LightbulbIcon from "@mui/icons-material/Lightbulb";
+import PsychologyIcon from "@mui/icons-material/Psychology";
+import SettingsIcon from "@mui/icons-material/Settings";
+import CheckCircleIcon from "@mui/icons-material/CheckCircle";
+import CircleIcon from "@mui/icons-material/Circle";
+
+const iconMap: Record<string, React.FC<{ sx?: SxProps<Theme> }>> = {
+  AutoAwesome: AutoAwesomeIcon,
+  TextFields: TextFieldsIcon,
+  Download: DownloadIcon,
+  Lightbulb: LightbulbIcon,
+  Psychology: PsychologyIcon,
+  Settings: SettingsIcon,
+  CheckCircle: CheckCircleIcon,
+};
+
+export const DynamicIcon = ({ name, sx }: { name?: string; sx?: SxProps<Theme> }) => {
+  if (!name) return <CircleIcon sx={sx} />;
+  const IconComponent = iconMap[name] || CheckCircleIcon;
+  return <IconComponent sx={sx} />;
+};
 
 /**
  * Image with a styled gradient placeholder shown while loading or on error.
@@ -104,6 +128,36 @@ const AnimatedText: React.FC<React.ComponentProps<typeof Typography> & { animate
   );
 };
 
+export const SlideBadge: React.FC<{ text?: string; primary?: string; animate?: boolean }> = ({
+  text,
+  primary = "#6366f1",
+  animate,
+}) => {
+  if (!text) return null;
+
+  return (
+    <AnimatedText
+      animate={animate}
+      sx={{
+        display: "inline-block",
+        px: 1.5,
+        py: 0.5,
+        borderRadius: 1,
+        bgcolor: `${primary}1A`, // 10% opacity
+        color: primary,
+        fontSize: "0.80rem",
+        fontWeight: 600,
+        textTransform: "uppercase",
+        letterSpacing: "0.08em",
+        border: `1px solid ${primary}33`, // 20% opacity
+        mb: 2,
+      }}
+    >
+      {text}
+    </AnimatedText>
+  );
+};
+
 /**
  * Renders a 16:9 slide frame that looks like a real presentation slide.
  * All slide type renderers are composed inside this wrapper.
@@ -130,16 +184,20 @@ const SlideFrame: React.FC<SlideFrameProps> = ({ children, brandColors, fonts, s
   const secondary = brandColors?.secondary || "#a78bfa";
   const bgStyle = brandColors?.backgroundStyle || "solid";
 
-  let backgroundCSS = bg;
+  let backgroundImage = "none";
   if (bgStyle === "gradient") {
-    backgroundCSS = `linear-gradient(135deg, ${bg} 0%, rgba(0,0,0,0.8) 100%)`;
+    // Elegant soft gradient blending the background with a 15% tint
+    backgroundImage = `linear-gradient(135deg, ${primary}1A 0%, ${secondary}1A 100%)`;
   } else if (bgStyle === "mesh") {
-    backgroundCSS = `radial-gradient(at 0% 0%, ${primary}33 0px, transparent 50%), 
-                     radial-gradient(at 100% 100%, ${secondary}33 0px, transparent 50%), 
-                     ${bg}`;
+    // Complex, rich, Apple-like mesh gradient
+    backgroundImage = `
+      radial-gradient(circle at 15% 50%, ${primary}26, transparent 40%),
+      radial-gradient(circle at 85% 30%, ${secondary}26, transparent 40%),
+      radial-gradient(circle at 50% 100%, ${primary}1A, transparent 50%)
+    `;
   } else if (bgStyle === "minimal") {
     // A very subtle repeating grid pattern for minimal themes
-    backgroundCSS = `${bg} url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 0h40v40H0V0zm20 20h20v20H20V20zM0 20h20v20H0V20z' fill='%23ffffff' fill-opacity='0.02' fill-rule='evenodd'/%3E%3C/svg%3E")`;
+    backgroundImage = `url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 0h40v40H0V0zm20 20h20v20H20V20zM0 20h20v20H0V20z' fill='%23ffffff' fill-opacity='0.02' fill-rule='evenodd'/%3E%3C/svg%3E")`;
   }
 
   return (
@@ -147,7 +205,8 @@ const SlideFrame: React.FC<SlideFrameProps> = ({ children, brandColors, fonts, s
       sx={{
         width: 960 * scale,
         height: 540 * scale,
-        background: backgroundCSS,
+        bgcolor: bg,
+        backgroundImage,
         borderRadius: 2,
         overflow: "hidden",
         position: "relative",
@@ -209,7 +268,6 @@ interface SlideProps {
 }
 
 // Title Only
-// Title Only
 export const TitleOnlySlide: React.FC<SlideProps> = ({
   data = {},
   brandColors,
@@ -221,6 +279,20 @@ export const TitleOnlySlide: React.FC<SlideProps> = ({
   return (
     <SlideFrame brandColors={brandColors} fonts={fonts} scale={scale}>
       <Box sx={{ textAlign: "center" }}>
+        <SlideBadge text={data.badge as string} primary={primary} animate={animate} />
+        {data.iconName && typeof data.iconName === "string" ? (
+          <Box
+            sx={{
+              display: "inline-flex",
+              mb: 3,
+              p: 2,
+              borderRadius: "50%",
+              bgcolor: `${primary}15`,
+            }}
+          >
+            <DynamicIcon name={String(data.iconName)} sx={{ fontSize: 64, color: primary }} />
+          </Box>
+        ) : null}
         <AnimatedText
           animate={animate}
           sx={{
@@ -248,7 +320,6 @@ export const TitleOnlySlide: React.FC<SlideProps> = ({
 };
 
 // Text Block
-// Text Block
 export const TextBlockSlide: React.FC<SlideProps> = ({
   data = {},
   brandColors,
@@ -258,9 +329,23 @@ export const TextBlockSlide: React.FC<SlideProps> = ({
   const primary = brandColors?.primary || "#6366f1";
   return (
     <SlideFrame brandColors={brandColors} scale={scale}>
-      <AnimatedText animate={animate} sx={{ fontSize: 36, fontWeight: 700, mb: 3, color: primary }}>
-        {data.title as string}
-      </AnimatedText>
+      <SlideBadge text={data.badge as string} primary={primary} animate={animate} />
+      <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 3 }}>
+        {data.iconName && typeof data.iconName === "string" ? (
+          <DynamicIcon name={data.iconName} sx={{ fontSize: 40, color: primary }} />
+        ) : null}
+        <AnimatedText animate={animate} sx={{ fontSize: 36, fontWeight: 700, color: primary }}>
+          {data.title as string}
+        </AnimatedText>
+      </Box>
+      {data.subtitle && typeof data.subtitle === "string" ? (
+        <AnimatedText
+          animate={animate}
+          sx={{ fontSize: 20, color: "#94a3b8", mb: 3, fontWeight: 500 }}
+        >
+          {data.subtitle}
+        </AnimatedText>
+      ) : null}
       <AnimatedText animate={animate} sx={{ fontSize: 18, lineHeight: 1.7, color: "#cbd5e1" }}>
         {data.body as string}
       </AnimatedText>
@@ -268,7 +353,6 @@ export const TextBlockSlide: React.FC<SlideProps> = ({
   );
 };
 
-// Text + Image
 // Text + Image
 export const TextImageSlide: React.FC<SlideProps> = ({
   data = {},
@@ -282,6 +366,7 @@ export const TextImageSlide: React.FC<SlideProps> = ({
     <SlideFrame brandColors={brandColors} fonts={fonts} scale={scale}>
       <Box sx={{ display: "flex", gap: 5, alignItems: "center", height: "100%" }}>
         <Box sx={{ flex: 1 }}>
+          <SlideBadge text={data.badge as string} primary={primary} animate={animate} />
           <AnimatedText
             animate={animate}
             sx={{
@@ -341,18 +426,32 @@ export const BulletListSlide: React.FC<SlideProps> = ({
   }
   return (
     <SlideFrame brandColors={brandColors} fonts={fonts} scale={scale}>
+      <SlideBadge text={data.badge as string} primary={primary} animate={animate} />
       <AnimatedText
         animate={animate}
         sx={{
           fontSize: 36,
           fontWeight: 700,
-          mb: 4,
+          mb: data.subtitle ? 1 : 4,
           color: primary,
           fontFamily: `'${fonts?.heading || "Inter"}', sans-serif`,
         }}
       >
         {data.title as string}
       </AnimatedText>
+      {data.subtitle && typeof data.subtitle === "string" ? (
+        <AnimatedText
+          animate={animate}
+          sx={{
+            fontSize: 20,
+            color: "#94a3b8",
+            mb: 4,
+            fontWeight: 500,
+          }}
+        >
+          {data.subtitle}
+        </AnimatedText>
+      ) : null}
       <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
         {bullets.map((bullet, i) => (
           <Box
@@ -413,19 +512,21 @@ export const TwoColumnsSlide: React.FC<SlideProps> = ({
 
   return (
     <SlideFrame brandColors={brandColors} fonts={fonts} scale={scale}>
-      <AnimatedText
-        animate={animate}
-        sx={{
-          fontSize: 36,
-          fontWeight: 700,
-          mb: 4,
-          color: primary,
-          textAlign: "center",
-          fontFamily: `'${fonts?.heading || "Inter"}', sans-serif`,
-        }}
-      >
-        {data.title as string}
-      </AnimatedText>
+      <Box sx={{ textAlign: "center" }}>
+        <SlideBadge text={data.badge as string} primary={primary} animate={animate} />
+        <AnimatedText
+          animate={animate}
+          sx={{
+            fontSize: 36,
+            fontWeight: 700,
+            mb: 4,
+            color: primary,
+            fontFamily: `'${fonts?.heading || "Inter"}', sans-serif`,
+          }}
+        >
+          {data.title as string}
+        </AnimatedText>
+      </Box>
       <Box sx={{ display: "flex", gap: 4 }}>
         <Box
           sx={{
@@ -514,19 +615,21 @@ export const TeamGridSlide: React.FC<SlideProps> = ({
 
   return (
     <SlideFrame brandColors={brandColors} fonts={fonts} scale={scale}>
-      <AnimatedText
-        animate={animate}
-        sx={{
-          fontSize: 36,
-          fontWeight: 700,
-          mb: 4,
-          color: primary,
-          textAlign: "center",
-          fontFamily: `'${fonts?.heading || "Inter"}', sans-serif`,
-        }}
-      >
-        {data.title as string}
-      </AnimatedText>
+      <Box sx={{ textAlign: "center" }}>
+        <SlideBadge text={data.badge as string} primary={primary} animate={animate} />
+        <AnimatedText
+          animate={animate}
+          sx={{
+            fontSize: 36,
+            fontWeight: 700,
+            mb: 4,
+            color: primary,
+            fontFamily: `'${fonts?.heading || "Inter"}', sans-serif`,
+          }}
+        >
+          {data.title as string}
+        </AnimatedText>
+      </Box>
       <Box
         sx={{
           display: "grid",
@@ -597,19 +700,21 @@ export const ShowcaseSlide: React.FC<SlideProps> = ({
   const primary = brandColors?.primary || "#6366f1";
   return (
     <SlideFrame brandColors={brandColors} fonts={fonts} scale={scale}>
-      <AnimatedText
-        animate={animate}
-        sx={{
-          fontSize: 32,
-          fontWeight: 700,
-          mb: 3,
-          color: primary,
-          textAlign: "center",
-          fontFamily: `'${fonts?.heading || "Inter"}', sans-serif`,
-        }}
-      >
-        {data.title as string}
-      </AnimatedText>
+      <Box sx={{ textAlign: "center" }}>
+        <SlideBadge text={data.badge as string} primary={primary} animate={animate} />
+        <AnimatedText
+          animate={animate}
+          sx={{
+            fontSize: 32,
+            fontWeight: 700,
+            mb: 3,
+            color: primary,
+            fontFamily: `'${fonts?.heading || "Inter"}', sans-serif`,
+          }}
+        >
+          {data.title as string}
+        </AnimatedText>
+      </Box>
       <Box
         sx={{
           flex: 1,
@@ -669,19 +774,21 @@ export const StatsSlide: React.FC<SlideProps> = ({
 
   return (
     <SlideFrame brandColors={brandColors} fonts={fonts} scale={scale}>
-      <AnimatedText
-        animate={animate}
-        sx={{
-          fontSize: 36,
-          fontWeight: 700,
-          mb: 6,
-          color: primary,
-          textAlign: "center",
-          fontFamily: `'${fonts?.heading || "Inter"}', sans-serif`,
-        }}
-      >
-        {data.title as string}
-      </AnimatedText>
+      <Box sx={{ textAlign: "center" }}>
+        <SlideBadge text={data.badge as string} primary={primary} animate={animate} />
+        <AnimatedText
+          animate={animate}
+          sx={{
+            fontSize: 36,
+            fontWeight: 700,
+            mb: 6,
+            color: primary,
+            fontFamily: `'${fonts?.heading || "Inter"}', sans-serif`,
+          }}
+        >
+          {data.title as string}
+        </AnimatedText>
+      </Box>
       <Box
         sx={{
           display: "grid",
@@ -736,6 +843,473 @@ export const StatsSlide: React.FC<SlideProps> = ({
   );
 };
 
+// Split KPI
+export const SplitKpiSlide: React.FC<SlideProps> = ({
+  data = {},
+  brandColors,
+  fonts,
+  scale,
+  animate,
+}) => {
+  const primary = brandColors?.primary || "#6366f1";
+  const rawKpis = data.kpis;
+  const kpis: { value: string; label: string; description?: string }[] = Array.isArray(rawKpis)
+    ? rawKpis.map((k: unknown) => {
+        const obj = k as Record<string, unknown>;
+        return {
+          value: String(obj.value || ""),
+          label: String(obj.label || ""),
+          description: obj.description ? String(obj.description) : undefined,
+        };
+      })
+    : [];
+
+  return (
+    <SlideFrame brandColors={brandColors} fonts={fonts} scale={scale}>
+      <Box
+        sx={{
+          display: "flex",
+          gap: 6,
+          alignItems: "stretch",
+          height: "100%",
+          ml: -6,
+          mt: -6,
+          mb: -6,
+        }}
+      >
+        <Box sx={{ width: "45%", position: "relative" }}>
+          <SlideImage
+            src={(data.imageUrl as string) || ""}
+            alt={String(data.imageQuery || "Featured Image")}
+            query={String(data.imageQuery || "")}
+            primary={primary}
+            style={{
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+              borderRadius: "8px 0 0 8px",
+            }}
+          />
+        </Box>
+        <Box
+          sx={{
+            flex: 1,
+            py: 8,
+            pr: 6,
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "center",
+          }}
+        >
+          <SlideBadge text={data.badge as string} primary={primary} animate={animate} />
+          <AnimatedText
+            animate={animate}
+            sx={{
+              fontSize: 40,
+              fontWeight: 800,
+              mb: 6,
+              color: "#fff",
+              lineHeight: 1.2,
+              fontFamily: `'${fonts?.heading || "Inter"}', sans-serif`,
+            }}
+          >
+            {data.title as string}
+          </AnimatedText>
+
+          <Box sx={{ display: "flex", gap: 4, flexWrap: "wrap", mt: 2 }}>
+            {kpis.map((kpi, i) => (
+              <Box key={i} sx={{ flex: 1, minWidth: "120px" }}>
+                <Typography
+                  sx={{
+                    fontSize: 42,
+                    fontWeight: 900,
+                    color: primary,
+                    mb: 1,
+                    letterSpacing: "-0.02em",
+                  }}
+                >
+                  {kpi.value}
+                </Typography>
+                <Typography sx={{ fontSize: 16, fontWeight: 600, color: "#fff", mb: 0.5 }}>
+                  {kpi.label}
+                </Typography>
+                {kpi.description && (
+                  <Typography sx={{ fontSize: 13, color: "#94a3b8", lineHeight: 1.4 }}>
+                    {kpi.description}
+                  </Typography>
+                )}
+              </Box>
+            ))}
+          </Box>
+        </Box>
+      </Box>
+    </SlideFrame>
+  );
+};
+
+// Split Cards
+export const SplitCardsSlide: React.FC<SlideProps> = ({
+  data = {},
+  brandColors,
+  fonts,
+  scale,
+  animate,
+}) => {
+  const primary = brandColors?.primary || "#6366f1";
+  const rawCards = data.cards;
+  const cards: { title: string; body: string; iconName?: string }[] = Array.isArray(rawCards)
+    ? rawCards.map((c: unknown) => {
+        const obj = c as Record<string, unknown>;
+        return {
+          title: String(obj.title || ""),
+          body: String(obj.body || ""),
+          iconName: obj.iconName ? String(obj.iconName) : undefined,
+        };
+      })
+    : [];
+
+  return (
+    <SlideFrame brandColors={brandColors} fonts={fonts} scale={scale}>
+      <Box
+        sx={{
+          display: "flex",
+          gap: 6,
+          alignItems: "stretch",
+          height: "100%",
+          ml: -6,
+          mt: -6,
+          mb: -6,
+        }}
+      >
+        <Box sx={{ width: "45%" }}>
+          <SlideImage
+            src={(data.imageUrl as string) || ""}
+            alt={String(data.imageQuery || "Featured Image")}
+            query={String(data.imageQuery || "")}
+            primary={primary}
+            style={{
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+              borderRadius: "8px 0 0 8px",
+            }}
+          />
+        </Box>
+        <Box
+          sx={{
+            flex: 1,
+            py: 6,
+            pr: 6,
+            pl: 2,
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "center",
+          }}
+        >
+          <SlideBadge text={data.badge as string} primary={primary} animate={animate} />
+          <AnimatedText
+            animate={animate}
+            sx={{
+              fontSize: 34,
+              fontWeight: 800,
+              mb: 4,
+              color: "#fff",
+              lineHeight: 1.2,
+              fontFamily: `'${fonts?.heading || "Inter"}', sans-serif`,
+            }}
+          >
+            {data.title as string}
+          </AnimatedText>
+
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+            {cards.map((card, i) => (
+              <Box
+                key={i}
+                sx={{
+                  p: 2.5,
+                  bgcolor: "rgba(255,255,255,0.03)",
+                  border: `1px solid ${primary}22`,
+                  borderRadius: 2,
+                  borderLeft: `4px solid ${primary}`,
+                }}
+              >
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 1 }}>
+                  <DynamicIcon name={card.iconName} sx={{ color: primary, fontSize: 20 }} />
+                  <Typography sx={{ fontSize: 16, fontWeight: 700, color: "#fff" }}>
+                    {card.title}
+                  </Typography>
+                </Box>
+                <Typography sx={{ fontSize: 14, color: "#94a3b8", lineHeight: 1.5, ml: 4 }}>
+                  {card.body}
+                </Typography>
+              </Box>
+            ))}
+          </Box>
+        </Box>
+      </Box>
+    </SlideFrame>
+  );
+};
+
+// Image Width List
+export const ImageWithListSlide: React.FC<SlideProps> = ({
+  data = {},
+  brandColors,
+  fonts,
+  scale,
+  animate,
+}) => {
+  const primary = brandColors?.primary || "#6366f1";
+  const rawFeatures = data.features;
+  const features: { title: string; description?: string; iconName?: string }[] = Array.isArray(
+    rawFeatures,
+  )
+    ? rawFeatures.map((f: unknown) => {
+        const obj = f as Record<string, unknown>;
+        return {
+          title: String(obj.title || ""),
+          description: obj.description ? String(obj.description) : undefined,
+          iconName: obj.iconName ? String(obj.iconName) : undefined,
+        };
+      })
+    : [];
+
+  return (
+    <SlideFrame brandColors={brandColors} fonts={fonts} scale={scale}>
+      <Box sx={{ mb: 4 }}>
+        <SlideBadge text={data.badge as string} primary={primary} animate={animate} />
+        <AnimatedText
+          animate={animate}
+          sx={{
+            fontSize: 36,
+            fontWeight: 800,
+            color: "#fff",
+            fontFamily: `'${fonts?.heading || "Inter"}', sans-serif`,
+          }}
+        >
+          {data.title as string}
+        </AnimatedText>
+        {data.body && typeof data.body === "string" ? (
+          <AnimatedText
+            animate={animate}
+            sx={{ fontSize: 16, color: "#94a3b8", mt: 1, maxWidth: "80%" }}
+          >
+            {data.body}
+          </AnimatedText>
+        ) : null}
+      </Box>
+
+      <Box sx={{ display: "flex", gap: 5, flex: 1 }}>
+        <Box
+          sx={{
+            width: "45%",
+            borderRadius: 3,
+            overflow: "hidden",
+            bgcolor: "rgba(99,102,241,0.05)",
+          }}
+        >
+          <SlideImage
+            src={(data.imageUrl as string) || ""}
+            alt={String(data.imageQuery || "Featured Image")}
+            query={String(data.imageQuery || "")}
+            primary={primary}
+            style={{ width: "100%", height: "100%", objectFit: "cover" }}
+          />
+        </Box>
+        <Box
+          sx={{
+            flex: 1,
+            display: "flex",
+            flexDirection: "column",
+            gap: 3,
+            justifyContent: "center",
+            pb: 4,
+          }}
+        >
+          {features.map((feat, i) => (
+            <Box
+              key={i}
+              sx={{
+                display: "flex",
+                gap: 3,
+                bgcolor: "rgba(255,255,255,0.02)",
+                p: 2,
+                borderRadius: 2,
+              }}
+            >
+              <Box
+                sx={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: "50%",
+                  bgcolor: `${primary}22`,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexShrink: 0,
+                }}
+              >
+                <DynamicIcon name={feat.iconName} sx={{ color: primary }} />
+              </Box>
+              <Box>
+                <Typography sx={{ fontSize: 18, fontWeight: 700, color: "#fff", mb: 0.5 }}>
+                  {String(feat.title)}
+                </Typography>
+                {feat.description && (
+                  <Typography sx={{ fontSize: 14, color: "#94a3b8", lineHeight: 1.5 }}>
+                    {String(feat.description)}
+                  </Typography>
+                )}
+              </Box>
+            </Box>
+          ))}
+        </Box>
+      </Box>
+    </SlideFrame>
+  );
+};
+
+// Three Columns
+export const ThreeColumnsSlide: React.FC<SlideProps> = ({
+  data = {},
+  brandColors,
+  fonts,
+  scale,
+  animate,
+}) => {
+  const primary = brandColors?.primary || "#6366f1";
+  const rawCols = data.columns;
+  const columns: { title: string; body: string; iconName?: string }[] = Array.isArray(rawCols)
+    ? rawCols.map((c: unknown) => {
+        const obj = c as Record<string, unknown>;
+        return {
+          title: String(obj.title || ""),
+          body: String(obj.body || ""),
+          iconName: obj.iconName ? String(obj.iconName) : undefined,
+        };
+      })
+    : [];
+
+  return (
+    <SlideFrame brandColors={brandColors} fonts={fonts} scale={scale}>
+      <Box sx={{ textAlign: "center", mb: 6 }}>
+        <SlideBadge text={data.badge as string} primary={primary} animate={animate} />
+        <AnimatedText
+          animate={animate}
+          sx={{
+            fontSize: 38,
+            fontWeight: 800,
+            color: "#fff",
+            lineHeight: 1.2,
+            fontFamily: `'${fonts?.heading || "Inter"}', sans-serif`,
+          }}
+        >
+          {data.title as string}
+        </AnimatedText>
+        {data.subtitle && typeof data.subtitle === "string" ? (
+          <AnimatedText
+            animate={animate}
+            sx={{ fontSize: 18, color: "#94a3b8", mt: 2, maxWidth: "70%", mx: "auto" }}
+          >
+            {data.subtitle}
+          </AnimatedText>
+        ) : null}
+      </Box>
+
+      <Box sx={{ display: "flex", gap: 4, px: 2, pb: 4 }}>
+        {columns.map((col, i) => (
+          <Box key={i} sx={{ flex: 1, textAlign: "center" }}>
+            <Box
+              sx={{
+                display: "inline-flex",
+                p: 2,
+                borderRadius: "50%",
+                bgcolor: `${primary}15`,
+                mb: 3,
+              }}
+            >
+              <DynamicIcon name={col.iconName} sx={{ fontSize: 36, color: primary }} />
+            </Box>
+            <Typography sx={{ fontSize: 20, fontWeight: 700, color: "#fff", mb: 1.5 }}>
+              {String(col.title)}
+            </Typography>
+            <Typography sx={{ fontSize: 15, color: "#cbd5e1", lineHeight: 1.6 }}>
+              {String(col.body)}
+            </Typography>
+          </Box>
+        ))}
+      </Box>
+    </SlideFrame>
+  );
+};
+
+// Quote Showcase
+export const QuoteShowcaseSlide: React.FC<SlideProps> = ({
+  data = {},
+  brandColors,
+  fonts,
+  scale,
+  animate,
+}) => {
+  const primary = brandColors?.primary || "#6366f1";
+
+  return (
+    <SlideFrame brandColors={brandColors} fonts={fonts} scale={scale}>
+      <Box sx={{ display: "flex", height: "100%", ml: -6, mt: -6, mb: -6, mr: -6 }}>
+        <Box sx={{ width: "50%" }}>
+          <SlideImage
+            src={(data.imageUrl as string) || ""}
+            alt={String(data.imageQuery || "Featured Image")}
+            query={String(data.imageQuery || "")}
+            primary={primary}
+            style={{
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+              borderRadius: "8px 0 0 8px",
+            }}
+          />
+        </Box>
+        <Box
+          sx={{
+            flex: 1,
+            p: 8,
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "center",
+            bgcolor: "rgba(0,0,0,0.4)",
+          }}
+        >
+          <Box sx={{ mb: 4 }}>
+            <SlideBadge text={data.badge as string} primary={primary} animate={animate} />
+          </Box>
+          <AnimatedText
+            animate={animate}
+            sx={{
+              fontSize: 32,
+              fontWeight: 500,
+              fontStyle: "italic",
+              color: "#f8fafc",
+              lineHeight: 1.4,
+              fontFamily: `'${fonts?.heading || "Inter"}', serif`,
+            }}
+          >
+            &quot;{String(data.statement)}&quot;
+          </AnimatedText>
+          {data.author && typeof data.author === "string" ? (
+            <AnimatedText
+              animate={animate}
+              sx={{ fontSize: 18, fontWeight: 700, color: primary, mt: 4 }}
+            >
+              &mdash; {data.author}
+            </AnimatedText>
+          ) : null}
+        </Box>
+      </Box>
+    </SlideFrame>
+  );
+};
+
 // ─── Slide Renderer dispatcher ───────────────────────────────────────
 
 const slideRenderers: Record<string, React.FC<SlideProps>> = {
@@ -747,6 +1321,11 @@ const slideRenderers: Record<string, React.FC<SlideProps>> = {
   team_grid: TeamGridSlide,
   showcase: ShowcaseSlide,
   stats: StatsSlide,
+  split_kpi: SplitKpiSlide,
+  split_cards: SplitCardsSlide,
+  image_with_list: ImageWithListSlide,
+  three_columns: ThreeColumnsSlide,
+  quote_showcase: QuoteShowcaseSlide,
 };
 
 interface SlideRendererProps extends SlideProps {
