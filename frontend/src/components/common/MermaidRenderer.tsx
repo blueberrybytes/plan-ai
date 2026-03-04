@@ -22,6 +22,9 @@ const MermaidRenderer: React.FC<MermaidRendererProps> = ({ chart, theme }) => {
     let isMounted = true;
 
     const renderChart = async () => {
+      // Define ID outside try block so we can locate orphaned error SVGs in finally
+      const id = `mermaid-svg-${Math.random().toString(36).substr(2, 9)}`;
+
       try {
         setHasError(false);
         // Initialize mermaid with dynamic theme variables.
@@ -36,10 +39,13 @@ const MermaidRenderer: React.FC<MermaidRendererProps> = ({ chart, theme }) => {
             fontFamily: "inherit",
           },
           securityLevel: "loose",
+          logLevel: 5, // Suppress verbose mermaid logs
+          suppressErrorRendering: true, // Force Mermaid not to render SVGs for syntax errors
         });
 
-        // Unique ID for this instance to prevent SVG collisions
-        const id = `mermaid-svg-${Math.random().toString(36).substr(2, 9)}`;
+        // Pre-validate syntax so mermaid doesn't successfully render an error SVG
+        await mermaid.parse(chart, { suppressErrors: true });
+
         const { svg } = await mermaid.render(id, chart);
 
         if (isMounted) {
@@ -50,6 +56,13 @@ const MermaidRenderer: React.FC<MermaidRendererProps> = ({ chart, theme }) => {
         if (isMounted) {
           setHasError(true);
         }
+      } finally {
+        // Mermaid is notorious for injecting huge error SVG bomb graphics directly to the bottom
+        // of the document <body> when parsing fails mid-stream. Physically obliterate them!
+        const orphan1 = document.getElementById(id);
+        const orphan2 = document.getElementById(`d-${id}`);
+        if (orphan1) orphan1.remove();
+        if (orphan2) orphan2.remove();
       }
     };
 

@@ -200,7 +200,19 @@ const DiagramView: React.FC = () => {
     const node = document.querySelector(".mermaid-container svg") as HTMLElement;
     if (!node) return;
     try {
-      const dataUrl = await toPng(node, { backgroundColor: "#ffffff" });
+      // Scale up the PNG resolution 3x so it doesn't look tiny
+      const scale = 3;
+      const dataUrl = await toPng(node, {
+        backgroundColor: "#ffffff",
+        height: node.scrollHeight * scale,
+        width: node.scrollWidth * scale,
+        style: {
+          transform: `scale(${scale})`,
+          transformOrigin: "top left",
+          width: `${node.scrollWidth}px`,
+          height: `${node.scrollHeight}px`,
+        },
+      });
       const link = document.createElement("a");
       link.download = `${diagram?.title || "diagram"}.png`;
       link.href = dataUrl;
@@ -212,10 +224,34 @@ const DiagramView: React.FC = () => {
 
   const handleDownloadSVG = () => {
     setDownloadAnchorEl(null);
-    const svgNode = document.querySelector(".mermaid-container svg");
-    if (!svgNode) return;
+    const originalSvgNode = document.querySelector(
+      ".mermaid-container svg",
+    ) as SVGSVGElement | null;
+    if (!originalSvgNode) return;
+
+    // Clone the SVG node to dramatically alter it for standalone export
+    const svgNode = originalSvgNode.cloneNode(true) as SVGSVGElement;
+
+    // Force a white background on the root node
+    svgNode.style.backgroundColor = "#ffffff";
+
+    // Ensure the SVG has strict XML namespaces
+    if (!svgNode.getAttribute("xmlns")) {
+      svgNode.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+    }
+
+    // Inject a hardcoded white background rect just in case the viewer ignores background-color CSS
+    const bgRect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+    bgRect.setAttribute("width", "100%");
+    bgRect.setAttribute("height", "100%");
+    bgRect.setAttribute("fill", "#ffffff");
+    svgNode.insertBefore(bgRect, svgNode.firstChild);
+
     const svgText = new XMLSerializer().serializeToString(svgNode);
-    const blob = new Blob([svgText], { type: "image/svg+xml" });
+    // Add the XML declaration manually
+    const finalSvg = `<?xml version="1.0" standalone="no"?>\r\n${svgText}`;
+
+    const blob = new Blob([finalSvg], { type: "image/svg+xml;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
