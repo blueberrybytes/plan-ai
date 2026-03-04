@@ -174,42 +174,26 @@ const DraggableTaskCard: React.FC<{
           {task.summary ? (
             <MarkdownRenderer
               content={task.summary}
-              sx={{ "& p": { variant: "body2", color: "text.primary" } }}
+              sx={{
+                display: "-webkit-box",
+                WebkitLineClamp: 1,
+                WebkitBoxOrient: "vertical",
+                overflow: "hidden",
+                "& p": { variant: "body2", color: "text.secondary", m: 0 },
+              }}
             />
           ) : null}
 
-          {task.description ? (
-            <MarkdownRenderer
-              content={task.description}
-              sx={{ "& p": { variant: "body2", color: "text.secondary" } }}
-            />
-          ) : null}
-
-          {task.acceptanceCriteria ? (
-            <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: "pre-wrap" }}>
-              Acceptance: {task.acceptanceCriteria}
-            </Typography>
-          ) : null}
-
-          <Stack direction="row" spacing={2}>
-            <Tooltip title="Due date">
-              <Typography variant="caption" color="text.secondary">
-                Due: {task.dueDate ? new Date(task.dueDate).toLocaleDateString() : "—"}
-              </Typography>
+          {task.dependencies?.length ? (
+            <Tooltip title="Number of blocking tasks">
+              <Chip
+                label={`${task.dependencies.length} blocked`}
+                size="small"
+                variant="outlined"
+                sx={{ height: 20, fontSize: "0.7rem", width: "fit-content" }}
+              />
             </Tooltip>
-            <Tooltip title="Last updated">
-              <Typography variant="caption" color="text.secondary">
-                Updated: {new Date(task.updatedAt).toLocaleString()}
-              </Typography>
-            </Tooltip>
-            {task.dependencies?.length ? (
-              <Tooltip title="Number of blocking tasks">
-                <Typography variant="caption" color="text.secondary">
-                  Dependencies: {task.dependencies.length}
-                </Typography>
-              </Tooltip>
-            ) : null}
-          </Stack>
+          ) : null}
         </Stack>
       </CardContent>
     </Card>

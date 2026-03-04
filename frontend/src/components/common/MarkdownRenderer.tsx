@@ -5,13 +5,19 @@ import remarkGfm from "remark-gfm";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
 import { Link as RouterLink } from "react-router-dom";
+import MermaidRenderer from "./MermaidRenderer";
 
 interface MarkdownRendererProps {
   content: string;
   sx?: SxProps;
+  theme?: {
+    primaryColor?: string;
+    backgroundColor?: string;
+    textColor?: string;
+  } | null;
 }
 
-const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content, sx }) => {
+const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content, sx, theme }) => {
   return (
     <Box
       sx={{
@@ -67,6 +73,11 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content, sx }) => {
             const match = /language-(\w+)/.exec(className || "");
             const isInline = !match;
             const language = match ? match[1] : "";
+
+            if (language === "mermaid") {
+              return <MermaidRenderer chart={String(children).replace(/\n$/, "")} theme={theme} />;
+            }
+
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const Component = SyntaxHighlighter as any;
             return !isInline ? (

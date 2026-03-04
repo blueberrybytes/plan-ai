@@ -87,6 +87,7 @@
     "i18next": "^24.2.1",
     "jspdf": "^4.2.0",
     "konva": "8",
+    "mermaid": "^11.12.3",
     "pptxgenjs": "3.12.0",
     "react": "18",
     "react-big-calendar": "^1.19.4",

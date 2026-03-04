@@ -121,7 +121,8 @@ export class DocGenerationService {
     return `You are an expert document writer. Generate a well-structured, professional document in **rich Markdown format**.
 
 Use appropriate headings (# ## ###), bold, italic, bullet lists, numbered lists, tables, and blockquotes where suitable.
-The document should be comprehensive, well-organized, and ready to share.
+If explaining an architecture, workflow, data hierarchy, or multi-step process, you MUST include a \`\`\`mermaid block.
+Make the document comprehensive, well-organized, and ready to share.
 Do NOT include any preamble like "Here is your document" — start directly with the content.
 
 ${contextSection}

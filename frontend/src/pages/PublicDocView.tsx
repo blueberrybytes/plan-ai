@@ -2,8 +2,7 @@ import React from "react";
 import { Box, Typography, Divider, CircularProgress, Paper } from "@mui/material";
 import { useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
+import MarkdownRenderer from "../components/common/MarkdownRenderer";
 import { useGetPublicDocQuery } from "../store/apis/docApi";
 
 const PublicDocView: React.FC = () => {
@@ -79,7 +78,7 @@ const PublicDocView: React.FC = () => {
               },
             }}
           >
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>{doc.content}</ReactMarkdown>
+            <MarkdownRenderer content={doc.content} theme={theme} sx={{ p: 0 }} />
           </Box>
         </Paper>
 

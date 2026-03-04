@@ -26,8 +26,7 @@ import {
 } from "@mui/icons-material";
 import { useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
+import MarkdownRenderer from "../components/common/MarkdownRenderer";
 import jsPDF from "jspdf";
 import { Document, Packer, Paragraph, TextRun, HeadingLevel } from "docx";
 import SidebarLayout from "../components/layout/SidebarLayout";
@@ -289,7 +288,7 @@ const DocView: React.FC = () => {
                 },
               }}
             >
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
+              <MarkdownRenderer content={content} theme={theme} sx={{ p: 0 }} />
             </Box>
           )}
         </Box>

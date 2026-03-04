@@ -14,6 +14,16 @@ export interface ThemePreset {
 
 export const THEME_PRESETS: ThemePreset[] = [
   {
+    name: "BlueBerryBytes",
+    primaryColor: "#21429c",
+    secondaryColor: "#f87116",
+    backgroundColor: "#ffffff",
+    headingFont: "Inter",
+    bodyFont: "Inter",
+    backgroundStyle: "gradient",
+    cardStyle: "glass",
+  },
+  {
     name: "Indigo Night",
     primaryColor: "#6366f1",
     secondaryColor: "#a78bfa",

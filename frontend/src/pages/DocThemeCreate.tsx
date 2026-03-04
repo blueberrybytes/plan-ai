@@ -25,6 +25,15 @@ interface DocThemePreset {
 
 const DOC_THEME_PRESETS: DocThemePreset[] = [
   {
+    name: "BlueBerryBytes",
+    headingFont: "Inter",
+    bodyFont: "Inter",
+    primaryColor: "#21429c",
+    accentColor: "#f87116",
+    backgroundColor: "#ffffff",
+    textColor: "#020817",
+  },
+  {
     name: "Classic Light",
     headingFont: "Merriweather",
     bodyFont: "Source Sans 3",
