@@ -92,3 +92,5 @@ This command:
 - `backend/src/controller`: API Endpoints (TSOA).
 - `backend/src/services`: Business logic.
 - `backend/prisma/schema.prisma`: Database schema.
+
+DO NOT START the servers. I have them running!! I mean no yarn start or yarn dev

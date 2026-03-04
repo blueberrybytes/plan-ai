@@ -31,8 +31,8 @@ const MermaidRenderer: React.FC<MermaidRendererProps> = ({ chart, theme }) => {
           themeVariables: {
             primaryColor: theme?.backgroundColor ?? "#ffffff",
             primaryBorderColor: theme?.primaryColor ?? "#6366f1",
-            primaryTextColor: theme?.textColor ?? "#333333",
-            lineColor: theme?.textColor ?? "#6366f1",
+            primaryTextColor: theme?.textColor ?? "#111827",
+            lineColor: theme?.primaryColor ?? "#6366f1",
             fontFamily: "inherit",
           },
           securityLevel: "loose",

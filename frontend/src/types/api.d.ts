@@ -772,6 +772,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/diagrams/{diagramId}/assistant": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AssistDiagram"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1595,6 +1611,7 @@ export interface components {
             theme?: string;
             contextIds?: string[];
             transcriptIds?: string[];
+            isManual?: boolean;
         };
         UpdateDiagramRequest: {
             title?: string;
@@ -1602,6 +1619,9 @@ export interface components {
             theme?: string;
             /** @enum {string} */
             status?: "GENERATING" | "DRAFT" | "FAILED";
+        };
+        DiagramAssistantRequest: {
+            instruction: string;
         };
     };
     responses: never;
@@ -3518,6 +3538,32 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    AssistDiagram: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                diagramId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DiagramAssistantRequest"];
+            };
+        };
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DiagramResponse"];
+                };
             };
         };
     };

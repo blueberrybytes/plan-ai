@@ -5,6 +5,7 @@ import { baseQueryWithReauth } from "../../utils/baseQuery";
 export type DiagramResponse = components["schemas"]["DiagramResponse"];
 export type CreateDiagramRequest = components["schemas"]["CreateDiagramRequest"];
 export type UpdateDiagramRequest = components["schemas"]["UpdateDiagramRequest"];
+export type DiagramAssistantRequest = any; // components["schemas"]["DiagramAssistantRequest"];
 export type DiagramListResponse = components["schemas"]["DiagramListResponse"];
 
 export const diagramApi = createApi({
@@ -52,6 +53,17 @@ export const diagramApi = createApi({
         { type: "Diagrams", id: "LIST" },
       ],
     }),
+    improveDiagram: builder.mutation<
+      DiagramResponse,
+      { id: string; body: DiagramAssistantRequest }
+    >({
+      query: ({ id, body }) => ({
+        url: `/api/diagrams/${id}/assistant`,
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: (_result, _error, { id }) => [{ type: "Diagrams", id }],
+    }),
   }),
 });
 
@@ -61,4 +73,5 @@ export const {
   useCreateDiagramMutation,
   useUpdateDiagramMutation,
   useDeleteDiagramMutation,
+  useImproveDiagramMutation,
 } = diagramApi;

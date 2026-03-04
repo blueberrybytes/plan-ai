@@ -14,6 +14,15 @@ export interface DiagramGenerationRequest {
   transcriptIds: string[];
 }
 
+export interface DiagramAssistantTriggerRequest {
+  diagramId: string;
+  userId: string;
+  instruction: string;
+  currentCode: string;
+  contextIds: string[];
+  transcriptIds: string[];
+}
+
 class DiagramGenerationService {
   private openrouter = createOpenRouter({
     apiKey: EnvUtils.get("OPENROUTER_API_KEY"),
@@ -94,6 +103,82 @@ class DiagramGenerationService {
           where: { id: diagramId },
           data: { status: "FAILED" },
         })
+        .catch(() => {});
+    }
+  }
+
+  async triggerImprovement(request: DiagramAssistantTriggerRequest): Promise<void> {
+    const { diagramId, userId, instruction, currentCode, contextIds, transcriptIds } = request;
+
+    try {
+      const rawContextData = await queryContexts(contextIds, instruction);
+      let contextContent = "";
+      if (rawContextData && rawContextData.length > 0) {
+        contextContent = rawContextData
+          .map((c) => `## Context Chunk: \n${c || "(No readable text)"}`)
+          .join("\n\n---\n\n");
+      }
+
+      const rawTranscripts = await prisma.transcript.findMany({
+        where: { id: { in: transcriptIds }, userId },
+      });
+      let transcriptContent = "";
+      if (rawTranscripts.length > 0) {
+        transcriptContent = rawTranscripts
+          .map((t) => `## Transcript: ${t.title || "Untitled"}\n${t.transcript || ""}`)
+          .join("\n\n---\n\n");
+      }
+
+      const systemPrompt = `You are an expert Mermaid diagram architect.
+You are helping the user improve or fix an EXISTING Mermaid diagram.
+Your HIGH-LEVEL INSTRUCTION: ${instruction}
+
+**RULES:**
+1. Your sole purpose is to output EXCLUSIVELY raw Mermaid syntax representing the updated diagram.
+2. Do NOT output any markdown blocks, conversational text, explanations, or preamble.
+3. The very first character of your response MUST be the start of the Mermaid syntax.
+4. Try your best to adhere to standard Mermaid syntax to prevent rendering errors.
+
+**CURRENT MERMAID CODE:**
+${currentCode}
+
+${contextContent ? `## Source Contexts\n${contextContent}` : ""}
+${transcriptContent ? `## Source Transcripts\n${transcriptContent}` : ""}`;
+
+      logger.info(`Starting diagram improvement for ${diagramId}`);
+
+      const model = this.openrouter(this.modelName);
+
+      const { textStream } = streamText({
+        model,
+        system: systemPrompt,
+        prompt: `Please apply this instruction to the diagram: ${instruction}`,
+        temperature: 0.2,
+      });
+
+      let fullMermaidCode = "";
+
+      for await (const textPart of textStream) {
+        fullMermaidCode += textPart;
+        await prisma.diagram.update({
+          where: { id: diagramId },
+          data: { mermaidCode: this.cleanMermaidSyntax(fullMermaidCode) },
+        });
+      }
+
+      await prisma.diagram.update({
+        where: { id: diagramId },
+        data: {
+          mermaidCode: this.cleanMermaidSyntax(fullMermaidCode),
+          status: "DRAFT",
+        },
+      });
+
+      logger.info(`Diagram improvement for ${diagramId} completed successfully.`);
+    } catch (error) {
+      logger.error(`Diagram improvement failed for ${diagramId}`, error);
+      await prisma.diagram
+        .update({ where: { id: diagramId }, data: { status: "FAILED" } })
         .catch(() => {});
     }
   }

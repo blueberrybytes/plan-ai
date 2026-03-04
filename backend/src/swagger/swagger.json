@@ -3059,6 +3059,9 @@
 							"type": "string"
 						},
 						"type": "array"
+					},
+					"isManual": {
+						"type": "boolean"
 					}
 				},
 				"required": [
@@ -3089,6 +3092,18 @@
 						]
 					}
 				},
+				"type": "object",
+				"additionalProperties": false
+			},
+			"DiagramAssistantRequest": {
+				"properties": {
+					"instruction": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"instruction"
+				],
 				"type": "object",
 				"additionalProperties": false
 			}
@@ -6229,6 +6244,51 @@
 						}
 					}
 				]
+			}
+		},
+		"/api/diagrams/{diagramId}/assistant": {
+			"post": {
+				"operationId": "AssistDiagram",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/DiagramResponse"
+								}
+							}
+						}
+					}
+				},
+				"tags": [
+					"Diagrams"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": [
+					{
+						"in": "path",
+						"name": "diagramId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/DiagramAssistantRequest"
+							}
+						}
+					}
+				}
 			}
 		}
 	},

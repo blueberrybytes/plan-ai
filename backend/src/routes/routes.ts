@@ -1078,6 +1078,7 @@ const models: TsoaRoute.Models = {
             "theme": {"dataType":"string"},
             "contextIds": {"dataType":"array","array":{"dataType":"string"}},
             "transcriptIds": {"dataType":"array","array":{"dataType":"string"}},
+            "isManual": {"dataType":"boolean"},
         },
         "additionalProperties": false,
     },
@@ -1089,6 +1090,14 @@ const models: TsoaRoute.Models = {
             "mermaidCode": {"dataType":"string"},
             "theme": {"dataType":"string"},
             "status": {"dataType":"union","subSchemas":[{"dataType":"enum","enums":["GENERATING"]},{"dataType":"enum","enums":["DRAFT"]},{"dataType":"enum","enums":["FAILED"]}]},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "DiagramAssistantRequest": {
+        "dataType": "refObject",
+        "properties": {
+            "instruction": {"dataType":"string","required":true},
         },
         "additionalProperties": false,
     },
@@ -3674,6 +3683,39 @@ export function RegisterRoutes(app: Router,opts?:{multer?:ReturnType<typeof mult
 
               await templateService.apiHandler({
                 methodName: 'deleteDiagram',
+                controller,
+                response,
+                next,
+                validatedArgs,
+                successStatus: undefined,
+              });
+            } catch (err) {
+                return next(err);
+            }
+        });
+        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+        const argsDiagramController_assistDiagram: Record<string, TsoaRoute.ParameterSchema> = {
+                request: {"in":"request","name":"request","required":true,"dataType":"object"},
+                diagramId: {"in":"path","name":"diagramId","required":true,"dataType":"string"},
+                body: {"in":"body","name":"body","required":true,"ref":"DiagramAssistantRequest"},
+        };
+        app.post('/api/diagrams/:diagramId/assistant',
+            authenticateMiddleware([{"ClientLevel":[]}]),
+            ...(fetchMiddlewares<RequestHandler>(DiagramController)),
+            ...(fetchMiddlewares<RequestHandler>(DiagramController.prototype.assistDiagram)),
+
+            async function DiagramController_assistDiagram(request: ExRequest, response: ExResponse, next: any) {
+
+            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+
+            let validatedArgs: any[] = [];
+            try {
+                validatedArgs = templateService.getValidatedArgs({ args: argsDiagramController_assistDiagram, request, response });
+
+                const controller = new DiagramController();
+
+              await templateService.apiHandler({
+                methodName: 'assistDiagram',
                 controller,
                 response,
                 next,

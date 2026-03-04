@@ -16,6 +16,8 @@ import {
   InputLabel,
   Select,
   MenuItem,
+  ToggleButtonGroup,
+  ToggleButton,
 } from "@mui/material";
 import {
   AutoAwesome as AutoAwesomeIcon,
@@ -35,7 +37,8 @@ import { useListContextsQuery } from "../store/apis/contextApi";
 import { useListGlobalTranscriptsQuery } from "../store/apis/transcriptApi";
 import { THEME_PRESETS } from "../components/slides/themePresets";
 
-const STEPS = ["Diagram Type & Theme", "Details", "Sources"];
+const STEPS_AI = ["Diagram Type & Theme", "Details", "Sources"];
+const STEPS_MANUAL = ["Diagram Type & Theme"];
 
 const DIAGRAM_TYPES = [
   {
@@ -93,6 +96,7 @@ const DiagramCreate: React.FC = () => {
   const [prompt, setPrompt] = useState("");
   const [contextIds, setContextIds] = useState<string[]>([]);
   const [transcriptIds, setTranscriptIds] = useState<string[]>([]);
+  const [isManual, setIsManual] = useState<boolean>(false);
 
   const [createDiagram, { isLoading }] = useCreateDiagramMutation();
   const { data: contextsData } = useListContextsQuery();
@@ -102,15 +106,16 @@ const DiagramCreate: React.FC = () => {
   const transcriptList = transcriptsData?.data?.transcripts || [];
 
   const handleSubmit = async () => {
-    if (!type || !prompt) return;
+    if (!type || (!isManual && !prompt)) return;
 
     const result = await createDiagram({
-      title: title || "Untitled Diagram",
-      prompt,
+      title: title || (isManual ? "New Manual Diagram" : "Untitled Diagram"),
+      prompt: isManual ? "" : prompt,
       type: type as CreateDiagramRequest["type"],
       theme,
-      contextIds,
-      transcriptIds,
+      contextIds: isManual ? [] : contextIds,
+      transcriptIds: isManual ? [] : transcriptIds,
+      isManual,
     });
 
     if ("data" in result && result.data) {
@@ -120,9 +125,11 @@ const DiagramCreate: React.FC = () => {
 
   const isStepValid = () => {
     if (activeStep === 0) return !!type;
-    if (activeStep === 1) return !!prompt.trim();
+    if (!isManual && activeStep === 1) return !!prompt.trim();
     return true;
   };
+
+  const currentSteps = isManual ? STEPS_MANUAL : STEPS_AI;
 
   return (
     <SidebarLayout>
@@ -134,8 +141,29 @@ const DiagramCreate: React.FC = () => {
           Visual Architect
         </Typography>
 
+        <Box sx={{ display: "flex", justifyContent: "center", mb: 4 }}>
+          <ToggleButtonGroup
+            color="primary"
+            value={isManual}
+            exclusive
+            onChange={(_, val) => {
+              if (val !== null) {
+                setIsManual(val);
+                setActiveStep(0);
+              }
+            }}
+          >
+            <ToggleButton value={false} sx={{ px: 4, fontWeight: 600 }}>
+              Generate with AI
+            </ToggleButton>
+            <ToggleButton value={true} sx={{ px: 4, fontWeight: 600 }}>
+              Start from Scratch
+            </ToggleButton>
+          </ToggleButtonGroup>
+        </Box>
+
         <Stepper activeStep={activeStep} sx={{ mb: 5 }}>
-          {STEPS.map((label) => (
+          {currentSteps.map((label) => (
             <Step key={label}>
               <StepLabel>{label}</StepLabel>
             </Step>
@@ -263,10 +291,14 @@ const DiagramCreate: React.FC = () => {
 
         {/* Navigation */}
         <Box sx={{ display: "flex", justifyContent: "space-between", mt: 6 }}>
-          <Button disabled={activeStep === 0} onClick={() => setActiveStep((s) => s - 1)}>
-            Back
-          </Button>
-          {activeStep < STEPS.length - 1 ? (
+          {currentSteps.length > 1 && (
+            <Button disabled={activeStep === 0} onClick={() => setActiveStep((s) => s - 1)}>
+              Back
+            </Button>
+          )}
+          {currentSteps.length === 1 && <Box />}
+
+          {activeStep < currentSteps.length - 1 ? (
             <Button
               variant="contained"
               endIcon={<ArrowForwardIcon />}
@@ -278,11 +310,12 @@ const DiagramCreate: React.FC = () => {
           ) : (
             <Button
               variant="contained"
-              startIcon={<AutoAwesomeIcon />}
+              startIcon={!isManual && <AutoAwesomeIcon />}
               loading={isLoading}
               onClick={handleSubmit}
+              disabled={!isStepValid()}
             >
-              Generate Diagram
+              {isManual ? "Create Empty Diagram" : "Generate Diagram"}
             </Button>
           )}
         </Box>

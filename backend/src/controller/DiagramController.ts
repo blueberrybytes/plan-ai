@@ -23,6 +23,11 @@ export interface CreateDiagramRequest {
   theme?: string;
   contextIds?: string[];
   transcriptIds?: string[];
+  isManual?: boolean;
+}
+
+export interface DiagramAssistantRequest {
+  instruction: string;
 }
 
 export interface UpdateDiagramRequest {
@@ -144,21 +149,23 @@ export class DiagramController extends Controller {
         contextIds: body.contextIds || [],
         transcriptIds: body.transcriptIds || [],
         mermaidCode: initialSyntax,
-        status: "GENERATING",
+        status: body.isManual ? "DRAFT" : "GENERATING",
       },
     });
 
-    // Fire & Forget the generation
-    diagramGenerationService
-      .triggerGeneration({
-        diagramId: diagram.id,
-        userId: user.id,
-        prompt: body.prompt,
-        type: body.type,
-        contextIds: body.contextIds || [],
-        transcriptIds: body.transcriptIds || [],
-      })
-      .catch(console.error);
+    if (!body.isManual) {
+      // Fire & Forget the generation
+      diagramGenerationService
+        .triggerGeneration({
+          diagramId: diagram.id,
+          userId: user.id,
+          prompt: body.prompt,
+          type: body.type,
+          contextIds: body.contextIds || [],
+          transcriptIds: body.transcriptIds || [],
+        })
+        .catch(console.error);
+    }
 
     return {
       ...diagram,
@@ -236,5 +243,54 @@ export class DiagramController extends Controller {
     await prisma.diagram.delete({
       where: { id: diagramId },
     });
+  }
+
+  @Post("{diagramId}/assistant")
+  @Security("ClientLevel")
+  public async assistDiagram(
+    @Request() request: AuthenticatedRequest,
+    @Path() diagramId: string,
+    @Body() body: DiagramAssistantRequest,
+  ): Promise<DiagramResponse> {
+    if (!request.user) throw new Error("Unauthorized");
+    const user = await prisma.user.findUnique({
+      where: { firebaseUid: request.user.uid },
+    });
+    if (!user) {
+      this.setStatus(401);
+      throw new Error("User not found");
+    }
+
+    const diagram = await prisma.diagram.findFirst({
+      where: { id: diagramId, userId: user.id },
+    });
+
+    if (!diagram) {
+      this.setStatus(404);
+      throw new Error("Diagram not found or not owned by user");
+    }
+
+    const updatedDiagram = await prisma.diagram.update({
+      where: { id: diagramId },
+      data: { status: "GENERATING" },
+    });
+
+    // Fire & Forget the improvement task
+    diagramGenerationService
+      .triggerImprovement({
+        diagramId: diagram.id,
+        userId: user.id,
+        instruction: body.instruction,
+        currentCode: diagram.mermaidCode || "",
+        contextIds: diagram.contextIds,
+        transcriptIds: diagram.transcriptIds,
+      })
+      .catch(console.error);
+
+    return {
+      ...updatedDiagram,
+      createdAt: updatedDiagram.createdAt.toISOString(),
+      updatedAt: updatedDiagram.updatedAt.toISOString(),
+    };
   }
 }

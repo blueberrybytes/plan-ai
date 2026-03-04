@@ -5,22 +5,32 @@ import {
   Button,
   IconButton,
   TextField,
-  Chip,
   FormControl,
   InputLabel,
   Select,
   MenuItem,
   CircularProgress,
+  Menu,
+  ListItemIcon,
+  ListItemText,
 } from "@mui/material";
 import {
   ArrowBack as ArrowBackIcon,
   Save as SaveIcon,
-  Refresh as RefreshIcon,
   Code as CodeIcon,
   CodeOff as CodeOffIcon,
+  AutoAwesome as AutoAwesomeIcon,
+  Download as DownloadIcon,
+  Image as ImageIcon,
+  DataObject as DataObjectIcon,
 } from "@mui/icons-material";
+import { toPng } from "html-to-image";
 import { useNavigate, useParams } from "react-router-dom";
-import { useGetDiagramQuery, useUpdateDiagramMutation } from "../store/apis/diagramApi";
+import {
+  useGetDiagramQuery,
+  useUpdateDiagramMutation,
+  useImproveDiagramMutation,
+} from "../store/apis/diagramApi";
 import MermaidRenderer from "../components/common/MermaidRenderer";
 import SidebarLayout from "../components/layout/SidebarLayout";
 import { THEME_PRESETS } from "../components/slides/themePresets";
@@ -41,6 +51,11 @@ const DiagramView: React.FC = () => {
   const [theme, setTheme] = useState<string>("BlueBerryBytes");
   const [isModified, setIsModified] = useState(false);
   const [isEditorOpen, setIsEditorOpen] = useState(true);
+
+  const [improveDiagram, { isLoading: isImproving }] = useImproveDiagramMutation();
+  const [assistantInstruction, setAssistantInstruction] = useState("");
+
+  const [downloadAnchorEl, setDownloadAnchorEl] = useState<null | HTMLElement>(null);
 
   // Sync state with fetching
   useEffect(() => {
@@ -74,6 +89,59 @@ const DiagramView: React.FC = () => {
       },
     });
     setIsModified(false);
+  };
+
+  const handleAssistantSubmit = async () => {
+    if (!diagramId || !assistantInstruction.trim()) return;
+    try {
+      await improveDiagram({
+        id: diagramId,
+        body: { instruction: assistantInstruction },
+      });
+      setAssistantInstruction("");
+    } catch (err) {
+      console.error("Assistant error:", err);
+    }
+  };
+
+  const handleDownloadPNG = async () => {
+    setDownloadAnchorEl(null);
+    const node = document.querySelector(".mermaid-container svg") as HTMLElement;
+    if (!node) return;
+    try {
+      const dataUrl = await toPng(node, { backgroundColor: "#ffffff" });
+      const link = document.createElement("a");
+      link.download = `${diagram?.title || "diagram"}.png`;
+      link.href = dataUrl;
+      link.click();
+    } catch (err) {
+      console.error("Failed to export PNG", err);
+    }
+  };
+
+  const handleDownloadSVG = () => {
+    setDownloadAnchorEl(null);
+    const svgNode = document.querySelector(".mermaid-container svg");
+    if (!svgNode) return;
+    const svgText = new XMLSerializer().serializeToString(svgNode);
+    const blob = new Blob([svgText], { type: "image/svg+xml" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${diagram?.title || "diagram"}.svg`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleDownloadMermaidCode = () => {
+    setDownloadAnchorEl(null);
+    const blob = new Blob([code], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${diagram?.title || "diagram"}.mermaid`;
+    link.click();
+    URL.revokeObjectURL(url);
   };
 
   if (isLoading) {
@@ -137,18 +205,6 @@ const DiagramView: React.FC = () => {
                 sx: { fontSize: "1.25rem", fontWeight: 700 },
               }}
             />
-            <Chip
-              label={diagram.status}
-              size="small"
-              color={
-                diagram.status === "GENERATING"
-                  ? "warning"
-                  : diagram.status === "FAILED"
-                    ? "error"
-                    : "success"
-              }
-              variant="outlined"
-            />
             {diagram.status === "GENERATING" && <CircularProgress size={16} sx={{ ml: 1 }} />}
             <Button
               variant="text"
@@ -178,21 +234,39 @@ const DiagramView: React.FC = () => {
                 ))}
               </Select>
             </FormControl>
-          </Box>
-          <Box sx={{ display: "flex", gap: 2 }}>
-            <Button
-              variant="outlined"
-              startIcon={<RefreshIcon />}
-              onClick={() => {
-                setCode(diagram.mermaidCode || "");
-                setTitle(diagram.title || "");
-                setTheme(diagram.theme || "BlueBerryBytes");
-                setIsModified(false);
-              }}
-              disabled={!isModified || isUpdating}
+
+            <IconButton
+              color="primary"
+              onClick={(e) => setDownloadAnchorEl(e.currentTarget)}
+              disabled={!code || diagram.status === "GENERATING"}
             >
-              Discard
-            </Button>
+              <DownloadIcon />
+            </IconButton>
+            <Menu
+              anchorEl={downloadAnchorEl}
+              open={Boolean(downloadAnchorEl)}
+              onClose={() => setDownloadAnchorEl(null)}
+            >
+              <MenuItem onClick={handleDownloadPNG}>
+                <ListItemIcon>
+                  <ImageIcon fontSize="small" />
+                </ListItemIcon>
+                <ListItemText>Export as PNG</ListItemText>
+              </MenuItem>
+              <MenuItem onClick={handleDownloadSVG}>
+                <ListItemIcon>
+                  <DataObjectIcon fontSize="small" />
+                </ListItemIcon>
+                <ListItemText>Export as SVG</ListItemText>
+              </MenuItem>
+              <MenuItem onClick={handleDownloadMermaidCode}>
+                <ListItemIcon>
+                  <CodeIcon fontSize="small" />
+                </ListItemIcon>
+                <ListItemText>Download Mermaid Code</ListItemText>
+              </MenuItem>
+            </Menu>
+
             <Button
               variant="contained"
               startIcon={<SaveIcon />}
@@ -290,6 +364,64 @@ const DiagramView: React.FC = () => {
                 position: "relative",
               }}
             >
+              {/* Floating AI Assistant Input */}
+              <Box
+                sx={{
+                  position: "absolute",
+                  bottom: 32,
+                  left: "50%",
+                  transform: "translateX(-50%)",
+                  zIndex: 20,
+                  width: "100%",
+                  maxWidth: 500,
+                  px: 2,
+                }}
+              >
+                <TextField
+                  fullWidth
+                  placeholder="Ask AI to modify or fix the diagram..."
+                  value={assistantInstruction}
+                  onChange={(e) => setAssistantInstruction(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      handleAssistantSubmit();
+                    }
+                  }}
+                  disabled={diagram.status === "GENERATING" || isImproving}
+                  InputProps={{
+                    sx: {
+                      bgcolor: "background.paper",
+                      boxShadow: 3,
+                      borderRadius: 4,
+                      pr: 1,
+                      "& fieldset": { border: "none" },
+                    },
+                    endAdornment: (
+                      <Button
+                        variant="contained"
+                        sx={{ borderRadius: 3, minWidth: "auto", px: 3 }}
+                        onClick={handleAssistantSubmit}
+                        disabled={
+                          diagram.status === "GENERATING" ||
+                          isImproving ||
+                          !assistantInstruction.trim()
+                        }
+                        startIcon={
+                          diagram.status === "GENERATING" || isImproving ? (
+                            <CircularProgress size={16} color="inherit" />
+                          ) : (
+                            <AutoAwesomeIcon />
+                          )
+                        }
+                      >
+                        {diagram.status === "GENERATING" || isImproving ? "Working..." : "Enhance"}
+                      </Button>
+                    ),
+                  }}
+                />
+              </Box>
+
               {code ? (
                 <MermaidRenderer chart={code} theme={THEME_PRESETS.find((t) => t.name === theme)} />
               ) : (
