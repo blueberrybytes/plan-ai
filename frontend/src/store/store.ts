@@ -16,6 +16,7 @@ import { slideApi } from "./apis/slideApi";
 import { transcriptApi } from "./apis/transcriptApi";
 import { docApi } from "./apis/docApi";
 import { docThemeApi } from "./apis/docThemeApi";
+import { diagramApi } from "./apis/diagramApi";
 
 const migrations = {
   1: (state: any) => {
@@ -61,6 +62,7 @@ const store = configureStore({
       transcriptApi.middleware,
       docApi.middleware,
       docThemeApi.middleware,
+      diagramApi.middleware,
     ),
 });
 

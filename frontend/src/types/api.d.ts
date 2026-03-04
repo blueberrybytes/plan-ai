@@ -740,6 +740,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/diagrams": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetUserDiagrams"];
+        put?: never;
+        post: operations["CreateDiagram"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/diagrams/{diagramId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetDiagram"];
+        put: operations["UpdateDiagram"];
+        post?: never;
+        delete: operations["DeleteDiagram"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1540,6 +1572,33 @@ export interface components {
             data: boolean | null;
             /** Format: double */
             status: number;
+        };
+        DiagramResponse: {
+            id: string;
+            title: string;
+            prompt: string;
+            mermaidCode: string | null;
+            type: string;
+            status: string;
+            createdAt: string;
+            updatedAt: string;
+        };
+        DiagramListResponse: {
+            diagrams: components["schemas"]["DiagramResponse"][];
+        };
+        CreateDiagramRequest: {
+            title: string;
+            prompt: string;
+            /** @enum {string} */
+            type: "FLOWCHART" | "SEQUENCE" | "GANTT" | "MINDMAP" | "CLASS" | "ER" | "ARCHITECTURE";
+            contextIds?: string[];
+            transcriptIds?: string[];
+        };
+        UpdateDiagramRequest: {
+            title?: string;
+            mermaidCode?: string;
+            /** @enum {string} */
+            status?: "GENERATING" | "DRAFT" | "FAILED";
         };
     };
     responses: never;
@@ -3344,6 +3403,118 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["ApiResponse_boolean_"];
                 };
+            };
+        };
+    };
+    GetUserDiagrams: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DiagramListResponse"];
+                };
+            };
+        };
+    };
+    CreateDiagram: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateDiagramRequest"];
+            };
+        };
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DiagramResponse"];
+                };
+            };
+        };
+    };
+    GetDiagram: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                diagramId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DiagramResponse"];
+                };
+            };
+        };
+    };
+    UpdateDiagram: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                diagramId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateDiagramRequest"];
+            };
+        };
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DiagramResponse"];
+                };
+            };
+        };
+    };
+    DeleteDiagram: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                diagramId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

@@ -15,6 +15,7 @@ import { slideApi } from "./apis/slideApi";
 import { transcriptApi } from "./apis/transcriptApi";
 import { docApi } from "./apis/docApi";
 import { docThemeApi } from "./apis/docThemeApi";
+import { diagramApi } from "./apis/diagramApi";
 
 // Define the combined reducers
 const appReducers = combineReducers({
@@ -32,6 +33,7 @@ const appReducers = combineReducers({
   [transcriptApi.reducerPath]: transcriptApi.reducer,
   [docApi.reducerPath]: docApi.reducer,
   [docThemeApi.reducerPath]: docThemeApi.reducer,
+  [diagramApi.reducerPath]: diagramApi.reducer,
 });
 
 // Create a root reducer that can handle the reset action

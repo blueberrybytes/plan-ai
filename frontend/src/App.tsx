@@ -42,6 +42,9 @@ import DocView from "./pages/DocView";
 import DocThemes from "./pages/DocThemes";
 import DocThemeCreate from "./pages/DocThemeCreate";
 import PublicDocView from "./pages/PublicDocView";
+import Diagrams from "./pages/Diagrams";
+import DiagramCreate from "./pages/DiagramCreate";
+import DiagramView from "./pages/DiagramView";
 import "./App.css";
 import "./i18n";
 import { useGetCurrentUserQuery } from "./store/apis/authApi";
@@ -125,6 +128,9 @@ const AppContent: React.FC = () => {
           <Route path="/docs/themes" element={<DocThemes />} />
           <Route path="/docs/themes/create" element={<DocThemeCreate />} />
           <Route path="/docs/themes/:id/edit" element={<DocThemeCreate />} />
+          <Route path="/diagrams" element={<Diagrams />} />
+          <Route path="/diagrams/create" element={<DiagramCreate />} />
+          <Route path="/diagrams/:diagramId" element={<DiagramView />} />
         </Route>
 
         <Route path="*" element={<NotFound />} />

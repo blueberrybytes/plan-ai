@@ -2963,6 +2963,123 @@
 					"status"
 				],
 				"type": "object"
+			},
+			"DiagramResponse": {
+				"properties": {
+					"id": {
+						"type": "string"
+					},
+					"title": {
+						"type": "string"
+					},
+					"prompt": {
+						"type": "string"
+					},
+					"mermaidCode": {
+						"type": "string",
+						"nullable": true
+					},
+					"type": {
+						"type": "string"
+					},
+					"status": {
+						"type": "string"
+					},
+					"createdAt": {
+						"type": "string"
+					},
+					"updatedAt": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"id",
+					"title",
+					"prompt",
+					"mermaidCode",
+					"type",
+					"status",
+					"createdAt",
+					"updatedAt"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"DiagramListResponse": {
+				"properties": {
+					"diagrams": {
+						"items": {
+							"$ref": "#/components/schemas/DiagramResponse"
+						},
+						"type": "array"
+					}
+				},
+				"required": [
+					"diagrams"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"CreateDiagramRequest": {
+				"properties": {
+					"title": {
+						"type": "string"
+					},
+					"prompt": {
+						"type": "string"
+					},
+					"type": {
+						"type": "string",
+						"enum": [
+							"FLOWCHART",
+							"SEQUENCE",
+							"GANTT",
+							"MINDMAP",
+							"CLASS",
+							"ER",
+							"ARCHITECTURE"
+						]
+					},
+					"contextIds": {
+						"items": {
+							"type": "string"
+						},
+						"type": "array"
+					},
+					"transcriptIds": {
+						"items": {
+							"type": "string"
+						},
+						"type": "array"
+					}
+				},
+				"required": [
+					"title",
+					"prompt",
+					"type"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"UpdateDiagramRequest": {
+				"properties": {
+					"title": {
+						"type": "string"
+					},
+					"mermaidCode": {
+						"type": "string"
+					},
+					"status": {
+						"type": "string",
+						"enum": [
+							"GENERATING",
+							"DRAFT",
+							"FAILED"
+						]
+					}
+				},
+				"type": "object",
+				"additionalProperties": false
 			}
 		},
 		"securitySchemes": {}
@@ -5937,6 +6054,170 @@
 					}
 				],
 				"parameters": []
+			}
+		},
+		"/api/diagrams": {
+			"get": {
+				"operationId": "GetUserDiagrams",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/DiagramListResponse"
+								}
+							}
+						}
+					}
+				},
+				"tags": [
+					"Diagrams"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": []
+			},
+			"post": {
+				"operationId": "CreateDiagram",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/DiagramResponse"
+								}
+							}
+						}
+					}
+				},
+				"tags": [
+					"Diagrams"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": [],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/CreateDiagramRequest"
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/diagrams/{diagramId}": {
+			"get": {
+				"operationId": "GetDiagram",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/DiagramResponse"
+								}
+							}
+						}
+					}
+				},
+				"tags": [
+					"Diagrams"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": [
+					{
+						"in": "path",
+						"name": "diagramId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				]
+			},
+			"put": {
+				"operationId": "UpdateDiagram",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/DiagramResponse"
+								}
+							}
+						}
+					}
+				},
+				"tags": [
+					"Diagrams"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": [
+					{
+						"in": "path",
+						"name": "diagramId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/UpdateDiagramRequest"
+							}
+						}
+					}
+				}
+			},
+			"delete": {
+				"operationId": "DeleteDiagram",
+				"responses": {
+					"204": {
+						"description": "No content"
+					}
+				},
+				"tags": [
+					"Diagrams"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": [
+					{
+						"in": "path",
+						"name": "diagramId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				]
 			}
 		}
 	},

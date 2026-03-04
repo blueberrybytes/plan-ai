@@ -28,6 +28,7 @@ model User {
   transcripts     Transcript[]
   integrations    UserIntegration[]
   projects        Project[]
+  diagrams        Diagram[]
 }
 
 model UserIntegration {
@@ -307,6 +308,40 @@ model DocDocument {
 
   @@index([userId])
   @@index([isPublic])
+}
+
+enum DiagramType {
+  FLOWCHART
+  SEQUENCE
+  GANTT
+  MINDMAP
+  CLASS
+  ER
+  ARCHITECTURE
+}
+
+enum DiagramStatus {
+  GENERATING
+  DRAFT
+  FAILED
+}
+
+model Diagram {
+  id            String        @id @default(cuid())
+  userId        String
+  title         String
+  prompt        String
+  mermaidCode   String?
+  type          DiagramType
+  status        DiagramStatus @default(DRAFT)
+  contextIds    String[]
+  transcriptIds String[]
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 enum Role {

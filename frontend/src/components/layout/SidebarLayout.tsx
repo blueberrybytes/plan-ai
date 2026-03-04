@@ -26,6 +26,7 @@ import {
   Article as ArticleIcon,
   AutoAwesome as AutoAwesomeIcon,
   Chat as ChatIcon,
+  AccountTree as AccountTreeIcon,
 } from "@mui/icons-material";
 import { NavLink, useLocation } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
@@ -83,6 +84,11 @@ const navItems: NavItem[] = [
     labelKey: "sidebarLayout.nav.documents",
     path: "/docs",
     icon: <ArticleIcon fontSize="small" />,
+  },
+  {
+    labelKey: "Diagrams", // Or add to i18n later
+    path: "/diagrams",
+    icon: <AccountTreeIcon fontSize="small" />,
   },
   {
     labelKey: "sidebarLayout.nav.integrations",
