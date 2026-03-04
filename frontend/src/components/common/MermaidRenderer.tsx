@@ -1,6 +1,8 @@
 import React, { useEffect, useRef, useState } from "react";
 import mermaid from "mermaid";
-import { Box, Typography } from "@mui/material";
+import { Box, Typography, IconButton } from "@mui/material";
+import { ZoomIn, ZoomOut, CenterFocusStrong } from "@mui/icons-material";
+import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
 
 interface MermaidRendererProps {
   chart: string;
@@ -72,21 +74,70 @@ const MermaidRenderer: React.FC<MermaidRendererProps> = ({ chart, theme }) => {
   }
 
   return (
-    <Box
-      ref={containerRef}
-      className="mermaid-container"
-      sx={{
-        display: "flex",
-        justifyContent: "center",
-        my: 3,
-        overflowX: "auto",
-        "& svg": {
-          maxWidth: "100%",
-          height: "auto",
-        },
-      }}
-      dangerouslySetInnerHTML={{ __html: svgContent }}
-    />
+    <Box sx={{ width: "100%", height: "100%", position: "relative" }}>
+      <TransformWrapper
+        initialScale={1}
+        minScale={0.1}
+        maxScale={4}
+        centerOnInit
+        wheel={{ step: 0.1 }}
+      >
+        {({ zoomIn, zoomOut, resetTransform }) => (
+          <>
+            <Box
+              sx={{
+                position: "absolute",
+                bottom: 16,
+                right: 80,
+                zIndex: 10,
+                display: "flex",
+                gap: 1,
+                bgcolor: "background.paper",
+                p: 0.5,
+                borderRadius: 2,
+                boxShadow: 1,
+              }}
+            >
+              <IconButton size="small" onClick={() => zoomIn()}>
+                <ZoomIn fontSize="small" />
+              </IconButton>
+              <IconButton size="small" onClick={() => zoomOut()}>
+                <ZoomOut fontSize="small" />
+              </IconButton>
+              <IconButton size="small" onClick={() => resetTransform()}>
+                <CenterFocusStrong fontSize="small" />
+              </IconButton>
+            </Box>
+            <TransformComponent
+              wrapperStyle={{ width: "100%", height: "100%" }}
+              contentStyle={{
+                width: "100%",
+                height: "100%",
+                display: "flex",
+                justifyContent: "center",
+                alignItems: "center",
+              }}
+            >
+              <Box
+                ref={containerRef}
+                className="mermaid-container"
+                sx={{
+                  display: "flex",
+                  justifyContent: "center",
+                  alignItems: "center",
+                  p: 4,
+                  "& svg": {
+                    maxWidth: "none", // Allow SVG to grow for panning
+                    height: "auto",
+                  },
+                }}
+                dangerouslySetInnerHTML={{ __html: svgContent }}
+              />
+            </TransformComponent>
+          </>
+        )}
+      </TransformWrapper>
+    </Box>
   );
 };
 

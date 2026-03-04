@@ -2982,6 +2982,10 @@
 					"type": {
 						"type": "string"
 					},
+					"theme": {
+						"type": "string",
+						"nullable": true
+					},
 					"status": {
 						"type": "string"
 					},
@@ -2998,6 +3002,7 @@
 					"prompt",
 					"mermaidCode",
 					"type",
+					"theme",
 					"status",
 					"createdAt",
 					"updatedAt"
@@ -3040,6 +3045,9 @@
 							"ARCHITECTURE"
 						]
 					},
+					"theme": {
+						"type": "string"
+					},
 					"contextIds": {
 						"items": {
 							"type": "string"
@@ -3067,6 +3075,9 @@
 						"type": "string"
 					},
 					"mermaidCode": {
+						"type": "string"
+					},
+					"theme": {
 						"type": "string"
 					},
 					"status": {

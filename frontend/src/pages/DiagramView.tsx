@@ -5,19 +5,25 @@ import {
   Button,
   IconButton,
   TextField,
-  CircularProgress,
   Chip,
-  Paper,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  CircularProgress,
 } from "@mui/material";
 import {
   ArrowBack as ArrowBackIcon,
   Save as SaveIcon,
   Refresh as RefreshIcon,
+  Code as CodeIcon,
+  CodeOff as CodeOffIcon,
 } from "@mui/icons-material";
 import { useNavigate, useParams } from "react-router-dom";
 import { useGetDiagramQuery, useUpdateDiagramMutation } from "../store/apis/diagramApi";
 import MermaidRenderer from "../components/common/MermaidRenderer";
 import SidebarLayout from "../components/layout/SidebarLayout";
+import { THEME_PRESETS } from "../components/slides/themePresets";
 
 const DiagramView: React.FC = () => {
   const navigate = useNavigate();
@@ -32,7 +38,9 @@ const DiagramView: React.FC = () => {
 
   const [code, setCode] = useState<string>("");
   const [title, setTitle] = useState<string>("");
+  const [theme, setTheme] = useState<string>("BlueBerryBytes");
   const [isModified, setIsModified] = useState(false);
+  const [isEditorOpen, setIsEditorOpen] = useState(true);
 
   // Sync state with fetching
   useEffect(() => {
@@ -40,6 +48,7 @@ const DiagramView: React.FC = () => {
       if (!isModified) {
         setCode(diagram.mermaidCode || "");
         setTitle(diagram.title || "");
+        setTheme(diagram.theme || "BlueBerryBytes");
       }
     }
   }, [diagram, isModified]);
@@ -61,6 +70,7 @@ const DiagramView: React.FC = () => {
       body: {
         title,
         mermaidCode: code,
+        theme,
       },
     });
     setIsModified(false);
@@ -140,6 +150,34 @@ const DiagramView: React.FC = () => {
               variant="outlined"
             />
             {diagram.status === "GENERATING" && <CircularProgress size={16} sx={{ ml: 1 }} />}
+            <Button
+              variant="text"
+              color="inherit"
+              startIcon={isEditorOpen ? <CodeOffIcon /> : <CodeIcon />}
+              onClick={() => setIsEditorOpen(!isEditorOpen)}
+              sx={{ ml: 2, textTransform: "none", fontWeight: 600 }}
+            >
+              {isEditorOpen ? "Hide Editor" : "Show Editor"}
+            </Button>
+          </Box>
+          <Box sx={{ display: "flex", gap: 2 }}>
+            <FormControl size="small" sx={{ minWidth: 150 }}>
+              <InputLabel>Theme</InputLabel>
+              <Select
+                value={theme}
+                label="Theme"
+                onChange={(e) => {
+                  setTheme(e.target.value);
+                  setIsModified(true);
+                }}
+              >
+                {THEME_PRESETS.map((t) => (
+                  <MenuItem key={t.name} value={t.name}>
+                    {t.name}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
           </Box>
           <Box sx={{ display: "flex", gap: 2 }}>
             <Button
@@ -147,6 +185,8 @@ const DiagramView: React.FC = () => {
               startIcon={<RefreshIcon />}
               onClick={() => {
                 setCode(diagram.mermaidCode || "");
+                setTitle(diagram.title || "");
+                setTheme(diagram.theme || "BlueBerryBytes");
                 setIsModified(false);
               }}
               disabled={!isModified || isUpdating}
@@ -167,55 +207,57 @@ const DiagramView: React.FC = () => {
         {/* Split Screen Workspace */}
         <Box sx={{ display: "flex", flex: 1, overflow: "hidden" }}>
           {/* Left panel: Code Editor */}
-          <Box
-            sx={{
-              width: "40%",
-              minWidth: 300,
-              borderRight: "1px solid",
-              borderColor: "divider",
-              display: "flex",
-              flexDirection: "column",
-            }}
-          >
+          {isEditorOpen && (
             <Box
               sx={{
-                px: 2,
-                py: 1,
-                borderBottom: "1px solid",
+                width: "40%",
+                minWidth: 300,
+                borderRight: "1px solid",
                 borderColor: "divider",
-                bgcolor: "rgba(255,255,255,0.02)",
+                display: "flex",
+                flexDirection: "column",
               }}
             >
-              <Typography variant="overline" color="text.secondary" fontWeight={700}>
-                Mermaid Syntax Editor
-              </Typography>
+              <Box
+                sx={{
+                  px: 2,
+                  py: 1,
+                  borderBottom: "1px solid",
+                  borderColor: "divider",
+                  bgcolor: "rgba(255,255,255,0.02)",
+                }}
+              >
+                <Typography variant="overline" color="text.secondary" fontWeight={700}>
+                  Mermaid Syntax Editor
+                </Typography>
+              </Box>
+              <TextField
+                multiline
+                fullWidth
+                value={code}
+                onChange={handleCodeChange}
+                disabled={diagram.status === "GENERATING"}
+                InputProps={{
+                  sx: {
+                    fontFamily: "monospace",
+                    fontSize: "0.875rem",
+                    p: 2,
+                    alignItems: "flex-start",
+                  },
+                }}
+                sx={{
+                  flex: 1,
+                  "& .MuiInputBase-root": {
+                    height: "100%",
+                  },
+                  "& .MuiInputBase-input": {
+                    height: "100% !important",
+                    overflowY: "auto !important",
+                  },
+                }}
+              />
             </Box>
-            <TextField
-              multiline
-              fullWidth
-              value={code}
-              onChange={handleCodeChange}
-              disabled={diagram.status === "GENERATING"}
-              InputProps={{
-                sx: {
-                  fontFamily: "monospace",
-                  fontSize: "0.875rem",
-                  p: 2,
-                  alignItems: "flex-start",
-                },
-              }}
-              sx={{
-                flex: 1,
-                "& .MuiInputBase-root": {
-                  height: "100%",
-                },
-                "& .MuiInputBase-input": {
-                  height: "100% !important",
-                  overflowY: "auto !important",
-                },
-              }}
-            />
-          </Box>
+          )}
 
           {/* Right panel: Live Preview */}
           <Box
@@ -243,34 +285,28 @@ const DiagramView: React.FC = () => {
             <Box
               sx={{
                 flex: 1,
-                p: 4,
                 display: "flex",
-                justifyContent: "center",
-                alignItems: "center",
+                bgcolor: "#ffffff",
+                position: "relative",
               }}
             >
               {code ? (
-                <Paper
-                  elevation={3}
+                <MermaidRenderer chart={code} theme={THEME_PRESETS.find((t) => t.name === theme)} />
+              ) : (
+                <Box
                   sx={{
-                    p: 4,
-                    borderRadius: 2,
-                    minWidth: "80%",
-                    minHeight: "80%",
                     display: "flex",
                     justifyContent: "center",
                     alignItems: "center",
-                    bgcolor: "#ffffff",
+                    width: "100%",
                   }}
                 >
-                  <MermaidRenderer chart={code} />
-                </Paper>
-              ) : (
-                <Typography color="text.secondary">
-                  {diagram.status === "GENERATING"
-                    ? "AI is constructing your diagram..."
-                    : "No Mermaid syntax provided."}
-                </Typography>
+                  <Typography color="text.secondary">
+                    {diagram.status === "GENERATING"
+                      ? "AI is constructing your diagram..."
+                      : "No Mermaid syntax provided."}
+                  </Typography>
+                </Box>
               )}
             </Box>
           </Box>

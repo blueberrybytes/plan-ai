@@ -20,6 +20,7 @@ export interface CreateDiagramRequest {
   title: string;
   prompt: string;
   type: "FLOWCHART" | "SEQUENCE" | "GANTT" | "MINDMAP" | "CLASS" | "ER" | "ARCHITECTURE";
+  theme?: string;
   contextIds?: string[];
   transcriptIds?: string[];
 }
@@ -27,6 +28,7 @@ export interface CreateDiagramRequest {
 export interface UpdateDiagramRequest {
   title?: string;
   mermaidCode?: string;
+  theme?: string;
   status?: "GENERATING" | "DRAFT" | "FAILED";
 }
 
@@ -36,6 +38,7 @@ export interface DiagramResponse {
   prompt: string;
   mermaidCode: string | null;
   type: string;
+  theme: string | null;
   status: string;
   createdAt: string;
   updatedAt: string;
@@ -137,6 +140,7 @@ export class DiagramController extends Controller {
         title: body.title,
         prompt: body.prompt,
         type: body.type as DiagramType,
+        theme: body.theme || "BlueBerryBytes",
         contextIds: body.contextIds || [],
         transcriptIds: body.transcriptIds || [],
         mermaidCode: initialSyntax,
@@ -193,6 +197,7 @@ export class DiagramController extends Controller {
       data: {
         title: body.title,
         mermaidCode: body.mermaidCode,
+        theme: body.theme,
         status: body.status,
       },
     });

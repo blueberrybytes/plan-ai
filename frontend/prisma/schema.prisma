@@ -334,6 +334,7 @@ model Diagram {
   mermaidCode   String?
   type          DiagramType
   status        DiagramStatus @default(DRAFT)
+  theme         String?       @default("BlueBerryBytes") @db.VarChar(120)
   contextIds    String[]
   transcriptIds String[]
   createdAt     DateTime      @default(now())

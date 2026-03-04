@@ -1053,6 +1053,7 @@ const models: TsoaRoute.Models = {
             "prompt": {"dataType":"string","required":true},
             "mermaidCode": {"dataType":"union","subSchemas":[{"dataType":"string"},{"dataType":"enum","enums":[null]}],"required":true},
             "type": {"dataType":"string","required":true},
+            "theme": {"dataType":"union","subSchemas":[{"dataType":"string"},{"dataType":"enum","enums":[null]}],"required":true},
             "status": {"dataType":"string","required":true},
             "createdAt": {"dataType":"string","required":true},
             "updatedAt": {"dataType":"string","required":true},
@@ -1074,6 +1075,7 @@ const models: TsoaRoute.Models = {
             "title": {"dataType":"string","required":true},
             "prompt": {"dataType":"string","required":true},
             "type": {"dataType":"union","subSchemas":[{"dataType":"enum","enums":["FLOWCHART"]},{"dataType":"enum","enums":["SEQUENCE"]},{"dataType":"enum","enums":["GANTT"]},{"dataType":"enum","enums":["MINDMAP"]},{"dataType":"enum","enums":["CLASS"]},{"dataType":"enum","enums":["ER"]},{"dataType":"enum","enums":["ARCHITECTURE"]}],"required":true},
+            "theme": {"dataType":"string"},
             "contextIds": {"dataType":"array","array":{"dataType":"string"}},
             "transcriptIds": {"dataType":"array","array":{"dataType":"string"}},
         },
@@ -1085,6 +1087,7 @@ const models: TsoaRoute.Models = {
         "properties": {
             "title": {"dataType":"string"},
             "mermaidCode": {"dataType":"string"},
+            "theme": {"dataType":"string"},
             "status": {"dataType":"union","subSchemas":[{"dataType":"enum","enums":["GENERATING"]},{"dataType":"enum","enums":["DRAFT"]},{"dataType":"enum","enums":["FAILED"]}]},
         },
         "additionalProperties": false,

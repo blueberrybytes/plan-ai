@@ -1579,6 +1579,7 @@ export interface components {
             prompt: string;
             mermaidCode: string | null;
             type: string;
+            theme: string | null;
             status: string;
             createdAt: string;
             updatedAt: string;
@@ -1591,12 +1592,14 @@ export interface components {
             prompt: string;
             /** @enum {string} */
             type: "FLOWCHART" | "SEQUENCE" | "GANTT" | "MINDMAP" | "CLASS" | "ER" | "ARCHITECTURE";
+            theme?: string;
             contextIds?: string[];
             transcriptIds?: string[];
         };
         UpdateDiagramRequest: {
             title?: string;
             mermaidCode?: string;
+            theme?: string;
             /** @enum {string} */
             status?: "GENERATING" | "DRAFT" | "FAILED";
         };
