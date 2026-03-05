@@ -31,7 +31,10 @@ export const TextImageSlide: React.FC<SlideProps> = ({
           >
             {data.title as string}
           </AnimatedText>
-          <AnimatedText animate={animate} sx={{ fontSize: 16, lineHeight: 1.7, color: "#cbd5e1" }}>
+          <AnimatedText
+            animate={animate}
+            sx={{ fontSize: 16, lineHeight: 1.7, color: "inherit", opacity: 0.85 }}
+          >
             {data.body as string}
           </AnimatedText>
         </Box>

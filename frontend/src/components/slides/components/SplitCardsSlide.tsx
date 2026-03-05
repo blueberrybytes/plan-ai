@@ -99,7 +99,9 @@ export const SplitCardsSlide: React.FC<SlideProps> = ({
                     {card.title}
                   </Typography>
                 </Box>
-                <Typography sx={{ fontSize: 14, color: "#94a3b8", lineHeight: 1.5, ml: 4 }}>
+                <Typography
+                  sx={{ fontSize: 14, color: "inherit", opacity: 0.7, lineHeight: 1.5, ml: 4 }}
+                >
                   {card.body}
                 </Typography>
               </Box>

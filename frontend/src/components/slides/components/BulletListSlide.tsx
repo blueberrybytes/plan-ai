@@ -44,7 +44,8 @@ export const BulletListSlide: React.FC<SlideProps> = ({
           animate={animate}
           sx={{
             fontSize: 20,
-            color: "#94a3b8",
+            color: "inherit",
+            opacity: 0.7,
             mb: 4,
             fontWeight: 500,
           }}
@@ -75,7 +76,7 @@ export const BulletListSlide: React.FC<SlideProps> = ({
                 boxShadow: `0 0 10px ${primary}80`,
               }}
             />
-            <Typography sx={{ fontSize: 18, color: "#cbd5e1", lineHeight: 1.6 }}>
+            <Typography sx={{ fontSize: 18, color: "inherit", opacity: 0.85, lineHeight: 1.6 }}>
               {bullet}
             </Typography>
           </Box>

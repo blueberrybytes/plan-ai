@@ -46,7 +46,14 @@ export const ThreeColumnsSlide: React.FC<SlideProps> = ({
         {data.subtitle && typeof data.subtitle === "string" ? (
           <AnimatedText
             animate={animate}
-            sx={{ fontSize: 18, color: "#94a3b8", mt: 2, maxWidth: "70%", mx: "auto" }}
+            sx={{
+              fontSize: 18,
+              color: "inherit",
+              opacity: 0.7,
+              mt: 2,
+              maxWidth: "70%",
+              mx: "auto",
+            }}
           >
             {data.subtitle}
           </AnimatedText>
@@ -70,7 +77,7 @@ export const ThreeColumnsSlide: React.FC<SlideProps> = ({
             <Typography sx={{ fontSize: 20, fontWeight: 700, color: "#fff", mb: 1.5 }}>
               {String(col.title)}
             </Typography>
-            <Typography sx={{ fontSize: 15, color: "#cbd5e1", lineHeight: 1.6 }}>
+            <Typography sx={{ fontSize: 15, color: "inherit", opacity: 0.85, lineHeight: 1.6 }}>
               {String(col.body)}
             </Typography>
           </Box>

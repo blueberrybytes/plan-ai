@@ -1,5 +1,5 @@
 import React from "react";
-import { Box } from "@mui/material";
+import { Box, useTheme } from "@mui/material";
 
 /**
  * Renders a 16:9 slide frame that looks like a real presentation slide.
@@ -23,6 +23,8 @@ export interface SlideFrameProps {
 
 const SlideFrame: React.FC<SlideFrameProps> = ({ children, brandColors, fonts, scale = 1 }) => {
   const bg = brandColors?.background || "#0f172a";
+  const muiTheme = useTheme();
+  const textColor = muiTheme.palette.getContrastText(bg);
   const primary = brandColors?.primary || "#6366f1";
   const secondary = brandColors?.secondary || "#a78bfa";
   const bgStyle = brandColors?.backgroundStyle || "solid";
@@ -81,7 +83,7 @@ const SlideFrame: React.FC<SlideFrameProps> = ({ children, brandColors, fonts, s
           display: "flex",
           flexDirection: "column",
           justifyContent: "center",
-          color: "#f1f5f9",
+          color: textColor,
           fontFamily: `'${fonts?.body || "Inter"}', sans-serif`,
         }}
       >

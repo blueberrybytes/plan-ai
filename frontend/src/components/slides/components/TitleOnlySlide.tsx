@@ -49,7 +49,10 @@ export const TitleOnlySlide: React.FC<SlideProps> = ({
           {data.title as string}
         </AnimatedText>
         {data.subtitle ? (
-          <AnimatedText animate={animate} sx={{ fontSize: 22, color: "#94a3b8", fontWeight: 400 }}>
+          <AnimatedText
+            animate={animate}
+            sx={{ fontSize: 22, color: "inherit", opacity: 0.7, fontWeight: 400 }}
+          >
             {String(data.subtitle)}
           </AnimatedText>
         ) : null}

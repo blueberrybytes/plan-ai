@@ -50,7 +50,9 @@ export const ShowcaseSlide: React.FC<SlideProps> = ({
           style={{ width: "100%", height: "100%", objectFit: "cover" }}
         />
       </Box>
-      <Typography sx={{ fontSize: 16, color: "#94a3b8", textAlign: "center", lineHeight: 1.6 }}>
+      <Typography
+        sx={{ fontSize: 16, color: "inherit", opacity: 0.7, textAlign: "center", lineHeight: 1.6 }}
+      >
         {data.caption as string}
       </Typography>
     </SlideFrame>

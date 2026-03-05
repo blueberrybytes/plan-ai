@@ -107,7 +107,7 @@ export const TeamGridSlide: React.FC<SlideProps> = ({
             <Typography sx={{ fontSize: 14, color: primary, mb: 1, fontWeight: 500 }}>
               {member.role}
             </Typography>
-            <Typography sx={{ fontSize: 13, color: "#94a3b8", lineHeight: 1.5 }}>
+            <Typography sx={{ fontSize: 13, color: "inherit", opacity: 0.7, lineHeight: 1.5 }}>
               {member.bio}
             </Typography>
           </Box>

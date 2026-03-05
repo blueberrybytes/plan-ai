@@ -201,9 +201,10 @@ Provide ONLY the required JSON parameters for this slide type matching the schem
             });
             parameters = slideGen.object;
             break; // Success
-          } catch {
+          } catch (err) {
             logger.warn(
-              `[Slide Gen Debug] Slide ${index + 1} parameter generation attempt ${attempt} failed.`,
+              `[Slide Gen Debug] Slide ${index + 1} parameter generation attempt ${attempt} failed:`,
+              err,
             );
           }
         }

@@ -48,7 +48,7 @@ export const ImageWithListSlide: React.FC<SlideProps> = ({
         {data.body && typeof data.body === "string" ? (
           <AnimatedText
             animate={animate}
-            sx={{ fontSize: 16, color: "#94a3b8", mt: 1, maxWidth: "80%" }}
+            sx={{ fontSize: 16, color: "inherit", opacity: 0.7, mt: 1, maxWidth: "80%" }}
           >
             {data.body}
           </AnimatedText>
@@ -112,7 +112,9 @@ export const ImageWithListSlide: React.FC<SlideProps> = ({
                   {String(feat.title)}
                 </Typography>
                 {feat.description && (
-                  <Typography sx={{ fontSize: 14, color: "#94a3b8", lineHeight: 1.5 }}>
+                  <Typography
+                    sx={{ fontSize: 14, color: "inherit", opacity: 0.7, lineHeight: 1.5 }}
+                  >
                     {String(feat.description)}
                   </Typography>
                 )}

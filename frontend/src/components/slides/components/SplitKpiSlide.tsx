@@ -97,7 +97,9 @@ export const SplitKpiSlide: React.FC<SlideProps> = ({
                   {kpi.label}
                 </Typography>
                 {kpi.description && (
-                  <Typography sx={{ fontSize: 13, color: "#94a3b8", lineHeight: 1.4 }}>
+                  <Typography
+                    sx={{ fontSize: 13, color: "inherit", opacity: 0.7, lineHeight: 1.4 }}
+                  >
                     {kpi.description}
                   </Typography>
                 )}

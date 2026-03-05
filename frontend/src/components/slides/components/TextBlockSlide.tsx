@@ -28,12 +28,15 @@ export const TextBlockSlide: React.FC<SlideProps> = ({
       {data.subtitle && typeof data.subtitle === "string" ? (
         <AnimatedText
           animate={animate}
-          sx={{ fontSize: 20, color: "#94a3b8", mb: 3, fontWeight: 500 }}
+          sx={{ fontSize: 20, color: "inherit", opacity: 0.7, mb: 3, fontWeight: 500 }}
         >
           {data.subtitle}
         </AnimatedText>
       ) : null}
-      <AnimatedText animate={animate} sx={{ fontSize: 18, lineHeight: 1.7, color: "#cbd5e1" }}>
+      <AnimatedText
+        animate={animate}
+        sx={{ fontSize: 18, lineHeight: 1.7, color: "inherit", opacity: 0.85 }}
+      >
         {data.body as string}
       </AnimatedText>
     </SlideFrame>

@@ -35,7 +35,8 @@ const SlideImage: React.FC<SlideImageProps> = ({ src, alt, query, primary = "#63
             <Typography
               sx={{
                 fontSize: 13,
-                color: "#94a3b8",
+                color: "inherit",
+                opacity: 0.7,
                 textAlign: "center",
                 px: 2,
                 maxWidth: 200,

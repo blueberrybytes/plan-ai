@@ -93,7 +93,8 @@ export const StatsSlide: React.FC<SlideProps> = ({
             <Typography
               sx={{
                 fontSize: 15,
-                color: "#94a3b8",
+                color: "inherit",
+                opacity: 0.7,
                 fontWeight: 600,
                 letterSpacing: "0.05em",
                 textTransform: "uppercase",
