@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import mermaid from "mermaid";
-import { Box, Typography, IconButton } from "@mui/material";
+import { Box, Typography, IconButton, useTheme } from "@mui/material";
 import { ZoomIn, ZoomOut, CenterFocusStrong } from "@mui/icons-material";
 import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
 
@@ -17,6 +17,14 @@ const MermaidRenderer: React.FC<MermaidRendererProps> = ({ chart, theme }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [svgContent, setSvgContent] = useState<string>("");
   const [hasError, setHasError] = useState<boolean>(false);
+  const muiTheme = useTheme();
+
+  // Smart background-aware text color inversion (fixes unreadable dark themes)
+  const textColor =
+    theme?.textColor ??
+    (theme?.backgroundColor
+      ? muiTheme.palette.getContrastText(theme.backgroundColor)
+      : muiTheme.palette.text.primary);
 
   useEffect(() => {
     let isMounted = true;
@@ -36,9 +44,9 @@ const MermaidRenderer: React.FC<MermaidRendererProps> = ({ chart, theme }) => {
             mainBkg: theme?.backgroundColor ?? "#ffffff",
             primaryBorderColor: theme?.primaryColor ?? "#6366f1",
             nodeBorder: theme?.primaryColor ?? "#6366f1",
-            primaryTextColor: theme?.textColor ?? "#111827",
-            textColor: theme?.textColor ?? "#111827",
-            nodeTextColor: theme?.textColor ?? "#111827",
+            primaryTextColor: textColor,
+            textColor: textColor,
+            nodeTextColor: textColor,
             lineColor: theme?.primaryColor ?? "#6366f1",
             fontFamily: "inherit",
           },
@@ -62,22 +70,22 @@ const MermaidRenderer: React.FC<MermaidRendererProps> = ({ chart, theme }) => {
             /(<svg[^>]*>)/i,
             `$1<style>
               #${id} { max-width: 100% !important; height: auto !important; }
-              #${id} * { color: ${theme?.textColor ?? "#111827"} !important; }
+              #${id} * { color: ${textColor} !important; }
               #${id} text, #${id} tspan, #${id} .nodeLabel, #${id} .edgeLabel, #${id} .label, #${id} foreignObject div, #${id} foreignObject span, #${id} foreignObject p, #${id} foreignObject strong, #${id} foreignObject b, #${id} foreignObject i, #${id} foreignObject em { 
-                fill: ${theme?.textColor ?? "#111827"} !important; 
-                color: ${theme?.textColor ?? "#111827"} !important; 
+                fill: ${textColor} !important; 
+                color: ${textColor} !important; 
               }
               #${id} .node rect, #${id} .node polygon, #${id} .node circle, #${id} .node ellipse { fill: ${theme?.backgroundColor ?? "#ffffff"} !important; stroke: ${theme?.primaryColor ?? "#6366f1"} !important; }
               #${id} .edgePath .path { stroke: ${theme?.primaryColor ?? "#6366f1"} !important; }
-              #${id} .edgeLabel { background-color: ${theme?.backgroundColor ?? "#ffffff"} !important; color: ${theme?.textColor ?? "#111827"} !important; }
+              #${id} .edgeLabel { background-color: ${theme?.backgroundColor ?? "#ffffff"} !important; color: ${textColor} !important; }
               #${id} .actor { fill: ${theme?.backgroundColor ?? "#ffffff"} !important; stroke: ${theme?.primaryColor ?? "#6366f1"} !important; }
               #${id} .messageLine0, #${id} .messageLine1 { stroke: ${theme?.primaryColor ?? "#6366f1"} !important; }
               #${id} .labelBox { fill: ${theme?.backgroundColor ?? "#ffffff"} !important; stroke: ${theme?.primaryColor ?? "#6366f1"} !important; }
-              #${id} .labelText { fill: ${theme?.textColor ?? "#111827"} !important; }
-              #${id} .loopText, #${id} .loopText > tspan { fill: ${theme?.textColor ?? "#111827"} !important; }
-              #${id} .messageText { fill: ${theme?.textColor ?? "#111827"} !important; stroke: none !important; }
+              #${id} .labelText { fill: ${textColor} !important; }
+              #${id} .loopText, #${id} .loopText > tspan { fill: ${textColor} !important; }
+              #${id} .messageText { fill: ${textColor} !important; stroke: none !important; }
               #${id} .note { fill: ${theme?.backgroundColor ?? "#ffffff"} !important; stroke: ${theme?.primaryColor ?? "#6366f1"} !important; }
-              #${id} .noteText { fill: ${theme?.textColor ?? "#111827"} !important; stroke: none !important; }
+              #${id} .noteText { fill: ${textColor} !important; stroke: none !important; }
             </style>`,
           );
           setSvgContent(themedSvg);
@@ -102,7 +110,7 @@ const MermaidRenderer: React.FC<MermaidRendererProps> = ({ chart, theme }) => {
     return () => {
       isMounted = false;
     };
-  }, [chart, theme]);
+  }, [chart, theme, textColor]);
 
   if (hasError) {
     return (
