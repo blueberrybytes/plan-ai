@@ -219,6 +219,17 @@ export const SLIDE_TYPE_DEFINITIONS: SlideTypeDefinition[] = [
       imageQuery: z.string().max(100).optional(),
     }),
   },
+  {
+    key: "diagram_slide",
+    name: "System Diagram",
+    description:
+      "A large Mermaid.js diagram. Best for visualizing processes, systems, architectures, or sequences. Always output strictly valid Mermaid syntax.",
+    parametersSchema: z.object({
+      badge: z.string().max(30).optional(),
+      title: z.string().max(50),
+      mermaidCode: z.string().max(2000),
+    }),
+  },
 ];
 
 /**

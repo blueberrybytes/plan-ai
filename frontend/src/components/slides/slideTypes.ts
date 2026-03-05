@@ -215,4 +215,15 @@ export const SLIDE_TYPES: SlideTypeDefinition[] = [
       imageQuery: "futuristic sleek server room blue",
     },
   },
+  {
+    key: "diagram_slide",
+    name: "System Diagram",
+    description:
+      "A large Mermaid diagram visualizing processes, systems, architectures, or sequences.",
+    sampleData: {
+      badge: "Architecture",
+      title: "High-Level System Flow",
+      mermaidCode: "graph TD\n  A[Client] --> B(Gateway)\n  B --> C{Database}",
+    },
+  },
 ];
