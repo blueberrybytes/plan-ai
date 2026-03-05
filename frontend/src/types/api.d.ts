@@ -1568,6 +1568,7 @@ export interface components {
         };
         DiagramAssistantRequest: {
             instruction: string;
+            currentCode?: string;
         };
     };
     responses: never;

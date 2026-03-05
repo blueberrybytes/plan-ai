@@ -28,6 +28,7 @@ export interface CreateDiagramRequest {
 
 export interface DiagramAssistantRequest {
   instruction: string;
+  currentCode?: string;
 }
 
 export interface UpdateDiagramRequest {
@@ -281,7 +282,7 @@ export class DiagramController extends Controller {
         diagramId: diagram.id,
         userId: user.id,
         instruction: body.instruction,
-        currentCode: diagram.mermaidCode || "",
+        currentCode: body.currentCode || diagram.mermaidCode || "",
         contextIds: diagram.contextIds,
         transcriptIds: diagram.transcriptIds,
       })

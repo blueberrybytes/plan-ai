@@ -3026,6 +3026,9 @@
 				"properties": {
 					"instruction": {
 						"type": "string"
+					},
+					"currentCode": {
+						"type": "string"
 					}
 				},
 				"required": [

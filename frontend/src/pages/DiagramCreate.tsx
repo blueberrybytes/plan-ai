@@ -12,10 +12,6 @@ import {
   Grid,
   Card,
   CardActionArea,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
   ToggleButtonGroup,
   ToggleButton,
 } from "@mui/material";
@@ -35,10 +31,8 @@ import SidebarLayout from "../components/layout/SidebarLayout";
 import { useCreateDiagramMutation, CreateDiagramRequest } from "../store/apis/diagramApi";
 import { useListContextsQuery } from "../store/apis/contextApi";
 import { useListGlobalTranscriptsQuery } from "../store/apis/transcriptApi";
-import { THEME_PRESETS } from "../components/slides/themePresets";
-
-const STEPS_AI = ["Diagram Type & Theme", "Details", "Sources"];
-const STEPS_MANUAL = ["Diagram Type & Theme"];
+const STEPS_AI = ["Diagram Type", "Details", "Sources"];
+const STEPS_MANUAL = ["Diagram Type"];
 
 const DIAGRAM_TYPES = [
   {
@@ -91,7 +85,6 @@ const DiagramCreate: React.FC = () => {
 
   // Form State
   const [type, setType] = useState<string>("");
-  const [theme, setTheme] = useState<string>("BlueBerryBytes");
   const [title, setTitle] = useState("");
   const [prompt, setPrompt] = useState("");
   const [contextIds, setContextIds] = useState<string[]>([]);
@@ -112,7 +105,7 @@ const DiagramCreate: React.FC = () => {
       title: title || (isManual ? "New Manual Diagram" : "Untitled Diagram"),
       prompt: isManual ? "" : prompt,
       type: type as CreateDiagramRequest["type"],
-      theme: isManual ? "BlueBerryBytes" : theme,
+      theme: "BlueBerryBytes",
       contextIds: isManual ? [] : contextIds,
       transcriptIds: isManual ? [] : transcriptIds,
       isManual,
@@ -170,26 +163,9 @@ const DiagramCreate: React.FC = () => {
           ))}
         </Stepper>
 
-        {/* Step 0: Diagram Type & Theme */}
+        {/* Step 0: Diagram Type */}
         {activeStep === 0 && (
           <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
-            {!isManual && (
-              <FormControl fullWidth sx={{ mt: 2 }}>
-                <InputLabel>Diagram Theme</InputLabel>
-                <Select
-                  value={theme}
-                  label="Diagram Theme"
-                  onChange={(e) => setTheme(e.target.value)}
-                >
-                  {THEME_PRESETS.map((t) => (
-                    <MenuItem key={t.name} value={t.name}>
-                      {t.name}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            )}
-
             <Typography variant="h6" fontWeight={600} sx={{ mt: 2 }}>
               Select Diagram Type
             </Typography>

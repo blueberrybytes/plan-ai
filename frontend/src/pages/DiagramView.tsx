@@ -177,7 +177,7 @@ const DiagramView: React.FC = () => {
     try {
       await improveDiagram({
         id: diagramId,
-        body: { instruction: userMsg },
+        body: { instruction: userMsg, currentCode: code },
       }).unwrap();
       refetch();
       // We don't append the success message here anymore. We wait for the status to switch back to DRAFT.

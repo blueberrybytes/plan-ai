@@ -33,8 +33,12 @@ const MermaidRenderer: React.FC<MermaidRendererProps> = ({ chart, theme }) => {
           theme: "base",
           themeVariables: {
             primaryColor: theme?.backgroundColor ?? "#ffffff",
+            mainBkg: theme?.backgroundColor ?? "#ffffff",
             primaryBorderColor: theme?.primaryColor ?? "#6366f1",
+            nodeBorder: theme?.primaryColor ?? "#6366f1",
             primaryTextColor: theme?.textColor ?? "#111827",
+            textColor: theme?.textColor ?? "#111827",
+            nodeTextColor: theme?.textColor ?? "#111827",
             lineColor: theme?.primaryColor ?? "#6366f1",
             fontFamily: "inherit",
           },
@@ -49,7 +53,26 @@ const MermaidRenderer: React.FC<MermaidRendererProps> = ({ chart, theme }) => {
         const { svg } = await mermaid.render(id, chart);
 
         if (isMounted) {
-          setSvgContent(svg);
+          // Force text and borders to respect theme variables even if Mermaid chart type ignores them natively
+          const themedSvg = svg.replace(
+            /(<svg[^>]*>)/i,
+            `$1<style>
+              #${id} * { color: ${theme?.textColor ?? "#111827"} !important; }
+              #${id} text, #${id} tspan { fill: ${theme?.textColor ?? "#111827"} !important; color: ${theme?.textColor ?? "#111827"} !important; }
+              #${id} .node rect, #${id} .node polygon, #${id} .node circle, #${id} .node ellipse { fill: ${theme?.backgroundColor ?? "#ffffff"} !important; stroke: ${theme?.primaryColor ?? "#6366f1"} !important; }
+              #${id} .edgePath .path { stroke: ${theme?.primaryColor ?? "#6366f1"} !important; }
+              #${id} .edgeLabel { background-color: ${theme?.backgroundColor ?? "#ffffff"} !important; color: ${theme?.textColor ?? "#111827"} !important; }
+              #${id} .actor { fill: ${theme?.backgroundColor ?? "#ffffff"} !important; stroke: ${theme?.primaryColor ?? "#6366f1"} !important; }
+              #${id} .messageLine0, #${id} .messageLine1 { stroke: ${theme?.primaryColor ?? "#6366f1"} !important; }
+              #${id} .labelBox { fill: ${theme?.backgroundColor ?? "#ffffff"} !important; stroke: ${theme?.primaryColor ?? "#6366f1"} !important; }
+              #${id} .labelText { fill: ${theme?.textColor ?? "#111827"} !important; }
+              #${id} .loopText, #${id} .loopText > tspan { fill: ${theme?.textColor ?? "#111827"} !important; }
+              #${id} .messageText { fill: ${theme?.textColor ?? "#111827"} !important; stroke: none !important; }
+              #${id} .note { fill: ${theme?.backgroundColor ?? "#ffffff"} !important; stroke: ${theme?.primaryColor ?? "#6366f1"} !important; }
+              #${id} .noteText { fill: ${theme?.textColor ?? "#111827"} !important; stroke: none !important; }
+            </style>`,
+          );
+          setSvgContent(themedSvg);
         }
       } catch (err) {
         console.error("Mermaid parsing error:", err);
