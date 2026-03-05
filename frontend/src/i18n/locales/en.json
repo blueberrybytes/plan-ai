@@ -111,6 +111,10 @@
       "contexts": {
         "title": "Manage contexts",
         "description": "Upload files and documents to enrich AI-generated content."
+      },
+      "createDiagram": {
+        "title": "Visual Architect",
+        "description": "Generate an architecture diagram instantly."
       }
     },
     "activity": {
@@ -120,6 +124,11 @@
       "heading": "Recent presentations",
       "loading": "Loading presentations…",
       "viewAll": "View all presentations"
+    },
+    "diagrams": {
+      "heading": "Recent diagrams",
+      "loading": "Loading diagrams…",
+      "viewAll": "View all diagrams"
     },
     "emptyState": {
       "title": "Your workspace is ready",

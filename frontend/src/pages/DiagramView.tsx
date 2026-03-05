@@ -605,19 +605,21 @@ const DiagramView: React.FC = () => {
                       }}
                       disabled={diagram.status === "GENERATING" || isImproving}
                       InputProps={{
-                        sx: { borderRadius: 4, pr: 1 },
+                        sx: { borderRadius: "24px", pr: 1, pl: 2, py: 0.5 },
                         endAdornment: (
-                          <Box sx={{ display: "flex", gap: 1 }}>
+                          <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
                             {previousCode && previousCode !== code && (
                               <Button
-                                variant="outlined"
+                                variant="text"
                                 color="warning"
                                 size="small"
                                 sx={{
-                                  borderRadius: 3,
+                                  borderRadius: 20,
                                   minWidth: "auto",
                                   px: 2,
+                                  py: 0.75,
                                   textTransform: "none",
+                                  fontWeight: 600,
                                 }}
                                 onClick={() => {
                                   setCode(previousCode);
@@ -630,7 +632,17 @@ const DiagramView: React.FC = () => {
                             )}
                             <Button
                               variant="contained"
-                              sx={{ borderRadius: 3, minWidth: "auto", px: 2 }}
+                              size="small"
+                              sx={{
+                                borderRadius: 20,
+                                minWidth: "auto",
+                                px: 3,
+                                py: 0.75,
+                                textTransform: "none",
+                                fontWeight: 600,
+                                boxShadow: "none",
+                                "&:hover": { boxShadow: "none" },
+                              }}
                               onClick={handleAssistantSubmit}
                               disabled={
                                 diagram.status === "GENERATING" ||

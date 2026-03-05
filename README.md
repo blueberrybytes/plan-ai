@@ -20,6 +20,7 @@ Try the live app at [plan-ai.blueberrybytes.com](https://plan-ai.blueberrybytes.
 | **Transcript ingestion**      | Upload PDFs, DOCX, or raw text. AI auto-detects speakers, decisions, and action items.                                                                             |
 | **AI task generation**        | Scoped, prioritised tasks with owners, due dates, and full meeting context — zero manual effort.                                                                   |
 | **Kanban boards & timelines** | Switch between kanban, dependency diagrams, and roadmap views.                                                                                                     |
+| **Visual Architect**          | Generate and refine Mermaid.js architecture diagrams, flowcharts, and system designs iteratively using AI.                                                         |
 | **AI slide decks**            | Generate branded presentations from any prompt or context file. Pick a theme, choose a slide count (or let AI decide, up to 15), and stream the result.            |
 | **Contextual RAG chat**       | A dedicated `/home` chat dashboard to query up to 500 relevant chunks across sessions, transcripts, and a global backend knowledge base.                           |
 | **Floating assistant**        | An omnipresent floating chat window for quick actions, navigation help, and on-demand contextual queries without losing your place.                                |
@@ -226,6 +227,8 @@ User ──< Session ──< Transcript
                        └──< TaskTranscriptLink
 
 User ──< Context ──< ContextFile   (vectors stored in Qdrant)
+
+User ──< Diagram (Mermaid)
 
 User ──< ChatThread ──< ChatMessage
 

@@ -23,6 +23,7 @@ import {
   Assignment as AssignmentIcon,
   ListAlt as ListAltIcon,
   Description as DescriptionIcon,
+  Schema as SchemaIcon,
 } from "@mui/icons-material";
 import { Link as RouterLink } from "react-router-dom";
 import { useSelector } from "react-redux";
@@ -34,6 +35,7 @@ import {
   type TaskResponse,
 } from "../store/apis/projectApi";
 import { useGetPresentationsQuery } from "../store/apis/slideApi";
+import { useGetUserDiagramsQuery } from "../store/apis/diagramApi";
 import type { components } from "../types/api";
 import { skipToken } from "@reduxjs/toolkit/query";
 import { useTranslation } from "react-i18next";
@@ -56,6 +58,9 @@ const Dashboard: React.FC = () => {
   const projects: ProjectResponse[] = sessionsData?.data?.projects ?? [];
   const presentations = useMemo(() => presentationsData ?? [], [presentationsData]);
 
+  const { data: diagramsData, isLoading: isDiagramsLoading } = useGetUserDiagramsQuery();
+  const diagrams = useMemo(() => diagramsData?.diagrams ?? [], [diagramsData]);
+
   const firstProjectId = projects[0]?.id;
 
   const { data: transcriptsData, isLoading: isTranscriptsLoading } = useListProjectTranscriptsQuery(
@@ -75,11 +80,16 @@ const Dashboard: React.FC = () => {
   ).length;
 
   const isLoadingAny =
-    isProjectsLoading || isTranscriptsLoading || isTasksLoading || isPresentationsLoading;
+    isProjectsLoading ||
+    isTranscriptsLoading ||
+    isTasksLoading ||
+    isPresentationsLoading ||
+    isDiagramsLoading;
 
   const topTasks = tasks.slice(0, 3);
   const recentTranscripts = transcripts.slice(0, 3);
   const recentPresentations = presentations.slice(0, 3);
+  const recentDiagrams = diagrams.slice(0, 3);
 
   const greeting = useMemo(() => {
     const hour = new Date().getHours();
@@ -113,6 +123,13 @@ const Dashboard: React.FC = () => {
       color: "#10B981",
     },
     {
+      icon: <SchemaIcon sx={{ fontSize: 28 }} />,
+      title: t("home.quickActions.createDiagram.title"),
+      description: t("home.quickActions.createDiagram.description"),
+      to: "/diagrams/create",
+      color: "#EC4899",
+    },
+    {
       icon: <FolderIcon sx={{ fontSize: 28 }} />,
       title: t("home.quickActions.contexts.title"),
       description: t("home.quickActions.contexts.description"),
@@ -141,6 +158,12 @@ const Dashboard: React.FC = () => {
       value: isPresentationsLoading ? null : presentations.length,
       cta: { label: t("home.stats.presentations.cta"), to: "/slides" },
       color: "#10B981",
+    },
+    {
+      label: t("home.stats.activeDiagrams.label"),
+      value: isDiagramsLoading ? null : diagrams.length,
+      cta: { label: t("home.stats.activeDiagrams.cta"), to: "/diagrams" },
+      color: "#EC4899",
     },
   ];
 
@@ -514,56 +537,148 @@ const Dashboard: React.FC = () => {
           </>
         )}
 
-        {/* Empty state */}
-        {!isLoadingAny && projects.length === 0 && presentations.length === 0 && (
-          <Card
-            variant="outlined"
-            sx={{
-              borderStyle: "dashed",
-              borderColor: "rgba(67,97,238,0.3)",
-              bgcolor: "rgba(67,97,238,0.04)",
-            }}
-          >
-            <CardContent>
-              <Stack spacing={2} alignItems="flex-start">
-                <Box
-                  sx={{
-                    p: 1.5,
-                    borderRadius: "12px",
-                    bgcolor: "rgba(67,97,238,0.12)",
-                    color: "#4361EE",
-                  }}
-                >
-                  <AutoAwesomeIcon sx={{ fontSize: 28 }} />
-                </Box>
-                <Typography variant="h5" sx={{ fontWeight: 700 }}>
-                  {t("home.emptyState.title")}
-                </Typography>
-                <Typography variant="body1" color="text.secondary">
-                  {t("home.emptyState.description")}
-                </Typography>
-                <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
+        {/* Recent Diagrams */}
+        {(recentDiagrams.length > 0 || isDiagramsLoading) && (
+          <>
+            <Typography variant="h5" sx={{ fontWeight: 700, mb: 2 }}>
+              {t("home.diagrams.heading")}
+            </Typography>
+            <Grid container spacing={2} sx={{ mb: 5 }}>
+              {isDiagramsLoading ? (
+                <Grid item xs={12}>
+                  <Typography color="text.secondary">{t("home.diagrams.loading")}</Typography>
+                </Grid>
+              ) : (
+                recentDiagrams.map((diag) => (
+                  <Grid item xs={12} sm={6} md={4} key={diag.id}>
+                    <Card
+                      component={RouterLink}
+                      to={`/diagrams/view/${diag.id}`}
+                      variant="outlined"
+                      sx={{
+                        display: "block",
+                        textDecoration: "none",
+                        transition: "all 0.2s ease",
+                        "&:hover": {
+                          borderColor: "rgba(236,72,153,0.4)",
+                          transform: "translateY(-2px)",
+                        },
+                      }}
+                    >
+                      <CardContent>
+                        <Stack direction="row" spacing={1.5} alignItems="center">
+                          <Box
+                            sx={{
+                              width: 40,
+                              height: 40,
+                              borderRadius: "10px",
+                              bgcolor: "rgba(236,72,153,0.15)",
+                              border: "1px solid rgba(236,72,153,0.25)",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              color: "#EC4899",
+                              flexShrink: 0,
+                            }}
+                          >
+                            <SchemaIcon fontSize="small" />
+                          </Box>
+                          <Stack spacing={0.25} flexGrow={1} minWidth={0}>
+                            <Typography
+                              variant="subtitle2"
+                              sx={{ fontWeight: 700, color: "#f1f5f9" }}
+                              noWrap
+                            >
+                              {diag.title}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary" noWrap>
+                              {new Date(diag.createdAt).toLocaleDateString()}
+                            </Typography>
+                          </Stack>
+                        </Stack>
+                      </CardContent>
+                    </Card>
+                  </Grid>
+                ))
+              )}
+              {recentDiagrams.length > 0 && (
+                <Grid item xs={12}>
                   <Button
                     component={RouterLink}
-                    to="/projects?create=true"
-                    variant="contained"
-                    startIcon={<AddCircleOutlineIcon />}
-                  >
-                    {t("home.emptyState.newSession")}
-                  </Button>
-                  <Button
-                    component={RouterLink}
-                    to="/slides/create"
+                    to="/diagrams"
                     variant="outlined"
-                    startIcon={<SlideshowIcon />}
+                    size="small"
+                    endIcon={<ArrowForwardIcon />}
                   >
-                    {t("home.emptyState.createSlides")}
+                    {t("home.diagrams.viewAll")}
                   </Button>
-                </Stack>
-              </Stack>
-            </CardContent>
-          </Card>
+                </Grid>
+              )}
+            </Grid>
+          </>
         )}
+
+        {/* Empty state */}
+        {!isLoadingAny &&
+          projects.length === 0 &&
+          presentations.length === 0 &&
+          diagrams.length === 0 && (
+            <Card
+              variant="outlined"
+              sx={{
+                borderStyle: "dashed",
+                borderColor: "rgba(67,97,238,0.3)",
+                bgcolor: "rgba(67,97,238,0.04)",
+              }}
+            >
+              <CardContent>
+                <Stack spacing={2} alignItems="flex-start">
+                  <Box
+                    sx={{
+                      p: 1.5,
+                      borderRadius: "12px",
+                      bgcolor: "rgba(67,97,238,0.12)",
+                      color: "#4361EE",
+                    }}
+                  >
+                    <AutoAwesomeIcon sx={{ fontSize: 28 }} />
+                  </Box>
+                  <Typography variant="h5" sx={{ fontWeight: 700 }}>
+                    {t("home.emptyState.title")}
+                  </Typography>
+                  <Typography variant="body1" color="text.secondary">
+                    {t("home.emptyState.description")}
+                  </Typography>
+                  <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
+                    <Button
+                      component={RouterLink}
+                      to="/projects?create=true"
+                      variant="contained"
+                      startIcon={<AddCircleOutlineIcon />}
+                    >
+                      {t("home.emptyState.newSession")}
+                    </Button>
+                    <Button
+                      component={RouterLink}
+                      to="/slides/create"
+                      variant="outlined"
+                      startIcon={<SlideshowIcon />}
+                    >
+                      {t("home.emptyState.createSlides")}
+                    </Button>
+                    <Button
+                      component={RouterLink}
+                      to="/diagrams/create"
+                      variant="outlined"
+                      startIcon={<SchemaIcon />}
+                    >
+                      {t("home.quickActions.createDiagram.title")}
+                    </Button>
+                  </Stack>
+                </Stack>
+              </CardContent>
+            </Card>
+          )}
       </Box>
     </SidebarLayout>
   );

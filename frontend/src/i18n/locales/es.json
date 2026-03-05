@@ -92,6 +92,10 @@
       "presentations": {
         "label": "Presentaciones",
         "cta": "Ver slides"
+      },
+      "activeDiagrams": {
+        "label": "Diagramas activos",
+        "cta": "Ver diagramas"
       }
     },
     "quickActions": {
@@ -111,6 +115,10 @@
       "contexts": {
         "title": "Gestionar contextos",
         "description": "Sube archivos y documentos para enriquecer el contenido generado por IA."
+      },
+      "createDiagram": {
+        "title": "Arquitecto Visual",
+        "description": "Genera un diagrama de arquitectura al instante."
       }
     },
     "activity": {
@@ -120,6 +128,11 @@
       "heading": "Presentaciones recientes",
       "loading": "Cargando presentaciones…",
       "viewAll": "Ver todas las presentaciones"
+    },
+    "diagrams": {
+      "heading": "Diagramas recientes",
+      "loading": "Cargando diagramas…",
+      "viewAll": "Ver todos los diagramas"
     },
     "emptyState": {
       "title": "Tu workspace está listo",
