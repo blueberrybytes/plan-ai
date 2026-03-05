@@ -57,6 +57,7 @@ const DiagramView: React.FC = () => {
   const [updateDiagram, { isLoading: isUpdating }] = useUpdateDiagramMutation();
 
   const [code, setCode] = useState<string>("");
+  const [previousCode, setPreviousCode] = useState<string>("");
   const [title, setTitle] = useState<string>("");
   const [theme, setTheme] = useState<string>("BlueBerryBytes");
   const [isModified, setIsModified] = useState(false);
@@ -170,6 +171,9 @@ const DiagramView: React.FC = () => {
     const newMessages = [...chatMessages, { role: "user" as const, text: userMsg }];
     setChatMessages(newMessages);
     sessionStorage.setItem(`diagram-chat-${diagramId}`, JSON.stringify(newMessages));
+
+    // Save the current state in case the AI messes it up
+    setPreviousCode(code);
 
     // Crucial: reset isModified so polling updates from the backend can overwrite the editor code
     setIsModified(false);
@@ -603,18 +607,40 @@ const DiagramView: React.FC = () => {
                       InputProps={{
                         sx: { borderRadius: 4, pr: 1 },
                         endAdornment: (
-                          <Button
-                            variant="contained"
-                            sx={{ borderRadius: 3, minWidth: "auto", px: 2 }}
-                            onClick={handleAssistantSubmit}
-                            disabled={
-                              diagram.status === "GENERATING" ||
-                              isImproving ||
-                              !assistantInstruction.trim()
-                            }
-                          >
-                            Send
-                          </Button>
+                          <Box sx={{ display: "flex", gap: 1 }}>
+                            {previousCode && previousCode !== code && (
+                              <Button
+                                variant="outlined"
+                                color="warning"
+                                size="small"
+                                sx={{
+                                  borderRadius: 3,
+                                  minWidth: "auto",
+                                  px: 2,
+                                  textTransform: "none",
+                                }}
+                                onClick={() => {
+                                  setCode(previousCode);
+                                  setIsModified(true);
+                                }}
+                                disabled={diagram.status === "GENERATING" || isImproving}
+                              >
+                                Undo AI
+                              </Button>
+                            )}
+                            <Button
+                              variant="contained"
+                              sx={{ borderRadius: 3, minWidth: "auto", px: 2 }}
+                              onClick={handleAssistantSubmit}
+                              disabled={
+                                diagram.status === "GENERATING" ||
+                                isImproving ||
+                                !assistantInstruction.trim()
+                              }
+                            >
+                              Send
+                            </Button>
+                          </Box>
                         ),
                       }}
                     />
