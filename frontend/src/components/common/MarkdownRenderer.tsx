@@ -61,6 +61,17 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content, sx, theme 
           m: 0,
           p: 0,
           bgcolor: "transparent !important",
+          overflowX: "auto",
+        },
+        "& .mermaid-container": {
+          my: 4,
+          display: "flex",
+          justifyContent: "center",
+          "& svg": {
+            minWidth: "60%",
+            maxWidth: "100%",
+            height: "auto",
+          },
         },
         ...sx,
       }}

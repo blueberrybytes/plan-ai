@@ -42,6 +42,10 @@ const MermaidRenderer: React.FC<MermaidRendererProps> = ({ chart, theme }) => {
             lineColor: theme?.primaryColor ?? "#6366f1",
             fontFamily: "inherit",
           },
+          flowchart: {
+            htmlLabels: true,
+            useMaxWidth: true,
+          },
           securityLevel: "loose",
           logLevel: 5, // Suppress verbose mermaid logs
           suppressErrorRendering: true, // Force Mermaid not to render SVGs for syntax errors
@@ -57,8 +61,12 @@ const MermaidRenderer: React.FC<MermaidRendererProps> = ({ chart, theme }) => {
           const themedSvg = svg.replace(
             /(<svg[^>]*>)/i,
             `$1<style>
+              #${id} { max-width: 100% !important; height: auto !important; }
               #${id} * { color: ${theme?.textColor ?? "#111827"} !important; }
-              #${id} text, #${id} tspan { fill: ${theme?.textColor ?? "#111827"} !important; color: ${theme?.textColor ?? "#111827"} !important; }
+              #${id} text, #${id} tspan, #${id} .nodeLabel, #${id} .edgeLabel, #${id} .label, #${id} foreignObject div, #${id} foreignObject span, #${id} foreignObject p, #${id} foreignObject strong, #${id} foreignObject b, #${id} foreignObject i, #${id} foreignObject em { 
+                fill: ${theme?.textColor ?? "#111827"} !important; 
+                color: ${theme?.textColor ?? "#111827"} !important; 
+              }
               #${id} .node rect, #${id} .node polygon, #${id} .node circle, #${id} .node ellipse { fill: ${theme?.backgroundColor ?? "#ffffff"} !important; stroke: ${theme?.primaryColor ?? "#6366f1"} !important; }
               #${id} .edgePath .path { stroke: ${theme?.primaryColor ?? "#6366f1"} !important; }
               #${id} .edgeLabel { background-color: ${theme?.backgroundColor ?? "#ffffff"} !important; color: ${theme?.textColor ?? "#111827"} !important; }

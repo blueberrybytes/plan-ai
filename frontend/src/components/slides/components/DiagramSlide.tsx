@@ -49,6 +49,13 @@ export const DiagramSlide: React.FC<SlideProps> = ({
           bgcolor: "background.paper", // Often white/light depending on MUI theme, giving the diagram a clean backdrop within the dark slide
           borderRadius: 2,
           overflow: "hidden",
+          p: 2,
+          "& svg": {
+            maxWidth: "100%",
+            maxHeight: "100%",
+            height: "auto",
+            width: "auto",
+          },
         }}
         onClick={(e) => {
           // Prevent clicks on diagram tools from propagating and triggering slide advances if used interactively
