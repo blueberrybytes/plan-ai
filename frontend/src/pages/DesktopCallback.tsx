@@ -35,7 +35,7 @@ const DesktopCallback: React.FC = () => {
 
   const localPort = new URLSearchParams(window.location.search).get("local_port");
 
-  const [triggerGetDesktopToken, { error }] = useGetDesktopTokenMutation();
+  const [triggerGetDesktopToken] = useGetDesktopTokenMutation();
 
   const cancelAuth = useCallback(() => {
     if (localPort) {
@@ -116,14 +116,6 @@ const DesktopCallback: React.FC = () => {
 
     attemptFetch();
   }, [isAuthInitialized, firebaseUser, triggerGetDesktopToken, localPort, status]);
-
-  useEffect(() => {
-    if (error) {
-      console.log("[DesktopCallback] Error generating desktop auth code:", error);
-      setStatus("error");
-      setErrorMsg("Failed to generate desktop auth code. Please try again.");
-    }
-  }, [error]);
 
   return (
     <Box
