@@ -3,7 +3,7 @@ import { components, operations } from "../../types/api";
 import { baseQueryWithReauth } from "../../utils/baseQuery";
 
 export type ApiResponseUserResponse = components["schemas"]["ApiResponse_UserResponse_"];
-export type ApiResponseCustomToken = components["schemas"]["ApiResponse__customToken-string__"];
+export type ApiResponseCustomToken = components["schemas"]["ApiResponse__code-string__"];
 export type LoginRequest = operations["Login"]["requestBody"]["content"]["application/json"];
 
 export const authApi = createApi({
@@ -20,10 +20,13 @@ export const authApi = createApi({
     getCurrentUser: builder.query<ApiResponseUserResponse, void>({
       query: () => "/api/session/me",
     }),
-    getDesktopToken: builder.query<ApiResponseCustomToken, void>({
-      query: () => "/api/session/desktop-token",
+    getDesktopToken: builder.mutation<ApiResponseCustomToken, void>({
+      query: () => ({
+        url: "/api/session/desktop-token",
+        method: "POST",
+      }),
     }),
   }),
 });
 
-export const { useLoginMutation, useGetCurrentUserQuery, useLazyGetDesktopTokenQuery } = authApi;
+export const { useLoginMutation, useGetCurrentUserQuery, useGetDesktopTokenMutation } = authApi;

@@ -260,13 +260,33 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        get?: never;
+        put?: never;
         /**
          * @description Generate a Firebase Custom Token for the authenticated user.
          *     Called by the web app after the user logs in, to hand off auth to the Electron desktop recorder.
          */
-        get: operations["GetDesktopToken"];
+        post: operations["GetDesktopToken"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/session/desktop-exchange": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
         put?: never;
-        post?: never;
+        /**
+         * @description Exchange the Short-Lived Code for a Firebase Custom Token.
+         *     Called securely behind the scenes by the Electron desktop recorder.
+         */
+        post: operations["ExchangeDesktopCode"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1180,6 +1200,14 @@ export interface components {
         };
         GenericResponse: {
             message: string;
+            /** Format: double */
+            status: number;
+        };
+        "ApiResponse__code-string__": {
+            message?: string;
+            data: {
+                code: string;
+            } | null;
             /** Format: double */
             status: number;
         };
@@ -2359,6 +2387,32 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse__code-string__"];
+                };
+            };
+        };
+    };
+    ExchangeDesktopCode: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    code: string;
+                };
+            };
+        };
         responses: {
             /** @description Ok */
             200: {

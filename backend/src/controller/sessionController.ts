@@ -5,6 +5,7 @@ import { Role } from "@prisma/client";
 import { firebaseAdmin, setUserRole } from "../firebase/firebaseAdmin";
 import prisma from "../prisma/prismaClient";
 import { AuthenticatedRequest } from "../middleware/authMiddleware";
+import crypto from "crypto";
 
 interface UserResponse {
   id: string;
@@ -222,22 +223,97 @@ export class SessionController {
    * Generate a Firebase Custom Token for the authenticated user.
    * Called by the web app after the user logs in, to hand off auth to the Electron desktop recorder.
    */
-  @Get("desktop-token")
+  @Post("desktop-token")
   @Security("ClientLevel")
   public async getDesktopToken(
     @Request() request: AuthenticatedRequest,
+  ): Promise<ApiResponse<{ code: string }>> {
+    try {
+      const dbUser = await prisma.user.findUnique({
+        where: { firebaseUid: request.user!.uid },
+      });
+
+      if (!dbUser) {
+        throw new Error("User not found in database");
+      }
+
+      // Generate a secure 64-character random hex code
+      const authCode = crypto.randomBytes(32).toString("hex");
+
+      // Store in PostgreSQL, expires in 60 seconds
+      await prisma.desktopAuthCode.create({
+        data: {
+          code: authCode,
+          userId: dbUser.id,
+          expiresAt: new Date(Date.now() + 60 * 1000),
+        },
+      });
+
+      return {
+        status: 200,
+        data: { code: authCode },
+      };
+    } catch {
+      throw {
+        status: 500,
+        message: "Failed to generate desktop auth code",
+      };
+    }
+  }
+
+  /**
+   * Exchange the Short-Lived Code for a Firebase Custom Token.
+   * Called securely behind the scenes by the Electron desktop recorder.
+   */
+  @Post("desktop-exchange")
+  public async exchangeDesktopCode(
+    @Body() body: { code: string },
   ): Promise<ApiResponse<{ customToken: string }>> {
     try {
-      const customToken = await firebaseAdmin.auth().createCustomToken(request.user!.uid);
+      console.log(`[sessionController] Exchanging OTP code: "${body.code}"`);
+
+      // Find the code and eagerly delete it to prevent replay attacks
+      const authRecord = await prisma.desktopAuthCode.findUnique({
+        where: { code: body.code },
+        include: { user: true },
+      });
+
+      console.log(`[sessionController] Prisma lookup result:`, authRecord ? "FOUND" : "NOT FOUND");
+
+      if (!authRecord) {
+        throw new Error("Invalid or expired authorization code.");
+      }
+
+      console.log(
+        `[sessionController] Code expires at: ${authRecord.expiresAt.toISOString()}, Current time: ${new Date().toISOString()}`,
+      );
+
+      // Immediately burn the code
+      await prisma.desktopAuthCode.delete({
+        where: { id: authRecord.id },
+      });
+
+      // Verify expiration strictly
+      if (authRecord.expiresAt.getTime() < Date.now()) {
+        throw new Error("Authorization code expired.");
+      }
+
+      // Generate the massive Firebase Custom JWT and hand it over!
+      const customToken = await firebaseAdmin.auth().createCustomToken(authRecord.user.firebaseUid);
+
+      console.log(
+        `[sessionController] Successfully minted token for user ${authRecord.user.firebaseUid}. Returning.`,
+      );
 
       return {
         status: 200,
         data: { customToken },
       };
-    } catch {
+    } catch (error: any) {
+      console.error("[sessionController] Exchange failed:", error.message || error);
       throw {
-        status: 500,
-        message: "Failed to generate desktop auth token",
+        status: error.status || 401,
+        message: error.message || "Failed to exchange desktop auth code",
       };
     }
   }

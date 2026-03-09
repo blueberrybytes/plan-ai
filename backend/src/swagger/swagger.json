@@ -1518,6 +1518,34 @@
 				],
 				"type": "object"
 			},
+			"ApiResponse__code-string__": {
+				"properties": {
+					"message": {
+						"type": "string"
+					},
+					"data": {
+						"properties": {
+							"code": {
+								"type": "string"
+							}
+						},
+						"required": [
+							"code"
+						],
+						"type": "object",
+						"nullable": true
+					},
+					"status": {
+						"type": "number",
+						"format": "double"
+					}
+				},
+				"required": [
+					"data",
+					"status"
+				],
+				"type": "object"
+			},
 			"ApiResponse__customToken-string__": {
 				"properties": {
 					"message": {
@@ -4394,7 +4422,7 @@
 			}
 		},
 		"/api/session/desktop-token": {
-			"get": {
+			"post": {
 				"operationId": "GetDesktopToken",
 				"responses": {
 					"200": {
@@ -4402,7 +4430,7 @@
 						"content": {
 							"application/json": {
 								"schema": {
-									"$ref": "#/components/schemas/ApiResponse__customToken-string__"
+									"$ref": "#/components/schemas/ApiResponse__code-string__"
 								}
 							}
 						}
@@ -4418,6 +4446,47 @@
 					}
 				],
 				"parameters": []
+			}
+		},
+		"/api/session/desktop-exchange": {
+			"post": {
+				"operationId": "ExchangeDesktopCode",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiResponse__customToken-string__"
+								}
+							}
+						}
+					}
+				},
+				"description": "Exchange the Short-Lived Code for a Firebase Custom Token.\nCalled securely behind the scenes by the Electron desktop recorder.",
+				"tags": [
+					"Session"
+				],
+				"security": [],
+				"parameters": [],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"properties": {
+									"code": {
+										"type": "string"
+									}
+								},
+								"required": [
+									"code"
+								],
+								"type": "object"
+							}
+						}
+					}
+				}
 			}
 		},
 		"/api/public/presentations/{presentationId}": {

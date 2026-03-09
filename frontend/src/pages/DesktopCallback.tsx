@@ -4,7 +4,7 @@ import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
 import { useAuth } from "../providers/FirebaseAuthProvider";
 import { auth } from "../firebase/firebase";
 import { onAuthStateChanged } from "firebase/auth";
-import { useLazyGetDesktopTokenQuery } from "../store/apis/authApi";
+import { useGetDesktopTokenMutation } from "../store/apis/authApi";
 
 /**
  * /auth/desktop?local_port=4321 — opened by the Plan AI Recorder (Electron app)
@@ -35,7 +35,7 @@ const DesktopCallback: React.FC = () => {
 
   const localPort = new URLSearchParams(window.location.search).get("local_port");
 
-  const [triggerGetDesktopToken, { data, error }] = useLazyGetDesktopTokenQuery();
+  const [triggerGetDesktopToken, { error }] = useGetDesktopTokenMutation();
 
   const cancelAuth = useCallback(() => {
     if (localPort) {
@@ -79,8 +79,28 @@ const DesktopCallback: React.FC = () => {
       for (let i = 0; i < 10; i++) {
         try {
           // Unwrapping allows us to catch the RTK Query error properly
-          await triggerGetDesktopToken().unwrap();
-          return; // Success! The data useEffect below will handle the rest.
+          const fetchResponse = await triggerGetDesktopToken().unwrap();
+
+          if (!fetchResponse?.data?.code) {
+            throw new Error("No authorization code in response");
+          }
+
+          const authCode = fetchResponse.data.code;
+
+          if (localPort) {
+            console.log("[DesktopCallback] Delivering code via local HTTP server...");
+            // Dev mode: deliver code via local HTTP server
+            const url = `http://localhost:${localPort}/auth?code=${encodeURIComponent(authCode)}`;
+            window.location.href = url;
+            setStatus("success");
+            console.log("[DesktopCallback] Code delivered successfully.");
+          } else {
+            // Prod mode: deliver via custom protocol handler
+            console.log("[DesktopCallback] Delivering code via custom protocol handler...");
+            window.location.href = `blueberrybytes-recorder://auth?code=${encodeURIComponent(authCode)}`;
+            setStatus("success");
+          }
+          return; // Success! Loop ends.
         } catch (err) {
           console.warn(
             `[DesktopCallback] Token fetch attempt ${i + 1} failed (waiting for backend DB sync). Retrying...`,
@@ -98,41 +118,10 @@ const DesktopCallback: React.FC = () => {
   }, [isAuthInitialized, firebaseUser, triggerGetDesktopToken, localPort, status]);
 
   useEffect(() => {
-    if (!data?.data?.customToken) {
-      console.log("[DesktopCallback] No custom token received, waiting...");
-      return;
-    }
-
-    const token = data.data.customToken;
-
-    if (localPort) {
-      console.log("[DesktopCallback] Delivering token via local HTTP server...");
-      // Dev mode: deliver token via local HTTP server
-      const url = `http://localhost:${localPort}/auth?token=${encodeURIComponent(token)}`;
-      try {
-        window.location.href = url;
-        setStatus("success");
-        console.log("[DesktopCallback] Token delivered successfully.");
-      } catch (e) {
-        console.error("[DesktopCallback] Failed to execute window.location.href:", e);
-      }
-    } else {
-      // Prod mode: deliver via custom protocol handler
-      try {
-        console.log("[DesktopCallback] Delivering token via custom protocol handler...");
-        window.location.href = `blueberrybytes-recorder://auth?token=${encodeURIComponent(token)}`;
-        setStatus("success");
-      } catch (e) {
-        console.error("[DesktopCallback] Failed to execute custom protocol redirect:", e);
-      }
-    }
-  }, [data, localPort]);
-
-  useEffect(() => {
     if (error) {
-      console.log("[DesktopCallback] Error generating desktop auth token:", error);
+      console.log("[DesktopCallback] Error generating desktop auth code:", error);
       setStatus("error");
-      setErrorMsg("Failed to generate desktop auth token. Please try again.");
+      setErrorMsg("Failed to generate desktop auth code. Please try again.");
     }
   }, [error]);
 
