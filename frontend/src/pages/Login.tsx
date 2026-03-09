@@ -63,16 +63,28 @@ export default function Login() {
   }, [dispatch]);
 
   // Parse URL parameters for Desktop Auth OOB flow
-  const isDesktopAuth = new URLSearchParams(window.location.search).get("desktop_auth") === "true";
+  const isDesktopAuthMode =
+    new URLSearchParams(window.location.search).get("desktop_auth") === "true";
+  const autoTrigger = new URLSearchParams(window.location.search).get("auto_trigger");
+
+  useEffect(() => {
+    // If Electron spawned a hidden BrowserWindow specifically for Apple, auto-trigger it!
+    if (autoTrigger === "apple") {
+      console.log("[Login] Received auto_trigger for Apple. Launching instantly.");
+      handleAppleLogin();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoTrigger]);
+
   const localPort = new URLSearchParams(window.location.search).get("local_port");
-  const desktopParams = isDesktopAuth
+  const desktopParams = isDesktopAuthMode
     ? `?desktop_auth=true${localPort ? `&local_port=${localPort}` : ""}`
     : "";
 
   // Redirect if user is already logged in
   useEffect(() => {
     if (user) {
-      if (isDesktopAuth) {
+      if (isDesktopAuthMode) {
         if (localPort) {
           navigate(`/auth/desktop?local_port=${localPort}`);
         } else {
@@ -82,16 +94,21 @@ export default function Login() {
         navigate("/home");
       }
     }
-  }, [user, navigate, isDesktopAuth, localPort]);
+  }, [user, navigate, isDesktopAuthMode, localPort]);
 
   // Handle error from Redux
   useEffect(() => {
     if (errorSession?.message) {
       setError(errorSession.message);
+      // Auto-close the Electron window if the user cancelled the secondary popup
+      if (isDesktopAuthMode && autoTrigger === "apple") {
+        console.log("[Login] Apple Auth failed/cancelled. Closing Electron window.");
+        window.close();
+      }
     } else {
       setError(null);
     }
-  }, [errorSession]);
+  }, [errorSession, isDesktopAuthMode, autoTrigger]);
 
   const validateEmail = (email: string) => {
     if (!email) {
@@ -160,6 +177,38 @@ export default function Login() {
     setPasswordError(null);
     dispatch(loginApple());
   };
+
+  if (autoTrigger === "apple") {
+    return (
+      <Container maxWidth="sm">
+        <Box
+          sx={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            minHeight: "100vh",
+            py: 4,
+          }}
+        >
+          <Paper elevation={3} sx={{ p: 4, width: "100%", borderRadius: 2, textAlign: "center" }}>
+            <Box sx={{ display: "flex", justifyContent: "center", mb: 3 }}>
+              <img src={logoSrc} alt={logoAlt} style={{ height: "56px" }} />
+            </Box>
+            <Typography variant="h5" component="h1" align="center" gutterBottom>
+              {t("login.title", { productName })}
+            </Typography>
+            <Box sx={{ mt: 4, mb: 2 }}>
+              <CircularProgress size={40} />
+            </Box>
+            <Typography variant="body1" align="center" color="text.secondary">
+              Continuing with Apple Context Securely...
+            </Typography>
+          </Paper>
+        </Box>
+      </Container>
+    );
+  }
 
   return (
     <Container maxWidth="sm">
