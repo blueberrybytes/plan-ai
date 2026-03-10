@@ -13,6 +13,11 @@ import {
   MenuItem,
   ListItemIcon,
   ListItemText,
+  Select,
+  ListSubheader,
+  FormControl,
+  InputLabel,
+  SelectChangeEvent,
 } from "@mui/material";
 import {
   ArrowBack as ArrowBackIcon,
@@ -32,6 +37,8 @@ import { Document, Packer, Paragraph, TextRun, HeadingLevel } from "docx";
 import SidebarLayout from "../components/layout/SidebarLayout";
 import { useGetDocQuery, useUpdateDocMutation } from "../store/apis/docApi";
 import type { DocDocumentResponse } from "../store/apis/docApi";
+import { useGetDocThemesQuery, useCreateDocThemeMutation } from "../store/apis/docThemeApi";
+import { DOC_THEME_PRESETS } from "../constants/docThemePresets";
 
 const AUTOSAVE_DELAY = 800;
 
@@ -53,6 +60,9 @@ const DocView: React.FC = () => {
   });
   const [updateDoc, { isLoading: isSaving }] = useUpdateDocMutation();
 
+  const { data: themes = [] } = useGetDocThemesQuery();
+  const [createTheme, { isLoading: isCreatingTheme }] = useCreateDocThemeMutation();
+
   const [content, setContent] = useState("");
   const [title, setTitle] = useState("");
   const [isEditMode, setIsEditMode] = useState(false);
@@ -66,6 +76,34 @@ const DocView: React.FC = () => {
       setPollingInterval(undefined);
     }
   }, [doc?.status]);
+
+  const handleThemeChange = async (event: SelectChangeEvent<string>) => {
+    const selectedValue = event.target.value as string;
+    if (!id) return;
+
+    // Check if it's an existing theme ID
+    const existingTheme = themes.find((t) => t.id === selectedValue);
+    if (existingTheme) {
+      await updateDoc({ id, data: { themeId: existingTheme.id } });
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+      return;
+    }
+
+    // Otherwise, it might be a preset name
+    const preset = DOC_THEME_PRESETS.find((p) => p.name === selectedValue);
+    if (preset) {
+      const userTheme = themes.find((t) => t.name === preset.name);
+      if (userTheme) {
+        await updateDoc({ id, data: { themeId: userTheme.id } });
+      } else {
+        const newTheme = await createTheme(preset).unwrap();
+        await updateDoc({ id, data: { themeId: newTheme.id } });
+      }
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    }
+  };
 
   useEffect(() => {
     if (doc && !isEditMode) {
@@ -194,6 +232,36 @@ const DocView: React.FC = () => {
             />
           )}
           <Box sx={{ flexGrow: 1 }} />
+
+          <FormControl size="small" sx={{ minWidth: 150, m: 0 }}>
+            <InputLabel>{t("docs.view.themeSelect.label")}</InputLabel>
+            <Select
+              value={doc?.themeId || ""}
+              label={t("docs.view.themeSelect.label")}
+              onChange={handleThemeChange}
+              disabled={isSaving || isCreatingTheme}
+            >
+              <ListSubheader>{t("docs.view.themeSelect.myThemes")}</ListSubheader>
+              {themes.length === 0 ? (
+                <MenuItem disabled value="none">
+                  <em>{t("docThemes.empty")}</em>
+                </MenuItem>
+              ) : (
+                themes.map((theme) => (
+                  <MenuItem key={theme.id} value={theme.id}>
+                    {theme.name}
+                  </MenuItem>
+                ))
+              )}
+              <ListSubheader>{t("docs.view.themeSelect.defaultThemes")}</ListSubheader>
+              {DOC_THEME_PRESETS.map((preset) => (
+                <MenuItem key={`preset-${preset.name}`} value={preset.name}>
+                  {preset.name}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+
           {isSaving && <CircularProgress size={16} />}
           {saved && (
             <Chip icon={<CheckIcon />} label={t("docs.view.saved")} color="success" size="small" />

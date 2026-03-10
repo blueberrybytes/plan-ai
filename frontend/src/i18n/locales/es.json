@@ -707,7 +707,12 @@
       "exportGdoc": "Descargar para Google Docs (.docx)",
       "publicUrl": "URL pública",
       "notFound": "Documento no encontrado o no es público.",
-      "sharedVia": "Compartido vía Plan AI"
+      "sharedVia": "Compartido vía Plan AI",
+      "themeSelect": {
+        "myThemes": "Mis Temas",
+        "defaultThemes": "Temas Predeterminados",
+        "label": "Tema"
+      }
     }
   },
   "docThemes": {

@@ -1,5 +1,18 @@
 import React from "react";
-import { Box, Typography, Divider, CircularProgress, Paper } from "@mui/material";
+import {
+  Box,
+  Typography,
+  Divider,
+  CircularProgress,
+  Paper,
+  Button,
+  Menu,
+  MenuItem,
+} from "@mui/material";
+import { Download as DownloadIcon } from "@mui/icons-material";
+import jsPDF from "jspdf";
+import { Document, Paragraph, TextRun, HeadingLevel, Packer } from "docx";
+import { saveAs } from "file-saver";
 import { useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import MarkdownRenderer from "../components/common/MarkdownRenderer";
@@ -9,6 +22,54 @@ const PublicDocView: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { t } = useTranslation();
   const { data: doc, isLoading, isError } = useGetPublicDocQuery(id ?? "");
+  const [exportAnchor, setExportAnchor] = React.useState<null | HTMLElement>(null);
+
+  const handleExportPdf = async () => {
+    setExportAnchor(null);
+    if (!doc) return;
+    const pdf = new jsPDF({ unit: "pt", format: "a4" });
+    pdf.setFont("helvetica");
+    pdf.setFontSize(22);
+    pdf.text(doc.title, 40, 60);
+    pdf.setFontSize(11);
+    const lines = pdf.splitTextToSize((doc.content || "").replace(/[#*`]/g, ""), 515);
+    pdf.text(lines, 40, 90);
+    pdf.save(`${doc.title}.pdf`);
+  };
+
+  const handleExportMarkdown = () => {
+    setExportAnchor(null);
+    if (!doc) return;
+    const blob = new Blob([doc.content || ""], { type: "text/markdown;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${doc.title}.md`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleExportDocx = async () => {
+    setExportAnchor(null);
+    if (!doc) return;
+    const lines = (doc.content || "").split("\n");
+    const children: Paragraph[] = lines.map((line) => {
+      if (line.startsWith("### "))
+        return new Paragraph({ text: line.replace(/^### /, ""), heading: HeadingLevel.HEADING_3 });
+      if (line.startsWith("## "))
+        return new Paragraph({ text: line.replace(/^## /, ""), heading: HeadingLevel.HEADING_2 });
+      if (line.startsWith("# "))
+        return new Paragraph({ text: line.replace(/^# /, ""), heading: HeadingLevel.HEADING_1 });
+      return new Paragraph({
+        children: [new TextRun(line.replace(/\*\*(.*?)\*\*/g, "$1").replace(/\*(.*?)\*/g, "$1"))],
+      });
+    });
+    const docxDoc = new Document({
+      sections: [{ properties: {}, children }],
+    });
+    const blob = await Packer.toBlob(docxDoc);
+    saveAs(blob, `${doc.title}.docx`);
+  };
 
   if (isLoading)
     return (
@@ -35,19 +96,37 @@ const PublicDocView: React.FC = () => {
         sx={{
           py: 3,
           px: 4,
-          background: theme
-            ? `linear-gradient(90deg, ${theme.primaryColor}, ${theme.accentColor})`
-            : "primary.main",
+          background: "primary.main",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
         }}
       >
-        <Typography variant="h4" fontWeight={700} sx={{ color: "#fff" }}>
-          {doc.title}
-        </Typography>
-        {theme && (
-          <Typography variant="body2" sx={{ color: "rgba(255,255,255,0.7)", mt: 0.5 }}>
-            Style: {theme.name}
+        <Box>
+          <Typography variant="h4" fontWeight={700} sx={{ color: "#fff" }}>
+            {doc.title}
           </Typography>
-        )}
+        </Box>
+        <Box>
+          <Button
+            variant="contained"
+            color="secondary"
+            startIcon={<DownloadIcon />}
+            onClick={(e) => setExportAnchor(e.currentTarget)}
+            sx={{ textTransform: "none", mr: 2 }}
+          >
+            {t("docs.view.export")}
+          </Button>
+          <Menu
+            anchorEl={exportAnchor}
+            open={Boolean(exportAnchor)}
+            onClose={() => setExportAnchor(null)}
+          >
+            <MenuItem onClick={handleExportPdf}>{t("docs.view.exportPdf")}</MenuItem>
+            <MenuItem onClick={handleExportMarkdown}>{t("docs.view.exportMarkdown")}</MenuItem>
+            <MenuItem onClick={handleExportDocx}>{t("docs.view.exportGdoc")}</MenuItem>
+          </Menu>
+        </Box>
       </Box>
 
       <Box sx={{ maxWidth: 860, mx: "auto", px: { xs: 2, md: 4 }, py: 5 }}>
