@@ -29,6 +29,7 @@ export const docApi = createApi({
 
     getPublicDoc: builder.query<DocDocumentResponse, string>({
       query: (id) => `/api/public/documents/${id}`,
+      keepUnusedDataFor: 0,
     }),
 
     createDoc: builder.mutation<DocDocumentResponse, CreateDocRequest>({

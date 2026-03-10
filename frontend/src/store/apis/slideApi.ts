@@ -89,6 +89,7 @@ export const slideApi = createApi({
     getPublicPresentation: builder.query<PresentationResponse, string>({
       query: (id) => `/api/public/presentations/${id}`,
       providesTags: (_result, _error, id) => [{ type: "Presentation", id }],
+      keepUnusedDataFor: 0,
     }),
 
     generatePresentation: builder.mutation<PresentationResponse, GeneratePresentationRequest>({

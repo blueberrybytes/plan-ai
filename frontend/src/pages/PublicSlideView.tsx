@@ -24,7 +24,10 @@ const PublicSlideView: React.FC = () => {
     data: presentation,
     isLoading,
     error,
-  } = useGetPublicPresentationQuery(presentationId || "", { skip: !presentationId });
+  } = useGetPublicPresentationQuery(presentationId || "", {
+    skip: !presentationId,
+    refetchOnMountOrArgChange: true,
+  });
 
   const [currentSlide, setCurrentSlide] = useState(0);
   const [fadeIn, setFadeIn] = useState(true);

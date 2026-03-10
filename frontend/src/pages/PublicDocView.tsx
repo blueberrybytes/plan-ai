@@ -10,6 +10,7 @@ import {
   MenuItem,
 } from "@mui/material";
 import { Download as DownloadIcon } from "@mui/icons-material";
+import { Helmet } from "react-helmet-async";
 import jsPDF from "jspdf";
 import { toPng } from "html-to-image";
 import { Document, Paragraph, TextRun, HeadingLevel, Packer } from "docx";
@@ -22,7 +23,13 @@ import { useGetPublicDocQuery } from "../store/apis/docApi";
 const PublicDocView: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { t } = useTranslation();
-  const { data: doc, isLoading, isError } = useGetPublicDocQuery(id ?? "");
+  const {
+    data: doc,
+    isLoading,
+    isError,
+  } = useGetPublicDocQuery(id ?? "", {
+    refetchOnMountOrArgChange: true,
+  });
   const [exportAnchor, setExportAnchor] = React.useState<null | HTMLElement>(null);
 
   const handleExportPdf = async () => {
@@ -139,6 +146,30 @@ const PublicDocView: React.FC = () => {
 
   return (
     <Box sx={{ minHeight: "100vh", bgcolor: theme?.backgroundColor ?? "#fff" }}>
+      <Helmet>
+        <title>{`${doc.title} | Plan AI`}</title>
+        <meta name="description" content={`View document: ${doc.title}`} />
+
+        {/* Open Graph / Facebook */}
+        <meta property="og:type" content="article" />
+        <meta property="og:url" content={window.location.href} />
+        <meta property="og:title" content={`${doc.title} | Plan AI`} />
+        <meta property="og:description" content={`Read document: ${doc.title}`} />
+        <meta
+          property="og:image"
+          content="https://plan-ai.blueberrybytes.com/logos/android-chrome-512x512.png"
+        />
+
+        {/* Twitter */}
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:url" content={window.location.href} />
+        <meta name="twitter:title" content={`${doc.title} | Plan AI`} />
+        <meta name="twitter:description" content={`Read document: ${doc.title}`} />
+        <meta
+          name="twitter:image"
+          content="https://plan-ai.blueberrybytes.com/logos/android-chrome-512x512.png"
+        />
+      </Helmet>
       {/* Header bar */}
       <Box
         sx={{
