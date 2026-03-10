@@ -24,7 +24,12 @@ import {
   DeleteForever as DeleteForeverIcon,
   Person as PersonIcon,
   Warning as WarningIcon,
+  Email as EmailIcon,
 } from "@mui/icons-material";
+import GoogleIcon from "@mui/icons-material/Google";
+import AppleIcon from "@mui/icons-material/Apple";
+import MicrosoftIcon from "../components/MicrosoftIcon";
+
 import { useDispatch, useSelector } from "react-redux";
 
 import SidebarLayout from "../components/layout/SidebarLayout";
@@ -142,6 +147,36 @@ const Profile: React.FC = () => {
     t,
     refetchUserData,
   ]);
+
+  const signInMethods = useMemo(() => {
+    const methods = [];
+    const data = currentUserData?.data as Record<string, unknown>;
+    if (data?.isGoogleAccount) {
+      methods.push({
+        icon: <GoogleIcon fontSize="small" />,
+        label: "Google",
+        color: "error" as const,
+      });
+    }
+    if (data?.isAppleAccount) {
+      methods.push({
+        icon: <AppleIcon fontSize="small" />,
+        label: "Apple",
+        color: "default" as const,
+      });
+    }
+    if (data?.isMicrosoftAccount) {
+      methods.push({ icon: <MicrosoftIcon />, label: "Microsoft", color: "info" as const });
+    }
+    if (methods.length === 0) {
+      methods.push({
+        icon: <EmailIcon fontSize="small" />,
+        label: "Email / Password",
+        color: "primary" as const,
+      });
+    }
+    return methods;
+  }, [currentUserData]);
 
   const handleLogout = () => {
     dispatch(logout());
@@ -300,6 +335,25 @@ const Profile: React.FC = () => {
               </ListItem>
               <ListItem>
                 <ListItemText primary={t("profile.info.role")} secondary={roleDisplay} />
+              </ListItem>
+              <ListItem>
+                <ListItemText
+                  primary="Sign-In Method"
+                  secondary={
+                    <Box sx={{ display: "flex", gap: 1, mt: 0.5 }}>
+                      {signInMethods.map((method, idx) => (
+                        <Chip
+                          key={idx}
+                          icon={method.icon}
+                          label={method.label}
+                          size="small"
+                          color={method.color}
+                          variant="outlined"
+                        />
+                      ))}
+                    </Box>
+                  }
+                />
               </ListItem>
             </List>
 

@@ -1458,7 +1458,21 @@
 						"type": "string",
 						"nullable": true
 					},
+					"appleId": {
+						"type": "string",
+						"nullable": true
+					},
+					"microsoftId": {
+						"type": "string",
+						"nullable": true
+					},
 					"isGoogleAccount": {
+						"type": "boolean"
+					},
+					"isAppleAccount": {
+						"type": "boolean"
+					},
+					"isMicrosoftAccount": {
 						"type": "boolean"
 					},
 					"role": {
@@ -1472,7 +1486,11 @@
 					"name",
 					"avatarUrl",
 					"googleId",
+					"appleId",
+					"microsoftId",
 					"isGoogleAccount",
+					"isAppleAccount",
+					"isMicrosoftAccount",
 					"role"
 				],
 				"type": "object",

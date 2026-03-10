@@ -14,7 +14,11 @@ interface UserResponse {
   name: string | null;
   avatarUrl: string | null;
   googleId: string | null;
+  appleId: string | null;
+  microsoftId: string | null;
   isGoogleAccount: boolean;
+  isAppleAccount: boolean;
+  isMicrosoftAccount: boolean;
   role: Role;
 }
 
@@ -62,13 +66,28 @@ export class SessionController {
       const name = decodedToken.name || decodedToken.display_name || null;
       const avatarUrl = decodedToken.picture || null;
 
+      console.log(
+        `\n\n[SESSION DEBUG] Full Firebase JWT Payload for UID ${firebaseUid}:`,
+        JSON.stringify(decodedToken.firebase, null, 2),
+      );
+
       // Extract Google ID and determine account type
       const googleIdRaw = decodedToken.firebase?.identities?.["google.com"]?.[0];
       const googleId = googleIdRaw && googleIdRaw.trim() !== "" ? googleIdRaw : null;
       const isGoogleAccount = googleId !== null;
 
+      // Extract Apple ID
+      const appleIdRaw = decodedToken.firebase?.identities?.["apple.com"]?.[0];
+      const appleId = appleIdRaw && appleIdRaw.trim() !== "" ? appleIdRaw : null;
+      const isAppleAccount = appleId !== null;
+
+      // Extract Microsoft ID
+      const microsoftIdRaw = decodedToken.firebase?.identities?.["microsoft.com"]?.[0];
+      const microsoftId = microsoftIdRaw && microsoftIdRaw.trim() !== "" ? microsoftIdRaw : null;
+      const isMicrosoftAccount = microsoftId !== null;
+
       console.log(
-        `User details - Email: ${email}, Name: ${name}, Google ID: ${googleId || "N/A (email/password signup)"}, isGoogleAccount: ${isGoogleAccount}`,
+        `User details - Email: ${email}, Name: ${name}, Google ID: ${googleId || "N/A"}, Apple ID: ${appleId || "N/A"}, Microsoft ID: ${microsoftId || "N/A"}`,
       );
 
       // Check if user exists in the database by Firebase UID
@@ -95,6 +114,10 @@ export class SessionController {
               avatarUrl: avatarUrl || user.avatarUrl,
               googleId: googleId || user.googleId,
               isGoogleAccount: isGoogleAccount || user.isGoogleAccount,
+              appleId: appleId || user.appleId,
+              isAppleAccount: isAppleAccount || user.isAppleAccount,
+              microsoftId: microsoftId || user.microsoftId,
+              isMicrosoftAccount: isMicrosoftAccount || user.isMicrosoftAccount,
             },
           });
           console.log("Firebase UID updated successfully");
@@ -102,6 +125,26 @@ export class SessionController {
       }
 
       console.log(`User exists in database: ${!!user}`);
+
+      if (user) {
+        // Aggressively sync OAuth identities on every login to catch users who link new providers
+        const needsUpdate =
+          (isGoogleAccount && !user.isGoogleAccount) ||
+          (isAppleAccount && !user.isAppleAccount) ||
+          (isMicrosoftAccount && !user.isMicrosoftAccount);
+
+        if (needsUpdate) {
+          console.log(`Syncing new OAuth Identities to existing Postgres User...`);
+          user = await prisma.user.update({
+            where: { id: user.id },
+            data: {
+              ...(isGoogleAccount && { googleId, isGoogleAccount: true }),
+              ...(isAppleAccount && { appleId, isAppleAccount: true }),
+              ...(isMicrosoftAccount && { microsoftId, isMicrosoftAccount: true }),
+            },
+          });
+        }
+      }
 
       // If user doesn't exist, create a new one
       if (!user) {
@@ -115,7 +158,11 @@ export class SessionController {
               name: name,
               avatarUrl: avatarUrl,
               googleId: googleId,
+              appleId: appleId,
+              microsoftId: microsoftId,
               isGoogleAccount: isGoogleAccount,
+              isAppleAccount: isAppleAccount,
+              isMicrosoftAccount: isMicrosoftAccount,
               role: Role.CLIENT, // Default role
             },
           });
@@ -142,7 +189,11 @@ export class SessionController {
         name: user.name,
         avatarUrl: user.avatarUrl,
         googleId: user.googleId,
+        appleId: user.appleId,
+        microsoftId: user.microsoftId,
         isGoogleAccount: user.isGoogleAccount,
+        isAppleAccount: user.isAppleAccount,
+        isMicrosoftAccount: user.isMicrosoftAccount,
         role: user.role,
       };
 
@@ -202,7 +253,11 @@ export class SessionController {
         name: user.name,
         avatarUrl: user.avatarUrl,
         googleId: user.googleId,
+        appleId: user.appleId,
+        microsoftId: user.microsoftId,
         isGoogleAccount: user.isGoogleAccount,
+        isAppleAccount: user.isAppleAccount,
+        isMicrosoftAccount: user.isMicrosoftAccount,
         role: user.role,
       };
 

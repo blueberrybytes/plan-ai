@@ -4,6 +4,7 @@ import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
 import { useAuth } from "../providers/FirebaseAuthProvider";
 import { auth } from "../firebase/firebase";
 import { onAuthStateChanged } from "firebase/auth";
+import axios from "axios";
 import { useGetDesktopTokenMutation } from "../store/apis/authApi";
 
 /**
@@ -76,6 +77,20 @@ const DesktopCallback: React.FC = () => {
     // If the user was ALREADY logged in from hours ago, this will succeed on the 1st attempt.
     const attemptFetch = async () => {
       console.log("[DesktopCallback] Triggering token fetch for user:", firebaseUser.uid);
+
+      // CRITICAL FIX: Because Apple Auth can trigger a full page redirect in Electron,
+      // the Redux Sagas that normally perform PostgreSQL registration might be killed!
+      // To prevent 'User not found' crashes strictly enforce Database existence right here:
+      try {
+        const idToken = await firebaseUser.getIdToken();
+        const apiUrl = `${process.env.REACT_APP_API_BACKEND_URL || "http://localhost:8080"}/api/session/login`;
+        console.log("[DesktopCallback] Bootstrapping Postgres Identity synchronization...");
+        await axios.post(apiUrl, { token: idToken, uuid: firebaseUser.uid });
+        console.log("[DesktopCallback] Postgres Identity successfully synced!");
+      } catch (syncErr) {
+        console.warn("[DesktopCallback] Postgres sync non-fatal error:", syncErr);
+      }
+
       for (let i = 0; i < 10; i++) {
         try {
           // Unwrapping allows us to catch the RTK Query error properly

@@ -1189,7 +1189,11 @@ export interface components {
             name: string | null;
             avatarUrl: string | null;
             googleId: string | null;
+            appleId: string | null;
+            microsoftId: string | null;
             isGoogleAccount: boolean;
+            isAppleAccount: boolean;
+            isMicrosoftAccount: boolean;
             role: components["schemas"]["Role"];
         };
         ApiResponse_UserResponse_: {

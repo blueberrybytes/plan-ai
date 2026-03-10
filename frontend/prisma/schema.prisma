@@ -8,28 +8,32 @@ datasource db {
 }
 
 model User {
-  id              String            @id @default(cuid())
-  firebaseUid     String            @unique
-  email           String            @unique
-  name            String?
-  avatarUrl       String?
-  googleId        String?           @unique
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @updatedAt
-  role            Role              @default(CLIENT)
-  isGoogleAccount Boolean           @default(false)
-  threads         ChatThread[]
-  contexts        Context[]
-  customTheme     CustomTheme?
-  documents       DocDocument[]
-  docThemes       DocTheme[]
-  slideTemplates  SlideTemplate[]
-  assignedTasks   Task[]            @relation("TaskAssignee")
-  transcripts     Transcript[]
-  integrations    UserIntegration[]
-  projects        Project[]
-  diagrams        Diagram[]
-  desktopAuthCodes DesktopAuthCode[]
+  id                 String            @id @default(cuid())
+  firebaseUid        String            @unique
+  email              String            @unique
+  name               String?
+  avatarUrl          String?
+  googleId           String?           @unique
+  appleId            String?           @unique
+  microsoftId        String?           @unique
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+  role               Role              @default(CLIENT)
+  isGoogleAccount    Boolean           @default(false)
+  isAppleAccount     Boolean           @default(false)
+  isMicrosoftAccount Boolean           @default(false)
+  threads            ChatThread[]
+  contexts           Context[]
+  customTheme        CustomTheme?
+  documents          DocDocument[]
+  docThemes          DocTheme[]
+  slideTemplates     SlideTemplate[]
+  assignedTasks      Task[]            @relation("TaskAssignee")
+  transcripts        Transcript[]
+  integrations       UserIntegration[]
+  projects           Project[]
+  diagrams           Diagram[]
+  desktopAuthCodes   DesktopAuthCode[]
 }
 
 model DesktopAuthCode {
@@ -352,8 +356,8 @@ model Diagram {
   transcriptIds String[]
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
-  
-  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
 }
