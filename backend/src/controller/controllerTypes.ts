@@ -3,6 +3,11 @@ export type GenericResponse = {
   message: string;
 };
 
+export interface LiveChatHistoryItem {
+  role: "user" | "assistant";
+  content: string;
+}
+
 export type ApiResponse<T> = {
   status: number;
   data: T | null;

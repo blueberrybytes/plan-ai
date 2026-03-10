@@ -203,8 +203,8 @@ export const queryContexts = async (
     const points = await queryVectors(contextIds, vector, limit);
 
     return points
-      .map((p: ContextVectorPoint) => p.payload.text)
-      .filter((t: unknown): t is string => typeof t === "string" && t.length > 0);
+      .map((p: ContextVectorPoint) => p.payload?.text)
+      .filter((t: unknown): t is string => typeof t === "string" && t.trim().length > 0);
   } catch (error) {
     logger.error("Failed to query context vectors", error);
     return [];

@@ -1055,6 +1055,26 @@
 				],
 				"type": "object"
 			},
+			"LiveChatHistoryItem": {
+				"properties": {
+					"role": {
+						"type": "string",
+						"enum": [
+							"user",
+							"assistant"
+						]
+					},
+					"content": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"role",
+					"content"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
 			"CreateStandaloneTranscriptBody": {
 				"properties": {
 					"projectId": {
@@ -1114,6 +1134,12 @@
 					},
 					"englishLevel": {
 						"type": "string"
+					},
+					"chatHistory": {
+						"items": {
+							"$ref": "#/components/schemas/LiveChatHistoryItem"
+						},
+						"type": "array"
 					}
 				},
 				"type": "object",
@@ -2649,6 +2675,53 @@
 				"type": "object",
 				"additionalProperties": false
 			},
+			"ApiResponse_ChatThread-Array_": {
+				"properties": {
+					"message": {
+						"type": "string"
+					},
+					"data": {
+						"items": {
+							"$ref": "#/components/schemas/ChatThread"
+						},
+						"type": "array",
+						"nullable": true
+					},
+					"status": {
+						"type": "number",
+						"format": "double"
+					}
+				},
+				"required": [
+					"data",
+					"status"
+				],
+				"type": "object"
+			},
+			"ApiResponse_ChatThread_": {
+				"properties": {
+					"message": {
+						"type": "string"
+					},
+					"data": {
+						"allOf": [
+							{
+								"$ref": "#/components/schemas/ChatThread"
+							}
+						],
+						"nullable": true
+					},
+					"status": {
+						"type": "number",
+						"format": "double"
+					}
+				},
+				"required": [
+					"data",
+					"status"
+				],
+				"type": "object"
+			},
 			"CreateThreadRequest": {
 				"properties": {
 					"title": {
@@ -2686,6 +2759,30 @@
 				"type": "object",
 				"additionalProperties": false
 			},
+			"ApiResponse_SendMessageResponse_": {
+				"properties": {
+					"message": {
+						"type": "string"
+					},
+					"data": {
+						"allOf": [
+							{
+								"$ref": "#/components/schemas/SendMessageResponse"
+							}
+						],
+						"nullable": true
+					},
+					"status": {
+						"type": "number",
+						"format": "double"
+					}
+				},
+				"required": [
+					"data",
+					"status"
+				],
+				"type": "object"
+			},
 			"SendMessageRequest": {
 				"properties": {
 					"content": {
@@ -2694,6 +2791,70 @@
 				},
 				"required": [
 					"content"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"LiveChatMessageResponse": {
+				"properties": {
+					"response": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"response"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"ApiResponse_LiveChatMessageResponse_": {
+				"properties": {
+					"message": {
+						"type": "string"
+					},
+					"data": {
+						"allOf": [
+							{
+								"$ref": "#/components/schemas/LiveChatMessageResponse"
+							}
+						],
+						"nullable": true
+					},
+					"status": {
+						"type": "number",
+						"format": "double"
+					}
+				},
+				"required": [
+					"data",
+					"status"
+				],
+				"type": "object"
+			},
+			"LiveChatMessageRequest": {
+				"properties": {
+					"content": {
+						"type": "string"
+					},
+					"liveTranscript": {
+						"type": "string"
+					},
+					"contextIds": {
+						"items": {
+							"type": "string"
+						},
+						"type": "array"
+					},
+					"history": {
+						"items": {
+							"$ref": "#/components/schemas/LiveChatHistoryItem"
+						},
+						"type": "array"
+					}
+				},
+				"required": [
+					"content",
+					"liveTranscript"
 				],
 				"type": "object",
 				"additionalProperties": false
@@ -5697,10 +5858,7 @@
 						"content": {
 							"application/json": {
 								"schema": {
-									"items": {
-										"$ref": "#/components/schemas/ChatThread"
-									},
-									"type": "array"
+									"$ref": "#/components/schemas/ApiResponse_ChatThread-Array_"
 								}
 							}
 						}
@@ -5724,7 +5882,7 @@
 						"content": {
 							"application/json": {
 								"schema": {
-									"$ref": "#/components/schemas/ChatThread"
+									"$ref": "#/components/schemas/ApiResponse_ChatThread_"
 								}
 							}
 						}
@@ -5760,7 +5918,7 @@
 						"content": {
 							"application/json": {
 								"schema": {
-									"$ref": "#/components/schemas/ChatThread"
+									"$ref": "#/components/schemas/ApiResponse_ChatThread_"
 								}
 							}
 						}
@@ -5793,7 +5951,7 @@
 						"content": {
 							"application/json": {
 								"schema": {
-									"$ref": "#/components/schemas/ChatThread"
+									"$ref": "#/components/schemas/ApiResponse_ChatThread_"
 								}
 							}
 						}
@@ -5850,15 +6008,7 @@
 						"content": {
 							"application/json": {
 								"schema": {
-									"properties": {
-										"success": {
-											"type": "boolean"
-										}
-									},
-									"required": [
-										"success"
-									],
-									"type": "object"
+									"$ref": "#/components/schemas/ApiResponse__success-boolean__"
 								}
 							}
 						}
@@ -5893,7 +6043,7 @@
 						"content": {
 							"application/json": {
 								"schema": {
-									"$ref": "#/components/schemas/SendMessageResponse"
+									"$ref": "#/components/schemas/ApiResponse_SendMessageResponse_"
 								}
 							}
 						}
@@ -5923,6 +6073,42 @@
 						"application/json": {
 							"schema": {
 								"$ref": "#/components/schemas/SendMessageRequest"
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/chat/live": {
+			"post": {
+				"operationId": "SendMessageLive",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiResponse_LiveChatMessageResponse_"
+								}
+							}
+						}
+					}
+				},
+				"tags": [
+					"Chat"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": [],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/LiveChatMessageRequest"
 							}
 						}
 					}

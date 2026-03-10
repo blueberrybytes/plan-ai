@@ -11,6 +11,7 @@ import {
   Security,
   Request,
 } from "tsoa";
+import { type LiveChatHistoryItem, type ApiResponse } from "./controllerTypes";
 import { ChatRole } from "@prisma/client";
 import prisma from "../prisma/prismaClient";
 import { logger } from "../utils/logger";
@@ -54,6 +55,17 @@ interface SendMessageResponse {
   response: ChatMessage;
 }
 
+export interface LiveChatMessageRequest {
+  content: string;
+  liveTranscript: string;
+  contextIds?: string[];
+  history?: LiveChatHistoryItem[];
+}
+
+export interface LiveChatMessageResponse {
+  response: string;
+}
+
 @Route("api/chat")
 @Tags("Chat")
 @Security("ClientLevel")
@@ -64,7 +76,9 @@ export class ChatController extends Controller {
   private readonly modelName = "google/gemini-2.0-flash-001";
 
   @Get("threads")
-  public async listThreads(@Request() request: AuthenticatedRequest): Promise<ChatThread[]> {
+  public async listThreads(
+    @Request() request: AuthenticatedRequest,
+  ): Promise<ApiResponse<ChatThread[]>> {
     if (!request.user) {
       this.setStatus(401);
       throw new Error("Unauthorized");
@@ -84,14 +98,14 @@ export class ChatController extends Controller {
       where: { userId: user.id },
       orderBy: { updatedAt: "desc" },
     });
-    return threads;
+    return { status: 200, data: threads };
   }
 
   @Get("threads/{threadId}")
   public async getThread(
     @Path() threadId: string,
     @Request() request: AuthenticatedRequest,
-  ): Promise<ChatThread> {
+  ): Promise<ApiResponse<ChatThread>> {
     if (!request.user) {
       this.setStatus(401);
       throw new Error("Unauthorized");
@@ -115,14 +129,14 @@ export class ChatController extends Controller {
         },
       },
     });
-    return thread;
+    return { status: 200, data: thread };
   }
 
   @Post("threads")
   public async createThread(
     @Body() body: CreateThreadRequest,
     @Request() request: AuthenticatedRequest,
-  ): Promise<ChatThread> {
+  ): Promise<ApiResponse<ChatThread>> {
     if (!request.user) {
       this.setStatus(401);
       throw new Error("Unauthorized");
@@ -138,15 +152,41 @@ export class ChatController extends Controller {
       throw new Error("User not found");
     }
 
+    // 1. Generate an intelligent title if none provided
+    let title = body.title || "New Chat";
+    if (!body.title) {
+      try {
+        const contentPreview = "New user asking questions about context/recordings.";
+        const aiResponse = await generateText({
+          model: this.openrouter(this.modelName),
+          messages: [
+            {
+              role: "system",
+              content:
+                "Given the context/activity, provide a very short, 3-5 word title for this new chat. Respond ONLY with the title. No quotes.",
+            },
+            { role: "user", content: contentPreview },
+          ],
+        });
+        if (aiResponse?.text) {
+          title = aiResponse.text.trim().replace(/^["'](.*)["']$/, "$1");
+        }
+      } catch (e) {
+        logger.warn("Failed to generate intelligent title for chat thread", e);
+      }
+    }
+
     const thread = await prisma.chatThread.create({
       data: {
         userId: user.id,
-        title: body.title || "New Chat",
+        title,
         contextIds: body.contextIds,
         englishLevel: body.englishLevel,
       },
+      include: { messages: true },
     });
-    return thread;
+
+    return { status: 200, data: thread };
   }
 
   @Put("threads/{threadId}")
@@ -154,7 +194,7 @@ export class ChatController extends Controller {
     @Path() threadId: string,
     @Body() body: { title?: string; contextIds?: string[]; englishLevel?: string },
     @Request() request: AuthenticatedRequest,
-  ): Promise<ChatThread> {
+  ): Promise<ApiResponse<ChatThread>> {
     if (!request.user) {
       this.setStatus(401);
       throw new Error("Unauthorized");
@@ -178,14 +218,14 @@ export class ChatController extends Controller {
         englishLevel: body.englishLevel,
       },
     });
-    return thread;
+    return { status: 200, data: thread };
   }
 
   @Delete("threads/{threadId}")
   public async deleteThread(
     @Path() threadId: string,
     @Request() request: AuthenticatedRequest,
-  ): Promise<{ success: boolean }> {
+  ): Promise<ApiResponse<{ success: boolean }>> {
     if (!request.user) {
       this.setStatus(401);
       throw new Error("Unauthorized");
@@ -204,7 +244,7 @@ export class ChatController extends Controller {
     await prisma.chatThread.deleteMany({
       where: { id: threadId, userId: user.id },
     });
-    return { success: true };
+    return { status: 200, data: { success: true } };
   }
 
   @Post("threads/{threadId}/messages")
@@ -212,7 +252,7 @@ export class ChatController extends Controller {
     @Path() threadId: string,
     @Body() body: SendMessageRequest,
     @Request() request: AuthenticatedRequest,
-  ): Promise<SendMessageResponse> {
+  ): Promise<ApiResponse<SendMessageResponse>> {
     if (!request.user) {
       this.setStatus(401);
       throw new Error("Unauthorized");
@@ -228,15 +268,16 @@ export class ChatController extends Controller {
       throw new Error("User not found");
     }
 
-    const thread = await prisma.chatThread.findFirstOrThrow({
+    // Verify thread ownership
+    const thread = await prisma.chatThread.findFirst({
       where: { id: threadId, userId: user.id },
-      include: {
-        messages: {
-          orderBy: { createdAt: "asc" },
-          take: 100, // Limit history
-        },
-      },
+      include: { messages: { orderBy: { createdAt: "asc" } } },
     });
+
+    if (!thread) {
+      this.setStatus(404);
+      throw new Error("Chat thread not found");
+    }
 
     // 1. Save User Message
     const userMessage = await prisma.chatMessage.create({
@@ -247,49 +288,56 @@ export class ChatController extends Controller {
       },
     });
 
-    // 2. Retrieve Context (RAG)
+    // 2. Build Context (Vector RAG)
     let contextText = "";
     if (thread.contextIds.length > 0) {
-      // Swapped arguments to match definition: (contextIds: string[], queryText: string)
-      const contexts = await queryContexts(thread.contextIds, body.content, 500);
+      const contexts = await queryContexts(thread.contextIds, body.content, 5);
       if (contexts && contexts.length > 0) {
         contextText = contexts.join("\n---\n");
       }
     }
 
-    // 3. Call LLM using Vercel AI SDK
-    let englishLevelInstruction = "";
-    if (thread.englishLevel) {
-      englishLevelInstruction = `\nPlease adjust your language complexity to a "${thread.englishLevel}" English level.`;
-    }
+    // 3. System Prompt & History Construction
+    const systemPrompt = `You are a helpful AI Meeting Assistant and Document Analyst.
+You excel at answering questions based on the provided context, which are typically meeting transcripts or related documents.
 
-    const systemPrompt = `You are a helpful AI coding assistant.
-You have access to the user's codebase context.
-Answer the user's question based on the provided context if applicable.
-If the context doesn't contain the answer, use your general knowledge but mention that you didn't find it in the context.
-${englishLevelInstruction}
+${
+  thread.englishLevel
+    ? `The user has requested you speak at the following English fluency level: ${thread.englishLevel}. Adjust your vocabulary, structure, and idioms accordingly.`
+    : ""
+}
 
-Context:
+Here is the context provided for answering the user's queries:
+<context>
 ${contextText}
-`;
+</context>
 
-    // Construct history for AI SDK
-    const messages = [
-      { role: "system" as const, content: systemPrompt },
-      ...thread.messages.map((m) => ({
-        role: m.role.toLowerCase() as "user" | "assistant",
-        content: m.content,
-      })),
-      { role: "user" as const, content: body.content },
+Answer directly, accurately, and concisely. If the answer is not contained primarily in the context or conversation history, state that you do not have enough information derived from the provided documents.`;
+
+    const messages: { role: "system" | "user" | "assistant"; content: string }[] = [
+      { role: "system", content: systemPrompt },
     ];
 
+    if (thread.messages) {
+      for (const m of thread.messages) {
+        if (m.role === "USER" || m.role === "ASSISTANT") {
+          messages.push({
+            role: m.role === "USER" ? "user" : "assistant",
+            content: m.content,
+          });
+        }
+      }
+    }
+
+    messages.push({ role: "user", content: body.content });
+
     try {
-      const { text } = await generateText({
+      const aiResponse = await generateText({
         model: this.openrouter(this.modelName),
         messages: messages,
       });
 
-      const replyContent = text || "I'm sorry, I couldn't generate a response.";
+      const replyContent = aiResponse?.text || "I'm sorry, I couldn't generate a response.";
 
       // 4. Save Assistant Message
       const assistantMessage = await prisma.chatMessage.create({
@@ -307,12 +355,85 @@ ${contextText}
       });
 
       return {
-        message: userMessage,
-        response: assistantMessage,
+        status: 200,
+        data: {
+          message: userMessage,
+          response: assistantMessage,
+        },
       };
     } catch (error) {
       logger.error("Error generating AI response", error);
       throw new Error("Failed to generate response");
+    }
+  }
+
+  @Post("live")
+  public async sendMessageLive(
+    @Body() body: LiveChatMessageRequest,
+    @Request() request: AuthenticatedRequest,
+  ): Promise<ApiResponse<LiveChatMessageResponse>> {
+    if (!request.user) {
+      this.setStatus(401);
+      throw new Error("Unauthorized");
+    }
+
+    // 1. Retrieve Context (RAG) if any contextIds are provided
+    let contextText = "";
+    if (body.contextIds && body.contextIds.length > 0) {
+      const contexts = await queryContexts(body.contextIds, body.content, 500);
+      if (contexts && contexts.length > 0) {
+        contextText = contexts.join("\n---\n");
+      }
+    }
+
+    // 2. Build the Live system prompt
+    const systemPrompt = `You are a helpful AI Meeting Assistant sidekick.
+You are actively listening in on a live meeting. 
+The user will ask you questions about the meeting or related documents.
+
+Here is what has been spoken in the live meeting transcript so far:
+<live_transcript>
+${body.liveTranscript}
+</live_transcript>
+
+Here is the supplementary Knowledge Base Context (if any):
+<context>
+${contextText}
+</context>
+
+Answer the user's question directly and concisely, drawing primarily from the live transcript and context provided. If the topic has not been discussed yet, say so.`;
+
+    // 3. Construct history array
+    const messages: { role: "system" | "user" | "assistant"; content: string }[] = [
+      { role: "system", content: systemPrompt },
+    ];
+
+    if (body.history && Array.isArray(body.history)) {
+      for (const h of body.history) {
+        if (h.role === "user" || h.role === "assistant") {
+          messages.push({ role: h.role, content: h.content });
+        }
+      }
+    }
+
+    messages.push({ role: "user", content: body.content });
+
+    // 4. Generate stateless response using Vercel AI
+    try {
+      const aiResponse = await generateText({
+        model: this.openrouter(this.modelName),
+        messages: messages,
+      });
+
+      return {
+        status: 200,
+        data: {
+          response: aiResponse?.text || "I'm sorry, I couldn't generate a response.",
+        },
+      };
+    } catch (error) {
+      logger.error("Error generating Live AI response", error);
+      throw new Error("Failed to generate live response");
     }
   }
 }

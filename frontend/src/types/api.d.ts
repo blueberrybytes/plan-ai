@@ -682,6 +682,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/chat/live": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["SendMessageLive"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/audio/transcribe-chunk": {
         parameters: {
             query?: never;
@@ -1080,6 +1096,11 @@ export interface components {
             /** Format: double */
             status: number;
         };
+        LiveChatHistoryItem: {
+            /** @enum {string} */
+            role: "user" | "assistant";
+            content: string;
+        };
         CreateStandaloneTranscriptBody: {
             projectId?: string | null;
             title?: string | null;
@@ -1095,6 +1116,7 @@ export interface components {
             persona?: "SECRETARY" | "ARCHITECT" | "PRODUCT_MANAGER" | "DEVELOPER";
             objective?: string | null;
             englishLevel?: string;
+            chatHistory?: components["schemas"]["LiveChatHistoryItem"][];
         };
         UpdateStandaloneTranscriptBody: {
             title?: string | null;
@@ -1493,6 +1515,18 @@ export interface components {
             updatedAt: string;
             messages?: components["schemas"]["ChatMessage"][];
         };
+        "ApiResponse_ChatThread-Array_": {
+            message?: string;
+            data: components["schemas"]["ChatThread"][] | null;
+            /** Format: double */
+            status: number;
+        };
+        ApiResponse_ChatThread_: {
+            message?: string;
+            data: components["schemas"]["ChatThread"] | null;
+            /** Format: double */
+            status: number;
+        };
         CreateThreadRequest: {
             title?: string;
             contextIds: string[];
@@ -1502,8 +1536,29 @@ export interface components {
             message: components["schemas"]["ChatMessage"];
             response: components["schemas"]["ChatMessage"];
         };
+        ApiResponse_SendMessageResponse_: {
+            message?: string;
+            data: components["schemas"]["SendMessageResponse"] | null;
+            /** Format: double */
+            status: number;
+        };
         SendMessageRequest: {
             content: string;
+        };
+        LiveChatMessageResponse: {
+            response: string;
+        };
+        ApiResponse_LiveChatMessageResponse_: {
+            message?: string;
+            data: components["schemas"]["LiveChatMessageResponse"] | null;
+            /** Format: double */
+            status: number;
+        };
+        LiveChatMessageRequest: {
+            content: string;
+            liveTranscript: string;
+            contextIds?: string[];
+            history?: components["schemas"]["LiveChatHistoryItem"][];
         };
         "ApiResponse__text-string__": {
             message?: string;
@@ -3188,7 +3243,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ChatThread"][];
+                    "application/json": components["schemas"]["ApiResponse_ChatThread-Array_"];
                 };
             };
         };
@@ -3212,7 +3267,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ChatThread"];
+                    "application/json": components["schemas"]["ApiResponse_ChatThread_"];
                 };
             };
         };
@@ -3234,7 +3289,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ChatThread"];
+                    "application/json": components["schemas"]["ApiResponse_ChatThread_"];
                 };
             };
         };
@@ -3264,7 +3319,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ChatThread"];
+                    "application/json": components["schemas"]["ApiResponse_ChatThread_"];
                 };
             };
         };
@@ -3286,9 +3341,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        success: boolean;
-                    };
+                    "application/json": components["schemas"]["ApiResponse__success-boolean__"];
                 };
             };
         };
@@ -3314,7 +3367,31 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SendMessageResponse"];
+                    "application/json": components["schemas"]["ApiResponse_SendMessageResponse_"];
+                };
+            };
+        };
+    };
+    SendMessageLive: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LiveChatMessageRequest"];
+            };
+        };
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_LiveChatMessageResponse_"];
                 };
             };
         };

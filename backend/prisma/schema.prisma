@@ -121,6 +121,7 @@ model Transcript {
   projectId  String?
   userId     String
   taskLinks  TaskTranscriptLink[]
+  chatThread ChatThread?
   project    Project?             @relation(fields: [projectId], references: [id], onDelete: Cascade)
   user       User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -223,8 +224,10 @@ model ChatThread {
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
   englishLevel String?
+  transcriptId String?       @unique
   messages     ChatMessage[]
   user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transcript   Transcript?   @relation(fields: [transcriptId], references: [id], onDelete: Cascade)
 
   @@index([userId])
 }

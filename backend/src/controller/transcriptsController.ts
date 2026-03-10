@@ -15,7 +15,7 @@ import {
 import { Prisma, Transcript, TranscriptSource } from "@prisma/client";
 import prisma from "../prisma/prismaClient";
 import type { AuthenticatedRequest } from "../middleware/authMiddleware";
-import { type ApiResponse, type TsoaJsonObject } from "./controllerTypes";
+import { type ApiResponse, type TsoaJsonObject, type LiveChatHistoryItem } from "./controllerTypes";
 import {
   transcriptCrudService,
   type TranscriptListOptions,
@@ -58,6 +58,7 @@ interface CreateStandaloneTranscriptBody {
   persona?: "SECRETARY" | "ARCHITECT" | "PRODUCT_MANAGER" | "DEVELOPER";
   objective?: string | null;
   englishLevel?: string;
+  chatHistory?: LiveChatHistoryItem[];
 }
 
 interface UpdateStandaloneTranscriptBody {
@@ -253,6 +254,22 @@ export class TranscriptsController extends Controller {
             englishLevel: body.englishLevel,
           });
           transcript = result.transcript;
+          if (body.chatHistory && body.chatHistory.length > 0) {
+            await prisma.chatThread.create({
+              data: {
+                userId: user.id,
+                title: transcript.title || "Live Meeting Chat",
+                transcriptId: transcript.id,
+                contextIds: body.contextIds || [],
+                messages: {
+                  create: body.chatHistory.map((m) => ({
+                    role: m.role.toUpperCase() as "USER" | "ASSISTANT",
+                    content: m.content,
+                  })),
+                },
+              },
+            });
+          }
         }
       }
 
