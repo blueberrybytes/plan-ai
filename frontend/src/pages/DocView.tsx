@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect, useCallback } from "react";
 import {
   Box,
@@ -35,10 +36,11 @@ import MarkdownRenderer from "../components/common/MarkdownRenderer";
 import jsPDF from "jspdf";
 import { Document, Packer, Paragraph, TextRun, HeadingLevel } from "docx";
 import SidebarLayout from "../components/layout/SidebarLayout";
-import { useGetDocQuery, useUpdateDocMutation } from "../store/apis/docApi";
+import { useGetDocQuery, useUpdateDocMutation, docApi } from "../store/apis/docApi";
 import type { DocDocumentResponse } from "../store/apis/docApi";
 import { useGetDocThemesQuery, useCreateDocThemeMutation } from "../store/apis/docThemeApi";
 import { DOC_THEME_PRESETS } from "../constants/docThemePresets";
+import { useDispatch } from "react-redux";
 
 const AUTOSAVE_DELAY = 800;
 
@@ -62,6 +64,7 @@ const DocView: React.FC = () => {
 
   const { data: themes = [] } = useGetDocThemesQuery();
   const [createTheme, { isLoading: isCreatingTheme }] = useCreateDocThemeMutation();
+  const dispatch = useDispatch<any>();
 
   const [content, setContent] = useState("");
   const [title, setTitle] = useState("");
@@ -81,27 +84,49 @@ const DocView: React.FC = () => {
     const selectedValue = event.target.value as string;
     if (!id) return;
 
-    // Check if it's an existing theme ID
-    const existingTheme = themes.find((t) => t.id === selectedValue);
-    if (existingTheme) {
-      await updateDoc({ id, data: { themeId: existingTheme.id } });
-      setSaved(true);
-      setTimeout(() => setSaved(false), 2000);
-      return;
-    }
-
-    // Otherwise, it might be a preset name
-    const preset = DOC_THEME_PRESETS.find((p) => p.name === selectedValue);
-    if (preset) {
-      const userTheme = themes.find((t) => t.name === preset.name);
-      if (userTheme) {
-        await updateDoc({ id, data: { themeId: userTheme.id } });
-      } else {
-        const newTheme = await createTheme(preset).unwrap();
-        await updateDoc({ id, data: { themeId: newTheme.id } });
+    try {
+      // Check if it's an existing theme ID
+      const existingTheme = themes.find((t) => t.id === selectedValue);
+      if (existingTheme) {
+        // Optimistically apply the full theme object immediately so styles change without waiting!
+        dispatch(
+          docApi.util.updateQueryData("getDoc", id, (draft) => {
+            draft.themeId = existingTheme.id;
+            draft.theme = existingTheme;
+          }) as any,
+        );
+        await updateDoc({ id, data: { themeId: existingTheme.id } }).unwrap();
+        setSaved(true);
+        setTimeout(() => setSaved(false), 2000);
+        return;
       }
-      setSaved(true);
-      setTimeout(() => setSaved(false), 2000);
+
+      // Otherwise, it might be a preset name
+      const preset = DOC_THEME_PRESETS.find((p) => p.name === selectedValue);
+      if (preset) {
+        let finalTheme = themes.find((t) => t.name === preset.name);
+
+        if (!finalTheme) {
+          finalTheme = await createTheme(preset).unwrap();
+        }
+
+        // Optimistically apply immediately
+        dispatch(
+          docApi.util.updateQueryData("getDoc", id, (draft) => {
+            if (finalTheme) {
+              draft.themeId = finalTheme.id;
+              draft.theme = finalTheme;
+            }
+          }) as any,
+        );
+
+        await updateDoc({ id, data: { themeId: finalTheme.id } }).unwrap();
+        setSaved(true);
+        setTimeout(() => setSaved(false), 2000);
+      }
+    } catch (err) {
+      console.error("Failed to update doc theme", err);
+      alert("Failed to update the theme. Please try again.");
     }
   };
 

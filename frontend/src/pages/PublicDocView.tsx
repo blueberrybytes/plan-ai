@@ -96,7 +96,9 @@ const PublicDocView: React.FC = () => {
         sx={{
           py: 3,
           px: 4,
-          background: "primary.main",
+          background: theme
+            ? `linear-gradient(90deg, ${theme.primaryColor}, ${theme.accentColor})`
+            : "primary.main",
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",

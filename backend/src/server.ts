@@ -22,7 +22,7 @@ const QDRANT_URL = EnvUtils.get("QDRANT_URL") || "http://127.0.0.1:6333";
 app.use(
   cors({
     origin: "*", // allow all
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: "*", // allow all headers
   }),
 );

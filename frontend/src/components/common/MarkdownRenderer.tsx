@@ -32,13 +32,13 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content, sx, theme 
           p: 1,
         },
         "& h1, & h2, & h3, & h4, & h5, & h6": {
-          color: "primary.main",
+          color: theme?.primaryColor || "primary.main",
           fontWeight: 600,
           mt: 3,
           mb: 1.5,
         },
         "& a": {
-          color: "secondary.main",
+          color: theme?.primaryColor || "secondary.main",
           textDecoration: "none",
           "&:hover": {
             textDecoration: "underline",
@@ -46,16 +46,16 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content, sx, theme 
         },
         "& blockquote": {
           borderLeft: "4px solid",
-          borderColor: "primary.light",
-          bgcolor: "background.default",
+          borderColor: theme?.primaryColor || "primary.light",
+          bgcolor: theme?.backgroundColor || "background.default",
           m: 1,
           p: 2,
-          color: "text.secondary",
+          color: theme?.textColor || "text.secondary",
           fontStyle: "italic",
           borderRadius: 1,
         },
         "& strong": {
-          color: "primary.light",
+          color: theme?.primaryColor || "primary.light",
         },
         "& pre": {
           m: 0,
