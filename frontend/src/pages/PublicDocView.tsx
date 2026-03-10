@@ -11,6 +11,7 @@ import {
 } from "@mui/material";
 import { Download as DownloadIcon } from "@mui/icons-material";
 import jsPDF from "jspdf";
+import { toPng } from "html-to-image";
 import { Document, Paragraph, TextRun, HeadingLevel, Packer } from "docx";
 import { saveAs } from "file-saver";
 import { useParams } from "react-router-dom";
@@ -27,14 +28,61 @@ const PublicDocView: React.FC = () => {
   const handleExportPdf = async () => {
     setExportAnchor(null);
     if (!doc) return;
-    const pdf = new jsPDF({ unit: "pt", format: "a4" });
-    pdf.setFont("helvetica");
-    pdf.setFontSize(22);
-    pdf.text(doc.title, 40, 60);
-    pdf.setFontSize(11);
-    const lines = pdf.splitTextToSize((doc.content || "").replace(/[#*`]/g, ""), 515);
-    pdf.text(lines, 40, 90);
-    pdf.save(`${doc.title}.pdf`);
+
+    const element = document.getElementById("pdf-content");
+    if (!element) return;
+
+    try {
+      const dataUrl = await toPng(element, {
+        quality: 1.0,
+        backgroundColor: doc.theme?.backgroundColor || "#ffffff",
+        style: {
+          padding: "40px",
+          margin: "0",
+        },
+      });
+
+      const pdf = new jsPDF({
+        orientation: "portrait",
+        unit: "pt",
+        format: "a4",
+      });
+
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+
+      const imgProps = pdf.getImageProperties(dataUrl);
+      const imgWidth = pdfWidth;
+      const imgHeight = (imgProps.height * pdfWidth) / imgProps.width;
+
+      let heightLeft = imgHeight;
+      let position = 0;
+
+      // Add first page
+      pdf.addImage(dataUrl, "PNG", 0, position, imgWidth, imgHeight);
+      heightLeft -= pdfHeight;
+
+      // Add subsequent pages if content overflows
+      while (heightLeft > 0) {
+        position = heightLeft - imgHeight;
+        pdf.addPage();
+        pdf.addImage(dataUrl, "PNG", 0, position, imgWidth, imgHeight);
+        heightLeft -= pdfHeight;
+      }
+
+      pdf.save(`${doc.title}.pdf`);
+    } catch (err) {
+      console.error("Failed to generate PDF", err);
+      // Fallback
+      const pdf = new jsPDF({ unit: "pt", format: "a4" });
+      pdf.setFont("helvetica");
+      pdf.setFontSize(22);
+      pdf.text(doc.title, 40, 60);
+      pdf.setFontSize(11);
+      const lines = pdf.splitTextToSize((doc.content || "").replace(/[#*`]/g, ""), 515);
+      pdf.text(lines, 40, 90);
+      pdf.save(`${doc.title}.pdf`);
+    }
   };
 
   const handleExportMarkdown = () => {
@@ -131,7 +179,7 @@ const PublicDocView: React.FC = () => {
         </Box>
       </Box>
 
-      <Box sx={{ maxWidth: 860, mx: "auto", px: { xs: 2, md: 4 }, py: 5 }}>
+      <Box id="pdf-content" sx={{ maxWidth: 860, mx: "auto", px: { xs: 2, md: 4 }, py: 5 }}>
         <Paper elevation={0} sx={{ p: { xs: 2, md: 4 }, bgcolor: "transparent" }}>
           <Box
             sx={{
