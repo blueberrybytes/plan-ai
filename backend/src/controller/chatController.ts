@@ -401,7 +401,9 @@ Here is the supplementary Knowledge Base Context (if any):
 ${contextText}
 </context>
 
-Answer the user's question directly and concisely, drawing primarily from the live transcript and context provided. If the topic has not been discussed yet, say so.`;
+Answer the user's question directly and concisely, drawing primarily from the live transcript and context provided. If the topic has not been discussed yet, say so.
+
+CRITICAL: You MUST respond in the EXACT same language that the user used to ask their question. (e.g., if the user asks in Spanish, you MUST answer in Spanish; if in English, answer in English).`;
 
     // 3. Construct history array
     const messages: { role: "system" | "user" | "assistant"; content: string }[] = [
