@@ -41,22 +41,8 @@ export class TokenService {
       throw new Error("No user is logged in");
     }
 
-    if (!user.emailVerified) {
-      try {
-        await user.reload();
-        console.log(
-          "TokenService.updateUserInStore: user reloaded. emailVerified=",
-          user.emailVerified,
-          "providerIds=",
-          user.providerData.map((provider) => provider.providerId),
-        );
-      } catch (reloadError) {
-        console.warn(
-          "TokenService.updateUserInStore: failed to reload user before provider check",
-          reloadError,
-        );
-      }
-    }
+    // Removed user.reload() because it triggers onAuthStateChanged implicitly in Firebase v9+,
+    // causing an unstoppable infinite recursion loop when invoked during the initial auth listener.
 
     const hasNonPasswordProvider = user.providerData.some(
       (provider) => provider.providerId !== "password",

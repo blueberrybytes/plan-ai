@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { createApi } from "@reduxjs/toolkit/query/react";
 import { baseQueryWithReauth } from "../../utils/baseQuery";
 
@@ -27,6 +28,11 @@ export const chatApi = createApi({
   endpoints: (builder) => ({
     listThreads: builder.query<ChatThread[], void>({
       query: () => "/api/chat/threads",
+      transformResponse: (res: any) => {
+        if (Array.isArray(res)) return res;
+        if (res?.data && Array.isArray(res.data)) return res.data;
+        return [];
+      },
       providesTags: (result) =>
         result
           ? [
@@ -37,6 +43,10 @@ export const chatApi = createApi({
     }),
     getThread: builder.query<ChatThread & { messages: ChatMessage[] }, string>({
       query: (threadId: string) => `/api/chat/threads/${threadId}`,
+      transformResponse: (res: { data: ChatThread & { messages?: ChatMessage[] } }) => ({
+        ...res.data,
+        messages: res.data?.messages || [],
+      }),
       providesTags: (result, error, id) => [{ type: "ChatThread", id }],
     }),
     createThread: builder.mutation<
@@ -48,6 +58,7 @@ export const chatApi = createApi({
         method: "POST",
         body,
       }),
+      transformResponse: (res: { data: ChatThread }) => res.data,
       invalidatesTags: ["ChatThread"],
     }),
     sendMessage: builder.mutation<
@@ -59,6 +70,8 @@ export const chatApi = createApi({
         method: "POST",
         body: { content },
       }),
+      transformResponse: (res: { data: { message: ChatMessage; response: ChatMessage } }) =>
+        res.data,
       invalidatesTags: (result, error, { threadId }) => [{ type: "ChatThread", id: threadId }],
     }),
     updateThread: builder.mutation<
@@ -70,6 +83,7 @@ export const chatApi = createApi({
         method: "PUT",
         body,
       }),
+      transformResponse: (res: { data: ChatThread }) => res.data,
       invalidatesTags: (result, error, { threadId }) => [
         "ChatThread",
         { type: "ChatThread", id: threadId },
@@ -80,6 +94,7 @@ export const chatApi = createApi({
         url: `/api/chat/threads/${threadId}`,
         method: "DELETE",
       }),
+      transformResponse: (res: { data: { success: boolean } }) => res.data,
       invalidatesTags: (result, error, threadId) => [
         "ChatThread",
         { type: "ChatThread", id: threadId },

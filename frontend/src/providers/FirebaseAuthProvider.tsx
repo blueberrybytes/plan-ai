@@ -97,15 +97,18 @@ const FirebaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       }
 
       // Mark authentication as initialized after first check
-      if (!isAuthInitialized) {
-        console.log("Auth initialization completed");
-        setIsAuthInitialized(true);
-      }
+      setIsAuthInitialized((prev) => {
+        if (!prev) {
+          console.log("Auth initialization completed");
+          return true;
+        }
+        return prev;
+      });
     });
 
     // Clean up subscription
     return () => unsubscribe();
-  }, [dispatch, isAuthInitialized]);
+  }, [dispatch]); // Removed isAuthInitialized to break the infinite remount loop
 
   return (
     <AuthContext.Provider value={{ isAuthInitialized, currentPath }}>
