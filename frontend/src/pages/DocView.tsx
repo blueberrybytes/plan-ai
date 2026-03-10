@@ -34,6 +34,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import MarkdownRenderer from "../components/common/MarkdownRenderer";
 import jsPDF from "jspdf";
+import { toPng } from "html-to-image";
 import { Document, Packer, Paragraph, TextRun, HeadingLevel } from "docx";
 import SidebarLayout from "../components/layout/SidebarLayout";
 import { useGetDocQuery, useUpdateDocMutation, docApi } from "../store/apis/docApi";
@@ -166,14 +167,62 @@ const DocView: React.FC = () => {
   const handleExportPdf = async () => {
     setExportAnchor(null);
     if (!doc) return;
-    const pdf = new jsPDF({ unit: "pt", format: "a4" });
-    pdf.setFont("helvetica");
-    pdf.setFontSize(22);
-    pdf.text(title, 40, 60);
-    pdf.setFontSize(11);
-    const lines = pdf.splitTextToSize(content.replace(/[#*`]/g, ""), 515);
-    pdf.text(lines, 40, 90);
-    pdf.save(`${title}.pdf`);
+
+    const element = document.getElementById("pdf-content");
+    if (!element) return;
+
+    try {
+      // Create a temporary clone or adjust styles if needed, but direct toPng is usually fine
+      const dataUrl = await toPng(element, {
+        quality: 1.0,
+        backgroundColor: doc.theme?.backgroundColor || "#ffffff",
+        style: {
+          padding: "40px",
+          margin: "0",
+        },
+      });
+
+      const pdf = new jsPDF({
+        orientation: "portrait",
+        unit: "pt",
+        format: "a4",
+      });
+
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+
+      const imgProps = pdf.getImageProperties(dataUrl);
+      const imgWidth = pdfWidth;
+      const imgHeight = (imgProps.height * pdfWidth) / imgProps.width;
+
+      let heightLeft = imgHeight;
+      let position = 0;
+
+      // Add first page
+      pdf.addImage(dataUrl, "PNG", 0, position, imgWidth, imgHeight);
+      heightLeft -= pdfHeight;
+
+      // Add subsequent pages if content overflows
+      while (heightLeft > 0) {
+        position = heightLeft - imgHeight;
+        pdf.addPage();
+        pdf.addImage(dataUrl, "PNG", 0, position, imgWidth, imgHeight);
+        heightLeft -= pdfHeight;
+      }
+
+      pdf.save(`${title}.pdf`);
+    } catch (err) {
+      console.error("Failed to generate PDF", err);
+      // Fallback
+      const pdf = new jsPDF({ unit: "pt", format: "a4" });
+      pdf.setFont("helvetica");
+      pdf.setFontSize(22);
+      pdf.text(title, 40, 60);
+      pdf.setFontSize(11);
+      const lines = pdf.splitTextToSize(content.replace(/[#*`]/g, ""), 515);
+      pdf.text(lines, 40, 90);
+      pdf.save(`${title}.pdf`);
+    }
   };
 
   const handleExportMarkdown = () => {
@@ -334,56 +383,58 @@ const DocView: React.FC = () => {
           </Menu>
         </Box>
 
-        {/* Title */}
-        {isEditMode ? (
-          <TextField
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            variant="standard"
-            fullWidth
-            inputProps={{ style: { fontSize: 28, fontWeight: 700 } }}
-            sx={{ mb: 2 }}
-          />
-        ) : (
-          <Typography variant="h3" fontWeight={700} sx={{ mb: 2 }}>
-            {title}
-          </Typography>
-        )}
-
-        <Divider sx={{ mb: 3 }} />
-
-        {/* Content */}
-        <Box style={themeStyle}>
+        <Box id="pdf-content">
+          {/* Title */}
           {isEditMode ? (
             <TextField
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              multiline
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              variant="standard"
               fullWidth
-              minRows={20}
-              variant="outlined"
+              inputProps={{ style: { fontSize: 28, fontWeight: 700 } }}
+              sx={{ mb: 2 }}
             />
           ) : (
-            <Box
-              sx={{
-                "& h1, & h2, & h3": {
-                  fontFamily: theme?.headingFont,
-                  color: theme?.primaryColor ?? "inherit",
-                },
-                "& a": { color: theme?.accentColor ?? "primary.main" },
-                "& strong": { color: theme?.primaryColor ?? "inherit" },
-                "& table": { borderCollapse: "collapse", width: "100%" },
-                "& td, & th": { border: "1px solid", borderColor: "divider", p: 1 },
-                "& blockquote": {
-                  borderLeft: `4px solid ${theme?.accentColor ?? "#4361EE"}`,
-                  pl: 2,
-                  opacity: 0.85,
-                },
-              }}
-            >
-              <MarkdownRenderer content={content} theme={theme} sx={{ p: 0 }} />
-            </Box>
+            <Typography variant="h3" fontWeight={700} sx={{ mb: 2 }}>
+              {title}
+            </Typography>
           )}
+
+          <Divider sx={{ mb: 3 }} />
+
+          {/* Content */}
+          <Box style={themeStyle}>
+            {isEditMode ? (
+              <TextField
+                value={content}
+                onChange={(e) => setContent(e.target.value)}
+                multiline
+                fullWidth
+                minRows={20}
+                variant="outlined"
+              />
+            ) : (
+              <Box
+                sx={{
+                  "& h1, & h2, & h3": {
+                    fontFamily: theme?.headingFont,
+                    color: theme?.primaryColor ?? "inherit",
+                  },
+                  "& a": { color: theme?.accentColor ?? "primary.main" },
+                  "& strong": { color: theme?.primaryColor ?? "inherit" },
+                  "& table": { borderCollapse: "collapse", width: "100%" },
+                  "& td, & th": { border: "1px solid", borderColor: "divider", p: 1 },
+                  "& blockquote": {
+                    borderLeft: `4px solid ${theme?.accentColor ?? "#4361EE"}`,
+                    pl: 2,
+                    opacity: 0.85,
+                  },
+                }}
+              >
+                <MarkdownRenderer content={content} theme={theme} sx={{ p: 0 }} />
+              </Box>
+            )}
+          </Box>
         </Box>
       </Box>
     </SidebarLayout>
