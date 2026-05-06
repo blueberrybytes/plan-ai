@@ -51,16 +51,13 @@ export default function DrawerLayout() {
           <Dialog.Title style={{ textAlign: "center", color: theme.colors.error }}>API Keys Required</Dialog.Title>
           <Dialog.Content>
             <PaperText variant="bodyMedium" style={{ lineHeight: 22, textAlign: "center" }}>
-              Your workspace "{activeWorkspace?.name}" is missing required API keys (OpenRouter or Deepgram).
+              Your workspace "{activeWorkspace?.name}" is missing required configuration.
               {"\n\n"}
-              Configure the keys on the web dashboard, then tap "I've Completed Setup" to continue.
+              Please configure your workspace settings from your computer, then tap "Refresh" to continue.
             </PaperText>
           </Dialog.Content>
           <Dialog.Actions>
             <View style={{ width: "100%", gap: 8 }}>
-              <Button mode="contained" onPress={() => Linking.openURL(`${WEB_APP_URL}/team`)}>
-                Open Dashboard
-              </Button>
               <Button
                 mode="outlined"
                 loading={refreshing}

@@ -36,12 +36,9 @@ export default function Index() {
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
         <Text style={{ fontSize: 24, fontWeight: 'bold', marginBottom: 10 }}>Almost there!</Text>
         <Text style={{ fontSize: 16, textAlign: 'center', color: '#666', marginBottom: 24, maxWidth: 360 }}>
-          Please log into the Web Dashboard to complete your Workspace and API Key setup, then come back and tap "I've Completed Setup".
+          Your account setup is incomplete. Please finish configuring your workspace from your computer, then tap "Refresh" below.
         </Text>
         <View style={{ width: '100%', maxWidth: 280, gap: 12 }}>
-          <Button mode="contained" onPress={() => Linking.openURL(`${WEB_APP_URL}/onboarding`)}>
-            Open Dashboard
-          </Button>
           <Button mode="outlined" onPress={handleRefresh} loading={refreshing} disabled={refreshing}>
             {refreshing ? 'Checking...' : "I've Completed Setup"}
           </Button>
