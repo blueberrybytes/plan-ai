@@ -6,6 +6,7 @@ import {
   Animated,
   TouchableOpacity,
   Alert,
+  FlatList,
 } from "react-native";
 import { Buffer } from "buffer";
 import {
@@ -20,7 +21,8 @@ import {
   Chip,
   ActivityIndicator,
   Divider,
-  Menu,
+  Portal,
+  Modal,
 } from "react-native-paper";
 import LiveAudioStream from "react-native-live-audio-stream";
 import { useRouter } from "expo-router";
@@ -242,6 +244,11 @@ export default function RecordScreen() {
 
   const [language, setLanguage] = useState("");
   const [languageMenuVisible, setLanguageMenuVisible] = useState(false);
+  const [languageSearchQuery, setLanguageSearchQuery] = useState("");
+
+  const filteredLanguages = LANGUAGE_OPTIONS.filter((lang) =>
+    lang.name.toLowerCase().includes(languageSearchQuery.toLowerCase())
+  );
 
   const wsRef = useRef<WebSocket | null>(null);
   const theme = useTheme();
@@ -771,7 +778,7 @@ export default function RecordScreen() {
           >
             Processing Options
           </Text>
-          <IconButton icon="close" size={24} onPress={() => router.back()} />
+          <IconButton icon="close" size={24} onPress={handleCloseTap} />
         </View>
 
         {isLoadingMetadata ? (
@@ -1005,29 +1012,57 @@ export default function RecordScreen() {
         </Text>
         
         <View style={{ flexDirection: "row", alignItems: "center" }}>
-          <Menu
-            visible={languageMenuVisible}
-            onDismiss={() => setLanguageMenuVisible(false)}
-            anchor={
-              <Button
-                mode="outlined"
-                compact
-                onPress={() => setLanguageMenuVisible(true)}
-                style={{ marginRight: 8, borderColor: theme.colors.surfaceVariant }}
-                textColor={theme.colors.onSurfaceVariant}
-              >
-                {LANGUAGE_OPTIONS.find((l) => l.code === language)?.name || "Language"}
-              </Button>
-            }
+          <Button
+            mode="outlined"
+            compact
+            onPress={() => setLanguageMenuVisible(true)}
+            style={{ marginRight: 8, borderColor: theme.colors.surfaceVariant }}
+            textColor={theme.colors.onSurfaceVariant}
           >
-            {LANGUAGE_OPTIONS.map((lang) => (
-              <Menu.Item
-                key={lang.code}
-                onPress={() => handleLanguageChange(lang.code)}
-                title={lang.name}
+            {LANGUAGE_OPTIONS.find((l) => l.code === language)?.name || "Language"}
+          </Button>
+
+          <Portal>
+            <Modal
+              visible={languageMenuVisible}
+              onDismiss={() => {
+                setLanguageMenuVisible(false);
+                setLanguageSearchQuery("");
+              }}
+              contentContainerStyle={{
+                backgroundColor: theme.colors.background,
+                padding: 20,
+                margin: 20,
+                borderRadius: 12,
+                maxHeight: '80%',
+              }}
+            >
+              <Text variant="titleMedium" style={{ marginBottom: 12, fontWeight: 'bold' }}>Select Language</Text>
+              <TextInput
+                mode="outlined"
+                placeholder="Search language..."
+                value={languageSearchQuery}
+                onChangeText={setLanguageSearchQuery}
+                style={{ marginBottom: 12 }}
+                left={<TextInput.Icon icon="magnify" />}
               />
-            ))}
-          </Menu>
+              <FlatList
+                data={filteredLanguages}
+                keyExtractor={(item) => item.code}
+                renderItem={({ item }) => (
+                  <List.Item
+                    title={item.name}
+                    onPress={() => {
+                      handleLanguageChange(item.code);
+                      setLanguageSearchQuery("");
+                    }}
+                    right={props => item.code === language ? <List.Icon {...props} icon="check" color={theme.colors.primary} /> : null}
+                  />
+                )}
+                showsVerticalScrollIndicator={false}
+              />
+            </Modal>
+          </Portal>
 
           <IconButton
             icon="close"
