@@ -1,6 +1,6 @@
 {
   "name": "plan-ai",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Plan AI - AI-assisted meeting planning & execution platform by Blueberrybytes",
   "main": "index.js",
   "engines": {
@@ -8,6 +8,7 @@
   },
   "scripts": {
     "clean:install": "rm -rf node_modules yarn.lock && yarn install && yarn install) && (cd plan-ai/frontend && yarn install) && (cd plan-ai-recorder && yarn install) && (cd plan-ai-mobile && yarn install)",
+    "set:version": "node scripts/set-version.js",
     "setup:env": "cp plan-ai/backend/.env.template plan-ai/backend/.env && cp plan-ai/frontend/.env.template plan-ai/frontend/.env && touch plan-ai-mobile/.env && touch plan-ai-recorder/.env",
     "update": "cd plan-ai/backend && yarn generate:swagger && yarn prisma:migrate && echo 'Waiting 15 seconds for server to be ready...' && sleep 15 && cd ../frontend && yarn generate:types:local && yarn prisma:generate && cd ../../plan-ai-recorder && yarn generate:types && cd ../plan-ai-mobile && yarn generate:types && cd .. && yarn gitnexus:all",
     "prepare": "husky",
