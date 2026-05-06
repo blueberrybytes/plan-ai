@@ -12,3 +12,8 @@ plan-ai-recorder/release
 repomix_output
 __pycache__
 plan-ai/voice-ai/.venv
+*.csr
+*.key
+*.cer
+*.p12
+*.pem
