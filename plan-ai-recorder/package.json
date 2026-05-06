@@ -7,6 +7,7 @@
     "name": "BLUEBERRYBYTES SERVICES FZCO",
     "email": "projects@blueberrybytes.com"
   },
+  "homepage": "https://plan-ai.blueberrybytes.com",
   "description": "Plan AI Desktop Recorder — capture any meeting and generate tasks with AI",
   "main": "dist-electron/main/index.js",
   "engines": {
