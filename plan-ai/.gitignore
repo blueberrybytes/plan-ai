@@ -9,3 +9,4 @@ recorder/dist-electron
 recorder/release
 data
 .gitnexus
+.venv

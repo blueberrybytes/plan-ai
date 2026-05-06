@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { WebSocketServer, WebSocket as WSWebSocket } from "ws";
 import { IncomingMessage, Server } from "http";
 import { firebaseAdmin } from "../firebase/firebaseAdmin";
@@ -40,81 +41,81 @@ export function setupAudioStream(server: Server) {
     let deepgram: ReturnType<typeof createClient>;
     let setupDgListeners: (dgConn: ListenLiveClient, source: "mic" | "sys") => void;
 
-      // We define this higher up so it can be called dynamically
-      ws.on("message", (message: Buffer | string) => {
-        // Temporarily buffer early packets if deepgram isn't ready
-        try {
-          const data = JSON.parse(message.toString());
+    // We define this higher up so it can be called dynamically
+    ws.on("message", (message: Buffer | string) => {
+      // Temporarily buffer early packets if deepgram isn't ready
+      try {
+        const data = JSON.parse(message.toString());
 
-          if (data.type === "ping") {
-            ws.send(JSON.stringify({ type: "pong" }));
-            return;
+        if (data.type === "ping") {
+          ws.send(JSON.stringify({ type: "pong" }));
+          return;
+        }
+
+        if (data.type === "end_stream") {
+          isClientEnding = true;
+          logger.info("Electron cleanly terminated audio stream");
+          try {
+            if (dgConnMic && dgConnMic.getReadyState() === 1) dgConnMic.requestClose();
+            if (dgConnSys && dgConnSys.getReadyState() === 1) dgConnSys.requestClose();
+          } catch (e) {
+            console.error("Failed to close Deepgram connections:", e);
           }
 
-          if (data.type === "end_stream") {
-            isClientEnding = true;
-            logger.info("Electron cleanly terminated audio stream");
-            try {
-              if (dgConnMic && dgConnMic.getReadyState() === 1) dgConnMic.requestClose();
-              if (dgConnSys && dgConnSys.getReadyState() === 1) dgConnSys.requestClose();
-            } catch (e) {
-              console.error("Failed to close Deepgram connections:", e);
-            }
+          const totalSecs = Math.max(totalAudioSeconds.mic, totalAudioSeconds.sys);
+          if (totalSecs > 0 && currentWorkspaceId && currentWorkspaceId !== "placeholder") {
+            aiUsageService
+              .logUsage({
+                userId: currentUserId,
+                workspaceId: currentWorkspaceId,
+                feature: "RECORDER",
+                provider: "DEEPGRAM",
+                model: "nova-3-live",
+                inputTokens: Math.ceil(totalSecs),
+                outputTokens: 0,
+              })
+              .catch((e) => logger.error("Usage logging error", e));
+          }
+          return;
+        }
 
-            const totalSecs = Math.max(totalAudioSeconds.mic, totalAudioSeconds.sys);
-            if (totalSecs > 0 && currentWorkspaceId && currentWorkspaceId !== "placeholder") {
-              aiUsageService
-                .logUsage({
-                  userId: currentUserId,
-                  workspaceId: currentWorkspaceId,
-                  feature: "RECORDER",
-                  provider: "DEEPGRAM",
-                  model: "nova-3-live",
-                  inputTokens: Math.ceil(totalSecs),
-                  outputTokens: 0,
-                })
-                .catch((e) => logger.error("Usage logging error", e));
-            }
+        if (data.type === "change_language") {
+          if (!dgConfig || !deepgram || !setupDgListeners) {
+            logger.warn("Received change_language before Deepgram was initialized");
             return;
           }
+          logger.info(`Changing stream language to ${data.language}`);
+          const newLanguage = data.language === "multi" || !data.language ? "multi" : data.language;
 
-          if (data.type === "change_language") {
-            if (!dgConfig || !deepgram || !setupDgListeners) {
-              logger.warn("Received change_language before Deepgram was initialized");
-              return;
-            }
-            logger.info(`Changing stream language to ${data.language}`);
-            const newLanguage = data.language === "multi" || !data.language ? "multi" : data.language;
-            
-            // Update the config so auto-reconnects use the new language
-            dgConfig.language = newLanguage;
-            
-            const oldMic = dgConnMic;
-            const oldSys = dgConnSys;
-            
-            dgConnMic = deepgram.listen.live(dgConfig);
-            dgConnSys = deepgram.listen.live(dgConfig);
-            
-            isMicReady = false;
-            isSysReady = false;
-            
-            if (setupDgListeners) {
-              setupDgListeners(dgConnMic, "mic");
-              setupDgListeners(dgConnSys, "sys");
-            }
-            
-            // Carefully detach and close old connections to prevent zombie reconnects
-            if (oldMic) {
-              oldMic.removeAllListeners();
-              if (oldMic.getReadyState() === 1) oldMic.requestClose();
-            }
-            if (oldSys) {
-              oldSys.removeAllListeners();
-              if (oldSys.getReadyState() === 1) oldSys.requestClose();
-            }
-            
-            return;
+          // Update the config so auto-reconnects use the new language
+          dgConfig.language = newLanguage;
+
+          const oldMic = dgConnMic;
+          const oldSys = dgConnSys;
+
+          dgConnMic = deepgram.listen.live(dgConfig);
+          dgConnSys = deepgram.listen.live(dgConfig);
+
+          isMicReady = false;
+          isSysReady = false;
+
+          if (setupDgListeners) {
+            setupDgListeners(dgConnMic, "mic");
+            setupDgListeners(dgConnSys, "sys");
           }
+
+          // Carefully detach and close old connections to prevent zombie reconnects
+          if (oldMic) {
+            oldMic.removeAllListeners();
+            if (oldMic.getReadyState() === 1) oldMic.requestClose();
+          }
+          if (oldSys) {
+            oldSys.removeAllListeners();
+            if (oldSys.getReadyState() === 1) oldSys.requestClose();
+          }
+
+          return;
+        }
 
         if (data.type === "input_audio") {
           const source = data.source as "mic" | "sys";
@@ -189,7 +190,7 @@ export function setupAudioStream(server: Server) {
       if (currentWorkspaceId && currentWorkspaceId !== "placeholder") {
         workspaceRecord = await prisma.workspace.findUnique({ where: { id: currentWorkspaceId } });
       }
-      
+
       console.log("[DEBUG WS] looking up DEEPGRAM_API_KEY");
       const deepgramApiKey = workspaceRecord?.deepgramKey || EnvUtils.get("DEEPGRAM_API_KEY");
       if (!deepgramApiKey) {
@@ -304,11 +305,11 @@ export function setupAudioStream(server: Server) {
         dgConn.on(LiveTranscriptionEvents.Close, (event: unknown) => {
           clearInterval(diagInterval);
           clearInterval(keepAliveInterval);
-          console.log(`[Deepgram] Stream Closed: ${source}. Details: ${JSON.stringify(event)}`);
+          //console.log(`[Deepgram] Stream Closed: ${source}. Details: ${JSON.stringify(event)}`);
 
           // Automatically Reconnect if Deepgram dropped the socket but the user is still actively recording!
           if (!isClientEnding && ws.readyState === ws.OPEN) {
-            console.log(`[Deepgram] Reconnecting dropped ${source} stream...`);
+            //console.log(`[Deepgram] Reconnecting dropped ${source} stream...`);
             const newConn = deepgram.listen.live(dgConfig);
             if (source === "mic") {
               isMicReady = false;

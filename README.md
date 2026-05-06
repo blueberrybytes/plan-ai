@@ -92,6 +92,7 @@ graph TD
     subgraph Intelligence[AI & Analysis]
         LLMs[🤖 OpenRouter / OpenAI]
         Speech[🎙️ Deepgram]
+        VoiceAI[🗣️ Voice Biometrics<br>Python / SpeechBrain]
         GitNexus[🔍 GitNexus]
     end
 
@@ -120,6 +121,7 @@ graph TD
     Workers <--> VectorDB
     
     Workers <--> Speech
+    Workers <--> VoiceAI
     Workers <--> LLMs
     Workers <--> GitNexus
 
@@ -140,8 +142,9 @@ You will need a few external services configured for the platform to work:
 1. **Firebase Project**: Used for user authentication. You'll need your Firebase client config for the frontend/apps, and a base64 encoded Firebase Admin SDK service account key placed in the `FIREBASE_SERVICE_KEY` environment variable for the backend.
 2. **OpenRouter API Key**: Used for LLM task extraction and intelligence.
 3. **Deepgram API Key**: Used for fast, accurate audio transcription.
-4. **Sentry (optional)**: Error tracking. The backend reads `SENTRY_DSN`, the web frontend reads `REACT_APP_SENTRY_DSN`, and the desktop recorder reads `VITE_SENTRY_DSN`. All three are commented out in the `.env.template` files — leave them unset to disable, and the apps run fine without it.
-5. **GitNexus (MCP)**: This monorepo utilizes `gitnexus` for semantic code intelligence. When using AI coding assistants (like Cline, Cursor, or Gemini), they leverage GitNexus tools (`gitnexus_query`, `gitnexus_impact`) to safely navigate the monorepo architecture and understand execution flows before modifying shared backend services.
+4. **Python Microservice (Voice AI)**: For advanced speaker verification and biometrics. This is handled locally via a Python microservice using `SpeechBrain` and `uvicorn`. It runs as a Docker container.
+5. **Sentry (optional)**: Error tracking. The backend reads `SENTRY_DSN`, the web frontend reads `REACT_APP_SENTRY_DSN`, and the desktop recorder reads `VITE_SENTRY_DSN`. All three are commented out in the `.env.template` files — leave them unset to disable, and the apps run fine without it.
+6. **GitNexus (MCP)**: This monorepo utilizes `gitnexus` for semantic code intelligence. When using AI coding assistants (like Cline, Cursor, or Gemini), they leverage GitNexus tools (`gitnexus_query`, `gitnexus_impact`) to safely navigate the monorepo architecture and understand execution flows before modifying shared backend services.
 
 ### 1. Install Dependencies
 
@@ -185,11 +188,11 @@ This automatically provisions `admin@plan-ai.local` (Password: `password123`) in
 
 From the root of the project, use the following scripts to launch various components:
 
-**Start the Web Platform (Frontend & Backend):**
+**Start the Web Platform (Frontend, Backend & Voice AI):**
 ```bash
 yarn dev
 ```
-*(This concurrently starts both the Node server and React client)*
+*(This concurrently starts the Node server, React client, GitNexus MCP, and the Python Voice Biometrics service)*
 
 **Start the Desktop Recorder:**
 ```bash
@@ -207,9 +210,10 @@ We provide several helper scripts in the root `package.json` to make development
 
 | Script                      | Description                                                                                                          |
 | --------------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| `yarn dev`                  | Start the web frontend + backend concurrently                                                                        |
+| `yarn dev`                  | Start the web frontend, backend, GitNexus, and Voice AI concurrently                                                 |
 | `yarn dev:recorder`         | Start the Electron desktop recorder                                                                                  |
 | `yarn dev:mobile`           | Start the Expo mobile app                                                                                            |
+| `yarn dev:voice`            | Start the Python Voice AI microservice locally using `uv` (useful if not using Docker)                               |
 | `yarn install:all`          | Install dependencies across all sub-projects                                                                         |
 | `yarn clean:install`        | Wipe all `node_modules` / `yarn.lock` and reinstall cleanly                                                          |
 | `yarn setup:env`            | Create `.env` files from `.env.template` defaults                                                                    |

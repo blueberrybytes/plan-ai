@@ -10,3 +10,5 @@ plan-ai-recorder/release
 .gitnexus
 .claude
 repomix_output
+__pycache__
+plan-ai/voice-ai/.venv
