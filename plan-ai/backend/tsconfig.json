@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "target": "ES2021", // Target modern JavaScript
+    "module": "CommonJS", // Use CommonJS for Node.js
+    "strict": true, // Enable strict type checking
+    "esModuleInterop": true, // Allow default imports
+    "outDir": "./dist", // Output folder
+    "rootDir": "./src", // Input folder
+    "resolveJsonModule": true, // Allow importing JSON
+    "skipLibCheck": true, // Skip type checks for node_modules
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "types": ["node"]
+  },
+  "include": ["src/**/*"], // Files to include
+  "exclude": ["node_modules", "src/routes/routes.ts", "**/*.spec.ts"] // Files to exclude
+}

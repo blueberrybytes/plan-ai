@@ -1,0 +1,610 @@
+import { BaseWorkspaceController } from "./BaseWorkspaceController";
+import {
+  Route,
+  Tags,
+  Security,
+  Get,
+  Post,
+  Put,
+  Delete,
+  Body,
+  Path,
+  Query,
+  Request,
+  FormField,
+  UploadedFile,
+} from "tsoa";
+import { Prisma, Transcript, TranscriptSource } from "@prisma/client";
+import prisma from "../prisma/prismaClient";
+import type { AuthenticatedRequest } from "../middleware/authMiddleware";
+import { type ApiResponse, type TsoaJsonObject, type LiveChatHistoryItem } from "./controllerTypes";
+import {
+  transcriptCrudService,
+  type TranscriptListOptions,
+} from "../services/transcriptCrudService";
+import { type TaskWithRelations } from "../services/taskCrudService";
+import { projectTranscriptService } from "../services/projectTranscriptService";
+import { mapTaskResponse, type TaskResponse } from "./projectsModelController";
+import { transcriptGenerationQueue } from "../queue/transcriptGenerationQueue";
+import { firebaseAdmin } from "../firebase/firebaseAdmin";
+
+interface StandaloneTranscriptResponse {
+  id: string;
+  projectId: string | null;
+  userId: string;
+  title: string | null;
+  source: TranscriptSource;
+  language: string | null;
+  summary: string | null;
+  transcript: string | null;
+  recordedAt: Date | null;
+  metadata: TsoaJsonObject | null;
+  durationSeconds?: number | null;
+  speakerCount?: number | null;
+  sentiment?: string | null;
+  utterances?: TsoaJsonObject | null;
+  createdAt: Date;
+  updatedAt: Date;
+  tasks?: TaskResponse[];
+  chatThread?: {
+    id: string;
+    title: string;
+    messages: {
+      role: "USER" | "ASSISTANT";
+      content: string;
+      createdAt: Date;
+    }[];
+  } | null;
+}
+
+interface StandaloneTranscriptListResponse {
+  transcripts: StandaloneTranscriptResponse[];
+  total: number;
+}
+
+interface CreateStandaloneTranscriptBody {
+  projectId?: string | null;
+  title?: string | null;
+  source?: TranscriptSource;
+  content?: string | null;
+  language?: string | null;
+  summary?: string | null;
+  recordedAt?: Date | null;
+  metadata?: TsoaJsonObject | null;
+  contextIds?: string[];
+  persona?: "SECRETARY" | "ARCHITECT" | "PRODUCT_MANAGER" | "DEVELOPER";
+  objective?: string | null;
+  complexityLevel?: string;
+  chatHistory?: LiveChatHistoryItem[];
+  modelKey?: string;
+  syncToJira?: boolean;
+  syncToLinear?: boolean;
+}
+
+interface UpdateStandaloneTranscriptBody {
+  title?: string | null;
+  source?: TranscriptSource;
+  language?: string | null;
+  summary?: string | null;
+  transcript?: string | null;
+  metadata?: TsoaJsonObject | null;
+  recordedAt?: Date | null;
+}
+
+@Route("api/transcripts")
+@Tags("Transcripts")
+export class TranscriptsController extends BaseWorkspaceController {
+  private mapTranscriptResponse(t: Transcript): StandaloneTranscriptResponse {
+    return {
+      id: t.id,
+      projectId: t.projectId,
+      userId: t.userId,
+      title: t.title,
+      source: t.source,
+      language: t.language,
+      summary: t.summary,
+      transcript: t.transcript,
+      recordedAt: t.recordedAt,
+      metadata: t.metadata as TsoaJsonObject,
+      durationSeconds: t.durationSeconds,
+      speakerCount: t.speakerCount,
+      sentiment: t.sentiment,
+      utterances: t.utterances as TsoaJsonObject,
+      createdAt: t.createdAt,
+      updatedAt: t.updatedAt,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      chatThread: (t as any).chatThread
+        ? {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            id: (t as any).chatThread.id,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            title: (t as any).chatThread.title,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            messages: (t as any).chatThread.messages.map((m: any) => ({
+              role: m.role,
+              content: m.content,
+              createdAt: m.createdAt,
+            })),
+          }
+        : null,
+    };
+  }
+
+  @Get()
+  @Security("ClientLevel")
+  public async listTranscripts(
+    @Request() request: AuthenticatedRequest,
+    @Query() page = 1,
+    @Query() pageSize = 20,
+    @Query() source?: TranscriptSource,
+  ): Promise<ApiResponse<StandaloneTranscriptListResponse>> {
+    const { user, workspaceId } = await this.getAuthorizedWorkspaceAccess(request);
+    const options: TranscriptListOptions = { workspaceId, page, pageSize, source };
+
+    console.log(
+      `[DEBUG] GET /api/transcripts - fetching for user ${user.id} (email: ${user.email})`,
+      options,
+    );
+
+    const result = await transcriptCrudService.listTranscriptsForUser(user.id, options);
+
+    console.log(
+      `[DEBUG] GET /api/transcripts - Found ${result.transcripts.length} items (Total: ${result.total})`,
+    );
+
+    return {
+      status: 200,
+      data: {
+        transcripts: result.transcripts.map(this.mapTranscriptResponse),
+        total: result.total,
+      },
+    };
+  }
+
+  private async buildContextPrompt(userId: string, contextIds: string[]): Promise<string | null> {
+    if (!contextIds || contextIds.length === 0) {
+      return null;
+    }
+
+    const sanitizedIds = Array.from(
+      new Set(contextIds.map((id) => id.trim()).filter((id): id is string => id.length > 0)),
+    );
+
+    if (sanitizedIds.length === 0) {
+      return null;
+    }
+
+    const contexts = await prisma.context.findMany({
+      where: {
+        id: {
+          in: sanitizedIds,
+        },
+        userId,
+      },
+      include: {
+        files: {
+          select: {
+            id: true,
+            fileName: true,
+          },
+        },
+      },
+    });
+
+    if (contexts.length !== sanitizedIds.length) {
+      this.setStatus(404);
+      throw { status: 404, message: "One or more contexts were not found" };
+    }
+
+    const sections = contexts.map((context) => {
+      const details: string[] = [];
+
+      if (context.description) {
+        details.push(`Description: ${context.description}`);
+      }
+
+      const fileNames = context.files
+        .map((file) => file.fileName)
+        .filter((name): name is string => Boolean(name));
+
+      if (fileNames.length > 0) {
+        const limited = fileNames.slice(0, 5).join(", ");
+        details.push(`Files: ${limited}`);
+      }
+
+      const detailsText = details.length > 0 ? ` - ${details.join(" | ")}` : "";
+      return `• ${context.name}${detailsText}`;
+    });
+
+    return `Use the following context when analyzing the transcript:\n${sections.join("\n")}`;
+  }
+
+  @Post("recorder-upload")
+  @Security("ClientLevel")
+  public async createTranscriptFromRecording(
+    @Request() request: AuthenticatedRequest,
+    @FormField() source?: TranscriptSource,
+    @FormField() content?: string,
+    @FormField() title?: string,
+    @FormField() recordedAt?: string,
+    @FormField() projectId?: string,
+    @FormField() contextIds?: string,
+    @FormField() chatHistory?: string,
+    @FormField() modelKey?: string,
+    @FormField() complexityLevel?: string,
+    @FormField() syncToJira?: string,
+    @FormField() syncToLinear?: string,
+    @FormField() skipAi?: string,
+    @FormField() taskStrategy?: "AUTO" | "SINGLE_TICKET" | "SPECIFIC_COUNT",
+    @FormField() taskCount?: string,
+    @FormField() location?: string,
+    @UploadedFile("micFile") micFile?: Express.Multer.File,
+    @UploadedFile("sysFile") sysFile?: Express.Multer.File,
+  ): Promise<ApiResponse<StandaloneTranscriptResponse>> {
+    const { user, workspaceId } = await this.getAuthorizedWorkspaceAccess(request);
+
+    console.log(`[Upload Debug] POST /api/transcripts/recorder-upload hit by user ${user.id}`);
+    console.log(
+      `[Upload Debug] micFile present? ${!!micFile} (size: ${micFile?.size}, name: ${micFile?.originalname})`,
+    );
+    console.log(
+      `[Upload Debug] sysFile present? ${!!sysFile} (size: ${sysFile?.size}, name: ${sysFile?.originalname})`,
+    );
+
+    // Parse JSON arrays which arrived as strings in formData
+    const contextIdsArray = contextIds ? JSON.parse(contextIds) : [];
+    const chatHistoryArray = chatHistory ? JSON.parse(chatHistory) : [];
+    const locationObj = location ? JSON.parse(location) : undefined;
+
+    // Optional Firebase Upload logic inline (if files exist)
+    let rawMicUrl: string | undefined;
+    let rawSysUrl: string | undefined;
+
+    if (micFile || sysFile) {
+      const bucket = firebaseAdmin.storage().bucket();
+      const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
+
+      if (micFile) {
+        if (micFile.buffer.length > 44) {
+          const riff = micFile.buffer.toString("utf8", 0, 4);
+          const sizeHex = micFile.buffer.readUInt32LE(4);
+          if (riff === "RIFF" && sizeHex === 0xffffffff) {
+            const dataSize = micFile.buffer.length - 44;
+            micFile.buffer.writeUInt32LE(dataSize + 36, 4);
+            micFile.buffer.writeUInt32LE(dataSize, 40);
+            console.log(`[Upload Debug] Patched micFile WAV header. Data Size: ${dataSize}`);
+          }
+        }
+
+        const ext = micFile.originalname.split(".").pop() || "webm";
+        const fileRef = bucket.file(`transcripts/${user.id}/${uniqueSuffix}-mic.${ext}`);
+        await fileRef.save(micFile.buffer, { contentType: micFile.mimetype });
+        await fileRef.makePublic();
+        rawMicUrl = fileRef.publicUrl();
+      }
+
+      if (sysFile) {
+        if (sysFile.buffer.length > 44) {
+          const riff = sysFile.buffer.toString("utf8", 0, 4);
+          const sizeHex = sysFile.buffer.readUInt32LE(4);
+          if (riff === "RIFF" && sizeHex === 0xffffffff) {
+            const dataSize = sysFile.buffer.length - 44;
+            sysFile.buffer.writeUInt32LE(dataSize + 36, 4);
+            sysFile.buffer.writeUInt32LE(dataSize, 40);
+            console.log(`[Upload Debug] Patched sysFile WAV header. Data Size: ${dataSize}`);
+          }
+        }
+
+        const ext = sysFile.originalname.split(".").pop() || "webm";
+        const fileRef = bucket.file(`transcripts/${user.id}/${uniqueSuffix}-sys.${ext}`);
+        await fileRef.save(sysFile.buffer, { contentType: sysFile.mimetype });
+        await fileRef.makePublic();
+        rawSysUrl = fileRef.publicUrl();
+      }
+    }
+
+    const contextPrompt = await this.buildContextPrompt(user.id, contextIdsArray);
+
+    if (projectId) {
+      const project = await prisma.project.findUnique({
+        where: { id: projectId, userId: user.id, workspaceId },
+      });
+      if (!project) throw { status: 404, message: "Project not found or unauthorized." };
+    }
+
+    // Save initial metadata and live content fallback
+    const transcript = await prisma.transcript.create({
+      data: {
+        userId: user.id,
+        workspaceId,
+        projectId: projectId ?? null,
+        title: title ?? "Generating Transcript...",
+        source: source ?? TranscriptSource.RECORDING,
+        language: null,
+        summary: null,
+        transcript: content ?? "Processing...",
+        recordedAt: recordedAt ? new Date(recordedAt) : null,
+        rawMicUrl,
+        rawSysUrl,
+        metadata: {
+          processingStatus: skipAi === "true" ? "DONE" : "PENDING",
+          ...(locationObj ? { location: locationObj } : {}),
+        } as Prisma.JsonObject,
+      },
+    });
+
+    if (skipAi !== "true") {
+      await transcriptGenerationQueue.add("generate-transcript", {
+        transcriptId: transcript.id,
+        workspaceId,
+        projectId: projectId || undefined,
+        userId: user.id,
+        content: content ?? "",
+        source: source ?? TranscriptSource.RECORDING,
+        contextIds: contextIdsArray,
+        persona: undefined,
+        complexityLevel: complexityLevel || undefined,
+        modelKey: modelKey || undefined,
+        syncToJira: syncToJira === "true",
+        syncToLinear: syncToLinear === "true",
+        taskStrategy,
+        taskCount: taskCount ? parseInt(taskCount, 10) : undefined,
+        contextPrompt: contextPrompt ?? undefined,
+      });
+    }
+
+    if (chatHistoryArray.length > 0) {
+      await prisma.chatThread.create({
+        data: {
+          transcriptId: transcript.id,
+          title: "Live Recording Assistant",
+          userId: user.id,
+          workspaceId,
+          messages: {
+            create: chatHistoryArray.map((msg: { role: string; content: string }) => ({
+              role: msg.role === "user" ? "USER" : "ASSISTANT",
+              content: msg.content,
+              createdAt: new Date(),
+            })),
+          },
+        },
+      });
+    }
+
+    // Reuse map function from standard POST
+    return {
+      status: 200,
+      data: this.mapTranscriptResponse(transcript),
+    };
+  }
+
+  @Post()
+  @Security("ClientLevel")
+  public async createTranscript(
+    @Request() request: AuthenticatedRequest,
+    @Body() body: CreateStandaloneTranscriptBody,
+  ): Promise<ApiResponse<StandaloneTranscriptResponse>> {
+    try {
+      const { user, workspaceId } = await this.getAuthorizedWorkspaceAccess(request);
+
+      let transcript: Transcript;
+
+      if (!body.content) {
+        // Empty transcript (just metadata creation)
+        const transcriptInput = {
+          ...body,
+          workspaceId,
+          metadata: body.metadata as Prisma.InputJsonValue | undefined,
+        };
+        transcript = await transcriptCrudService.createTranscriptForUser(user.id, transcriptInput);
+      } else {
+        const contextPrompt = await this.buildContextPrompt(user.id, body.contextIds ?? []);
+
+        if (body.projectId) {
+          // Security check: ensure user has access to this project
+          const project = await prisma.project.findUnique({
+            where: { id: body.projectId, userId: user.id, workspaceId },
+          });
+
+          if (!project) {
+            this.setStatus(404);
+            throw { status: 404, message: "Project not found or unauthorized to attach." };
+          }
+        }
+
+        const pendingResult = await projectTranscriptService.createPendingTranscript({
+          projectId: body.projectId || "",
+          userId: user.id,
+          workspaceId,
+          content: body.content,
+          title: body.title ?? undefined,
+          source: body.source ?? TranscriptSource.MANUAL,
+          recordedAt: body.recordedAt ?? null,
+          metadata: body.metadata as Prisma.InputJsonValue | undefined,
+        });
+
+        transcript = pendingResult.transcript;
+
+        // Push to BullMQ Worker
+        await transcriptGenerationQueue.add("generate-transcript", {
+          transcriptId: transcript.id,
+          workspaceId,
+          projectId: body.projectId || undefined,
+          userId: user.id,
+          content: body.content,
+          source: body.source ?? TranscriptSource.MANUAL,
+          contextIds: body.contextIds,
+          persona: body.persona,
+          objective: body.objective ?? undefined,
+          complexityLevel: body.complexityLevel ?? undefined,
+          modelKey: body.modelKey ?? undefined,
+          syncToJira: body.syncToJira,
+          syncToLinear: body.syncToLinear,
+          contextPrompt: contextPrompt ?? undefined,
+        });
+
+        // Save Chat History for both Standalone and Project-linked transcripts
+        if (body.chatHistory && body.chatHistory.length > 0) {
+          await prisma.chatThread.create({
+            data: {
+              userId: user.id,
+              workspaceId,
+              title: transcript.title || "Live Meeting Chat",
+              transcriptId: transcript.id,
+              contextIds: body.contextIds || [],
+              messages: {
+                create: body.chatHistory.map((m) => ({
+                  role: m.role.toUpperCase() as "USER" | "ASSISTANT",
+                  content: m.content,
+                })),
+              },
+            },
+          });
+        }
+
+        this.setStatus(202);
+        return {
+          status: 202,
+          data: this.mapTranscriptResponse(transcript),
+        };
+      }
+
+      this.setStatus(201);
+      return {
+        status: 201,
+        data: this.mapTranscriptResponse(transcript),
+      };
+    } catch (error) {
+      console.error("[ERROR] Failed to create transcript:", error);
+      throw error;
+    }
+  }
+
+  @Get("{id}")
+  @Security("ClientLevel")
+  public async getTranscript(
+    @Request() request: AuthenticatedRequest,
+    @Path() id: string,
+  ): Promise<ApiResponse<StandaloneTranscriptResponse>> {
+    const { user, workspaceId } = await this.getAuthorizedWorkspaceAccess(request);
+
+    const transcript = await transcriptCrudService.getTranscriptForWorkspace(workspaceId, id);
+
+    const rawTasks = await prisma.task.findMany({
+      where: {
+        transcriptLinks: {
+          some: { transcriptId: id },
+        },
+        project: { userId: user.id, workspaceId },
+      },
+      include: {
+        dependants: {
+          select: { dependsOnTaskId: true },
+        },
+      },
+    });
+
+    const mappedTasks = rawTasks.map((t) => mapTaskResponse(t as unknown as TaskWithRelations));
+
+    return {
+      status: 200,
+      data: {
+        ...this.mapTranscriptResponse(transcript),
+        tasks: mappedTasks,
+      },
+    };
+  }
+
+  @Put("{id}")
+  @Security("ClientLevel")
+  public async updateTranscript(
+    @Request() request: AuthenticatedRequest,
+    @Path() id: string,
+    @Body() body: UpdateStandaloneTranscriptBody,
+  ): Promise<ApiResponse<StandaloneTranscriptResponse>> {
+    const { workspaceId } = await this.getAuthorizedWorkspaceAccess(request);
+
+    const updateInput = {
+      ...body,
+      metadata: body.metadata as Prisma.InputJsonValue | undefined,
+    };
+    const transcript = await transcriptCrudService.updateTranscriptForWorkspace(
+      workspaceId,
+      id,
+      updateInput,
+    );
+
+    return {
+      status: 200,
+      data: this.mapTranscriptResponse(transcript),
+    };
+  }
+
+  @Post("{id}/reprocess")
+  @Security("ClientLevel")
+  public async reprocessTranscript(
+    @Request() request: AuthenticatedRequest,
+    @Path() id: string,
+  ): Promise<ApiResponse<StandaloneTranscriptResponse>> {
+    const { user, workspaceId } = await this.getAuthorizedWorkspaceAccess(request);
+
+    const existing = await transcriptCrudService.getTranscriptForWorkspace(workspaceId, id);
+
+    if (!existing) {
+      this.setStatus(404);
+      throw { status: 404, message: "Transcript not found" };
+    }
+
+    const currentStatus = (existing.metadata as Record<string, unknown>)?.processingStatus as
+      | string
+      | undefined;
+    if (currentStatus === "PENDING" || currentStatus === "PROCESSING") {
+      this.setStatus(409);
+      throw { status: 409, message: "Transcript is already being processed" };
+    }
+
+    // Reset status to PENDING so the UI reflects it immediately
+    const updated = await prisma.transcript.update({
+      where: { id },
+      data: {
+        summary: null,
+        sentiment: null,
+        metadata: {
+          ...(existing.metadata as Record<string, unknown>),
+          processingStatus: "PENDING",
+        } as Prisma.JsonObject,
+      },
+    });
+
+    // Re-enqueue into the generation worker
+    await transcriptGenerationQueue.add("generate-transcript", {
+      transcriptId: id,
+      workspaceId,
+      projectId: existing.projectId ?? undefined,
+      userId: user.id,
+      content: existing.transcript ?? "",
+      source: existing.source,
+    });
+
+    return {
+      status: 200,
+      data: this.mapTranscriptResponse(updated),
+    };
+  }
+
+  @Delete("{id}")
+  @Security("ClientLevel")
+  public async deleteTranscript(
+    @Request() request: AuthenticatedRequest,
+    @Path() id: string,
+  ): Promise<ApiResponse<{ success: boolean }>> {
+    const { workspaceId } = await this.getAuthorizedWorkspaceAccess(request);
+
+    await transcriptCrudService.deleteTranscriptForWorkspace(workspaceId, id);
+
+    return {
+      status: 200,
+      data: { success: true },
+    };
+  }
+}

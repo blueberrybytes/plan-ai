@@ -1,0 +1,46 @@
+{
+  "project_info": {
+    "project_number": "935756144028",
+    "project_id": "plan-ai-211b8",
+    "storage_bucket": "plan-ai-211b8.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:935756144028:android:8aaf6ecce8e90514a7bc59",
+        "android_client_info": {
+          "package_name": "com.blueberrybytes.planai"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "935756144028-5qt3dmnjtnh1bl1pje9g10ljmqacj3u7.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAU9l5qBj9mNS7PIaNl9Po1fn8ZQUuU-tU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "935756144028-5qt3dmnjtnh1bl1pje9g10ljmqacj3u7.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "935756144028-p6pap7sb78n7nctqio3e0aevajutsaum.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.blueberrybytes.planai"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

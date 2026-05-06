@@ -1,0 +1,12 @@
+node_modules
+*.env
+dist
+build
+.expo
+.next
+out
+plan-ai-recorder/release
+.DS_Store
+.gitnexus
+.claude
+repomix_output
