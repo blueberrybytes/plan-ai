@@ -16,7 +16,7 @@ export default function DrawerLayout() {
   const [refreshing, setRefreshing] = useState(false);
 
   const activeWorkspace = workspaces.find((w) => w.id === activeWorkspaceId);
-  const isMissingKeys = activeWorkspace && !activeWorkspace.isCourtesy && (!activeWorkspace.openRouterKey || !activeWorkspace.deepgramKey);
+  const isMissingKeys = activeWorkspace && !activeWorkspace.isCourtesy && activeWorkspace.role === "OWNER" && (!activeWorkspace.openRouterKey || !activeWorkspace.deepgramKey);
 
   useEffect(() => {
     const checkBanner = async () => {

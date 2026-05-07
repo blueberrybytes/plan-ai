@@ -7,11 +7,18 @@ import Recording from "./pages/Recording";
 import TranscriptView from "./pages/TranscriptView";
 import Profile from "./pages/Profile";
 import Debug from "./pages/Debug";
-import Pending from "./pages/Pending";
-import { CircularProgress, Box, Snackbar, Alert, Button, Typography } from "@mui/material";
+import {
+  CircularProgress,
+  Box,
+  Snackbar,
+  Alert,
+  Button,
+  Typography,
+} from "@mui/material";
 import { useAutoUpdater } from "./hooks/useAutoUpdater";
 
-const WEB_APP_URL = import.meta.env.VITE_PLAN_AI_WEB_URL || "http://localhost:3000";
+const WEB_APP_URL =
+  import.meta.env.VITE_PLAN_AI_WEB_URL || "http://localhost:3000";
 
 const GateActions: React.FC<{
   dashboardPath?: string;
@@ -35,7 +42,16 @@ const GateActions: React.FC<{
   };
 
   return (
-    <Box sx={{ display: "flex", flexDirection: "column", gap: 2, mt: 4, width: "100%", maxWidth: 240 }}>
+    <Box
+      sx={{
+        display: "flex",
+        flexDirection: "column",
+        gap: 2,
+        mt: 4,
+        width: "100%",
+        maxWidth: 240,
+      }}
+    >
       <Button variant="contained" onClick={handleOpenDashboard}>
         Open Dashboard
       </Button>
@@ -43,7 +59,9 @@ const GateActions: React.FC<{
         variant="outlined"
         onClick={handleRefresh}
         disabled={refreshing}
-        startIcon={refreshing ? <CircularProgress size={20} color="inherit" /> : null}
+        startIcon={
+          refreshing ? <CircularProgress size={20} color="inherit" /> : null
+        }
       >
         {refreshing ? "Checking..." : "I've Completed Setup"}
       </Button>
@@ -55,13 +73,26 @@ const GateActions: React.FC<{
 };
 
 const AppRoutes: React.FC = () => {
-  const { user, dbUser, loading, workspaces, activeWorkspaceId, signOut, refetchDbUser, refetchWorkspaces } = useAuth();
+  const {
+    user,
+    dbUser,
+    loading,
+    workspaces,
+    activeWorkspaceId,
+    signOut,
+    refetchDbUser,
+    refetchWorkspaces,
+  } = useAuth();
   const refetchAll = React.useCallback(async () => {
     await Promise.all([refetchDbUser(), refetchWorkspaces()]);
   }, [refetchDbUser, refetchWorkspaces]);
 
-  const activeWorkspace = workspaces.find(w => w.id === activeWorkspaceId);
-  const isMissingKeys = activeWorkspace && !activeWorkspace.isCourtesy && (!activeWorkspace.openRouterKey || !activeWorkspace.deepgramKey);
+  const activeWorkspace = workspaces.find((w) => w.id === activeWorkspaceId);
+  const isMissingKeys =
+    activeWorkspace &&
+    !activeWorkspace.isCourtesy &&
+    activeWorkspace.role === "OWNER" &&
+    (!activeWorkspace.openRouterKey || !activeWorkspace.deepgramKey);
 
   if (loading) {
     return (
@@ -90,16 +121,21 @@ const AppRoutes: React.FC = () => {
           height: "100vh",
           bgcolor: "background.default",
           p: 4,
-          textAlign: "center"
+          textAlign: "center",
         }}
       >
         <Typography variant="h5" fontWeight="bold" gutterBottom>
           Almost there!
         </Typography>
         <Typography color="text.secondary" sx={{ maxWidth: 400 }}>
-          Please log into the Web Dashboard to complete your Workspace and API Key setup, then come back and tap "I've Completed Setup".
+          Please log into the Web Dashboard to complete your Workspace and API
+          Key setup, then come back and tap "I've Completed Setup".
         </Typography>
-        <GateActions dashboardPath="/onboarding" onSignOut={signOut} onRefetch={refetchAll} />
+        <GateActions
+          dashboardPath="/onboarding"
+          onSignOut={signOut}
+          onRefetch={refetchAll}
+        />
       </Box>
     );
   }
@@ -115,16 +151,27 @@ const AppRoutes: React.FC = () => {
           height: "100vh",
           bgcolor: "background.default",
           p: 4,
-          textAlign: "center"
+          textAlign: "center",
         }}
       >
-        <Typography variant="h5" fontWeight="bold" color="error.main" gutterBottom>
+        <Typography
+          variant="h5"
+          fontWeight="bold"
+          color="error.main"
+          gutterBottom
+        >
           API Keys Required
         </Typography>
         <Typography color="text.secondary" sx={{ maxWidth: 400 }}>
-          Your workspace "{activeWorkspace.name}" is missing required API keys. Configure them on the web dashboard, then tap "I've Completed Setup" to continue.
+          Your workspace "{activeWorkspace.name}" is missing required API keys.
+          Configure them on the web dashboard, then tap "I've Completed Setup"
+          to continue.
         </Typography>
-        <GateActions dashboardPath="/team" onSignOut={signOut} onRefetch={refetchAll} />
+        <GateActions
+          dashboardPath="/team"
+          onSignOut={signOut}
+          onRefetch={refetchAll}
+        />
       </Box>
     );
   }
