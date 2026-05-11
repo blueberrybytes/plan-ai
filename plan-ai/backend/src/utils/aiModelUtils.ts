@@ -3,11 +3,11 @@ import EnvUtils from "./EnvUtils";
 import { AI_MODEL_LIMITS } from "../services/aiContextRouter";
 import prisma from "../prisma/prismaClient";
 
-export const DEFAULT_AI_MODEL = "anthropic/claude-3.7-sonnet";
+export const DEFAULT_AI_MODEL = "anthropic/claude-sonnet-4.6";
 export const FALLBACK_MODELS = [
-  "openai/gpt-4o",
-  "google/gemini-2.5-pro",
+  "openai/gpt-5.5",
   "google/gemini-2.5-flash",
+  "google/gemini-3.1-pro-preview",
 ];
 
 /**
@@ -16,7 +16,7 @@ export const FALLBACK_MODELS = [
 export function getConfiguredModel(modelKey?: string, apiKey?: string) {
   const primaryModel = modelKey && modelKey.length > 0 ? modelKey : DEFAULT_AI_MODEL;
   const fallbacks = FALLBACK_MODELS.filter((m) => m !== primaryModel);
-  
+
   const openrouter = createOpenRouter({
     apiKey: apiKey || EnvUtils.get("OPENROUTER_API_KEY"),
   });
