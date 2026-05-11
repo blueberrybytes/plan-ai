@@ -651,8 +651,8 @@ export class ProjectTranscriptService {
           tools,
           stopWhen: stepCountIs(3),
           system:
-            "You are an AI Software Architect. The user is generating Agile task tickets from a transcript or request. Use your tools to query the codebase knowledge graph and gather relevant structural context (e.g. affected components, database models, related execution flows). Summarize your findings so the task generator can write highly accurate, technically specific acceptance criteria.",
-          prompt: `Transcript/Request:\n${content}\n\nObjective: ${objective ?? "Extract tasks"}\n\nPlease investigate the codebase to gather any missing structural context.`,
+            "You are an AI Software Architect. The user is generating Agile task tickets from a transcript or request. IF the request is a simple, non-technical business or life task (like sending an email, scheduling a meeting, calling someone), DO NOT query the codebase. Simply return 'No codebase context needed.' OTHERWISE, use your tools to query the codebase knowledge graph and gather relevant structural context (e.g. affected components, database models, related execution flows). Summarize your findings so the task generator can write highly accurate, technically specific acceptance criteria.",
+          prompt: `Transcript/Request:\n${content}\n\nObjective: ${objective ?? "Extract tasks"}\n\nPlease investigate the codebase ONLY IF this is a technical software task to gather any missing structural context.`,
         });
 
         if (investigation.text) {

@@ -65,8 +65,8 @@ export class AiTaskCoachService {
           tools,
           stopWhen: stepCountIs(3),
           system:
-            "You are an AI Software Architect. The user is refining an Agile task ticket. Use your tools to query the codebase knowledge graph and gather relevant structural context (e.g. affected files, existing implementations). Summarize your findings so the task refiner can write highly accurate, technically specific acceptance criteria.",
-          prompt: `Task:\nTitle: ${input.title}\nSummary: ${input.summary || "None"}\nDescription: ${input.description || "None"}\n\nPlease investigate the codebase to gather any missing structural context.`,
+            "You are an AI Software Architect. The user is refining an Agile task ticket. IF the ticket is a simple, non-technical business or life task, DO NOT query the codebase. Simply return 'No codebase context needed.' OTHERWISE, use your tools to query the codebase knowledge graph and gather relevant structural context (e.g. affected files, existing implementations). Summarize your findings so the task refiner can write highly accurate, technically specific acceptance criteria.",
+          prompt: `Task:\nTitle: ${input.title}\nSummary: ${input.summary || "None"}\nDescription: ${input.description || "None"}\n\nPlease investigate the codebase ONLY IF this is a technical software task to gather any missing structural context.`,
         });
 
         if (investigation.text) {

@@ -122,8 +122,8 @@ export class DocGenerationService {
           tools,
           stopWhen: stepCountIs(3),
           system:
-            "You are an AI assistant. The user wants to generate a document or task list based on their prompt. Use your tools to query the codebase knowledge graph and gather relevant structure, execution flows, or context needed to fulfill this request. Summarize your findings to be included in the final document generation prompt.",
-          prompt: `Goal: ${input.prompt ?? "Generate document"}\n\nPlease investigate the codebase to gather any missing context for this request.`,
+            "You are an AI assistant. The user wants to generate a document or task list based on their prompt. IF the request is a simple, non-technical business or life task, DO NOT query the codebase. Simply return 'No codebase context needed.' OTHERWISE, use your tools to query the codebase knowledge graph and gather relevant structure, execution flows, or context needed to fulfill this request. Summarize your findings to be included in the final document generation prompt.",
+          prompt: `Goal: ${input.prompt ?? "Generate document"}\n\nPlease investigate the codebase ONLY IF this is a technical software task to gather any missing context for this request.`,
         });
 
         if (investigation.text) {
