@@ -171,7 +171,7 @@ export class SessionController {
             },
           });
 
-          const initialRole = pendingInvitations.length > 0 ? Role.CLIENT : Role.PENDING;
+          const initialRole = Role.CLIENT;
 
           user = await prisma.user.create({
             data: {
@@ -186,7 +186,7 @@ export class SessionController {
               isGoogleAccount: isGoogleAccount,
               isAppleAccount: isAppleAccount,
               isMicrosoftAccount: isMicrosoftAccount,
-              role: initialRole, // Set to CLIENT if invited, else PENDING
+              role: initialRole, // All new users are CLIENT; invited users also get added to workspace(s) below
             },
           });
           console.log("User created successfully in database with ID:", user.id);

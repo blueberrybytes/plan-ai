@@ -37,7 +37,8 @@
     "test:frontend": "yarn --cwd plan-ai/frontend test",
     "test:coverage": "yarn --cwd plan-ai/backend test:coverage && yarn --cwd plan-ai/frontend test:coverage",
     "coverage": "yarn --cwd plan-ai/backend test:coverage && yarn --cwd plan-ai/frontend test:coverage",
-    "register-protocol": "/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -r -domain local -domain system -domain user"
+    "register-protocol": "/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -r -domain local -domain system -domain user",
+    "studio": "cd plan-ai/backend && npx prisma studio"
   },
   "keywords": [
     "plan-ai",

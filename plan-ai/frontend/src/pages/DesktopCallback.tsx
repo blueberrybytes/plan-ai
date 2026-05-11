@@ -40,6 +40,23 @@ const DesktopCallback: React.FC = () => {
     new URLSearchParams(window.location.search).get("local_port") ||
     sessionStorage.getItem("local_port");
 
+  console.log("[DesktopCallback] === INIT ===");
+  console.log("[DesktopCallback] Full URL:", window.location.href);
+  console.log(
+    "[DesktopCallback] local_port from URL:",
+    new URLSearchParams(window.location.search).get("local_port"),
+  );
+  console.log(
+    "[DesktopCallback] local_port from sessionStorage:",
+    sessionStorage.getItem("local_port"),
+  );
+  console.log("[DesktopCallback] resolved localPort:", localPort);
+  console.log(
+    "[DesktopCallback] desktop_auth from sessionStorage:",
+    sessionStorage.getItem("desktop_auth"),
+  );
+  console.log("[DesktopCallback] deepLinkScheme:", "will log when used");
+
   const [triggerGetDesktopToken] = useGetDesktopTokenMutation();
 
   const cancelAuth = useCallback(() => {
@@ -172,11 +189,7 @@ const DesktopCallback: React.FC = () => {
             <Typography variant="body2" color="text.secondary">
               Return to the Plan AI Recorder app.
             </Typography>
-            <Button
-              variant="contained"
-              onClick={() => window.close()}
-              sx={{ mt: 1 }}
-            >
+            <Button variant="contained" onClick={() => window.close()} sx={{ mt: 1 }}>
               Close Tab
             </Button>
             <Typography variant="caption" color="text.secondary">

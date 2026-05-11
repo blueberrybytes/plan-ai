@@ -129,6 +129,16 @@ function setupProtocol(): void {
   console.log("[protocol] process.defaultApp:", process.defaultApp);
   console.log("[protocol] process.argv:", process.argv);
   console.log("[protocol] process.execPath:", process.execPath);
+  console.log("[protocol] PROTOCOL:", PROTOCOL);
+  console.log("[protocol] BASE_PROTOCOL:", BASE_PROTOCOL);
+
+  // In dev mode, actively remove any stale registration of the PROD protocol
+  // that may have been left by older dev builds (before the -dev suffix was added).
+  // This prevents the dev Electron binary from intercepting production deep links.
+  if (!app.isPackaged && PROTOCOL !== BASE_PROTOCOL) {
+    const removed = app.removeAsDefaultProtocolClient(BASE_PROTOCOL);
+    console.log(`[protocol] Removed stale prod protocol registration (${BASE_PROTOCOL}):`, removed);
+  }
 
   // In dev mode (process.defaultApp === true), the app runs via the shared Electron
   // binary. Without passing the script path, macOS associates the protocol with that
