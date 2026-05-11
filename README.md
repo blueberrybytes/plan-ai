@@ -31,6 +31,14 @@ The engineer and CEO of the Company:
 | 🤖 **Android** | [Google Play — Plan AI](https://play.google.com/store/apps/details?id=com.blueberrybytes.planai) |
 | 🍏 **iOS** | [App Store — Plan AI Recorder](https://apps.apple.com/us/app/plan-ai-mobile-recorder/id6762671958) |
 
+## 📸 Sneak Peek
+
+| <img src="./images/recorder.png" alt="Native Recorder" /> | <img src="./images/recording.png" alt="Live Meeting Assistant" /> | <img src="./images/tasks.png" alt="Automated Task Generation" /> |
+| :---: | :---: | :---: |
+| **1. Native Recorder**<br>Securely capture your meetings without invasive bots. Start recording instantly from your desktop or mobile app. | **2. Live Meeting Assistant**<br>While recording, you can swap the AI's context on the fly, read real-time summaries, and ask the live chat questions. | **3. Automated Tasks**<br>Once the meeting ends, Plan AI instantly generates perfectly scoped engineering tickets and actionable items based on the discussion. |
+
+<br>
+
 ## 📦 Project Structure & Architecture
 
 Plan AI is built as a monorepo.

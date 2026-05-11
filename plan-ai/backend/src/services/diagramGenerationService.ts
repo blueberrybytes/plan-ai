@@ -189,18 +189,19 @@ ${personaInstructions}
 2. Do NOT output any markdown blocks, conversational text, explanations, or preamble.
 3. The very first character of your response MUST be the start of the Mermaid syntax.
 4. Try your best to adhere to standard Mermaid syntax to prevent rendering errors.
-5. CRITICAL FOR FLOWCHARTS AND GRAPHS: ANY node label that contains spaces, parentheses "()", ampersands "&", or hyphens "-" MUST be strictly enclosed in double quotes. Example: A["Menu (Client)"] instead of A[Menu (Client)].
-6. CRITICAL FOR STATEDIAGRAM: NEVER use double quotes directly in transitions. ALWAYS define an alias first using the 'state "Label" as Alias ID' syntax, and then transition between Alias IDs. Example: 'state "Homepage/Landing" as HL \\n [*] --> HL'.
-7. CRITICAL FOR ER DIAGRAMS: Attribute types and names MUST be strictly alphanumeric. NEVER use special characters like '?', '!', '[', ']', or '()' in types or field names. For example, use 'String email' instead of 'String? email', and 'StringArray ids' instead of 'String[] ids'.
-8. CRITICAL FOR CLASS DIAGRAMS: Generics MUST use tildes instead of angle brackets. For example, use 'List~String~' instead of 'List<String>'.
-9. CRITICAL FOR MINDMAPS: Ensure strict indentation using spaces. Avoid special characters in node text unless you enclose the node text in double quotes or standard brackets like 'id(Text)'.
-10. CRITICAL FOR GANTT CHARTS: You MUST specify a valid 'dateFormat' (e.g., 'YYYY-MM-DD'). Dates MUST adhere strictly to that exact format.
-11. CRITICAL FOR XYCHART: Start with 'xychart-beta'. You MUST define the x-axis and y-axis. Use 'x-axis' and 'y-axis', followed by 'bar' or 'line' datasets.
-12. CRITICAL FOR QUADRANT: Use 'quadrantChart'. Define x-axis, y-axis, and 4 quadrants before listing points.
-13. CRITICAL FOR KANBAN: Use 'kanban' and organize strictly by columns.
-14. CRITICAL FOR SANKEY: Use 'sankey-beta', format is 'Source, Target, Value'.
-15. CRITICAL FOR TIMELINE/PIE/JOURNEY/BLOCK: Use exact syntax 'timeline', 'pie', 'journey', 'block-beta'.
-16. CRITICAL FOR THEMING: NEVER generate 'style', 'classDef', 'linkStyle', or 'theme' directives unless the user explicitly requests a specific color. We apply unified dynamic CSS theming globally.
+5. CRITICAL FOR FLOWCHARTS AND GRAPHS: NODE IDs MUST be strictly alphanumeric. ANY node label that contains spaces, punctuation, parentheses "()", ampersands "&", hyphens "-", or slashes "/" MUST be strictly enclosed in double quotes. Example: A["Menu (Client)"] instead of A[Menu (Client)].
+6. SUBGRAPHS: Every \`subgraph\` MUST have a matching \`end\` keyword. Do not truncate the diagram.
+7. CRITICAL FOR STATEDIAGRAM: NEVER use double quotes directly in transitions. ALWAYS define an alias first using the 'state "Label" as Alias ID' syntax, and then transition between Alias IDs. Example: 'state "Homepage/Landing" as HL \\n [*] --> HL'.
+8. CRITICAL FOR ER DIAGRAMS: Attribute types and names MUST be strictly alphanumeric. NEVER use special characters like '?', '!', '[', ']', or '()' in types or field names. For example, use 'String email' instead of 'String? email', and 'StringArray ids' instead of 'String[] ids'.
+9. CRITICAL FOR CLASS DIAGRAMS: Generics MUST use tildes instead of angle brackets. For example, use 'List~String~' instead of 'List<String>'.
+10. CRITICAL FOR MINDMAPS: Ensure strict indentation using spaces. Avoid special characters in node text unless you enclose the node text in double quotes or standard brackets like 'id(Text)'.
+11. CRITICAL FOR GANTT CHARTS: You MUST specify a valid 'dateFormat' (e.g., 'YYYY-MM-DD'). Dates MUST adhere strictly to that exact format.
+12. CRITICAL FOR XYCHART: Start with 'xychart-beta'. You MUST define the x-axis and y-axis. Use 'x-axis' and 'y-axis', followed by 'bar' or 'line' datasets.
+13. CRITICAL FOR QUADRANT: Use 'quadrantChart'. Define x-axis, y-axis, and 4 quadrants before listing points.
+14. CRITICAL FOR KANBAN: Use 'kanban' and organize strictly by columns.
+15. CRITICAL FOR SANKEY: Use 'sankey-beta', format is 'Source, Target, Value'.
+16. CRITICAL FOR TIMELINE/PIE/JOURNEY/BLOCK: Use exact syntax 'timeline', 'pie', 'journey', 'block-beta'.
+17. CRITICAL FOR THEMING: NEVER generate 'style', 'classDef', 'linkStyle', or 'theme' directives unless the user explicitly requests a specific color. We apply unified dynamic CSS theming globally.
 
 **CURRENT MERMAID CODE:**
 ${currentCode}
@@ -326,14 +327,16 @@ The very first character of your response MUST be the start of the Mermaid synta
 Use the provided source material to accurately deduce relationships, dependencies, hierarchies, and timelines.
 
 CRITICAL SYNTAX RULES:
-1. FOR FLOWCHARTS AND GRAPHS: ANY node label that contains spaces, parentheses "()", ampersands "&", or hyphens "-" MUST be strictly enclosed in double quotes. Example: A["Menu (Client)"] instead of A[Menu (Client)]. NEVER use unescaped characters unless enclosed in double quotes.
-2. FOR STATEDIAGRAMS: NEVER use double quotes directly in transition arrows. ALWAYS define an alias first using the 'state "Label" as ID' syntax, and then transition between IDs. Example: 'state "Homepage/Landing" as hPage \\n [*] --> hPage'.
-3. FOR ER DIAGRAMS: Attribute types and names MUST be strictly alphanumeric words. NEVER use special characters like '?', '!', '[', ']', or '()' in types or field names. For example, use 'String email' instead of 'String? email', and 'StringArray tags' instead of 'String[] tags'.
-4. FOR CLASS DIAGRAMS: Generic types MUST use tildes. Use 'List~String~' instead of 'List<String>'.
-5. FOR MINDMAPS: You MUST rely on strict indentation. 
-6. FOR GANTT CHARTS: Include 'dateFormat YYYY-MM-DD' and ensure dates match.
-7. FOR XYCHART: Use 'xychart-beta'. x-axis array items must be enclosed in brackets (e.g. x-axis ["A", "B"]). Define data directly on 'bar' or 'line' (e.g., bar [10, 20]).
-8. FOR THEMING: NEVER generate inline 'style', 'classDef', 'linkStyle', or 'theme' variables unless the user explicitly demands a specific color. The platform forces a unified dynamic theme via global CSS class overrides that you will break.
+1. NODE IDs: Node IDs MUST be strictly alphanumeric. NEVER use dots, slashes, hyphens, or spaces in Node IDs. (e.g. use \`NodeJS\` instead of \`Node.js\`).
+2. NODE LABELS: ANY node label that contains spaces, parentheses "()", ampersands "&", hyphens "-", slashes "/", or ANY punctuation MUST be strictly enclosed in double quotes. Example: A["Menu (Client)"] instead of A[Menu (Client)]. NEVER use unescaped characters unless enclosed in double quotes.
+3. SUBGRAPHS: Every \`subgraph\` block MUST be explicitly closed with an \`end\` keyword. Do NOT truncate the code or leave subgraphs unclosed.
+4. FOR STATEDIAGRAMS: NEVER use double quotes directly in transition arrows. ALWAYS define an alias first using the 'state "Label" as ID' syntax, and then transition between IDs. Example: 'state "Homepage/Landing" as hPage \\n [*] --> hPage'.
+5. FOR ER DIAGRAMS: Attribute types and names MUST be strictly alphanumeric words. NEVER use special characters like '?', '!', '[', ']', or '()' in types or field names. For example, use 'String email' instead of 'String? email', and 'StringArray tags' instead of 'String[] tags'.
+6. FOR CLASS DIAGRAMS: Generic types MUST use tildes. Use 'List~String~' instead of 'List<String>'.
+7. FOR MINDMAPS: You MUST rely on strict indentation. 
+8. FOR GANTT CHARTS: Include 'dateFormat YYYY-MM-DD' and ensure dates match.
+9. FOR XYCHART: Use 'xychart-beta'. x-axis array items must be enclosed in brackets (e.g. x-axis ["A", "B"]). Define data directly on 'bar' or 'line' (e.g., bar [10, 20]).
+10. FOR THEMING: NEVER generate inline 'style', 'classDef', 'linkStyle', or 'theme' variables unless the user explicitly demands a specific color. The platform forces a unified dynamic theme via global CSS class overrides that you will break.
 
 ${contextContent ? `## Source Contexts\n${contextContent}` : ""}
 ${transcriptContent ? `## Source Transcripts\n${transcriptContent}` : ""}`;

@@ -37,6 +37,27 @@ features:
 
 <br><br>
 
+<div style="text-align: center; max-width: 1000px; margin: 0 auto; padding: 2rem 0;">
+  <h2 style="font-size: 2.5rem; font-weight: 700; margin-bottom: 1rem; letter-spacing: -0.02em;">Sneak Peek</h2>
+  <div style="display: flex; justify-content: space-between; gap: 15px; margin-bottom: 3rem; text-align: left;">
+    <div style="width: 32%; display: flex; flex-direction: column; gap: 10px;">
+      <img src="/images/recorder.png" style="width: 100%; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);" alt="Native Recorder" />
+      <h3 style="margin: 0; font-size: 1.1rem; font-weight: 600;">1. Native Recorder</h3>
+      <p style="margin: 0; font-size: 0.9rem; color: var(--vp-c-text-2);">Securely capture your meetings without invasive bots. Start recording instantly from your desktop or mobile app.</p>
+    </div>
+    <div style="width: 32%; display: flex; flex-direction: column; gap: 10px;">
+      <img src="/images/recording.png" style="width: 100%; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);" alt="Live Meeting Assistant" />
+      <h3 style="margin: 0; font-size: 1.1rem; font-weight: 600;">2. Live Meeting Assistant</h3>
+      <p style="margin: 0; font-size: 0.9rem; color: var(--vp-c-text-2);">While recording, you can swap the AI's context on the fly, read real-time summaries, and ask the live chat questions.</p>
+    </div>
+    <div style="width: 32%; display: flex; flex-direction: column; gap: 10px;">
+      <img src="/images/tasks.png" style="width: 100%; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);" alt="Generated Tasks" />
+      <h3 style="margin: 0; font-size: 1.1rem; font-weight: 600;">3. Automated Tasks</h3>
+      <p style="margin: 0; font-size: 0.9rem; color: var(--vp-c-text-2);">Once the meeting ends, Plan AI instantly generates perfectly scoped engineering tickets and actionable items based on the discussion.</p>
+    </div>
+  </div>
+</div>
+
 <div style="text-align: center; max-width: 900px; margin: 0 auto; padding: 2rem 0;">
   <h2 style="font-size: 2.5rem; font-weight: 700; margin-bottom: 1rem; letter-spacing: -0.02em;">The Wedge Workflow</h2>
   <p style="color: var(--vp-c-text-2); margin-bottom: 3rem; font-size: 1.125rem;">Stop writing manual acceptance criteria. Let the context engine do the heavy lifting.</p>

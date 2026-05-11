@@ -190,13 +190,17 @@ ${brokenSyntax}
 
 Return ONLY the corrected Mermaid code inside a triple backtick block. Do NOT include any explanations. 
 CRITICAL RULES FOR MERMAID:
-1. ANY node label that contains spaces, parentheses "()", ampersands "&", or hyphens "-" MUST be strictly enclosed in double quotes. 
+1. NODE IDs: Node IDs MUST be strictly alphanumeric (A-Z, a-z, 0-9) and underscores. NEVER use dots, slashes, hyphens, or spaces in Node IDs.
+   - BAD: Node.js["Node.js"]
+   - GOOD: NodeJS["Node.js"]
+2. NODE LABELS: ANY node label that contains spaces, punctuation, parentheses "()", ampersands "&", hyphens "-", or slashes "/" MUST be strictly enclosed in double quotes. 
    - BAD: A[Define Target Audience & Objectives] --> B[Develop Content Strategy]
    - GOOD: A["Define Target Audience & Objectives"] --> B["Develop Content Strategy"]
    - BAD: F[Paid Ad Campaigns (LinkedIn)]
    - GOOD: F["Paid Ad Campaigns (LinkedIn)"]
-2. FOR STATEDIAGRAM: NEVER use double quotes directly in transition arrows. ALWAYS define an alias first using 'state "Label" as ID', and then transition between IDs.
-3. Ensure edges match standard syntax (--> etc).
+3. FOR STATEDIAGRAM: NEVER use double quotes directly in transition arrows. ALWAYS define an alias first using 'state "Label" as ID', and then transition between IDs.
+4. SUBGRAPHS: EVERY \`subgraph\` MUST be properly closed with an \`end\` keyword. Never leave a subgraph unclosed.
+5. Ensure edges match standard syntax (--> etc).
 
 If you return the exact same broken code without quotes around parentheses and ampersands, the system will crash again.`;
 
@@ -224,6 +228,10 @@ ${personaInstructions}
 
 Use appropriate headings (# ## ###), bold, italic, bullet lists, numbered lists, tables, and blockquotes where suitable.
 If explaining an architecture, workflow, data hierarchy, or multi-step process, you MUST include a \`\`\`mermaid block.
+When writing Mermaid code:
+- Node IDs must be strictly alphanumeric (no dots, no slashes).
+- Node labels with any special characters or spaces MUST be enclosed in double quotes (e.g. \`Node["My Label!"]\`).
+- Ensure every \`subgraph\` is properly closed with an \`end\` keyword.
 If the user's prompt implies generating tasks, action items, or a checklist, you MUST format each task with a Markdown checkbox (e.g., \`- [ ] Task description\`).
 Make the document comprehensive, well-organized, and ready to share.
 Do NOT include any preamble like "Here is your document" — start directly with the content.
