@@ -2885,6 +2885,12 @@
 				],
 				"type": "object"
 			},
+			"Record_string.unknown_": {
+				"properties": {},
+				"additionalProperties": {},
+				"type": "object",
+				"description": "Construct a type with a set of properties K of type T"
+			},
 			"CustomThemePayload": {
 				"properties": {
 					"primaryColor": {
@@ -2914,6 +2920,9 @@
 					"borderRadius": {
 						"type": "number",
 						"format": "double"
+					},
+					"configJson": {
+						"$ref": "#/components/schemas/Record_string.unknown_"
 					}
 				},
 				"type": "object",

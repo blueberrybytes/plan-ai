@@ -993,6 +993,11 @@ const models: TsoaRoute.Models = {
         "type": {"dataType":"nestedObjectLiteral","nestedProperties":{"message":{"dataType":"string"},"data":{"dataType":"union","subSchemas":[{"dataType":"nestedObjectLiteral","nestedProperties":{"role":{"dataType":"string","required":true},"success":{"dataType":"boolean","required":true}}},{"dataType":"enum","enums":[null]}],"required":true},"status":{"dataType":"double","required":true}},"validators":{}},
     },
     // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "Record_string.unknown_": {
+        "dataType": "refAlias",
+        "type": {"dataType":"nestedObjectLiteral","nestedProperties":{},"additionalProperties":{"dataType":"any"},"validators":{}},
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
     "CustomThemePayload": {
         "dataType": "refObject",
         "properties": {
@@ -1005,6 +1010,7 @@ const models: TsoaRoute.Models = {
             "fontFamily": {"dataType":"string"},
             "headingFontFamily": {"dataType":"string"},
             "borderRadius": {"dataType":"double"},
+            "configJson": {"ref":"Record_string.unknown_"},
         },
         "additionalProperties": false,
     },

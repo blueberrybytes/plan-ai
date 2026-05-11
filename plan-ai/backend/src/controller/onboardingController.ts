@@ -13,6 +13,7 @@ export interface CustomThemePayload {
   fontFamily?: string;
   headingFontFamily?: string;
   borderRadius?: number;
+  configJson?: Record<string, unknown>;
 }
 
 export interface BrandThemePayload {

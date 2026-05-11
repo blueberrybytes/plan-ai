@@ -220,12 +220,25 @@ export class SessionController {
           await setUserRole(firebaseUid, initialRole);
           console.log(`Role set in Firebase custom claims to ${initialRole}`);
         } catch (dbError: any) {
-          console.error("Error creating user in database:", dbError);
-          throw {
-            status: 500,
-            message: "Failed to create user in database",
-            error: dbError,
-          };
+          if (dbError?.code === "P2002") {
+            console.log("Race condition: User already created by another request. Fetching...");
+            user = await prisma.user.findFirst({ where: { firebaseUid } });
+            if (!user) {
+              console.error("Failed to recover from P2002 race condition.");
+              throw {
+                status: 500,
+                message: "Failed to create user in database (race condition recovery failed)",
+                error: dbError,
+              };
+            }
+          } else {
+            console.error("Error creating user in database:", dbError);
+            throw {
+              status: 500,
+              message: "Failed to create user in database",
+              error: dbError,
+            };
+          }
         }
       }
 

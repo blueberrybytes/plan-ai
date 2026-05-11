@@ -2544,6 +2544,10 @@ export interface components {
             /** Format: double */
             status: number;
         };
+        /** @description Construct a type with a set of properties K of type T */
+        "Record_string.unknown_": {
+            [key: string]: unknown;
+        };
         CustomThemePayload: {
             primaryColor?: string;
             secondaryColor?: string;
@@ -2555,6 +2559,7 @@ export interface components {
             headingFontFamily?: string;
             /** Format: double */
             borderRadius?: number;
+            configJson?: components["schemas"]["Record_string.unknown_"];
         };
         BrandThemePayload: {
             name: string;
