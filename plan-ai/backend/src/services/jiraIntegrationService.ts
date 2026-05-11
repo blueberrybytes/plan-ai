@@ -564,6 +564,17 @@ class JiraIntegrationService {
         ],
       });
     }
+    if (task.dueDate) {
+      documentContent.push({
+        type: "heading",
+        attrs: { level: 3 },
+        content: [{ type: "text", text: "Due Date" }],
+      });
+      documentContent.push({
+        type: "paragraph",
+        content: [{ type: "text", text: `🗓️ ${new Date(task.dueDate).toLocaleDateString()}` }],
+      });
+    }
 
     let jiraParentId: string | undefined = undefined;
     if (task.parentId) {
@@ -578,6 +589,7 @@ class JiraIntegrationService {
       fields: {
         project: { id: projectId },
         summary: (task.title || `Extracted Task ${task.id}`).substring(0, 250),
+        duedate: task.dueDate ? new Date(task.dueDate).toISOString().split("T")[0] : undefined,
         description: {
           type: "doc",
           version: 1,

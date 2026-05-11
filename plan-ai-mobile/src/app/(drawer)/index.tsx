@@ -97,7 +97,7 @@ export default function DashboardScreen() {
   // Smart polling mechanism if any transcripts are currently processing
   const hasPending = transcripts.some((t) => {
     const status = (t.metadata as Record<string, unknown>)?.processingStatus as string | undefined;
-    return status === "PENDING" || status === "PROCESSING";
+    return status === "PENDING" || status === "PROCESSING" || status === "EXTRACTING_TASKS";
   });
 
   useEffect(() => {

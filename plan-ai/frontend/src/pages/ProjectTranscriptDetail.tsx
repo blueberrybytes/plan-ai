@@ -233,9 +233,8 @@ const ProjectTranscriptDetail: React.FC = () => {
   );
 
   React.useEffect(() => {
-    const isPending =
-      (transcriptData?.data?.metadata as { processingStatus?: string })?.processingStatus ===
-      "PENDING";
+    const status = (transcriptData?.data?.metadata as { processingStatus?: string })?.processingStatus;
+    const isPending = status === "PENDING" || status === "EXTRACTING_TASKS";
     setPollingInterval(isPending ? 3000 : 0);
   }, [transcriptData]);
 
@@ -558,6 +557,11 @@ const ProjectTranscriptDetail: React.FC = () => {
               <Card variant="outlined">
                 <CardContent>
                   <Stack spacing={2}>
+                    {(transcript.metadata as any)?.processingStatus === "EXTRACTING_TASKS" && (
+                      <Alert severity="info" sx={{ mb: 2 }}>
+                        🤖 AI is currently extracting tasks from this transcript in the background. They will appear here shortly!
+                      </Alert>
+                    )}
                     <Box sx={{ borderBottom: 1, borderColor: "divider" }}>
                       <Tabs
                         value={tabValue}

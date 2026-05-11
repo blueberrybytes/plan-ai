@@ -80,7 +80,9 @@ const ProjectDetails: React.FC = () => {
   const isPending = useMemo(() => {
     return (
       transcriptsData?.data?.transcripts?.some(
-        (t) => (t.metadata as { processingStatus?: string })?.processingStatus === "PENDING",
+        (t) =>
+          (t.metadata as { processingStatus?: string })?.processingStatus === "PENDING" ||
+          (t.metadata as { processingStatus?: string })?.processingStatus === "EXTRACTING_TASKS",
       ) ?? false
     );
   }, [transcriptsData]);

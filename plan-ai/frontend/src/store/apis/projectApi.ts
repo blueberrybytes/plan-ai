@@ -55,6 +55,7 @@ export interface UploadProjectTranscriptArgs {
   modelKey?: string | null;
   taskStrategy?: "AUTO" | "SINGLE_TICKET" | "SPECIFIC_COUNT";
   taskCount?: number;
+  agenticInvestigation?: boolean;
 }
 
 export type ListTasksParams = operations["ListTasks"]["parameters"]["query"];
@@ -193,6 +194,7 @@ export const projectApi = createApi({
           modelKey,
           taskStrategy,
           taskCount,
+          agenticInvestigation,
         } = arg;
         const formData = new FormData();
         files.forEach((file) => {
@@ -208,6 +210,7 @@ export const projectApi = createApi({
         if (modelKey) formData.append("modelKey", modelKey);
         if (taskStrategy) formData.append("taskStrategy", taskStrategy);
         if (taskCount) formData.append("taskCount", taskCount.toString());
+        if (agenticInvestigation !== undefined) formData.append("agenticInvestigation", agenticInvestigation.toString());
         if (contextIds && contextIds.length > 0) {
           contextIds.forEach((id: string) => formData.append("contextIds", id));
         }

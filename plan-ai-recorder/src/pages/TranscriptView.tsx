@@ -316,7 +316,7 @@ const TranscriptView: React.FC = () => {
       transcript?.metadata as { processingStatus?: string }
     )?.processingStatus;
 
-    if (processingStatus === "PENDING") {
+    if (processingStatus === "PENDING" || processingStatus === "EXTRACTING_TASKS") {
       timeoutId = setTimeout(() => {
         void fetchTranscript(true);
       }, 3000);
@@ -606,6 +606,11 @@ const TranscriptView: React.FC = () => {
               </Alert>
             ) : transcript.summary ? (
               <>
+                {(transcript.metadata as any)?.processingStatus === "EXTRACTING_TASKS" && (
+                  <Alert severity="info" sx={{ mb: 2 }}>
+                    🤖 AI is currently extracting tasks from this transcript in the background. They will appear here shortly!
+                  </Alert>
+                )}
                 <Tabs
                   value={tabValue}
                   onChange={handleTabChange}

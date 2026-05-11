@@ -80,6 +80,9 @@ interface CreateStandaloneTranscriptBody {
   syncToJira?: boolean;
   syncToLinear?: boolean;
   syncToTrello?: boolean;
+  taskStrategy?: "AUTO" | "SINGLE_TICKET" | "SPECIFIC_COUNT";
+  taskCount?: number;
+  agenticInvestigation?: boolean;
 }
 
 interface UpdateStandaloneTranscriptBody {
@@ -230,6 +233,7 @@ export class TranscriptsController extends BaseWorkspaceController {
     @FormField() skipAi?: string,
     @FormField() taskStrategy?: "AUTO" | "SINGLE_TICKET" | "SPECIFIC_COUNT",
     @FormField() taskCount?: string,
+    @FormField() agenticInvestigation?: string,
     @FormField() location?: string,
     @UploadedFile("micFile") micFile?: Express.Multer.File,
     @UploadedFile("sysFile") sysFile?: Express.Multer.File,
@@ -434,6 +438,9 @@ export class TranscriptsController extends BaseWorkspaceController {
           modelKey: body.modelKey ?? undefined,
           syncToJira: body.syncToJira,
           syncToLinear: body.syncToLinear,
+          taskStrategy: body.taskStrategy,
+          taskCount: body.taskCount,
+          agenticInvestigation: body.agenticInvestigation,
           contextPrompt: contextPrompt ?? undefined,
         });
 

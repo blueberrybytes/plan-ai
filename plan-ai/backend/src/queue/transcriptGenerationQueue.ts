@@ -31,6 +31,7 @@ export interface TranscriptGenerationJobPayload {
   syncToLinear?: boolean;
   syncToTrello?: boolean;
   contextPrompt?: string;
+  agenticInvestigation?: boolean;
 }
 
 export const transcriptGenerationQueue = new Queue<TranscriptGenerationJobPayload>(

@@ -41,7 +41,7 @@ const TASK_PRIORITY_SET = new Set<string>(TASK_PRIORITY_VALUES);
 const TranscriptTaskRawSchema = z.object({
   title: z.string().min(1),
   summary: z.string().min(1),
-  description: z.string().optional(),
+  description: z.string().min(1),
   acceptanceCriteria: z.string().min(1),
   priority: z.string().optional(),
   status: z.string().optional(),
@@ -154,6 +154,7 @@ export interface CreateTranscriptInput {
   workspaceId: string;
   taskStrategy?: "AUTO" | "SINGLE_TICKET" | "SPECIFIC_COUNT";
   taskCount?: number;
+  agenticInvestigation?: boolean;
 }
 
 export interface CreateTranscriptResult {
@@ -426,6 +427,64 @@ export class ProjectTranscriptService {
       }
     }
 
+    // PHASE 1: Fast Summary to Unlock UI Early
+    try {
+      logger.info(`Generating fast summary to unlock UI early for ${existing.id}`);
+      const fastModel = await getWorkspaceModel(input.workspaceId, "openai/gpt-4o-mini");
+      const { output: fastParsed } = await generateText({
+        model: fastModel,
+        providerOptions: getFallbackProviderOptions("openai/gpt-4o-mini"),
+        output: Output.object({
+          schema: z.object({
+            title: z.string(),
+            language: z.string(),
+            summary: z.string(),
+          }),
+        }),
+        system: "Extract a short title (max 6 words), language (e.g. 'english'), and a 2-sentence summary.",
+        prompt: `Transcript:\n${processedContent.slice(0, 8000)}`,
+        maxRetries: 1,
+      });
+
+      const currentMetadata = (existing.metadata as Record<string, unknown>) || {};
+      await prisma.transcript.update({
+        where: { id: transcriptId },
+        data: {
+          title: existing.title === "Generating Transcript..." ? fastParsed.title : existing.title,
+          language: fastParsed.language,
+          summary: fastParsed.summary,
+          transcript: processedContent,
+          durationSeconds: durationSeconds ?? null,
+          speakerCount: speakerCount ?? null,
+          utterances: (utterancesJson as unknown as Prisma.InputJsonValue) ?? Prisma.DbNull,
+          metadata: {
+            ...currentMetadata,
+            processingStatus: "EXTRACTING_TASKS",
+            principalSpeaker,
+          } as unknown as Prisma.InputJsonValue,
+        },
+      });
+      logger.info(`Fast summary generated and UI unlocked for ${existing.id}`);
+    } catch (err) {
+      logger.warn(`Fast summary failed, falling back to basic UI unlock for ${existing.id}`, err);
+      const currentMetadata = (existing.metadata as Record<string, unknown>) || {};
+      await prisma.transcript.update({
+        where: { id: transcriptId },
+        data: {
+          transcript: processedContent,
+          durationSeconds: durationSeconds ?? null,
+          speakerCount: speakerCount ?? null,
+          utterances: (utterancesJson as unknown as Prisma.InputJsonValue) ?? Prisma.DbNull,
+          metadata: {
+            ...currentMetadata,
+            processingStatus: "EXTRACTING_TASKS",
+            principalSpeaker,
+          } as unknown as Prisma.InputJsonValue,
+        },
+      });
+    }
+
+    // PHASE 2: Heavy Task Extraction
     const analysisRaw = await this.analyzeTranscript(
       input.userId,
       input.workspaceId,
@@ -438,6 +497,7 @@ export class ProjectTranscriptService {
       input.modelKey ?? undefined,
       input.taskStrategy ?? undefined,
       input.taskCount ?? undefined,
+      input.agenticInvestigation ?? true,
     );
 
     const result = await prisma.$transaction(async (tx) => {
@@ -603,6 +663,7 @@ export class ProjectTranscriptService {
     modelKey?: string,
     taskStrategy?: "AUTO" | "SINGLE_TICKET" | "SPECIFIC_COUNT",
     taskCount?: number,
+    agenticInvestigation: boolean = true,
   ): Promise<TranscriptAnalysis> {
     const activeModel = modelKey || DEFAULT_AI_MODEL;
     const model = await getWorkspaceModel(workspaceId, activeModel);
@@ -643,7 +704,7 @@ export class ProjectTranscriptService {
       (contextPrompt ? `Relevant context:\n${contextPrompt}\n\n` : "") + dynamicContext;
 
     // Step 1: Optional Agentic Investigation via MCP
-    const tools = mcpClientService.getAiTools();
+    const tools = agenticInvestigation ? mcpClientService.getAiTools() : undefined;
     if (tools) {
       try {
         logger.info(`Starting Two-Step Agentic Investigation for Transcript using fast model`);

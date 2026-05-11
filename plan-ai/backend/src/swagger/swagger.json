@@ -966,6 +966,9 @@
 					},
 					"syncToTrello": {
 						"type": "boolean"
+					},
+					"agenticInvestigation": {
+						"type": "boolean"
 					}
 				},
 				"required": [
@@ -1491,6 +1494,9 @@
 					"taskCount": {
 						"type": "number",
 						"format": "double"
+					},
+					"agenticInvestigation": {
+						"type": "boolean"
 					}
 				},
 				"type": "object",
@@ -1802,6 +1808,21 @@
 						"type": "boolean"
 					},
 					"syncToTrello": {
+						"type": "boolean"
+					},
+					"taskStrategy": {
+						"type": "string",
+						"enum": [
+							"AUTO",
+							"SINGLE_TICKET",
+							"SPECIFIC_COUNT"
+						]
+					},
+					"taskCount": {
+						"type": "number",
+						"format": "double"
+					},
+					"agenticInvestigation": {
 						"type": "boolean"
 					}
 				},
@@ -6359,6 +6380,9 @@
 									},
 									"syncToTrello": {
 										"type": "string"
+									},
+									"agenticInvestigation": {
+										"type": "string"
 									}
 								},
 								"required": [
@@ -7261,6 +7285,9 @@
 										"type": "string"
 									},
 									"taskCount": {
+										"type": "string"
+									},
+									"agenticInvestigation": {
 										"type": "string"
 									},
 									"location": {

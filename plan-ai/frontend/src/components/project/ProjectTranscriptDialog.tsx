@@ -19,6 +19,7 @@ import {
   RadioGroup,
   Select,
   Stack,
+  Switch,
   TextField,
   Typography,
 } from "@mui/material";
@@ -96,6 +97,7 @@ const ProjectTranscriptDialog: React.FC<ProjectTranscriptDialogProps> = ({
   const [selectedContextIds, setSelectedContextIds] = useState<string[]>([]);
   const [errorMessage, setErrorMessage] = useState<string>("");
   const [selectedRecordingId, setSelectedRecordingId] = useState<string | null>(null);
+  const [agenticInvestigation, setAgenticInvestigation] = useState<boolean>(true);
 
   const [createTranscript, { isLoading: isCreating }] = useCreateProjectTranscriptMutation();
   const [uploadTranscript, { isLoading: isUploading }] = useUploadProjectTranscriptMutation();
@@ -142,6 +144,7 @@ const ProjectTranscriptDialog: React.FC<ProjectTranscriptDialogProps> = ({
     setSelectedContextIds([]);
     setSelectedRecordingId(null);
     setErrorMessage("");
+    setAgenticInvestigation(true);
   };
 
   const handleClose = () => {
@@ -213,6 +216,7 @@ const ProjectTranscriptDialog: React.FC<ProjectTranscriptDialogProps> = ({
           taskStrategy,
           taskCount,
           contextIds: selectedContextIds.length > 0 ? selectedContextIds : undefined,
+          agenticInvestigation,
         }).unwrap();
       } else if (mode === "manual") {
         const content = manualContent.trim();
@@ -236,6 +240,7 @@ const ProjectTranscriptDialog: React.FC<ProjectTranscriptDialogProps> = ({
           modelKey: modelKey || undefined,
           taskStrategy,
           taskCount,
+          agenticInvestigation,
         };
 
         await createTranscript({
@@ -257,6 +262,7 @@ const ProjectTranscriptDialog: React.FC<ProjectTranscriptDialogProps> = ({
             persona,
             complexityLevel,
             modelKey: modelKey || undefined,
+            agenticInvestigation,
           },
         }).unwrap();
       }
@@ -538,6 +544,16 @@ const ProjectTranscriptDialog: React.FC<ProjectTranscriptDialogProps> = ({
                 filterSelectedOptions
                 disableCloseOnSelect
                 fullWidth
+              />
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={agenticInvestigation}
+                    onChange={(e) => setAgenticInvestigation(e.target.checked)}
+                    color="primary"
+                  />
+                }
+                label="Perform Agentic Codebase Investigation (Slower but gathers codebase context)"
               />
             </Stack>
 

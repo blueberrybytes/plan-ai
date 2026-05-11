@@ -166,7 +166,10 @@ class LinearIntegrationService {
       description += `${task.summary}\n\n`;
     }
     if (task.acceptanceCriteria) {
-      description += `### Acceptance Criteria\n${task.acceptanceCriteria}`;
+      description += `### Acceptance Criteria\n${task.acceptanceCriteria}\n\n`;
+    }
+    if (task.dueDate) {
+      description += `### Due Date\n🗓️ ${new Date(task.dueDate).toLocaleDateString()}\n\n`;
     }
 
     let linearParentId: string | undefined = undefined;
@@ -187,6 +190,7 @@ class LinearIntegrationService {
       title: task.title || `Extracted Task ${task.id}`,
       description,
       estimate: task.storyPoints ?? undefined,
+      dueDate: task.dueDate ? new Date(task.dueDate).toISOString().split("T")[0] : undefined,
       parentId: linearParentId,
     });
 

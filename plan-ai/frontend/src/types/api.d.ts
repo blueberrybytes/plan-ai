@@ -2041,6 +2041,7 @@ export interface components {
             syncToJira?: boolean;
             syncToLinear?: boolean;
             syncToTrello?: boolean;
+            agenticInvestigation?: boolean;
         };
         ApiResponse_TranscriptResponse_: {
             message?: string;
@@ -2185,6 +2186,7 @@ export interface components {
             taskStrategy?: "AUTO" | "SINGLE_TICKET" | "SPECIFIC_COUNT";
             /** Format: double */
             taskCount?: number;
+            agenticInvestigation?: boolean;
         };
         StandaloneTranscriptResponse: {
             id: string;
@@ -2263,6 +2265,11 @@ export interface components {
             syncToJira?: boolean;
             syncToLinear?: boolean;
             syncToTrello?: boolean;
+            /** @enum {string} */
+            taskStrategy?: "AUTO" | "SINGLE_TICKET" | "SPECIFIC_COUNT";
+            /** Format: double */
+            taskCount?: number;
+            agenticInvestigation?: boolean;
         };
         UpdateStandaloneTranscriptBody: {
             title?: string | null;
@@ -3830,6 +3837,7 @@ export interface operations {
                     syncToJira?: string;
                     syncToLinear?: string;
                     syncToTrello?: string;
+                    agenticInvestigation?: string;
                 };
             };
         };
@@ -4316,6 +4324,7 @@ export interface operations {
                     skipAi?: string;
                     taskStrategy?: string;
                     taskCount?: string;
+                    agenticInvestigation?: string;
                     location?: string;
                     /** Format: binary */
                     micFile?: string;
