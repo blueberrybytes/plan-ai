@@ -67,12 +67,13 @@ export const resolveBrand = (): BrandKey => {
 };
 
 export const useBrandIdentity = () => {
-  //const brandKey: BrandKey = "housegroup";
   const brandKey = resolveBrand();
   const config = brandConfigs[brandKey];
+  const isDev = process.env.NODE_ENV === "development";
 
   return {
     brandKey,
     ...config,
+    deepLinkScheme: isDev ? `${config.deepLinkScheme}-dev` : config.deepLinkScheme,
   };
 };

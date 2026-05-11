@@ -31,8 +31,9 @@ Sentry.init({
 });
 
 // Custom protocol for receiving auth tokens from the system browser
-const PROTOCOL = import.meta.env.VITE_APP_PROTOCOL || "blueberrybytes-recorder";
-const isHouseGroup = PROTOCOL === "housegroup-recorder";
+const BASE_PROTOCOL = import.meta.env.VITE_APP_PROTOCOL || "blueberrybytes-recorder";
+const PROTOCOL = app.isPackaged ? BASE_PROTOCOL : `${BASE_PROTOCOL}-dev`;
+const isHouseGroup = BASE_PROTOCOL === "housegroup-recorder";
 
 nativeTheme.themeSource = isHouseGroup ? "light" : "dark";
 // Force-disable CORS and Web Security policies at the deepest chromium level for WebAuthn/Passkeys
