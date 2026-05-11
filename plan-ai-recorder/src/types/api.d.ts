@@ -2239,6 +2239,7 @@ export interface components {
             modelKey?: string;
             syncToJira?: boolean;
             syncToLinear?: boolean;
+            syncToTrello?: boolean;
         };
         UpdateStandaloneTranscriptBody: {
             title?: string | null;
@@ -4212,6 +4213,7 @@ export interface operations {
                     complexityLevel?: string;
                     syncToJira?: string;
                     syncToLinear?: string;
+                    syncToTrello?: string;
                     skipAi?: string;
                     taskStrategy?: string;
                     taskCount?: string;

@@ -1791,6 +1791,9 @@
 					},
 					"syncToLinear": {
 						"type": "boolean"
+					},
+					"syncToTrello": {
+						"type": "boolean"
 					}
 				},
 				"type": "object",
@@ -7129,6 +7132,9 @@
 										"type": "string"
 									},
 									"syncToLinear": {
+										"type": "string"
+									},
+									"syncToTrello": {
 										"type": "string"
 									},
 									"skipAi": {

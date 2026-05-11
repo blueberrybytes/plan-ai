@@ -34,6 +34,7 @@ export const transcriptGenerationWorker = new Worker<TranscriptGenerationJobPayl
         modelKey: job.data.modelKey,
         syncToJira: job.data.syncToJira,
         syncToLinear: job.data.syncToLinear,
+        syncToTrello: job.data.syncToTrello,
         taskStrategy: job.data.taskStrategy,
         taskCount: job.data.taskCount,
         contextPrompt: job.data.contextPrompt,

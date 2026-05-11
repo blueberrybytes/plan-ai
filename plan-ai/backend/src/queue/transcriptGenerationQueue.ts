@@ -29,6 +29,7 @@ export interface TranscriptGenerationJobPayload {
   taskCount?: number;
   syncToJira?: boolean;
   syncToLinear?: boolean;
+  syncToTrello?: boolean;
   contextPrompt?: string;
 }
 

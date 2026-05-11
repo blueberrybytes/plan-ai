@@ -22,7 +22,7 @@ features:
     details: Complete privacy and wholesale AI pricing. Plug in your OpenRouter and Deepgram keys to avoid SaaS markup and token taxes.
     icon: 🔑
   - title: 1-Click Ticket Generation
-    details: Connect to Jira or Linear. Automatically generate perfectly scoped technical tasks with exact acceptance criteria based on the meeting audio.
+    details: Connect to Jira, Linear, or Trello. Automatically generate perfectly scoped technical tasks with exact acceptance criteria based on the meeting audio.
     icon: 🎫
   - title: Automated System Docs
     details: Stop writing documentation manually. Plan AI extracts architectural decisions and system changes directly from your engineering standups.

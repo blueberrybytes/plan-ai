@@ -19,7 +19,7 @@ graph TD
     AI_Deepgram[🎙️ Deepgram API<br>Audio Transcription]
     AI_OpenRouter[🧠 OpenRouter API<br>LLM Processing]
     Auth[🔐 Firebase<br>Authentication]
-    Ext_Integrations[🔌 Integrations<br>Linear, GitHub, Jira]
+    Ext_Integrations[🔌 Integrations<br>Linear, GitHub, Jira, Trello]
 
     %% Flow
     Mobile -->|Uploads Audio| Backend

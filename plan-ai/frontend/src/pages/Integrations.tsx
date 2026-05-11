@@ -128,7 +128,6 @@ const PROVIDER_CONFIGS: ProviderConfig[] = [
     connectCtaKey: "integrationsPage.providers.trello.connectCta",
     comingSoon: false,
     notConnectedKey: "integrationsPage.providers.trello.notConnected",
-    isBeta: true,
   },
 ];
 

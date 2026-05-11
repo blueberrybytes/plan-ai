@@ -1,6 +1,6 @@
 # Plan AI 🚀
 
-Plan AI is an open-source, AI-assisted meeting planning and execution platform. It records your meetings, generates accurate transcripts using Deepgram, and extracts structured insights, Jira tasks, and action items using advanced LLMs via OpenRouter.
+Plan AI is an open-source, AI-assisted meeting planning and execution platform. It records your meetings, generates accurate transcripts using Deepgram, and extracts structured insights, Jira/Linear/Trello tasks, and action items using advanced LLMs via OpenRouter.
 
 [![Plan AI Demo](https://img.youtube.com/vi/NqpvMhQBYqU/maxresdefault.jpg)](https://www.youtube.com/watch?v=NqpvMhQBYqU)
 
@@ -72,7 +72,7 @@ graph TD
     AI_OpenRouter[🧠 OpenRouter API<br>LLM Processing]
     Auth[🔐 Firebase<br>Authentication]
     Sentry[🐛 Sentry<br>Error Tracking]
-    Ext_Integrations[🔌 Integrations<br>Linear, GitHub, Google Drive]
+    Ext_Integrations[🔌 Integrations<br>Jira, Linear, Trello, Google Drive]
 
     %% Flow
     Mobile -->|Uploads Audio| Backend
@@ -134,7 +134,7 @@ graph TD
     subgraph External[External Services]
         Auth[🔐 Firebase Auth]
         Monitor[🐛 Sentry]
-        Integrations[🔌 Linear / GitHub / Google]
+        Integrations[🔌 Jira / Linear / Trello]
     end
 
     %% Flow

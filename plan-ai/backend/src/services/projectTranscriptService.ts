@@ -23,6 +23,7 @@ import { aiContextRouter } from "./aiContextRouter";
 import { IntegrationProvider, IntegrationStatus } from "@prisma/client";
 import { jiraIntegrationService } from "./jiraIntegrationService";
 import { linearIntegrationService } from "./linearIntegrationService";
+import { trelloIntegrationService } from "./trelloIntegrationService";
 import { aiUsageService } from "./aiUsageService";
 import type { TaskMetadata } from "./taskMetadataTypes";
 import { getPersonaInstructions } from "./personaService";
@@ -149,6 +150,7 @@ export interface CreateTranscriptInput {
   modelKey?: string | null;
   syncToJira?: boolean;
   syncToLinear?: boolean;
+  syncToTrello?: boolean;
   workspaceId: string;
   taskStrategy?: "AUTO" | "SINGLE_TICKET" | "SPECIFIC_COUNT";
   taskCount?: number;
@@ -576,6 +578,7 @@ export class ProjectTranscriptService {
       this.autoSyncTasks(input.userId, result.createdTasks, {
         syncToJira: input.syncToJira,
         syncToLinear: input.syncToLinear,
+        syncToTrello: input.syncToTrello,
       }).catch((err) => {
         logger.warn("Failed to auto-sync tasks for transcript import", err);
       });
@@ -911,7 +914,7 @@ ${content}`;
   private async autoSyncTasks(
     userId: string,
     tasks: Task[],
-    options?: { syncToJira?: boolean; syncToLinear?: boolean },
+    options?: { syncToJira?: boolean; syncToLinear?: boolean; syncToTrello?: boolean },
   ): Promise<void> {
     const integrations = await prisma.userIntegration.findMany({
       where: {
@@ -962,6 +965,25 @@ ${content}`;
               url: syncResult.url,
             });
           }
+        } else if (
+          integration.provider === IntegrationProvider.TRELLO &&
+          metadata.defaultBoardId &&
+          metadata.defaultListId &&
+          options?.syncToTrello !== false
+        ) {
+          for (const task of tasks) {
+            const syncResult = await trelloIntegrationService.createTrelloCard(
+              userId,
+              task.id,
+              metadata.defaultBoardId,
+              metadata.defaultListId,
+            );
+            await this.updateTaskTargetMetadata(task.id, "trello", {
+              cardId: syncResult.cardId,
+              shortLink: syncResult.shortLink,
+              url: syncResult.url,
+            });
+          }
         }
       } catch (error) {
         logger.error(`Auto-sync failed for ${integration.provider}`, error);
@@ -971,7 +993,7 @@ ${content}`;
 
   private async updateTaskTargetMetadata(
     taskId: string,
-    provider: "jira" | "linear",
+    provider: "jira" | "linear" | "trello",
     payload: unknown,
   ) {
     const task = await prisma.task.findUnique({
@@ -986,6 +1008,8 @@ ${content}`;
       existingMetadata.jira = payload as TaskMetadata["jira"];
     } else if (provider === "linear") {
       existingMetadata.linear = payload as TaskMetadata["linear"];
+    } else if (provider === "trello") {
+      existingMetadata.trello = payload as TaskMetadata["trello"];
     }
 
     await prisma.task.update({

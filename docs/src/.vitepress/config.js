@@ -44,7 +44,7 @@ export default withMermaid(defineConfig({
           { text: 'Recordings & Transcripts', link: '/features/recordings' },
           { text: 'Contexts & Advanced RAG', link: '/features/contexts-rag' },
           { text: 'GitNexus Analyzer', link: '/features/gitnexus' },
-          { text: 'Jira & Linear Sync', link: '/features/jira-linear' },
+          { text: 'Task Sync (Jira, Linear, Trello)', link: '/features/task-sync' },
           { text: 'Docs & Diagrams', link: '/features/docs-diagrams' }
         ]
       },

@@ -15,6 +15,7 @@ export type Context               = components['schemas']['ContextResponse'];
 export type AiModel               = components['schemas']['AiModelResponse'];
 export type UserIntegrationSummary = components['schemas']['IntegrationSummaryResponse'];
 export type UserResponse = components['schemas']['UserResponse'];
+export type CreateStandaloneTranscriptBody = components['schemas']['CreateStandaloneTranscriptBody'];
 
 async function handleResponseWithRetry<T>(
   res: Response,
@@ -257,17 +258,7 @@ export const createPlanAiApi = (
       await handleResponseWithRetry(res, () => req(true));
     },
 
-    async saveRecording(payload: {
-      content: string;
-      title?: string;
-      recordedAt?: string;
-      contextIds?: string[];
-      projectId?: string;
-      chatHistory?: { role: "user" | "assistant"; content: string }[];
-      modelKey?: string;
-      complexityLevel?: string;
-      syncToJira?: boolean;
-      syncToLinear?: boolean;
+    async saveRecording(payload: CreateStandaloneTranscriptBody & {
       taskStrategy?: "AUTO" | "SINGLE_TICKET" | "SPECIFIC_COUNT";
       taskCount?: number;
       micFile?: Blob;
@@ -280,7 +271,7 @@ export const createPlanAiApi = (
         // Append all text payload properties individually or as serialized JSON.
         // The backend `transcriptsController.ts` will parse them.
         formData.append("source", "RECORDING");
-        formData.append("content", payload.content);
+        if (payload.content) formData.append("content", payload.content);
         if (payload.title) formData.append("title", payload.title);
         if (payload.recordedAt) formData.append("recordedAt", payload.recordedAt);
         if (payload.projectId) formData.append("projectId", payload.projectId);
@@ -288,6 +279,7 @@ export const createPlanAiApi = (
         if (payload.complexityLevel) formData.append("complexityLevel", payload.complexityLevel);
         if (payload.syncToJira) formData.append("syncToJira", "true");
         if (payload.syncToLinear) formData.append("syncToLinear", "true");
+        if (payload.syncToTrello) formData.append("syncToTrello", "true");
         if (payload.taskStrategy) formData.append("taskStrategy", payload.taskStrategy);
         if (payload.taskCount) formData.append("taskCount", payload.taskCount.toString());
         if (payload.skipAi) formData.append("skipAi", "true");

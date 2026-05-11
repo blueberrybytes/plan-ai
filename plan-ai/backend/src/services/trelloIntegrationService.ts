@@ -12,8 +12,8 @@ class TrelloIntegrationService {
     options: RequestInit = {},
   ): Promise<T> {
     const url = new URL(`https://api.trello.com/1${path}`);
-    url.searchParams.set("key", apiKey);
-    url.searchParams.set("token", token);
+    url.searchParams.set("key", apiKey.trim());
+    url.searchParams.set("token", token.trim());
 
     const response = await fetch(url.toString(), {
       ...options,

@@ -201,6 +201,7 @@ const Recording: React.FC = () => {
   const [integrations, setIntegrations] = useState<UserIntegrationSummary[]>([]);
   const [syncToJira, setSyncToJira] = useState<boolean>(false);
   const [syncToLinear, setSyncToLinear] = useState<boolean>(false);
+  const [syncToTrello, setSyncToTrello] = useState<boolean>(false);
   
   const [taskStrategy, setTaskStrategy] = useState<"AUTO" | "SINGLE_TICKET" | "SPECIFIC_COUNT">("AUTO");
   const [taskCount, setTaskCount] = useState<number>(5);
@@ -371,6 +372,7 @@ const Recording: React.FC = () => {
         complexityLevel: complexityLevel || undefined,
         syncToJira,
         syncToLinear,
+        syncToTrello,
         taskStrategy,
         taskCount,
         skipAi,
@@ -418,6 +420,10 @@ const Recording: React.FC = () => {
           const linear = ints.find((i) => i.provider === "LINEAR" && i.status === "CONNECTED");
           if (linear && (linear.metadata as Record<string, unknown>)?.defaultTeamId) {
             setSyncToLinear(true);
+          }
+          const trello = ints.find((i) => i.provider === "TRELLO" && i.status === "CONNECTED");
+          if (trello && (trello.metadata as Record<string, unknown>)?.defaultBoardId) {
+            setSyncToTrello(true);
           }
         }).catch(console.error);
       }
@@ -708,6 +714,21 @@ const Recording: React.FC = () => {
               label={
                 <Typography variant="body2">
                   Sync generated tasks to Linear
+                </Typography>
+              }
+            />
+          )}
+          {integrations.some((i) => i.provider === "TRELLO" && i.status === "CONNECTED") && (
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={syncToTrello}
+                  onChange={(e) => setSyncToTrello(e.target.checked)}
+                />
+              }
+              label={
+                <Typography variant="body2">
+                  Sync generated tasks to Trello
                 </Typography>
               }
             />

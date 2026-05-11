@@ -295,8 +295,10 @@ export default function RecordScreen() {
   const [selectedContextIds, setSelectedContextIds] = useState<string[]>([]);
   const [syncToJira, setSyncToJira] = useState(false);
   const [syncToLinear, setSyncToLinear] = useState(false);
+  const [syncToTrello, setSyncToTrello] = useState(false);
   const [hasJira, setHasJira] = useState(false);
   const [hasLinear, setHasLinear] = useState(false);
+  const [hasTrello, setHasTrello] = useState(false);
 
   const [taskStrategy, setTaskStrategy] = useState<
     "AUTO" | "SINGLE_TICKET" | "SPECIFIC_COUNT"
@@ -512,12 +514,17 @@ export default function RecordScreen() {
           const linear = (ints as any[]).find(
             (i) => i.provider === "LINEAR" && i.status === "CONNECTED",
           );
+          const trello = (ints as any[]).find(
+            (i) => i.provider === "TRELLO" && i.status === "CONNECTED",
+          );
           if (jira) setHasJira(true);
           if (linear) setHasLinear(true);
+          if (trello) setHasTrello(true);
 
           // As per UX requirement, default to OFF on mobile to avoid accidental spam
           setSyncToJira(false);
           setSyncToLinear(false);
+          setSyncToTrello(false);
         })
         .finally(() => {
           setIsLoadingMetadata(false);
@@ -767,6 +774,7 @@ export default function RecordScreen() {
           selectedContextIds.length > 0 ? selectedContextIds : undefined,
         syncToJira,
         syncToLinear,
+        syncToTrello,
         taskStrategy,
         taskCount,
         skipAi,
@@ -1051,6 +1059,23 @@ export default function RecordScreen() {
                   value={syncToLinear}
                   onValueChange={setSyncToLinear}
                   disabled={!hasLinear}
+                />
+              </View>
+
+              <View
+                style={{
+                  flexDirection: "row",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                }}
+              >
+                <Text style={{ opacity: hasTrello ? 1 : 0.5 }}>
+                  Sync to Trello
+                </Text>
+                <Switch
+                  value={syncToTrello}
+                  onValueChange={setSyncToTrello}
+                  disabled={!hasTrello}
                 />
               </View>
             </View>

@@ -16,7 +16,7 @@ The core value proposition of Plan AI is ruthless efficiency.
 If you manage a software team, you're wasting thousands of dollars a month paying project managers to manually turn meeting notes into Jira tickets. Plan AI solves this by introducing a "Wedge" workflow:
 1. **Record:** You securely record your client syncs locally on your machine.
 2. **Contextualize:** The system processes the audio alongside your specific technical architecture and codebase.
-3. **Execute:** With one click, Plan AI generates perfectly scoped Jira or Linear tickets with exact acceptance criteria, preventing generic AI hallucinations.
+3. **Execute:** With one click, Plan AI generates perfectly scoped Jira, Linear, or Trello tickets with exact acceptance criteria, preventing generic AI hallucinations.
 
 ## Why Bot-Free?
 Most AI meeting tools invite a "creepy bot" to your Zoom, Google Meet, or Teams calls. This is a massive red flag for enterprise clients and B2B software agencies discussing proprietary code, NDA-protected architectures, or unreleased features.
@@ -41,7 +41,7 @@ You only pay the raw wholesale cost of the AI providers. Your API keys are secur
 Plan AI is built as a unified monorepo consisting of three core applications that work together seamlessly:
 
 ### 1. The Web Platform
-The central hub where your TPMs and engineers manage workspaces, define "Contexts", review transcripts, chat with the AI, and instantly push tickets to Jira or Linear.
+The central hub where your TPMs and engineers manage workspaces, define "Contexts", review transcripts, chat with the AI, and instantly push tickets to Jira, Linear, or Trello.
 
 ### 2. The Native Desktop Recorder
 A lightweight, secure Electron application that lives in your menu bar (macOS, Windows, Linux). It captures your microphone and system audio without ever inviting a bot to the call.
