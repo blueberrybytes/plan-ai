@@ -83,7 +83,12 @@ export class IntegrationController extends BaseWorkspaceController {
         defaultBoardUrl = `https://trello.com/b/${metadata.defaultBoardId}`;
       }
     } else if (integration.provider === "LINEAR") {
-      defaultBoardUrl = `https://linear.app`;
+      const metadata = (integration.metadata ?? {}) as Record<string, string>;
+      if (metadata.organizationUrlKey && metadata.teamKey) {
+        defaultBoardUrl = `https://linear.app/${metadata.organizationUrlKey}/team/${metadata.teamKey}/all`;
+      } else {
+        defaultBoardUrl = `https://linear.app`;
+      }
     } else if (integration.provider === "JIRA") {
       const metadata = (integration.metadata ?? {}) as Partial<JiraIntegrationMetadata>;
       if (metadata.jiraSiteUrl) {

@@ -17,6 +17,8 @@ export interface JiraIntegrationMetadata extends BaseIntegrationMetadata {
 export interface LinearIntegrationMetadata extends BaseIntegrationMetadata {
   authType: "API_KEY";
   defaultTeamId?: string;
+  organizationUrlKey?: string;
+  teamKey?: string;
 }
 
 export interface GoogleIntegrationMetadata extends BaseIntegrationMetadata {

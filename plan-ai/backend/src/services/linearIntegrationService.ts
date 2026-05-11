@@ -16,6 +16,7 @@ class LinearIntegrationService {
     try {
       const client = new LinearClient({ apiKey });
       const viewer = await client.viewer;
+      const org = await viewer.organization;
 
       if (!viewer || !viewer.id) {
         throw new Error("Invalid API Key");
@@ -37,6 +38,7 @@ class LinearIntegrationService {
           accountName: viewer.name,
           metadata: {
             authType: "API_KEY",
+            organizationUrlKey: org.urlKey,
           } as LinearIntegrationMetadata as unknown as Prisma.InputJsonObject,
         },
         update: {
@@ -46,6 +48,7 @@ class LinearIntegrationService {
           accountName: viewer.name,
           metadata: {
             authType: "API_KEY",
+            organizationUrlKey: org.urlKey,
           } as LinearIntegrationMetadata as unknown as Prisma.InputJsonObject,
         },
       });
@@ -112,10 +115,14 @@ class LinearIntegrationService {
     });
     if (!integration) throw new Error("Linear integration not found");
 
+    const client = new LinearClient({ apiKey: integration.accessToken });
+    const team = await client.team(teamId);
+
     const currentMeta = (integration.metadata ?? {}) as Record<string, unknown>;
     const newMetadata = {
       ...currentMeta,
       defaultTeamId: teamId,
+      teamKey: team.key,
     } as unknown as Prisma.InputJsonObject;
     console.log(
       `[linearIntegrationService] Updating metadata for ${userId} to:`,
