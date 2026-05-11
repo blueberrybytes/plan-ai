@@ -168,6 +168,9 @@ interface ImportTranscriptRequest {
   modelKey?: string;
   taskStrategy?: "AUTO" | "SINGLE_TICKET" | "SPECIFIC_COUNT";
   taskCount?: number;
+  syncToJira?: boolean;
+  syncToLinear?: boolean;
+  syncToTrello?: boolean;
 }
 
 interface TaskListResponse {
@@ -376,6 +379,9 @@ export class ProjectsModelController extends BaseWorkspaceController {
     @FormField() modelKey?: string,
     @FormField() taskStrategy?: "AUTO" | "SINGLE_TICKET" | "SPECIFIC_COUNT",
     @FormField() taskCount?: number,
+    @FormField() syncToJira?: boolean,
+    @FormField() syncToLinear?: boolean,
+    @FormField() syncToTrello?: boolean,
   ): Promise<ApiResponse<CreateTranscriptResponse>> {
     const { user, workspaceId } = await this.getAuthorizedWorkspaceAccess(request);
     await this.getProjectForWorkspace(request, projectId, workspaceId);
@@ -482,6 +488,9 @@ export class ProjectsModelController extends BaseWorkspaceController {
       modelKey,
       taskStrategy,
       taskCount,
+      syncToJira,
+      syncToLinear,
+      syncToTrello,
       contextPrompt: contextPrompt ?? undefined,
     });
 
@@ -588,6 +597,9 @@ export class ProjectsModelController extends BaseWorkspaceController {
       modelKey: body.modelKey,
       taskStrategy: body.taskStrategy,
       taskCount: body.taskCount,
+      syncToJira: body.syncToJira,
+      syncToLinear: body.syncToLinear,
+      syncToTrello: body.syncToTrello,
       contextPrompt: contextPrompt ?? undefined,
     });
 

@@ -55,7 +55,7 @@
     "@prisma/client": "^6.12.0",
     "@qdrant/js-client-rest": "^1.15.1",
     "@sentry/node": "^10.48.0",
-    "ai": "^6.0.101",
+    "ai": "^6.0.177",
     "axios": "^1.15.0",
     "bullmq": "^5.73.0",
     "class-transformer": "^0.5.1",

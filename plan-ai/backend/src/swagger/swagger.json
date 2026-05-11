@@ -957,6 +957,15 @@
 					"taskCount": {
 						"type": "number",
 						"format": "double"
+					},
+					"syncToJira": {
+						"type": "boolean"
+					},
+					"syncToLinear": {
+						"type": "boolean"
+					},
+					"syncToTrello": {
+						"type": "boolean"
 					}
 				},
 				"required": [
@@ -5498,7 +5507,7 @@
 	},
 	"info": {
 		"title": "backend",
-		"version": "2.0.2",
+		"version": "2.0.3",
 		"license": {
 			"name": "BUSL-1.1"
 		},
@@ -6340,6 +6349,15 @@
 										"type": "string"
 									},
 									"taskCount": {
+										"type": "string"
+									},
+									"syncToJira": {
+										"type": "string"
+									},
+									"syncToLinear": {
+										"type": "string"
+									},
+									"syncToTrello": {
 										"type": "string"
 									}
 								},

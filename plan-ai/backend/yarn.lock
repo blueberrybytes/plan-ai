@@ -2,13 +2,13 @@
 # yarn lockfile v1
 
 
-"@ai-sdk/gateway@3.0.108":
-  version "3.0.108"
-  resolved "https://registry.yarnpkg.com/@ai-sdk/gateway/-/gateway-3.0.108.tgz#afd425b371922b80cfb3e72bbc7a6d2a3a16b236"
-  integrity sha512-hOtwiM6E/m1PgqHnx0/grvh0P/kjENHsN222OL5iYPQwfWmcX+26oFXM7HGL/UzonB+RORMkYAbskgAiANVwCQ==
+"@ai-sdk/gateway@3.0.112":
+  version "3.0.112"
+  resolved "https://registry.yarnpkg.com/@ai-sdk/gateway/-/gateway-3.0.112.tgz#537fa99c3cd3101f9861dfffb3556e97e36b7067"
+  integrity sha512-jiBao9pR4owWyjo0BnuNc7WSQBGOD0thysE4AFgZXaG+zMFbISQXUkJr7ePw/phBvePy7jE5FSA2Lf7lwqUiiQ==
   dependencies:
     "@ai-sdk/provider" "3.0.10"
-    "@ai-sdk/provider-utils" "4.0.26"
+    "@ai-sdk/provider-utils" "4.0.27"
     "@vercel/oidc" "3.2.0"
 
 "@ai-sdk/openai@^3.0.34":
@@ -23,6 +23,15 @@
   version "4.0.26"
   resolved "https://registry.yarnpkg.com/@ai-sdk/provider-utils/-/provider-utils-4.0.26.tgz#0f0ffb28c0f337007f55e55a6de23384b31816ba"
   integrity sha512-CsKNLKsOpvPujRlIYvoz+Ybw+kGn7J4/fIZa/58+R7iWLLfwn6ifE2G6Yq8K9XvH/I/3bzaDAJ3NhRwEMsLBKQ==
+  dependencies:
+    "@ai-sdk/provider" "3.0.10"
+    "@standard-schema/spec" "^1.1.0"
+    eventsource-parser "^3.0.8"
+
+"@ai-sdk/provider-utils@4.0.27":
+  version "4.0.27"
+  resolved "https://registry.yarnpkg.com/@ai-sdk/provider-utils/-/provider-utils-4.0.27.tgz#d2183685768626bcf1c968b7d73ea2b974da59b9"
+  integrity sha512-ubkAJ+xODouwtmN1tYlvTPphH1hPOBfZaEQe8U7skGvFAnIRs9PPpsq57bC2+Ky/MB4yzhd6YOsxTAx9sGpazw==
   dependencies:
     "@ai-sdk/provider" "3.0.10"
     "@standard-schema/spec" "^1.1.0"
@@ -2759,14 +2768,14 @@ agent-base@^7.1.2:
   resolved "https://registry.yarnpkg.com/agent-base/-/agent-base-7.1.4.tgz#e3cd76d4c548ee895d3c3fd8dc1f6c5b9032e7a8"
   integrity sha512-MnA+YT8fwfJPgBx3m60MNqakm30XOkyIoH1y6huTQvC0PwZG7ki8NacLBcrPbNoo8vEZy7Jpuk7+jMO+CUovTQ==
 
-ai@^6.0.101:
-  version "6.0.173"
-  resolved "https://registry.yarnpkg.com/ai/-/ai-6.0.173.tgz#540d9b5adbb28cd8b7f48395abcd415a5b4c7f78"
-  integrity sha512-X2noFb82kouYQ4nlKGm1cR1Wvlp4Xit7fjJzwXv/msKQmtqkQn9NiXH6kCX4Gl4G+9DRWsJHIKANtWk8Ix1nTw==
+ai@^6.0.177:
+  version "6.0.177"
+  resolved "https://registry.yarnpkg.com/ai/-/ai-6.0.177.tgz#ed9dbd58397dc71dbe01487e8ff88cc0f26f63c9"
+  integrity sha512-1xQtbeWwNcLyyM86ixZhkKvT+WRXc1lvarIKqPVtsyn8F9NDikwUMBqYu+aQKDgMht50SMXh4qboYuU8MeHZZA==
   dependencies:
-    "@ai-sdk/gateway" "3.0.108"
+    "@ai-sdk/gateway" "3.0.112"
     "@ai-sdk/provider" "3.0.10"
-    "@ai-sdk/provider-utils" "4.0.26"
+    "@ai-sdk/provider-utils" "4.0.27"
     "@opentelemetry/api" "1.9.0"
 
 ajv-formats@^3.0.1:

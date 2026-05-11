@@ -2038,6 +2038,9 @@ export interface components {
             taskStrategy?: "AUTO" | "SINGLE_TICKET" | "SPECIFIC_COUNT";
             /** Format: double */
             taskCount?: number;
+            syncToJira?: boolean;
+            syncToLinear?: boolean;
+            syncToTrello?: boolean;
         };
         ApiResponse_TranscriptResponse_: {
             message?: string;
@@ -3824,6 +3827,9 @@ export interface operations {
                     modelKey?: string;
                     taskStrategy?: string;
                     taskCount?: string;
+                    syncToJira?: string;
+                    syncToLinear?: string;
+                    syncToTrello?: string;
                 };
             };
         };

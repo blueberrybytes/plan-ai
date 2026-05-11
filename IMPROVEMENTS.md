@@ -41,3 +41,6 @@ This document outlines the high-priority features, technical debt, and quality-o
 **Problem:** If transcript generation fails, the user is left without tasks and no easy way to try again.
 **Solution:**
 - Add a "Retry Generation" button in the UI for users if an AI extraction job fails due to rate limits or timeouts. We need to store somehow that htis failed so in the recorder ui and mobile we can retry
+
+## 7. Migrate all to generateText and telemetry all the usage including retries
+**Problem:** We are using generateObject which is a wrapper around generateText and there is no usage telemetry. We need to migrate all to generateText and telemetry all the usage including retries.
