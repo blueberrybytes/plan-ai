@@ -52,6 +52,7 @@
     "@firebase/performance": "^0.6.12",
     "@firebase/storage": "^0.13.6",
     "@microsoft/clarity": "^1.0.0",
+    "@mohtasham/md-to-docx": "^2.10.2",
     "@mui/icons-material": "^6.4.2",
     "@mui/material": "^6.4.1",
     "@mui/x-date-pickers": "5.0.0-alpha.7",

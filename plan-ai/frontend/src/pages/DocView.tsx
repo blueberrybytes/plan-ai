@@ -38,6 +38,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import MarkdownRenderer from "../components/common/MarkdownRenderer";
 import { Document, Packer, Paragraph, TextRun, HeadingLevel } from "docx";
+import { exportMarkdownToDocx } from "../utils/docxExport";
 import SidebarLayout from "../components/layout/SidebarLayout";
 import {
   useGetDocQuery,
@@ -248,76 +249,7 @@ const DocView: React.FC = () => {
   const handleExportDocx = async () => {
     setExportAnchor(null);
     if (!doc) return;
-    // Parse markdown lines into DOCX paragraphs keeping code blocks intact
-    const lines = content.split("\n");
-    const children: Paragraph[] = [];
-
-    let inCodeBlock = false;
-    let codeLines: string[] = [];
-
-    lines.forEach((line) => {
-      if (line.trim().startsWith("```")) {
-        if (inCodeBlock) {
-          codeLines.push(line);
-          const runs = codeLines.map(
-            (cl, i) => new TextRun({ text: cl, font: "Courier New", break: i > 0 ? 1 : undefined }),
-          );
-          children.push(new Paragraph({ children: runs }));
-          inCodeBlock = false;
-          codeLines = [];
-        } else {
-          inCodeBlock = true;
-          codeLines.push(line);
-        }
-        return;
-      }
-
-      if (inCodeBlock) {
-        codeLines.push(line);
-        return;
-      }
-
-      if (line.startsWith("### ")) {
-        children.push(
-          new Paragraph({ text: line.replace(/^### /, ""), heading: HeadingLevel.HEADING_3 }),
-        );
-      } else if (line.startsWith("## ")) {
-        children.push(
-          new Paragraph({ text: line.replace(/^## /, ""), heading: HeadingLevel.HEADING_2 }),
-        );
-      } else if (line.startsWith("# ")) {
-        children.push(
-          new Paragraph({ text: line.replace(/^# /, ""), heading: HeadingLevel.HEADING_1 }),
-        );
-      } else if (line.trim().length > 0) {
-        children.push(
-          new Paragraph({
-            children: [
-              new TextRun(line.replace(/\*\*(.*?)\*\*/g, "$1").replace(/\*(.*?)\*/g, "$1")),
-            ],
-          }),
-        );
-      }
-    });
-
-    if (inCodeBlock && codeLines.length > 0) {
-      const runs = codeLines.map(
-        (cl, i) => new TextRun({ text: cl, font: "Courier New", break: i > 0 ? 1 : undefined }),
-      );
-      children.push(new Paragraph({ children: runs }));
-    }
-    const docxDoc = new Document({
-      sections: [
-        { children: [new Paragraph({ text: title, heading: HeadingLevel.TITLE }), ...children] },
-      ],
-    });
-    const buffer = await Packer.toBlob(docxDoc);
-    const url = URL.createObjectURL(buffer);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `${title}.docx`;
-    a.click();
-    URL.revokeObjectURL(url);
+    await exportMarkdownToDocx(title, content);
   };
 
   const theme = (

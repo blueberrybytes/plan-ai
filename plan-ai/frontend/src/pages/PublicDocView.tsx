@@ -19,6 +19,7 @@ import { Download as DownloadIcon } from "@mui/icons-material";
 import { Helmet } from "react-helmet-async";
 import { Document, Paragraph, TextRun, HeadingLevel, Packer } from "docx";
 import { saveAs } from "file-saver";
+import { exportMarkdownToDocx } from "../utils/docxExport";
 import { useParams, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import MarkdownRenderer from "../components/common/MarkdownRenderer";
@@ -63,68 +64,7 @@ const PublicDocView: React.FC = () => {
   const handleExportDocx = async () => {
     setExportAnchor(null);
     if (!doc) return;
-    const lines = (doc.content || "").split("\n");
-    const children: Paragraph[] = [];
-
-    let inCodeBlock = false;
-    let codeLines: string[] = [];
-
-    lines.forEach((line) => {
-      if (line.trim().startsWith("```")) {
-        if (inCodeBlock) {
-          codeLines.push(line);
-          const runs = codeLines.map(
-            (cl, i) => new TextRun({ text: cl, font: "Courier New", break: i > 0 ? 1 : undefined }),
-          );
-          children.push(new Paragraph({ children: runs }));
-          inCodeBlock = false;
-          codeLines = [];
-        } else {
-          inCodeBlock = true;
-          codeLines.push(line);
-        }
-        return;
-      }
-
-      if (inCodeBlock) {
-        codeLines.push(line);
-        return;
-      }
-
-      if (line.startsWith("### ")) {
-        children.push(
-          new Paragraph({ text: line.replace(/^### /, ""), heading: HeadingLevel.HEADING_3 }),
-        );
-      } else if (line.startsWith("## ")) {
-        children.push(
-          new Paragraph({ text: line.replace(/^## /, ""), heading: HeadingLevel.HEADING_2 }),
-        );
-      } else if (line.startsWith("# ")) {
-        children.push(
-          new Paragraph({ text: line.replace(/^# /, ""), heading: HeadingLevel.HEADING_1 }),
-        );
-      } else if (line.trim().length > 0) {
-        children.push(
-          new Paragraph({
-            children: [
-              new TextRun(line.replace(/\*\*(.*?)\*\*/g, "$1").replace(/\*(.*?)\*/g, "$1")),
-            ],
-          }),
-        );
-      }
-    });
-
-    if (inCodeBlock && codeLines.length > 0) {
-      const runs = codeLines.map(
-        (cl, i) => new TextRun({ text: cl, font: "Courier New", break: i > 0 ? 1 : undefined }),
-      );
-      children.push(new Paragraph({ children: runs }));
-    }
-    const docxDoc = new Document({
-      sections: [{ properties: {}, children }],
-    });
-    const blob = await Packer.toBlob(docxDoc);
-    saveAs(blob, `${doc.title}.docx`);
+    await exportMarkdownToDocx(doc.title, doc.content || "");
   };
 
   if (isLoading)
