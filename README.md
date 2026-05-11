@@ -22,8 +22,8 @@ The engineer and CEO of the Company:
 ### 💻 Desktop Recorder
 | Platform | Where to get it |
 | :--- | :--- |
-| 🍏 **macOS** | [Mac App Store — Plan AI Recorder](https://apps.apple.com/es/app/plan-ai-recorder/id6759553699?l=en-GB&mt=12) |
-| 🪟 **Windows** & 🐧 **Linux** | [GitHub Releases](https://github.com/blueberrybytes/plan-ai-recorder-releases/releases) |
+| 🍏 **macOS** | [Mac App Store](https://apps.apple.com/es/app/plan-ai-recorder/id6759553699?l=en-GB&mt=12) or [GitHub Releases (.dmg)](https://github.com/blueberrybytes/plan-ai-recorder-releases/releases) |
+| 🪟 **Windows** & 🐧 **Linux** | [GitHub Releases (.exe, .AppImage)](https://github.com/blueberrybytes/plan-ai-recorder-releases/releases) |
 
 ### 📱 Mobile Companion App
 | Platform | Where to get it |

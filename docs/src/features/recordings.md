@@ -15,8 +15,8 @@ Unlike generic AI meeting tools that require inviting a bot to your calendar eve
 You can download the Plan AI tools for your devices:
 
 ### Desktop Recorder
-*   **macOS:** Available on the [Mac App Store](https://apps.apple.com/es/app/plan-ai-recorder/id6759553699?l=en-GB&mt=12).
-*   **Windows & Linux:** Available on [GitHub Releases](https://github.com/blueberrybytes/plan-ai-recorder-releases/releases).
+*   **macOS:** Available on the [Mac App Store](https://apps.apple.com/es/app/plan-ai-recorder/id6759553699?l=en-GB&mt=12) or via [GitHub Releases (.dmg)](https://github.com/blueberrybytes/plan-ai-recorder-releases/releases).
+*   **Windows & Linux:** Available via [GitHub Releases (.exe, .AppImage)](https://github.com/blueberrybytes/plan-ai-recorder-releases/releases).
 
 ### Mobile Companion App
 *   **Android:** Available on [Google Play](https://play.google.com/store/apps/details?id=com.blueberrybytes.planai).

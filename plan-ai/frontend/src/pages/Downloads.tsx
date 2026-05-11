@@ -83,15 +83,26 @@ const Downloads: React.FC = () => {
                       <AppleIcon />
                       <Typography sx={{ fontWeight: 600 }}>macOS</Typography>
                     </Box>
-                    <Button
-                      variant="contained"
-                      size="small"
-                      startIcon={<OpenInNewIcon />}
-                      href="https://apps.apple.com/es/app/plan-ai-recorder/id6759553699?l=en-GB&mt=12"
-                      target="_blank"
-                    >
-                      Mac App Store
-                    </Button>
+                    <Box sx={{ display: "flex", gap: 1 }}>
+                      <Button
+                        variant="outlined"
+                        size="small"
+                        startIcon={<DownloadIcon />}
+                        href="https://github.com/blueberrybytes/plan-ai-recorder-releases/releases/latest"
+                        target="_blank"
+                      >
+                        .dmg
+                      </Button>
+                      <Button
+                        variant="contained"
+                        size="small"
+                        startIcon={<OpenInNewIcon />}
+                        href="https://apps.apple.com/es/app/plan-ai-recorder/id6759553699?l=en-GB&mt=12"
+                        target="_blank"
+                      >
+                        App Store
+                      </Button>
+                    </Box>
                   </Box>
 
                   {/* Windows */}
