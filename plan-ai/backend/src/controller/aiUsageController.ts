@@ -94,7 +94,13 @@ export class AiUsageController extends BaseWorkspaceController {
 
     const isAdminOrOwner = user.role === "ADMIN" || !!targetUserId;
 
-    const where: Prisma.AiUsageLogWhereInput = { userId: finalUserId, workspaceId };
+    // When a global admin is viewing a specific user's history, do NOT filter by the
+    // admin's active workspace — the target user's logs belong to their own workspaces.
+    const isGlobalAdminViewingTarget = user.role === "ADMIN" && !!targetUserId;
+
+    const where: Prisma.AiUsageLogWhereInput = isGlobalAdminViewingTarget
+      ? { userId: finalUserId }
+      : { userId: finalUserId, workspaceId };
     if (feature) where.feature = feature;
     if (isAdminOrOwner) {
       if (provider) where.provider = provider;
