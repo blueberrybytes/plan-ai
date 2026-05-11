@@ -171,7 +171,7 @@ export class SessionController {
             },
           });
 
-          const initialRole = pendingInvitations.length > 0 ? Role.CLIENT : Role.ADMIN;
+          const initialRole = pendingInvitations.length > 0 ? Role.CLIENT : Role.PENDING;
 
           user = await prisma.user.create({
             data: {
