@@ -24,7 +24,9 @@ import {
   FileDownloadOutlined,
   AddTask,
   TuneOutlined,
+  OpenInNew as OpenInNewIcon,
 } from "@mui/icons-material";
+import { useListIntegrationsQuery } from "../store/apis/integrationApi";
 import SidebarLayout from "../components/layout/SidebarLayout";
 import {
   useGetProjectQuery,
@@ -62,6 +64,11 @@ const ProjectDetails: React.FC = () => {
   const { data, isLoading, isFetching, error, refetch } = useGetProjectQuery(projectId ?? "", {
     skip: !projectId,
   });
+
+  const { data: integrationsResponse } = useListIntegrationsQuery();
+  const connectedIntegrations = useMemo(() => {
+    return (integrationsResponse?.data || []).filter(i => i.status === "CONNECTED" && i.defaultBoardUrl);
+  }, [integrationsResponse]);
 
   const [pollingInterval, setPollingInterval] = useState(0);
 
@@ -390,13 +397,32 @@ const ProjectDetails: React.FC = () => {
               </Typography>
             </Stack>
 
-            <Tooltip title={t("projectDetails.buttons.refresh")}>
-              <span>
-                <IconButton onClick={() => refetch()} disabled={isFetching} size="small">
-                  <RefreshIcon />
-                </IconButton>
-              </span>
-            </Tooltip>
+            <Stack direction="row" spacing={1} alignItems="center">
+              {connectedIntegrations.map((integration) => (
+                <Tooltip key={integration.provider} title={`Open ${integration.provider.charAt(0) + integration.provider.slice(1).toLowerCase()} Board`}>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    startIcon={<OpenInNewIcon fontSize="small" />}
+                    onClick={() => {
+                      if (integration.defaultBoardUrl) {
+                        window.open(integration.defaultBoardUrl, "_blank");
+                      }
+                    }}
+                    sx={{ textTransform: "none" }}
+                  >
+                    {integration.provider.charAt(0) + integration.provider.slice(1).toLowerCase()}
+                  </Button>
+                </Tooltip>
+              ))}
+              <Tooltip title={t("projectDetails.buttons.refresh")}>
+                <span>
+                  <IconButton onClick={() => refetch()} disabled={isFetching} size="small">
+                    <RefreshIcon />
+                  </IconButton>
+                </span>
+              </Tooltip>
+            </Stack>
           </Stack>
 
           <Box

@@ -36,6 +36,7 @@ import { useSyncTaskMutation } from "../../store/apis/taskApi";
 import SyncIcon from "@mui/icons-material/Sync";
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import type { components } from "../../types/api";
+import { useListIntegrationsQuery } from "../../store/apis/integrationApi";
 
 type TaskMetadata = components["schemas"]["TaskMetadata"];
 
@@ -176,11 +177,19 @@ const DraggableTaskCard: React.FC<{
   } as const;
 
   const [syncTask, { isLoading: isSyncing }] = useSyncTaskMutation();
+  const [syncingProvider, setSyncingProvider] = useState<string | null>(null);
+  const { data: integrationsResponse } = useListIntegrationsQuery();
   const dispatch = useDispatch();
+
+  const integrations = integrationsResponse?.data || [];
+  const hasJira = integrations.some((i) => i.provider === "JIRA" && i.status === "CONNECTED");
+  const hasLinear = integrations.some((i) => i.provider === "LINEAR" && i.status === "CONNECTED");
+  const hasTrello = integrations.some((i) => i.provider === "TRELLO" && i.status === "CONNECTED");
 
   const handleSyncClick = async (e: React.MouseEvent, provider: "jira" | "linear" | "trello") => {
     e.stopPropagation();
     try {
+      setSyncingProvider(provider);
       await syncTask({ taskId: task.id, provider, body: {} }).unwrap();
       dispatch(setToastMessage({ severity: "success", message: `Task pushed to ${provider}!` }));
     } catch (err: any) {
@@ -190,6 +199,8 @@ const DraggableTaskCard: React.FC<{
           message: `Failed to push to ${provider}: ${err?.data?.message || err.message}`,
         }),
       );
+    } finally {
+      setSyncingProvider(null);
     }
   };
 
@@ -259,10 +270,10 @@ const DraggableTaskCard: React.FC<{
                 onClick={(e) => handleExternalLink(e, jiraMeta.url)}
                 sx={{ cursor: "pointer", fontWeight: 600, height: 24 }}
               />
-            ) : (
+            ) : hasJira ? (
               <Chip
                 icon={
-                  isSyncing ? (
+                  isSyncing && syncingProvider === "jira" ? (
                     <CircularProgress size={12} color="inherit" />
                   ) : (
                     <SyncIcon sx={{ fontSize: "1rem" }} />
@@ -274,7 +285,7 @@ const DraggableTaskCard: React.FC<{
                 onClick={(e) => handleSyncClick(e, "jira")}
                 sx={{ cursor: "pointer", opacity: 0.6, "&:hover": { opacity: 1 }, height: 24 }}
               />
-            )}
+            ) : null}
 
             {linearMeta ? (
               <Chip
@@ -286,10 +297,10 @@ const DraggableTaskCard: React.FC<{
                 onClick={(e) => handleExternalLink(e, linearMeta.url)}
                 sx={{ cursor: "pointer", fontWeight: 600, height: 24 }}
               />
-            ) : (
+            ) : hasLinear ? (
               <Chip
                 icon={
-                  isSyncing ? (
+                  isSyncing && syncingProvider === "linear" ? (
                     <CircularProgress size={12} color="inherit" />
                   ) : (
                     <SyncIcon sx={{ fontSize: "1rem" }} />
@@ -301,7 +312,7 @@ const DraggableTaskCard: React.FC<{
                 onClick={(e) => handleSyncClick(e, "linear")}
                 sx={{ cursor: "pointer", opacity: 0.6, "&:hover": { opacity: 1 }, height: 24 }}
               />
-            )}
+            ) : null}
 
             {trelloMeta ? (
               <Chip
@@ -313,10 +324,10 @@ const DraggableTaskCard: React.FC<{
                 onClick={(e) => handleExternalLink(e, trelloMeta.url)}
                 sx={{ cursor: "pointer", fontWeight: 600, height: 24 }}
               />
-            ) : (
+            ) : hasTrello ? (
               <Chip
                 icon={
-                  isSyncing ? (
+                  isSyncing && syncingProvider === "trello" ? (
                     <CircularProgress size={12} color="inherit" />
                   ) : (
                     <SyncIcon sx={{ fontSize: "1rem" }} />
@@ -328,7 +339,7 @@ const DraggableTaskCard: React.FC<{
                 onClick={(e) => handleSyncClick(e, "trello")}
                 sx={{ cursor: "pointer", opacity: 0.6, "&:hover": { opacity: 1 }, height: 24 }}
               />
-            )}
+            ) : null}
           </Stack>
         </Stack>
       </CardContent>

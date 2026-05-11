@@ -5,6 +5,7 @@ import { type ApiResponse, type TsoaJsonObject } from "./controllerTypes";
 import { integrationService } from "../services/integrationService";
 import type { UserIntegrationSummary } from "../services/integrationService";
 import { IntegrationProvider, IntegrationStatus } from "@prisma/client";
+import type { TrelloIntegrationMetadata, JiraIntegrationMetadata } from "../services/integrationMetadataTypes";
 
 interface IntegrationSummaryResponse {
   id: string;
@@ -18,6 +19,7 @@ interface IntegrationSummaryResponse {
   createdAt: Date;
   updatedAt: Date;
   hasRefreshToken: boolean;
+  defaultBoardUrl?: string | null;
 }
 
 @Route("api/integrations")
@@ -73,9 +75,28 @@ export class IntegrationController extends BaseWorkspaceController {
   }
 
   private mapIntegrationResponse(integration: UserIntegrationSummary): IntegrationSummaryResponse {
+    let defaultBoardUrl = null;
+
+    if (integration.provider === "TRELLO") {
+      const metadata = (integration.metadata ?? {}) as Partial<TrelloIntegrationMetadata>;
+      if (metadata.defaultBoardId) {
+        defaultBoardUrl = `https://trello.com/b/${metadata.defaultBoardId}`;
+      }
+    } else if (integration.provider === "LINEAR") {
+      defaultBoardUrl = `https://linear.app`;
+    } else if (integration.provider === "JIRA") {
+      const metadata = (integration.metadata ?? {}) as Partial<JiraIntegrationMetadata>;
+      if (metadata.jiraSiteUrl) {
+        defaultBoardUrl = metadata.defaultProjectId 
+          ? `${metadata.jiraSiteUrl}/browse/${metadata.defaultProjectId}`
+          : metadata.jiraSiteUrl;
+      }
+    }
+
     return {
       ...integration,
       metadata: integration.metadata as TsoaJsonObject | null,
+      defaultBoardUrl,
     };
   }
 

@@ -3330,6 +3330,10 @@
 					},
 					"hasRefreshToken": {
 						"type": "boolean"
+					},
+					"defaultBoardUrl": {
+						"type": "string",
+						"nullable": true
 					}
 				},
 				"required": [

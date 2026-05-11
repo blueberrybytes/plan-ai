@@ -2644,6 +2644,7 @@ export interface components {
             /** Format: date-time */
             updatedAt: string;
             hasRefreshToken: boolean;
+            defaultBoardUrl?: string | null;
         };
         "ApiResponse_IntegrationSummaryResponse-Array_": {
             message?: string;
