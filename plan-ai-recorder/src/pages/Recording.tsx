@@ -399,6 +399,11 @@ const Recording: React.FC = () => {
     micDelta,
     sysDelta,
     blobs,
+    syncToJira,
+    syncToLinear,
+    syncToTrello,
+    taskStrategy,
+    taskCount,
   ]);
 
   const handleStop = useCallback(() => {

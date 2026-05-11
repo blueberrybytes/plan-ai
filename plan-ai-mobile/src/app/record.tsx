@@ -813,6 +813,7 @@ export default function RecordScreen() {
           contextIds: selectedContextIds,
           syncToJira,
           syncToLinear,
+          syncToTrello,
           taskStrategy,
           taskCount,
           skipAi,
