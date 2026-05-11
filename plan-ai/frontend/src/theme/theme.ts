@@ -76,8 +76,8 @@ export const baseThemeOptions: ThemeOptions = {
       main: alpha("#a78bfa", 0.5),
     },
     background: {
-      default: "#0b0d11", // Deep Charcoal
-      paper: "#161920", // Sleek dark gray
+      default: "#0F141E", // Softer deep slate black
+      paper: "#181F2E", // Elevated sleek dark slate
     },
     text: {
       primary: "#f8fafc",
@@ -173,7 +173,7 @@ export const baseThemeOptions: ThemeOptions = {
     MuiCssBaseline: {
       styleOverrides: {
         body: {
-          backgroundColor: "#0b0d11",
+          backgroundColor: "#0F141E",
           color: "#f8fafc",
           scrollbarColor: "rgba(255, 255, 255, 0.1) transparent",
           "&::-webkit-scrollbar": {
@@ -190,7 +190,7 @@ export const baseThemeOptions: ThemeOptions = {
       styleOverrides: {
         root: {
           backgroundImage: "none",
-          backgroundColor: "#161920",
+          backgroundColor: "#181F2E",
           border: "1px solid rgba(255, 255, 255, 0.08)",
         },
         elevation1: {
@@ -201,7 +201,7 @@ export const baseThemeOptions: ThemeOptions = {
     MuiDrawer: {
       styleOverrides: {
         paper: {
-          backgroundColor: "#0b0d11",
+          backgroundColor: "#0F141E",
           borderRight: "1px solid rgba(255, 255, 255, 0.08)",
         },
       },
@@ -237,7 +237,7 @@ export const baseThemeOptions: ThemeOptions = {
       styleOverrides: {
         root: {
           borderRadius: "16px",
-          backgroundColor: "rgba(22, 25, 32, 0.7)",
+          backgroundColor: "rgba(24, 31, 46, 0.7)",
           backdropFilter: "blur(12px)",
           border: "1px solid rgba(255, 255, 255, 0.08)",
           boxShadow: "0 8px 32px rgba(0, 0, 0, 0.2)",
@@ -300,7 +300,7 @@ export const baseThemeOptions: ThemeOptions = {
       styleOverrides: {
         paper: {
           borderRadius: "20px",
-          backgroundColor: "#161920",
+          backgroundColor: "#181F2E",
           backgroundImage: "none",
           border: "1px solid rgba(255, 255, 255, 0.1)",
           boxShadow: "0 24px 64px rgba(0, 0, 0, 0.5)",

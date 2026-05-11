@@ -46,8 +46,7 @@ const Downloads: React.FC = () => {
                 borderRadius: 4,
                 border: "1px solid",
                 borderColor: "divider",
-                bgcolor: (theme) => alpha(theme.palette.background.paper, 0.6),
-                backdropFilter: "blur(20px)",
+                bgcolor: "background.paper",
                 transition: "transform 0.2s, box-shadow 0.2s",
                 "&:hover": {
                   transform: "translateY(-4px)",
@@ -79,7 +78,7 @@ const Downloads: React.FC = () => {
 
                 <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
                   {/* macOS */}
-                  <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", p: 2, borderRadius: 2, bgcolor: "background.default" }}>
+                  <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", p: 2, borderRadius: 2, bgcolor: (theme) => alpha(theme.palette.common.white, 0.04) }}>
                     <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
                       <AppleIcon />
                       <Typography sx={{ fontWeight: 600 }}>macOS</Typography>
@@ -96,7 +95,7 @@ const Downloads: React.FC = () => {
                   </Box>
 
                   {/* Windows */}
-                  <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", p: 2, borderRadius: 2, bgcolor: "background.default" }}>
+                  <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", p: 2, borderRadius: 2, bgcolor: (theme) => alpha(theme.palette.common.white, 0.04) }}>
                     <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
                       <WindowIcon />
                       <Typography sx={{ fontWeight: 600 }}>Windows</Typography>
@@ -113,7 +112,7 @@ const Downloads: React.FC = () => {
                   </Box>
 
                   {/* Linux */}
-                  <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", p: 2, borderRadius: 2, bgcolor: "background.default" }}>
+                  <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", p: 2, borderRadius: 2, bgcolor: (theme) => alpha(theme.palette.common.white, 0.04) }}>
                     <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
                       <DesktopWindowsIcon />
                       <Typography sx={{ fontWeight: 600 }}>Linux</Typography>
@@ -162,8 +161,7 @@ const Downloads: React.FC = () => {
                 borderRadius: 4,
                 border: "1px solid",
                 borderColor: "divider",
-                bgcolor: (theme) => alpha(theme.palette.background.paper, 0.6),
-                backdropFilter: "blur(20px)",
+                bgcolor: "background.paper",
                 transition: "transform 0.2s, box-shadow 0.2s",
                 "&:hover": {
                   transform: "translateY(-4px)",
@@ -195,7 +193,7 @@ const Downloads: React.FC = () => {
 
                 <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
                   {/* Android */}
-                  <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", p: 2, borderRadius: 2, bgcolor: "background.default" }}>
+                  <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", p: 2, borderRadius: 2, bgcolor: (theme) => alpha(theme.palette.common.white, 0.04) }}>
                     <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
                       <AndroidIcon sx={{ color: "#3DDC84" }} />
                       <Typography sx={{ fontWeight: 600 }}>Android</Typography>
@@ -213,7 +211,7 @@ const Downloads: React.FC = () => {
                   </Box>
 
                   {/* iOS */}
-                  <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", p: 2, borderRadius: 2, bgcolor: "background.default" }}>
+                  <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", p: 2, borderRadius: 2, bgcolor: (theme) => alpha(theme.palette.common.white, 0.04) }}>
                     <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
                       <AppleIcon />
                       <Typography sx={{ fontWeight: 600 }}>iOS (iPhone/iPad)</Typography>

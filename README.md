@@ -33,9 +33,24 @@ The engineer and CEO of the Company:
 
 ## 📸 Sneak Peek
 
-| <img src="./images/recorder.png" alt="Native Recorder" /> | <img src="./images/recording.png" alt="Live Meeting Assistant" /> | <img src="./images/tasks.png" alt="Automated Task Generation" /> |
-| :---: | :---: | :---: |
-| **1. Native Recorder**<br>Securely capture your meetings without invasive bots. Start recording instantly from your desktop or mobile app. | **2. Live Meeting Assistant**<br>While recording, you can swap the AI's context on the fly, read real-time summaries, and ask the live chat questions. | **3. Automated Tasks**<br>Once the meeting ends, Plan AI instantly generates perfectly scoped engineering tickets and actionable items based on the discussion. |
+### 1. Native Recorder
+Securely capture your meetings without invasive bots. Start recording instantly from your desktop or mobile app.
+
+<img src="./images/recorder.png" alt="Native Recorder" />
+
+<br>
+
+### 2. Live Meeting Assistant
+While recording, you can swap the AI's context on the fly, read real-time summaries, and ask the live chat questions.
+
+<img src="./images/recording.png" alt="Live Meeting Assistant" />
+
+<br>
+
+### 3. Automated Tasks
+Once the meeting ends, Plan AI instantly generates perfectly scoped engineering tickets and actionable items based on the discussion.
+
+<img src="./images/tasks.png" alt="Automated Task Generation" />
 
 <br>
 
