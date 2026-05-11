@@ -1,4 +1,4 @@
-import { generateObject, generateText, stepCountIs } from "ai";
+import { generateText, stepCountIs, Output } from "ai";
 import { z } from "zod";
 import { aiUsageService } from "./aiUsageService";
 import { mcpClientService } from "./mcpClientService";
@@ -97,26 +97,25 @@ ${investigationContext}
 
 Generate the refined version strictly following the instructed template.`;
 
-    const response = await generateObject({
+    const response = await generateText({
       model,
       providerOptions,
-      schema: TaskCoachRefinementSchema,
+      output: Output.object({ schema: TaskCoachRefinementSchema }),
       system: systemPrompt,
       prompt: userPrompt,
       temperature: 0.2, // Low temp for more deterministic formatting
     });
 
-    const result = response.object as RefineTaskOutput;
+    const result = response.output as RefineTaskOutput;
 
-    if (response.usage) {
-      const usage = response.usage as unknown as { promptTokens: number; completionTokens: number };
+    if (response.totalUsage) {
       await aiUsageService.logUsage({
         userId: input.userId,
         workspaceId: input.workspaceId,
         provider: "OPENROUTER",
         model: defaultModel,
-        inputTokens: usage.promptTokens || 0,
-        outputTokens: usage.completionTokens || 0,
+        inputTokens: response.totalUsage.inputTokens || 0,
+        outputTokens: response.totalUsage.outputTokens || 0,
         feature: "TASK_EXTRACTION",
       });
     }

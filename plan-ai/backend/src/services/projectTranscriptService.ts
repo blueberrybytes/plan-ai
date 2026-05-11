@@ -13,7 +13,7 @@ import {
   DEFAULT_AI_MODEL,
   getMaxContextChunks,
 } from "../utils/aiModelUtils";
-import { generateObject, generateText, stepCountIs } from "ai";
+import { generateText, stepCountIs, Output } from "ai";
 import { z, type ZodTypeAny } from "zod";
 import { DeepgramClient } from "@deepgram/sdk";
 import { logger } from "../utils/logger";
@@ -669,8 +669,8 @@ export class ProjectTranscriptService {
             feature: "TASK_EXTRACTION",
             provider: "openrouter",
             model: "openai/gpt-4o-mini",
-            inputTokens: investigation.usage?.inputTokens || 0,
-            outputTokens: investigation.usage?.outputTokens || 0,
+            inputTokens: investigation.totalUsage?.inputTokens || 0,
+            outputTokens: investigation.totalUsage?.outputTokens || 0,
           })
           .catch(() => {});
       } catch (err) {
@@ -754,10 +754,10 @@ Transcript/Request:
 ${content}`;
 
     try {
-      const { object, usage } = await generateObject({
+      const { output: object, totalUsage: usage } = await generateText({
         model,
         providerOptions: getFallbackProviderOptions(activeModel),
-        schema: transcriptAnalysisSchemaForGeneration,
+        output: Output.object({ schema: transcriptAnalysisSchemaForGeneration }),
         prompt,
 
         temperature: 0.2,

@@ -11,22 +11,13 @@
     "@ai-sdk/provider-utils" "4.0.27"
     "@vercel/oidc" "3.2.0"
 
-"@ai-sdk/openai@^3.0.34":
-  version "3.0.57"
-  resolved "https://registry.yarnpkg.com/@ai-sdk/openai/-/openai-3.0.57.tgz#aad55060174db825c205b91149cb65a7169cd75c"
-  integrity sha512-2kfzDQYYz0m/yRF4bre9s2j8wNiPdhfHzYZc3dxAOMlprvGmRZOvoZBx8chlJIFwL7xR2EFkvLagBvo2llCXPw==
+"@ai-sdk/openai@^3.0.63":
+  version "3.0.63"
+  resolved "https://registry.yarnpkg.com/@ai-sdk/openai/-/openai-3.0.63.tgz#5c263e55e920697645b3a1351962f9084d35092b"
+  integrity sha512-4yY/m8a57MNNVoJCsXuNblKf6BO4yuAuLKRX4tzSNffBEBSp1FlcWdPE0Z4FkqUeS0AJhYSSqp0GIiA/cIcDNA==
   dependencies:
     "@ai-sdk/provider" "3.0.10"
-    "@ai-sdk/provider-utils" "4.0.26"
-
-"@ai-sdk/provider-utils@4.0.26":
-  version "4.0.26"
-  resolved "https://registry.yarnpkg.com/@ai-sdk/provider-utils/-/provider-utils-4.0.26.tgz#0f0ffb28c0f337007f55e55a6de23384b31816ba"
-  integrity sha512-CsKNLKsOpvPujRlIYvoz+Ybw+kGn7J4/fIZa/58+R7iWLLfwn6ifE2G6Yq8K9XvH/I/3bzaDAJ3NhRwEMsLBKQ==
-  dependencies:
-    "@ai-sdk/provider" "3.0.10"
-    "@standard-schema/spec" "^1.1.0"
-    eventsource-parser "^3.0.8"
+    "@ai-sdk/provider-utils" "4.0.27"
 
 "@ai-sdk/provider-utils@4.0.27":
   version "4.0.27"

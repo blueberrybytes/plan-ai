@@ -5,7 +5,7 @@ export type PresentationWithRelations = Prisma.PresentationGetPayload<{
   include: { template: true; theme: true };
 }>;
 import { getConfiguredModel, getFallbackProviderOptions } from "../utils/aiModelUtils";
-import { generateObject } from "ai";
+import { generateText, Output } from "ai";
 import { z } from "zod";
 import { logger } from "../utils/logger";
 import prisma from "../prisma/prismaClient";
@@ -161,16 +161,15 @@ export class SlideGenerationService {
       const model = getConfiguredModel(activeModel);
 
       // 3. Generate Object instead of streaming for schema reliability on complex nested objects
-      logger.info(`[Slide Gen Debug] Triggering generateObject to Google Gemini flash...`);
       let slidePlan;
 
       const maxRetries = 3;
       for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
-          const generationResult = await generateObject({
+          const generationResult = await generateText({
             model,
             providerOptions: getFallbackProviderOptions(),
-            schema: SlideOutlineSchema,
+            output: Output.object({ schema: SlideOutlineSchema }),
             prompt:
               attempt > 1
                 ? aiPrompt +
@@ -179,9 +178,9 @@ export class SlideGenerationService {
             temperature: 0.3 + attempt * 0.1, // Slightly increase temp on retries to break out of deterministic failure loops
             maxRetries: 3,
           });
-          slidePlan = generationResult.object;
+          slidePlan = generationResult.output;
 
-          if (generationResult.usage) {
+          if (generationResult.totalUsage) {
             aiUsageService
               .logUsage({
                 userId,
@@ -189,8 +188,8 @@ export class SlideGenerationService {
                 feature: "SLIDES",
                 provider: "openrouter",
                 model: this.modelName,
-                inputTokens: generationResult.usage.inputTokens || 0,
-                outputTokens: generationResult.usage.outputTokens || 0,
+                inputTokens: generationResult.totalUsage.inputTokens || 0,
+                outputTokens: generationResult.totalUsage.outputTokens || 0,
               })
               .catch(() => {});
           }
@@ -249,17 +248,17 @@ Provide ONLY the required JSON parameters for this slide type matching the schem
         let parameters = {};
         for (let attempt = 1; attempt <= 2; attempt++) {
           try {
-            const slideGen = await generateObject({
+            const slideGen = await generateText({
               model,
               providerOptions: getFallbackProviderOptions(),
-              schema: slideDef.parametersSchema,
+              output: Output.object({ schema: slideDef.parametersSchema }),
               prompt: slidePrompt,
               temperature: 0.2 + attempt * 0.1,
               maxRetries: 3,
             });
-            parameters = slideGen.object;
+            parameters = slideGen.output;
 
-            if (slideGen.usage) {
+            if (slideGen.totalUsage) {
               aiUsageService
                 .logUsage({
                   userId,
@@ -267,8 +266,8 @@ Provide ONLY the required JSON parameters for this slide type matching the schem
                   feature: "SLIDES",
                   provider: "openrouter",
                   model: this.modelName,
-                  inputTokens: slideGen.usage.inputTokens || 0,
-                  outputTokens: slideGen.usage.outputTokens || 0,
+                  inputTokens: slideGen.totalUsage.inputTokens || 0,
+                  outputTokens: slideGen.totalUsage.outputTokens || 0,
                 })
                 .catch(() => {});
             }
@@ -393,24 +392,26 @@ ${prompt}
 Select ONLY ONE slide type that best fits this request, and define a clear intent.`;
 
       try {
-        const decision = await generateObject({
+        const decision = await generateText({
           model,
           providerOptions: getFallbackProviderOptions(),
-          schema: z.object({
-            slideTypeKey: z
-              .string()
-              .describe("Must exactly match a slideTypeKey from the available catalog"),
-            intent: z
-              .string()
-              .describe("Detailed instruction for what specific content should go on the slide"),
+          output: Output.object({
+            schema: z.object({
+              slideTypeKey: z
+                .string()
+                .describe("Must exactly match a slideTypeKey from the available catalog"),
+              intent: z
+                .string()
+                .describe("Detailed instruction for what specific content should go on the slide"),
+            }),
           }),
           prompt: decidePrompt,
         });
 
-        finalSlideTypeKey = decision.object.slideTypeKey;
-        slideIntent = decision.object.intent;
+        finalSlideTypeKey = decision.output.slideTypeKey;
+        slideIntent = decision.output.intent;
 
-        if (decision.usage) {
+        if (decision.totalUsage) {
           aiUsageService
             .logUsage({
               userId,
@@ -418,8 +419,8 @@ Select ONLY ONE slide type that best fits this request, and define a clear inten
               feature: "SLIDES",
               provider: "openrouter",
               model: this.modelName,
-              inputTokens: decision.usage.inputTokens || 0,
-              outputTokens: decision.usage.outputTokens || 0,
+              inputTokens: decision.totalUsage.inputTokens || 0,
+              outputTokens: decision.totalUsage.outputTokens || 0,
             })
             .catch(() => {});
         }
@@ -448,17 +449,17 @@ Provide ONLY the required JSON parameters for this slide type matching the schem
     let parameters = {};
     for (let attempt = 1; attempt <= 2; attempt++) {
       try {
-        const slideGen = await generateObject({
+        const slideGen = await generateText({
           model,
           providerOptions: getFallbackProviderOptions(),
-          schema: slideDef.parametersSchema,
+          output: Output.object({ schema: slideDef.parametersSchema }),
           prompt: slidePrompt,
           temperature: 0.2 + attempt * 0.1,
           maxRetries: 3,
         });
-        parameters = slideGen.object;
+        parameters = slideGen.output;
 
-        if (slideGen.usage) {
+        if (slideGen.totalUsage) {
           aiUsageService
             .logUsage({
               userId,
@@ -466,8 +467,8 @@ Provide ONLY the required JSON parameters for this slide type matching the schem
               feature: "SLIDES",
               provider: "openrouter",
               model: this.modelName,
-              inputTokens: slideGen.usage.inputTokens || 0,
-              outputTokens: slideGen.usage.outputTokens || 0,
+              inputTokens: slideGen.totalUsage.inputTokens || 0,
+              outputTokens: slideGen.totalUsage.outputTokens || 0,
             })
             .catch(() => {});
         }

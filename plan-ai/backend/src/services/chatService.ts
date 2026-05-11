@@ -1,6 +1,6 @@
 import { ChatRole, ChatThread, ChatMessage } from "@prisma/client";
 import { getConfiguredModel } from "../utils/aiModelUtils";
-import { generateObject } from "ai";
+import { generateText, Output } from "ai";
 import { z } from "zod";
 import prisma from "../prisma/prismaClient";
 import { queryContexts } from "../vector/contextFileVectorService";
@@ -145,14 +145,30 @@ export class ChatService {
       { role: "user", content },
     ];
 
-    const { object, usage } = await generateObject({
+    const result = await generateText({
       model,
       system: dynamicSystemPrompt,
       messages,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      schema: ResponseSchema as any,
+      output: Output.object({ schema: ResponseSchema }),
       maxRetries: 3,
     });
+
+    const object = result.output;
+    const usage = result.totalUsage;
+
+    if (usage) {
+      aiUsageService
+        .logUsage({
+          userId: thread.userId,
+          workspaceId: thread.workspaceId,
+          feature: "CHAT",
+          provider: "openrouter",
+          model: model.modelId || "unknown",
+          inputTokens: usage?.inputTokens || 0,
+          outputTokens: usage?.outputTokens || 0,
+        })
+        .catch(() => {});
+    }
 
     logger.info("Generated Object Response", { object });
 
@@ -165,15 +181,17 @@ export class ChatService {
       },
     });
 
-    aiUsageService.logUsage({
-      userId,
-      workspaceId: thread.workspaceId,
-      feature: "CHAT",
-      provider: "openrouter",
-      model: "default",
-      inputTokens: usage?.inputTokens || 0,
-      outputTokens: usage?.outputTokens || 0,
-    }).catch(() => {});
+    aiUsageService
+      .logUsage({
+        userId,
+        workspaceId: thread.workspaceId,
+        feature: "CHAT",
+        provider: "openrouter",
+        model: "default",
+        inputTokens: usage?.inputTokens || 0,
+        outputTokens: usage?.outputTokens || 0,
+      })
+      .catch(() => {});
 
     return {
       message: userMessage,

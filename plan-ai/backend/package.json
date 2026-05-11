@@ -38,7 +38,7 @@
     "rollup": "4.52.5"
   },
   "dependencies": {
-    "@ai-sdk/openai": "^3.0.34",
+    "@ai-sdk/openai": "^3.0.63",
     "@bull-board/api": "^6.20.6",
     "@bull-board/express": "^6.20.6",
     "@deepgram/sdk": "^4.11.3",

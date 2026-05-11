@@ -203,8 +203,8 @@ export class ChatController extends BaseWorkspaceController {
           feature: "CHAT",
           provider: "openrouter",
           model: DEFAULT_AI_MODEL,
-          inputTokens: aiResponse.usage?.inputTokens || 0,
-          outputTokens: aiResponse.usage?.outputTokens || 0,
+          inputTokens: aiResponse.totalUsage?.inputTokens || 0,
+          outputTokens: aiResponse.totalUsage?.outputTokens || 0,
         }).catch(() => {});
       } catch (e) {
         logger.warn("Failed to generate intelligent title for chat thread", e);
@@ -435,8 +435,8 @@ CRITICAL RULES FOR MERMAID:
         feature: "CHAT",
         provider: "openrouter",
         model: selectedModel,
-        inputTokens: aiResponse.usage?.inputTokens || 0,
-        outputTokens: aiResponse.usage?.outputTokens || 0,
+        inputTokens: aiResponse.totalUsage?.inputTokens || 0,
+        outputTokens: aiResponse.totalUsage?.outputTokens || 0,
       }).catch(() => {});
 
       // Update thread updatedAt
@@ -528,8 +528,8 @@ CRITICAL: You MUST respond in the EXACT same language that the user used to ask 
         feature: "CHAT",
         provider: "openrouter",
         model: selectedModel,
-        inputTokens: aiResponse.usage?.inputTokens || 0,
-        outputTokens: aiResponse.usage?.outputTokens || 0,
+        inputTokens: aiResponse.totalUsage?.inputTokens || 0,
+        outputTokens: aiResponse.totalUsage?.outputTokens || 0,
       }).catch(() => {});
 
       return {
@@ -611,8 +611,8 @@ Format your response exclusively in clean Markdown. Use headings like "### Live 
         feature: "CHAT",
         provider: "openrouter",
         model: selectedModel,
-        inputTokens: aiResponse.usage?.inputTokens || 0,
-        outputTokens: aiResponse.usage?.outputTokens || 0,
+        inputTokens: aiResponse.totalUsage?.inputTokens || 0,
+        outputTokens: aiResponse.totalUsage?.outputTokens || 0,
       }).catch(() => {});
 
       return {

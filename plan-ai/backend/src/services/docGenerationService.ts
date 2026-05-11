@@ -136,8 +136,8 @@ export class DocGenerationService {
           feature: "DOC",
           provider: "openrouter",
           model: DEFAULT_AI_MODEL,
-          inputTokens: investigation.usage?.inputTokens || 0,
-          outputTokens: investigation.usage?.outputTokens || 0,
+          inputTokens: investigation.totalUsage?.inputTokens || 0,
+          outputTokens: investigation.totalUsage?.outputTokens || 0,
         }).catch(() => {});
       } catch (err) {
         logger.error("Failed during MCP agentic investigation step for doc generation", err);
@@ -146,7 +146,7 @@ export class DocGenerationService {
 
     let fullContent = "";
 
-    const { textStream, usage } = await streamText({
+    const { textStream, totalUsage } = await streamText({
       model,
       providerOptions: getFallbackProviderOptions(),
       prompt,
@@ -171,7 +171,7 @@ export class DocGenerationService {
     });
 
     try {
-      const usageData = await usage;
+      const usageData = await totalUsage;
       await aiUsageService.logUsage({
         userId,
         workspaceId,
@@ -214,7 +214,7 @@ CRITICAL RULES FOR MERMAID:
 
 If you return the exact same broken code without quotes around parentheses and ampersands, the system will crash again.`;
 
-    const { text, usage } = await generateText({ model, prompt, temperature: 0.2, maxRetries: 3 });
+    const { text, totalUsage: usage } = await generateText({ model, prompt, temperature: 0.2, maxRetries: 3 });
 
     aiUsageService.logUsage({
       userId: "system",
