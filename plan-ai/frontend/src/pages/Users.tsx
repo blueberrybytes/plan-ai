@@ -27,6 +27,7 @@ import {
 import SearchIcon from "@mui/icons-material/Search";
 import InsightsIcon from "@mui/icons-material/Insights";
 import SyncIcon from "@mui/icons-material/Sync";
+import DeleteIcon from "@mui/icons-material/Delete";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import SidebarLayout from "../components/layout/SidebarLayout";
@@ -38,6 +39,7 @@ import {
   useSyncOrphanMutation,
   UserOrphanResponse,
   useForceVerifyEmailMutation,
+  useDeleteUserMutation,
 } from "../store/apis/userApi";
 import HowToRegIcon from "@mui/icons-material/HowToReg";
 
@@ -58,6 +60,7 @@ const Users: React.FC = () => {
   const [updateRole] = useUpdateUserRoleMutation();
   const [syncOrphan, { isLoading: isSyncing }] = useSyncOrphanMutation();
   const [forceVerifyEmail, { isLoading: isVerifying }] = useForceVerifyEmailMutation();
+  const [deleteUser, { isLoading: isDeleting }] = useDeleteUserMutation();
   const [snackbarMessage, setSnackbarMessage] = useState("");
 
   const users = useMemo(() => response?.data || [], [response?.data]);
@@ -103,6 +106,18 @@ const Users: React.FC = () => {
       refetch();
     } catch (e: any) {
       setSnackbarMessage(e?.data?.message || "Error syncing orphan user");
+    }
+  };
+
+  const handleDeleteUser = async (userId: string) => {
+    if (window.confirm("Are you SURE you want to delete this user? This will delete them from PostgreSQL and Firebase and cannot be undone.")) {
+      try {
+        await deleteUser({ userId }).unwrap();
+        setSnackbarMessage("User deleted successfully.");
+        refetch();
+      } catch (e: any) {
+        setSnackbarMessage(e?.data?.message || "Error deleting user");
+      }
     }
   };
 
@@ -262,6 +277,16 @@ const Users: React.FC = () => {
                                 color="primary"
                               >
                                 <InsightsIcon />
+                              </IconButton>
+                            </Tooltip>
+                            <Tooltip title="Delete User">
+                              <IconButton
+                                size="small"
+                                onClick={() => handleDeleteUser(user.id)}
+                                color="error"
+                                disabled={isDeleting}
+                              >
+                                <DeleteIcon />
                               </IconButton>
                             </Tooltip>
                           </Box>

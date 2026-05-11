@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Put, Path, Route, Security, Tags, Response, Post } from "tsoa";
+import { Body, Controller, Get, Put, Path, Route, Security, Tags, Response, Post, Delete } from "tsoa";
 import prisma from "../prisma/prismaClient";
 import { logger } from "../utils/logger";
 import { Role } from "@prisma/client";
@@ -389,6 +389,68 @@ export class UserController extends Controller {
         status: 500,
         data: null as unknown as UserDetailResponse,
         message: "Failed to sync orphaned user",
+      };
+    }
+  }
+
+  /**
+   * Delete a user completely from PostgreSQL and attempt to delete from Firebase.
+   * Admin only.
+   */
+  @Delete("/{userId}")
+  @Security("AdminOnly")
+  @Response<ApiResponse<null>>(200, "Successfully deleted user")
+  @Response<GenericResponse>(400, "Bad Request")
+  @Response<GenericResponse>(401, "Unauthorized")
+  @Response<GenericResponse>(403, "Forbidden")
+  @Response<GenericResponse>(404, "Not Found")
+  @Response<GenericResponse>(500, "Internal Server Error")
+  public async deleteUser(
+    @Path("userId") userId: string,
+  ): Promise<ApiResponse<null>> {
+    try {
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+      });
+
+      if (!user) {
+        this.setStatus(404);
+        return {
+          status: 404,
+          data: null,
+          message: "User not found",
+        };
+      }
+
+      // Delete from Firebase (best effort)
+      try {
+        await firebaseAdmin.auth().deleteUser(user.firebaseUid);
+      } catch (fbError) {
+        logger.warn(`Could not delete user ${user.firebaseUid} from Firebase. They might already be deleted.`, fbError);
+      }
+
+      // Delete from PostgreSQL
+      await prisma.$transaction(async (tx) => {
+        await tx.userIntegration.deleteMany({
+          where: { userId },
+        });
+        await tx.user.delete({
+          where: { id: userId },
+        });
+      });
+
+      return {
+        status: 200,
+        data: null,
+        message: "User successfully deleted",
+      };
+    } catch (error) {
+      logger.error(`Error deleting user ${userId}:`, error);
+      this.setStatus(500);
+      return {
+        status: 500,
+        data: null,
+        message: "Failed to delete user",
       };
     }
   }

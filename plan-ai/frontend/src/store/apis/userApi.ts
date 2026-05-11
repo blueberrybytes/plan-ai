@@ -51,6 +51,13 @@ export const userApi = createApi({
       }),
       invalidatesTags: ["User"],
     }),
+    deleteUser: builder.mutation<void, { userId: string }>({
+      query: ({ userId }) => ({
+        url: `/api/users/${userId}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: ["User"],
+    }),
   }),
 });
 
@@ -60,4 +67,5 @@ export const {
   useGetOrphansQuery,
   useSyncOrphanMutation,
   useForceVerifyEmailMutation,
+  useDeleteUserMutation,
 } = userApi;
