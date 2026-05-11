@@ -17,8 +17,6 @@ import {
 import { getContrastRatio } from "@mui/material/styles";
 import { Download as DownloadIcon } from "@mui/icons-material";
 import { Helmet } from "react-helmet-async";
-import { Document, Paragraph, TextRun, HeadingLevel, Packer } from "docx";
-import { saveAs } from "file-saver";
 import { exportMarkdownToDocx } from "../utils/docxExport";
 import { useParams, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
