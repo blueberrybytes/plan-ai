@@ -197,7 +197,7 @@ export const FloatingAssistant: React.FC = () => {
         ref={anchorRef}
         sx={{
           position: "fixed",
-          bottom: 24,
+          bottom: 150,
           right: 24,
           zIndex: 1000,
         }}

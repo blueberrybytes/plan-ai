@@ -104,6 +104,7 @@
     "react-dropzone": "^14.3.8",
     "react-error-boundary": "^5.0.0",
     "react-filerobot-image-editor": "^4.9.1",
+    "react-force-graph-2d": "^1.29.1",
     "react-google-drive-picker": "^1.2.2",
     "react-h5-audio-player": "^3.10.0",
     "react-helmet": "^6.1.0",

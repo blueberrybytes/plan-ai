@@ -26,6 +26,7 @@ import { useTranslation } from "react-i18next";
 import { ChatMessage, ChatThread } from "../../store/apis/chatApi";
 import AssistantMessageRenderer from "./AssistantMessageRenderer";
 import CitationChip from "./CitationChip";
+import { AiGraphTrace, ContextGraph } from "../project/ContextGraph";
 import ThinkingIndicator from "./ThinkingIndicator";
 import { useListContextsQuery } from "../../store/apis/contextApi";
 import { useSelector } from "react-redux";
@@ -292,10 +293,10 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
       <Box sx={{ flexGrow: 1, p: 2, overflowY: "auto" }} ref={scrollRef} onScroll={handleScroll}>
         {allMessages.map((msg) => {
           let contentToRender = msg.content;
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          let citations: any[] = [];
+          let citations: Array<{ filename: string; lines: string }> = [];
           let latencyMs: number | undefined;
           let toolsUsed: string[] = [];
+          let aiGraphTrace: AiGraphTrace | null = null;
 
           if (msg.role !== "USER") {
             try {
@@ -311,6 +312,9 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
               }
               if (Array.isArray(parsed.tools)) {
                 toolsUsed = parsed.tools;
+              }
+              if (parsed.aiGraphTrace && Array.isArray(parsed.aiGraphTrace.nodes)) {
+                aiGraphTrace = parsed.aiGraphTrace;
               }
             } catch {
               // Not JSON, fallback to raw content.
@@ -334,6 +338,14 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
             // Also strip ---CITATIONS--- entirely if it was streamed before the update
             contentToRender = contentToRender.split("---CITATIONS---")[0].trim();
           }
+
+          console.log(`[DEBUG Chat Message ${msg.id}]`, {
+            role: msg.role,
+            hasContent: !!contentToRender,
+            citationsCount: citations.length,
+            toolsUsed: toolsUsed,
+            rawContent: msg.content.substring(0, 50) + "..."
+          });
 
           return (
             <Box
@@ -366,6 +378,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
                       <AssistantMessageRenderer
                         content={contentToRender}
                         onSendMessage={(msg) => handleSend(msg)}
+                        isStreaming={isStreaming && msg.id.startsWith("temp-ai")}
                       />
                     )}
                   </Box>
@@ -416,6 +429,21 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
                           />
                         ));
                       })()}
+                    </Box>
+                  </Box>
+                )}
+
+                {aiGraphTrace && aiGraphTrace.nodes.length > 0 && (
+                  <Box sx={{ mt: 2, pt: 1, borderTop: 1, borderColor: "divider" }}>
+                    <Box sx={{ mt: 1, minWidth: { xs: "250px", sm: "400px" }, width: "100%" }}>
+                      <Typography
+                        variant="caption"
+                        color="primary.main"
+                        sx={{ display: "block", mb: 1, fontWeight: 600 }}
+                      >
+                        ✨ AI Graph Trace
+                      </Typography>
+                      <ContextGraph height={250} nodes={aiGraphTrace.nodes} links={aiGraphTrace.links} />
                     </Box>
                   </Box>
                 )}
@@ -478,7 +506,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
         <Box sx={{ mb: 2 }}>
           <AiModelSelector value={modelKey} onChange={setModelKey} disabled={isStreaming} />
         </Box>
-        <Box sx={{ display: "flex", gap: 1 }}>
+        <Box sx={{ display: "flex", gap: 1, alignItems: "flex-end" }}>
           <TextField
             fullWidth
             placeholder={t("chat.placeholders.typeMessage")}
@@ -499,6 +527,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
             color="primary"
             onClick={() => handleSend()}
             disabled={!input.trim() || isSending || isStreaming}
+            sx={{ flexShrink: 0, mb: 0.5 }}
           >
             <SendIcon />
           </IconButton>

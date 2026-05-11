@@ -291,7 +291,7 @@ const MermaidRenderer: React.FC<MermaidRendererProps> = ({
           color="text.secondary"
           sx={{ fontFamily: "monospace", display: "block", mt: 1, whiteSpace: "pre-wrap" }}
         >
-          {chart}
+          {errorMessage ? errorMessage.split("\n")[0] : "Invalid diagram syntax."}
         </Typography>
       </Box>
     );

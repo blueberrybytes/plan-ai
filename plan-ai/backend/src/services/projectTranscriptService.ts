@@ -502,12 +502,34 @@ export class ProjectTranscriptService {
 
     const result = await prisma.$transaction(async (tx) => {
       const currentMetadata = (existing.metadata as Record<string, unknown>) || {};
+
+      // Build transcript-level graph trace: AI → Recording → all tasks
+      const transcriptGraphNodes: Prisma.JsonArray = [
+        { id: "ai", name: "Plan AI Extractor", group: "function", val: 30 },
+        { id: "recording", name: existing.title || "Recording", group: "database", val: 25 },
+      ];
+      const transcriptGraphLinks: Prisma.JsonArray = [
+        { source: "ai", target: "recording" },
+      ];
+      for (const [idx, taskCandidate] of analysisRaw.tasks.entries()) {
+        const taskId = `task-${idx}`;
+        const taskName = taskCandidate.title.length > 25
+          ? taskCandidate.title.substring(0, 25) + "..."
+          : taskCandidate.title;
+        transcriptGraphNodes.push({ id: taskId, name: taskName, group: "ticket", val: 18 });
+        transcriptGraphLinks.push({ source: "recording", target: taskId });
+      }
+
       const newMetadata = {
         ...currentMetadata,
         processingStatus: "COMPLETED",
         rawTasks: analysisRaw.tasks,
         sentimentExplanation: analysisRaw.sentimentExplanation,
         principalSpeaker,
+        aiGraphTrace: {
+          nodes: transcriptGraphNodes,
+          links: transcriptGraphLinks,
+        },
       };
 
       const transcript = await tx.transcript.update({
@@ -555,6 +577,17 @@ export class ProjectTranscriptService {
               metadata: {
                 generatedFromTranscriptId: transcript.id,
                 generatorVersion: "session-transcript-service@2",
+                aiGraphTrace: {
+                  nodes: [
+                    { id: "ai", name: "Plan AI Extractor", group: "function" as const, val: 30 },
+                    { id: "transcript", name: transcript.title || "Recording", group: "database" as const, val: 25 },
+                    { id: `task-${index}`, name: taskCandidate.title.length > 25 ? taskCandidate.title.substring(0, 25) + "..." : taskCandidate.title, group: "ticket" as const, val: 20 },
+                  ],
+                  links: [
+                    { source: "ai", target: "transcript" },
+                    { source: "transcript", target: `task-${index}` },
+                  ],
+                },
               } satisfies Prisma.JsonObject,
             },
           });

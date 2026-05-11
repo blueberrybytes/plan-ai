@@ -8,11 +8,13 @@ import { RootState } from "../../store/store";
 interface AssistantMessageRendererProps {
   content: string;
   onSendMessage?: (msg: string) => void;
+  isStreaming?: boolean;
 }
 
 export const AssistantMessageRenderer: React.FC<AssistantMessageRendererProps> = ({
   content,
   onSendMessage,
+  isStreaming,
 }) => {
   const [isTyping, setIsTyping] = useState(false);
   const token = useSelector((state: RootState) => state.auth.user?.token);
@@ -62,7 +64,7 @@ export const AssistantMessageRenderer: React.FC<AssistantMessageRendererProps> =
 
     return (
       <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
-        {textBefore.length > 0 && <MarkdownRenderer content={textBefore} />}
+        {textBefore.length > 0 && <MarkdownRenderer content={textBefore} isStreaming={isStreaming} />}
         <Card variant="outlined" sx={{ mt: 1, bgcolor: "background.paper" }}>
           <Box
             sx={{
@@ -179,7 +181,7 @@ export const AssistantMessageRenderer: React.FC<AssistantMessageRendererProps> =
 
     return (
       <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
-        {textBefore.length > 0 && <MarkdownRenderer content={textBefore} />}
+        {textBefore.length > 0 && <MarkdownRenderer content={textBefore} isStreaming={isStreaming} />}
         <Card variant="outlined" sx={{ mt: 1, bgcolor: "background.paper" }}>
           <Box
             sx={{
@@ -253,7 +255,7 @@ export const AssistantMessageRenderer: React.FC<AssistantMessageRendererProps> =
     );
   }
 
-  return <MarkdownRenderer content={content} />;
+  return <MarkdownRenderer content={content} isStreaming={isStreaming} />;
 };
 
 export default AssistantMessageRenderer;

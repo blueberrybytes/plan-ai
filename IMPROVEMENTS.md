@@ -44,3 +44,11 @@ This document outlines the high-priority features, technical debt, and quality-o
 
 ## 7. Migrate all to generateText and telemetry all the usage including retries
 **Problem:** We are using generateObject which is a wrapper around generateText and there is no usage telemetry. We need to migrate all to generateText and telemetry all the usage including retries.
+
+## 8. Backend Scaling Bottlenecks (Infrastructure)
+**Problem:** As concurrent users grow, the current infrastructure has a few architectural weak points that will fail under heavy load.
+**Solutions to Implement:**
+- **Redis Memory Exhaustion:** BullMQ currently stores massive payloads (like raw transcript texts and context strings) directly in Redis. If hundreds of large meetings are uploaded simultaneously, Redis RAM will OOM. **Fix:** Upload payloads to S3/Cloud Storage and pass a lightweight reference ID into the BullMQ job.
+- **Database Connection Limits:** Prisma opens direct connections to PostgreSQL. Sudden bursts of background workers and API requests will exhaust connections. **Fix:** Implement Prisma Connection Pooling (PgBouncer) or use Railway's built-in connection pooler for serverless scaling.
+- **Vector Database (Qdrant) Costs:** Storing massive codebase vectors for thousands of users will become expensive as Qdrant requires high RAM for fast RAG search. **Fix:** Optimize vector embeddings by discarding noisy code (e.g. minified files, lockfiles) and experiment with quantization.
+- **External API Rate Limiting:** Even with background queues, hammering Deepgram or OpenRouter with 500 concurrent requests will trigger HTTP 429 Too Many Requests. **Fix:** Implement rate-limit aware job concurrency in BullMQ, dynamically throttling workers when APIs respond with 429s.

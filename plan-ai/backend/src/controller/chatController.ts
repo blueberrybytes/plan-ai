@@ -197,15 +197,17 @@ export class ChatController extends BaseWorkspaceController {
         if (aiResponse?.text) {
           title = aiResponse.text.trim().replace(/^["'](.*)["']$/, "$1");
         }
-        aiUsageService.logUsage({
-          userId: user.id,
-          workspaceId,
-          feature: "CHAT",
-          provider: "openrouter",
-          model: DEFAULT_AI_MODEL,
-          inputTokens: aiResponse.totalUsage?.inputTokens || 0,
-          outputTokens: aiResponse.totalUsage?.outputTokens || 0,
-        }).catch(() => {});
+        aiUsageService
+          .logUsage({
+            userId: user.id,
+            workspaceId,
+            feature: "CHAT",
+            provider: "openrouter",
+            model: DEFAULT_AI_MODEL,
+            inputTokens: aiResponse.totalUsage?.inputTokens || 0,
+            outputTokens: aiResponse.totalUsage?.outputTokens || 0,
+          })
+          .catch(() => {});
       } catch (e) {
         logger.warn("Failed to generate intelligent title for chat thread", e);
       }
@@ -429,15 +431,17 @@ CRITICAL RULES FOR MERMAID:
         },
       });
 
-      aiUsageService.logUsage({
-        userId: user.id,
-        workspaceId,
-        feature: "CHAT",
-        provider: "openrouter",
-        model: selectedModel,
-        inputTokens: aiResponse.totalUsage?.inputTokens || 0,
-        outputTokens: aiResponse.totalUsage?.outputTokens || 0,
-      }).catch(() => {});
+      aiUsageService
+        .logUsage({
+          userId: user.id,
+          workspaceId,
+          feature: "CHAT",
+          provider: "openrouter",
+          model: selectedModel,
+          inputTokens: aiResponse.totalUsage?.inputTokens || 0,
+          outputTokens: aiResponse.totalUsage?.outputTokens || 0,
+        })
+        .catch(() => {});
 
       // Update thread updatedAt
       await prisma.chatThread.update({
@@ -522,15 +526,17 @@ CRITICAL: You MUST respond in the EXACT same language that the user used to ask 
         maxRetries: 3,
       });
 
-      aiUsageService.logUsage({
-        userId: (await this.getAuthorizedWorkspaceAccess(request)).user.id,
-        workspaceId,
-        feature: "CHAT",
-        provider: "openrouter",
-        model: selectedModel,
-        inputTokens: aiResponse.totalUsage?.inputTokens || 0,
-        outputTokens: aiResponse.totalUsage?.outputTokens || 0,
-      }).catch(() => {});
+      aiUsageService
+        .logUsage({
+          userId: (await this.getAuthorizedWorkspaceAccess(request)).user.id,
+          workspaceId,
+          feature: "CHAT",
+          provider: "openrouter",
+          model: selectedModel,
+          inputTokens: aiResponse.totalUsage?.inputTokens || 0,
+          outputTokens: aiResponse.totalUsage?.outputTokens || 0,
+        })
+        .catch(() => {});
 
       return {
         status: 200,
@@ -605,15 +611,17 @@ Format your response exclusively in clean Markdown. Use headings like "### Live 
         maxRetries: 3,
       });
 
-      aiUsageService.logUsage({
-        userId: (await this.getAuthorizedWorkspaceAccess(request)).user.id,
-        workspaceId,
-        feature: "CHAT",
-        provider: "openrouter",
-        model: selectedModel,
-        inputTokens: aiResponse.totalUsage?.inputTokens || 0,
-        outputTokens: aiResponse.totalUsage?.outputTokens || 0,
-      }).catch(() => {});
+      aiUsageService
+        .logUsage({
+          userId: (await this.getAuthorizedWorkspaceAccess(request)).user.id,
+          workspaceId,
+          feature: "CHAT",
+          provider: "openrouter",
+          model: selectedModel,
+          inputTokens: aiResponse.totalUsage?.inputTokens || 0,
+          outputTokens: aiResponse.totalUsage?.outputTokens || 0,
+        })
+        .catch(() => {});
 
       return {
         status: 200,

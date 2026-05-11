@@ -10,10 +10,12 @@ import {
   Stack,
   Typography,
   Button,
+  Box,
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import type { TaskResponse, TaskPrioritySchema } from "../../store/apis/projectApi";
 import type { components } from "../../types/api";
+import { AiGraphTrace, ContextGraph } from "./ContextGraph";
 import MarkdownRenderer from "../common/MarkdownRenderer";
 
 type TaskMetadata = components["schemas"]["TaskMetadata"];
@@ -302,6 +304,23 @@ const ProjectTaskDialog: React.FC<ProjectTaskDialogProps> = ({
                 </Typography>
               )}
             </Stack>
+
+            {(() => {
+              const trace = (extendedTask.metadata as Record<string, unknown>)?.aiGraphTrace as
+                | AiGraphTrace
+                | undefined;
+              if (!trace || !Array.isArray(trace.nodes) || trace.nodes.length === 0) return null;
+              return (
+                <Stack spacing={1}>
+                  <Typography variant="subtitle2" color="primary">
+                    ✨ AI Architecture Path (Proof of Work)
+                  </Typography>
+                  <Box sx={{ mt: 1 }}>
+                    <ContextGraph height={250} nodes={trace.nodes} links={trace.links} />
+                  </Box>
+                </Stack>
+              );
+            })()}
             {metadataJson ? (
               <Stack spacing={0.5}>
                 <Typography variant="subtitle2" color="text.secondary">

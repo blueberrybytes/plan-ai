@@ -21,6 +21,7 @@ interface MarkdownRendererProps {
   } | null;
   onFixDiagram?: (brokenChart: string) => void;
   isFixing?: boolean;
+  isStreaming?: boolean;
 }
 
 const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
@@ -29,6 +30,7 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
   theme,
   onFixDiagram,
   isFixing,
+  isStreaming,
 }) => {
   return (
     <Box
@@ -99,6 +101,27 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
 
             if (language === "mermaid") {
               const chart = String(children).replace(/\n$/, "");
+              
+              if (isStreaming) {
+                // Return plain text while streaming to prevent aggressive mermaid re-renders crashing
+                return (
+                  <Box
+                    sx={{
+                      p: 2,
+                      bgcolor: "action.hover",
+                      borderRadius: 1,
+                      fontFamily: "monospace",
+                      whiteSpace: "pre-wrap",
+                      fontSize: "0.85rem",
+                      border: "1px dashed",
+                      borderColor: "divider",
+                    }}
+                  >
+                    {chart}
+                  </Box>
+                );
+              }
+
               return (
                 <MermaidRenderer
                   chart={chart}

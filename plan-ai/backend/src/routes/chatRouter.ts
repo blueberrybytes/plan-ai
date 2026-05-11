@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { Router } from "express";
-import { streamObject, streamText, stepCountIs } from "ai";
+import { streamText, stepCountIs, Output } from "ai";
 import { z } from "zod";
 import {
   getConfiguredModel,
@@ -115,9 +115,8 @@ CRITICAL RULES FOR MERMAID:
 1. ANY node label that contains spaces, parentheses "()", ampersands "&", or hyphens "-" MUST be strictly enclosed in double quotes. Example: A["Target Audience (B2B)"] --> B["Content Strategy"]
 2. FOR STATEDIAGRAM: NEVER use double quotes directly in transition arrows. ALWAYS define an alias first using 'state "Label" as ID', and then transition between IDs.
 3. DO NOT include any custom styling, classDefs, or inline colors. The frontend natively injects dynamic theme colors.
-CRITICAL CITATION RULES:
-Whenever you state a fact, reference code, or pull information from the Context below, you MUST fill out the 'citations' array in your JSON output (unless you are answering via plain text in an agentic reasoning loop).
-Do NOT output inline citations (e.g. [{"filename": "...", ...}]) in your markdown 'text' output. Your markdown 'text' output must flow naturally.
+CITATION RULES:
+When referencing code from the Context below, mention the filename naturally in your response (e.g. "In \`authService.ts\`, the login flow..."). Do NOT output raw JSON citation objects inline.
 ${codeIntelligenceSection}
 
 Context:
@@ -148,11 +147,6 @@ ${contextText}
       ];
 
       const requestedModelKey = modelKey && modelKey.length > 0 ? modelKey : DEFAULT_AI_MODEL;
-      const isReasoningModel =
-        requestedModelKey.includes("deepseek-r1") ||
-        requestedModelKey.includes("o1") ||
-        requestedModelKey.includes("o3") ||
-        requestedModelKey.includes("opus");
 
       const ResponseSchema = z.object({
         text: z.string().describe("The markdown-formatted conversational response."),
@@ -168,141 +162,117 @@ ${contextText}
           ),
       });
 
-      if (isReasoningModel || gitnexusTools) {
-        // Reasoning models or Agentic Tool runs via pure streamText
-        const result = await streamText({
-          model: getConfiguredModel(requestedModelKey),
-          providerOptions: getFallbackProviderOptions(requestedModelKey),
-          messages,
-          maxRetries: 3,
-          ...(gitnexusTools ? { tools: gitnexusTools, stopWhen: stepCountIs(5) } : {}),
-          onFinish: async ({ text, usage }) => {
-            try {
-              if (usage) {
-                aiUsageService
-                  .logUsage({
-                    userId: user.id,
-                    workspaceId,
-                    feature: "CHAT",
-                    provider: "openrouter",
-                    model: requestedModelKey,
-                    inputTokens: usage.inputTokens || 0,
-                    outputTokens: usage.outputTokens || 0,
-                  })
-                  .catch(() => {});
-              }
-              const latencyMs = Date.now() - startTime;
+      // Tool-using models: pure streamText (text streaming)
+      // Standard models: streamText + Output.object (structured output with citations)
+      const useStructuredOutput = !gitnexusTools;
 
-              if (gitnexusTools) {
-                const resolvedSteps = await result.steps;
-                if (resolvedSteps && resolvedSteps.length > 0) {
-                  const usedToolNames = new Set<string>();
-                  for (const step of resolvedSteps) {
-                    if (step.toolCalls) {
-                      for (const tc of step.toolCalls) {
-                        if (tc.toolName === "fetch_url") usedToolNames.add("Web Search");
-                        else if (
-                          tc.toolName === "query_codebase" ||
-                          tc.toolName === "get_symbol_context"
-                        )
-                          usedToolNames.add("Plan AI Code Graph");
-                        else if (tc.toolName === "add_memory" || tc.toolName === "query_memory")
-                          usedToolNames.add("Organization Memory");
-                        else usedToolNames.add(tc.toolName);
-                      }
+      const result = await streamText({
+        model: getConfiguredModel(requestedModelKey),
+        providerOptions: getFallbackProviderOptions(requestedModelKey),
+        messages,
+        maxRetries: 3,
+        ...(gitnexusTools
+          ? { tools: gitnexusTools, stopWhen: stepCountIs(5) }
+          : { output: Output.object({ schema: ResponseSchema }) }),
+        onFinish: async ({ text, usage }) => {
+          try {
+            if (usage) {
+              aiUsageService
+                .logUsage({
+                  userId: user.id,
+                  workspaceId,
+                  feature: "CHAT",
+                  provider: "openrouter",
+                  model: requestedModelKey,
+                  inputTokens: usage.inputTokens || 0,
+                  outputTokens: usage.outputTokens || 0,
+                })
+                .catch(() => {});
+            }
+            const latencyMs = Date.now() - startTime;
+
+            if (gitnexusTools) {
+              const resolvedSteps = await result.steps;
+              if (resolvedSteps && resolvedSteps.length > 0) {
+                const usedToolNames = new Set<string>();
+                for (const step of resolvedSteps) {
+                  if (step.toolCalls) {
+                    for (const tc of step.toolCalls) {
+                      if (tc.toolName === "fetch_url") usedToolNames.add("Web Search");
+                      else if (
+                        tc.toolName === "query_codebase" ||
+                        tc.toolName === "get_symbol_context"
+                      )
+                        usedToolNames.add("Plan AI Code Graph");
+                      else if (tc.toolName === "add_memory" || tc.toolName === "query_memory")
+                        usedToolNames.add("Organization Memory");
+                      else usedToolNames.add(tc.toolName);
                     }
                   }
-                  toolsUsed.push(...Array.from(usedToolNames));
                 }
+                toolsUsed.push(...Array.from(usedToolNames));
               }
-
-              await prisma.chatMessage.create({
-                data: {
-                  threadId,
-                  role: "ASSISTANT",
-                  content: JSON.stringify({
-                    text: text || "Failed to generate text content.",
-                    latencyMs,
-                    tools: toolsUsed,
-                  }),
-                },
-              });
-              await prisma.chatThread.update({
-                where: { id: threadId },
-                data: { updatedAt: new Date() },
-              });
-            } catch (err) {
-              logger.error("Failed to persist streamed message", err);
             }
-          },
-        });
 
-        // Use result.textStream with modern iterator because pipeTextStreamToResponse might differ across versions
-        res.setHeader("Content-Type", "text/plain; charset=utf-8");
-        for await (const chunk of result.textStream) {
-          res.write(chunk);
-        }
-        res.end();
-        return;
-      } else {
-        // Standard models use strict streamObject to enforce text/citation separation.
-        const result = await streamObject({
-          model: getConfiguredModel(requestedModelKey),
-          providerOptions: getFallbackProviderOptions(requestedModelKey),
-          messages,
-          maxRetries: 3,
-          schema: ResponseSchema,
-          onFinish: async ({ object, error, usage }) => {
-            try {
-              if (usage) {
-                aiUsageService
-                  .logUsage({
-                    userId: user.id,
-                    workspaceId,
-                    feature: "CHAT",
-                    provider: "openrouter",
-                    model: requestedModelKey,
-                    inputTokens: usage.inputTokens || 0,
-                    outputTokens: usage.outputTokens || 0,
-                  })
-                  .catch(() => {});
+            // Extract text + citations from structured output, or use raw text for tool models
+            let finalText = text || "Failed to generate text content.";
+            let citations: { filename: string; lines: string }[] = [];
+            if (useStructuredOutput) {
+              try {
+                const outputObj = await result.output;
+                if (outputObj?.text) finalText = outputObj.text;
+                if (outputObj && Array.isArray(outputObj.citations))
+                  citations = outputObj.citations;
+              } catch {
+                // If output parsing fails, fall back to raw text
               }
-              const latencyMs = Date.now() - startTime;
-              const finalObject = object
-                ? { ...object, latencyMs, tools: toolsUsed }
-                : {
-                    reply:
-                      "Failed to process AI response natively. This typically occurs when reasoning models are used.",
-                    error: (error as Error)?.message || "Unknown parsing error",
-                    latencyMs,
-                    tools: toolsUsed,
-                  };
-
-              await prisma.chatMessage.create({
-                data: {
-                  threadId,
-                  role: "ASSISTANT",
-                  content: JSON.stringify(finalObject),
-                },
-              });
-              await prisma.chatThread.update({
-                where: { id: threadId },
-                data: { updatedAt: new Date() },
-              });
-            } catch (err) {
-              logger.error("Failed to persist streamed message", err);
             }
-          },
-        });
 
-        // Map object streams back to text directly for express
-        res.setHeader("Content-Type", "text/plain; charset=utf-8");
-        for await (const chunk of result.textStream) {
-          res.write(chunk);
-        }
-        res.end();
-        return;
+            // Build aiGraphTrace only when agentic tools were actually used (not just basic RAG)
+            let aiGraphTrace: { nodes: { id: string; name: string; group: string; val: number }[]; links: { source: string; target: string }[] } | undefined;
+            if (gitnexusTools && toolsUsed.length > 0) {
+              const graphNodes: { id: string; name: string; group: string; val: number }[] = [
+                { id: "ai", name: "Plan AI", group: "function", val: 30 },
+              ];
+              const graphLinks: { source: string; target: string }[] = [];
+              for (const toolName of toolsUsed) {
+                const toolId = `tool-${toolName}`;
+                graphNodes.push({ id: toolId, name: toolName, group: "database", val: 20 });
+                graphLinks.push({ source: "ai", target: toolId });
+              }
+              aiGraphTrace = { nodes: graphNodes, links: graphLinks };
+            }
+
+            await prisma.chatMessage.create({
+              data: {
+                threadId,
+                role: "ASSISTANT",
+                content: JSON.stringify({
+                  text: finalText,
+                  latencyMs,
+                  tools: toolsUsed,
+                  ...(citations.length > 0 ? { citations } : {}),
+                  ...(aiGraphTrace ? { aiGraphTrace } : {}),
+                }),
+              },
+            });
+            await prisma.chatThread.update({
+              where: { id: threadId },
+              data: { updatedAt: new Date() },
+            });
+          } catch (err) {
+            logger.error("Failed to persist streamed message", err);
+          }
+        },
+      });
+
+      // Stream text to the client (always clean readable text, never raw JSON)
+      res.setHeader("Content-Type", "text/plain; charset=utf-8");
+      for await (const chunk of result.textStream) {
+        res.write(chunk);
       }
+      res.end();
+      return;
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       logger.error("Streaming error", error);

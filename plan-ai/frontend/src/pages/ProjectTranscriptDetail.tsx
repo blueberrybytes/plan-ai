@@ -33,6 +33,7 @@ import { useTranslation } from "react-i18next";
 import { ContentCopy as CopyIcon, Check as CheckIcon } from "@mui/icons-material";
 import ReactMarkdown from "react-markdown";
 import MermaidRenderer from "../components/common/MermaidRenderer";
+import { AiGraphTrace, ContextGraph } from "../components/project/ContextGraph";
 
 const ChatMessageItem = ({ msg }: { msg: { role: string; content: string } }) => {
   const [copied, setCopied] = React.useState(false);
@@ -570,6 +571,13 @@ const ProjectTranscriptDetail: React.FC = () => {
                         scrollButtons="auto"
                       >
                         <Tab label="Raw Transcript" value="transcript" sx={{ fontWeight: 600 }} />
+                        {Boolean((transcript.metadata as Record<string, unknown>)?.aiGraphTrace) && (
+                          <Tab
+                            label="✨ AI Context Graph"
+                            value="context-graph"
+                            sx={{ fontWeight: 600, color: "primary.main" }}
+                          />
+                        )}
                         {transcriptTasks && transcriptTasks.length > 0 && generatedChart && (
                           <Tab
                             label="Architecture Map"
@@ -579,6 +587,16 @@ const ProjectTranscriptDetail: React.FC = () => {
                         )}
                       </Tabs>
                     </Box>
+
+                    {tabValue === "context-graph" && (() => {
+                      const trace = (transcript.metadata as Record<string, unknown>)?.aiGraphTrace as AiGraphTrace | undefined;
+                      if (!trace || !Array.isArray(trace.nodes) || trace.nodes.length === 0) return null;
+                      return (
+                        <Box sx={{ mt: 2 }}>
+                          <ContextGraph height={400} nodes={trace.nodes} links={trace.links} />
+                        </Box>
+                      );
+                    })()}
 
                     {tabValue === "transcript" && (
                       <Box sx={{ mt: 2 }}>
