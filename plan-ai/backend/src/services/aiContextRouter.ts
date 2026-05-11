@@ -12,56 +12,35 @@ export interface ModelLimits {
 
 // Supported models and their safe max token context limits
 export const AI_MODEL_LIMITS: Record<string, ModelLimits> = {
-  // 2026 Fleet - High Capacity & Reasoning
-  "google/gemini-3.1-pro-preview": {
-    modelName: "Gemini 3.1 Pro",
-    maxTokens: 1050000,
-    description:
-      "Google's flagship 2026 model. Best for massive datasets, huge codebases, and deep document analysis.",
-    tags: ["High Context", "Reasoning", "Google"],
-  },
-  "anthropic/claude-sonnet-4.6": {
-    modelName: "Claude 4.6 Sonnet",
-    maxTokens: 1000000,
-    description:
-      "Anthropic's latest workhorse. Perfect balance of blinding speed and near-AGI coding & writing capabilities.",
+  "anthropic/claude-3.7-sonnet": {
+    modelName: "Claude 3.7 Sonnet",
+    maxTokens: 200000,
+    description: "Anthropic's latest workhorse. Perfect balance of speed and coding & writing capabilities.",
     tags: ["Balanced", "Coding", "Anthropic"],
   },
-  "anthropic/claude-opus-4.7": {
-    modelName: "Claude 4.7 Opus",
-    maxTokens: 1000000,
-    description:
-      "Anthropic's most powerful agentic model. Built for long-running multi-step tasks, complex codebases, and end-to-end project orchestration. #2 in Programming.",
-    tags: ["High Reasoning", "Agentic", "Anthropic"],
+  "openai/gpt-4o": {
+    modelName: "GPT-4o",
+    maxTokens: 128000,
+    description: "OpenAI's flagship model with strong reasoning, structured outputs, and high reliability.",
+    tags: ["Reliable", "OpenAI"],
   },
-
-  // 2026 Fleet - Fast & Efficient
+  "google/gemini-2.5-pro": {
+    modelName: "Gemini 2.5 Pro",
+    maxTokens: 2000000,
+    description: "Google's flagship model with a massive context window. Best for huge codebases.",
+    tags: ["High Context", "Reasoning", "Google"],
+  },
   "google/gemini-2.5-flash": {
     modelName: "Gemini 2.5 Flash",
     maxTokens: 1000000,
-    description:
-      "Incredibly fast response times with a massive context window. Ideal for live chat and basic RAG.",
+    description: "Incredibly fast response times with a massive context window. Ideal for live chat.",
     tags: ["Fast", "Chat", "Google"],
-  },
-  "openai/gpt-5.5": {
-    modelName: "GPT-5.5",
-    maxTokens: 1050000,
-    description:
-      "OpenAI's frontier model with 1M+ context, strong reasoning and high reliability. Excellent cache hit rate makes it cost-efficient for repeated context.",
-    tags: ["Frontier", "High Context", "OpenAI"],
   },
   "deepseek/deepseek-r1": {
     modelName: "DeepSeek R1",
     maxTokens: 64000,
-    description:
-      "DeepSeek's frontier reasoning model. Specialized in chain-of-thought logic and system architecture.",
+    description: "DeepSeek's frontier reasoning model. Specialized in chain-of-thought logic.",
     tags: ["Reasoning", "Open Source", "DeepSeek"],
-  },
-  "meta-llama/llama-3.3-70b-instruct": {
-    modelName: "Llama 3.3 70B (Groq)",
-    maxTokens: 128000,
-    description: "Meta's flagship open LLM, optimized for instruction following and general tasks.",
-    tags: ["Open Source", "Meta", "Groq"],
   },
 };
 

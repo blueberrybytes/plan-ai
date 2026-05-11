@@ -249,7 +249,7 @@ export function setupAudioStream(server: Server) {
 
         dgConn.on(LiveTranscriptionEvents.Open, () => {
           clearInterval(diagInterval);
-          console.log(`[Deepgram] Stream Open: ${source}`);
+          //console.log(`[Deepgram] Stream Open: ${source}`);
           if (source === "mic") {
             isMicReady = true;
             micBuffer.forEach((buf) => dgConn.send(buf as unknown as ArrayBufferLike));
@@ -272,9 +272,6 @@ export function setupAudioStream(server: Server) {
             if (data.type === "Results" && data.channel?.alternatives?.[0]) {
               const transcript = data.channel.alternatives[0].transcript;
               if (transcript) {
-                console.log(
-                  `[DEEPGRAM TRANSCRIPT ${source}] (isFinal=${data.is_final}): ${transcript}`,
-                );
                 ws.send(
                   JSON.stringify({
                     type: "transcript",

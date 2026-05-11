@@ -3,10 +3,10 @@ import EnvUtils from "./EnvUtils";
 import { AI_MODEL_LIMITS } from "../services/aiContextRouter";
 import prisma from "../prisma/prismaClient";
 
-export const DEFAULT_AI_MODEL = "anthropic/claude-opus-4.7";
+export const DEFAULT_AI_MODEL = "anthropic/claude-3.7-sonnet";
 export const FALLBACK_MODELS = [
-  "google/gemini-3.1-pro-preview",
-  "openai/gpt-5.5",
+  "openai/gpt-4o",
+  "google/gemini-2.5-pro",
   "google/gemini-2.5-flash",
 ];
 

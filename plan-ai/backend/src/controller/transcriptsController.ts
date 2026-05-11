@@ -142,16 +142,7 @@ export class TranscriptsController extends BaseWorkspaceController {
     const { user, workspaceId } = await this.getAuthorizedWorkspaceAccess(request);
     const options: TranscriptListOptions = { workspaceId, page, pageSize, source };
 
-    console.log(
-      `[DEBUG] GET /api/transcripts - fetching for user ${user.id} (email: ${user.email})`,
-      options,
-    );
-
     const result = await transcriptCrudService.listTranscriptsForUser(user.id, options);
-
-    console.log(
-      `[DEBUG] GET /api/transcripts - Found ${result.transcripts.length} items (Total: ${result.total})`,
-    );
 
     return {
       status: 200,

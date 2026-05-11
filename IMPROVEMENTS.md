@@ -36,3 +36,8 @@ This document outlines the high-priority features, technical debt, and quality-o
 - Build an official integration with the Notion API.
 - Allow users to automatically export full formatted transcripts, executive summaries, and action item lists directly into a selected Notion Database or Page.
 - Enable a "Sync to Notion" toggle alongside the existing Jira/Linear/Trello options in the recording flow.
+
+## 6. If transcript generation fails
+**Problem:** If transcript generation fails, the user is left without tasks and no easy way to try again.
+**Solution:**
+- Add a "Retry Generation" button in the UI for users if an AI extraction job fails due to rate limits or timeouts. We need to store somehow that htis failed so in the recorder ui and mobile we can retry
