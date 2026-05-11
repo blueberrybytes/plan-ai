@@ -25,6 +25,11 @@ export abstract class BaseWorkspaceController extends Controller {
       throw { status: 404, message: "User not found" };
     }
 
+    // Global admins can access any workspace without being a member
+    if (user.role === "ADMIN") {
+      return { user, workspaceId, role: "OWNER" as const };
+    }
+
     const membership = await prisma.workspaceMember.findUnique({
       where: { workspaceId_userId: { workspaceId, userId: user.id } },
     });
