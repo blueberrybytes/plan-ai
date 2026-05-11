@@ -36,7 +36,9 @@ const DesktopCallback: React.FC = () => {
   const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
   const [errorMsg, setErrorMsg] = useState<string>("");
 
-  const localPort = new URLSearchParams(window.location.search).get("local_port");
+  const localPort =
+    new URLSearchParams(window.location.search).get("local_port") ||
+    sessionStorage.getItem("local_port");
 
   const [triggerGetDesktopToken] = useGetDesktopTokenMutation();
 
