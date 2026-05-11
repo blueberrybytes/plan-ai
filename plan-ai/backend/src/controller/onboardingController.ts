@@ -1,4 +1,5 @@
 import { Route, Tags, Post, Body, Security, Request, Controller } from "tsoa";
+import { Prisma } from "@prisma/client";
 import prisma from "../prisma/prismaClient";
 import { AuthenticatedRequest } from "../middleware/authMiddleware";
 import type { ApiResponse } from "./controllerTypes";
@@ -67,9 +68,11 @@ export class OnboardingController extends Controller {
       create: {
         userId: user.id,
         ...body.uiTheme,
+        configJson: body.uiTheme.configJson as Prisma.InputJsonValue,
       },
       update: {
         ...body.uiTheme,
+        configJson: body.uiTheme.configJson as Prisma.InputJsonValue,
       },
     });
 

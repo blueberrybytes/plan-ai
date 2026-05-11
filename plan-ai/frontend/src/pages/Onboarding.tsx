@@ -90,6 +90,7 @@ const Onboarding: React.FC = () => {
           selectedTheme.textPrimaryColor || (selectedTheme.isLight ? "#0f172a" : "#f8fafc"),
         textSecondaryColor: selectedTheme.textSecondaryColor,
         borderRadius: selectedTheme.borderRadius,
+        configJson: { isLight: selectedTheme.isLight, id: selectedTheme.id },
       };
       const selectedBrandThemePreset =
         uiThemeOptions.find((t) => t.id === selectedBrandTheme) || uiThemeOptions[0];
