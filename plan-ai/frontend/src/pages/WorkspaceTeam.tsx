@@ -141,7 +141,11 @@ const WorkspaceSettingsSection: React.FC<{ activeWorkspace: WorkspaceResponse }>
               helperText={
                 <span>
                   Get your key at{" "}
-                  <Link href="https://console.deepgram.com/api-keys" target="_blank" rel="noopener noreferrer">
+                  <Link
+                    href="https://console.deepgram.com/api-keys"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
                     console.deepgram.com
                   </Link>
                 </span>
@@ -166,7 +170,7 @@ const WorkspaceSettingsSection: React.FC<{ activeWorkspace: WorkspaceResponse }>
           size="small"
           helperText={`≈ $${estimatedCost} USD estimated combined API cost`}
           FormHelperTextProps={{
-            sx: { color: "success.main", fontWeight: 600, ml: 0 }
+            sx: { color: "success.main", fontWeight: 600, ml: 0 },
           }}
         />
 
@@ -198,9 +202,12 @@ const WorkspaceSettingsSection: React.FC<{ activeWorkspace: WorkspaceResponse }>
           functioning, but changes the sidebar usage bar to red if exceeded.
         </Typography>
         <Typography variant="body2" color="text.secondary" paragraph>
-          To make tracking easier, all your AI costs are unified into a single metric called <b>Blueberry Tokens</b>.
-          <br /><br />
-          <b>1 Blueberry Token ≈ $0.00005</b><br />
+          To make tracking easier, all your AI costs are unified into a single metric called{" "}
+          <b>Blueberry Tokens</b>.
+          <br />
+          <br />
+          <b>1 Blueberry Token ≈ $0.00005</b>
+          <br />
           <b>20,000 Tokens ≈ $1.00</b>
         </Typography>
         <Typography variant="body2" color="text.secondary" paragraph>
@@ -208,7 +215,8 @@ const WorkspaceSettingsSection: React.FC<{ activeWorkspace: WorkspaceResponse }>
         </Typography>
         <Box component="ul" sx={{ pl: 2, m: 0, "& li": { mb: 1 } }}>
           <Typography component="li" variant="body2" color="text.secondary">
-            <b>OpenRouter (LLMs):</b> Variable cost depending on the AI model (e.g., Claude 3.5 Sonnet, GPT-4o).
+            <b>OpenRouter (LLMs):</b> Variable cost depending on the AI model (e.g., Claude 3.5
+            Sonnet, GPT-4o).
           </Typography>
           <Typography component="li" variant="body2" color="text.secondary">
             <b>Deepgram (Audio):</b> Fast audio transcription. Costs ~$0.0043 per minute.
@@ -302,6 +310,11 @@ const WorkspaceTeam: React.FC = () => {
               <Typography variant="h4" sx={{ fontWeight: 700 }}>
                 {t("workspaceTeam.title", "Workspace Team")}
               </Typography>
+              {activeWorkspace?.isCourtesy ? (
+                <Chip label="Courtesy Workspace" color="success" size="small" variant="outlined" />
+              ) : (
+                <Chip label="BYOK Workspace" color="secondary" size="small" variant="outlined" />
+              )}
               <Tooltip title="Refresh team data">
                 <IconButton size="small" onClick={() => refetch()} disabled={isFetching}>
                   <RefreshIcon fontSize="small" />

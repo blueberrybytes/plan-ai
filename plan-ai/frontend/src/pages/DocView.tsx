@@ -366,6 +366,7 @@ const DocView: React.FC = () => {
       <Box
         sx={{
           p: { xs: 3, md: 4 },
+          width: "100%",
           maxWidth: isEditMode ? "100%" : 1200,
           mx: "auto",
           transition: "max-width 0.3s ease",

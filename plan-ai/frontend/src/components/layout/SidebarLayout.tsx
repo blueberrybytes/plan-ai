@@ -147,7 +147,7 @@ const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children, fullHeight = fa
     workspaces?.find((w) => w.id === activeWorkspaceId), 
   [workspaces, activeWorkspaceId]);
 
-  const isMissingKeys = activeWorkspace && !activeWorkspace.isCourtesy && activeWorkspace.role === "OWNER" && (!activeWorkspace.openRouterKey || !activeWorkspace.deepgramKey);
+  const isMissingKeys = activeWorkspace && !activeWorkspace.isCourtesy && activeWorkspace.role === "OWNER" && userDb?.role !== "ADMIN" && (!activeWorkspace.openRouterKey || !activeWorkspace.deepgramKey);
 
   const MAX_MONTHLY_TOKENS = activeWorkspace?.monthlyTokenLimit || 200000;
   const currentTokens = usageData?.totalBlueberryTokens || 0;
