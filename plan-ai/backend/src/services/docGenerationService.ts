@@ -214,7 +214,7 @@ CRITICAL RULES FOR MERMAID:
 
 If you return the exact same broken code without quotes around parentheses and ampersands, the system will crash again.`;
 
-    const { text, totalUsage: usage } = await generateText({ model, prompt, temperature: 0.2, maxRetries: 3 });
+    const { text, totalUsage } = await generateText({ model, prompt, temperature: 0.2, maxRetries: 3 });
 
     aiUsageService.logUsage({
       userId: "system",
@@ -222,8 +222,8 @@ If you return the exact same broken code without quotes around parentheses and a
       feature: "DOC",
       provider: "openrouter",
       model: DEFAULT_AI_MODEL,
-      inputTokens: usage?.inputTokens || 0,
-      outputTokens: usage?.outputTokens || 0,
+      inputTokens: totalUsage?.inputTokens || 0,
+      outputTokens: totalUsage?.outputTokens || 0,
     }).catch(() => {});
 
     // Extract code from backticks if present

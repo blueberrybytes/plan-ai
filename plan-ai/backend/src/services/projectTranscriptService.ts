@@ -754,7 +754,7 @@ Transcript/Request:
 ${content}`;
 
     try {
-      const { output: object, totalUsage: usage } = await generateText({
+      const { output: object, totalUsage } = await generateText({
         model,
         providerOptions: getFallbackProviderOptions(activeModel),
         output: Output.object({ schema: transcriptAnalysisSchemaForGeneration }),
@@ -765,7 +765,7 @@ ${content}`;
         maxOutputTokens: 8192,
       });
 
-      if (usage) {
+      if (totalUsage) {
         aiUsageService
           .logUsage({
             userId,
@@ -773,8 +773,8 @@ ${content}`;
             feature: "TRANSCRIPT",
             provider: "openrouter",
             model: activeModel,
-            inputTokens: usage.inputTokens || 0,
-            outputTokens: usage.outputTokens || 0,
+            inputTokens: totalUsage.inputTokens || 0,
+            outputTokens: totalUsage.outputTokens || 0,
           })
           .catch(() => {});
       }
