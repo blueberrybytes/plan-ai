@@ -1,5 +1,5 @@
-import { Router, Request, Response } from "express";
-import { getConfiguredModel, getFallbackProviderOptions } from "../utils/aiModelUtils";
+import { Router, Response } from "express";
+import { getConfiguredModel, getFallbackProviderOptions, DEFAULT_AI_MODEL } from "../utils/aiModelUtils";
 import {
   createUIMessageStream,
   pipeUIMessageStreamToResponse,
@@ -9,7 +9,9 @@ import {
 } from "ai";
 import { mcpClientService } from "../services/mcpClientService";
 import { logger } from "../utils/logger";
-import { authenticateUser } from "../middleware/authMiddleware";
+import { authenticateUser, AuthenticatedRequest } from "../middleware/authMiddleware";
+import { aiUsageService } from "../services/aiUsageService";
+import prisma from "../prisma/prismaClient";
 
 const router = Router();
 
@@ -18,7 +20,7 @@ const router = Router();
  * Streams an AI response using GitNexus MCP tools to answer codebase questions.
  * Requires Firebase auth.
  */
-router.post("/api/gitnexus/chat", authenticateUser, async (req: Request, res: Response) => {
+router.post("/api/gitnexus/chat", authenticateUser, async (req: AuthenticatedRequest, res: Response) => {
   if (process.env.USE_GITNEXUS !== "true") {
     res.status(503).json({ error: "GitNexus is not enabled on this server." });
     return;
@@ -105,6 +107,29 @@ You have up to 10 agentic steps. Use them all if needed.`,
               ? await convertToModelMessages(req.body.messages)
               : [{ role: "user", content: "Hello" }],
             tools,
+            onFinish: async ({ usage }) => {
+              const firebaseUid = req.user?.uid;
+              const workspaceId = req.headers["x-workspace-id"];
+              const resolvedWorkspaceId = Array.isArray(workspaceId) ? workspaceId[0] : workspaceId;
+              if (firebaseUid && resolvedWorkspaceId) {
+                try {
+                  const dbUser = await prisma.user.findUnique({ where: { firebaseUid } });
+                  if (dbUser) {
+                    aiUsageService.logUsage({
+                      userId: dbUser.id,
+                      workspaceId: resolvedWorkspaceId,
+                      feature: "CHAT",
+                      provider: "openrouter",
+                      model: DEFAULT_AI_MODEL,
+                      inputTokens: usage.inputTokens ?? 0,
+                      outputTokens: usage.outputTokens ?? 0,
+                    }).catch((err) => logger.error("Failed to log GitNexus usage", err));
+                  }
+                } catch (err) {
+                  logger.error("Failed to resolve user for GitNexus usage log", err);
+                }
+              }
+            },
             onError: (error) => {
               logger.error("Error in GitNexus chat streamText:", error);
               writer.write({ type: "error", errorText: "Error querying the codebase." });

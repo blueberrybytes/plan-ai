@@ -6,6 +6,7 @@ import prisma from "../prisma/prismaClient";
 import { queryContexts } from "../vector/contextFileVectorService";
 import { logger } from "../utils/logger";
 import { getPersonaInstructions } from "./personaService";
+import { aiUsageService } from "./aiUsageService";
 
 const SYSTEM_PROMPT = `You are Plan AI, an intelligent coding and documentation assistant.
 You have access to the user's codebase and documents (Contexts).
@@ -144,7 +145,7 @@ export class ChatService {
       { role: "user", content },
     ];
 
-    const { object } = await generateObject({
+    const { object, usage } = await generateObject({
       model,
       system: dynamicSystemPrompt,
       messages,
@@ -163,6 +164,16 @@ export class ChatService {
         content: JSON.stringify(object),
       },
     });
+
+    aiUsageService.logUsage({
+      userId,
+      workspaceId: thread.workspaceId,
+      feature: "CHAT",
+      provider: "openrouter",
+      model: "default",
+      inputTokens: usage?.inputTokens || 0,
+      outputTokens: usage?.outputTokens || 0,
+    }).catch(() => {});
 
     return {
       message: userMessage,

@@ -129,6 +129,16 @@ export class DocGenerationService {
         if (investigation.text) {
           prompt += `\n\n### Codebase Investigation Context:\n${investigation.text}`;
         }
+
+        aiUsageService.logUsage({
+          userId,
+          workspaceId,
+          feature: "DOC",
+          provider: "openrouter",
+          model: DEFAULT_AI_MODEL,
+          inputTokens: investigation.usage?.inputTokens || 0,
+          outputTokens: investigation.usage?.outputTokens || 0,
+        }).catch(() => {});
       } catch (err) {
         logger.error("Failed during MCP agentic investigation step for doc generation", err);
       }
@@ -204,7 +214,17 @@ CRITICAL RULES FOR MERMAID:
 
 If you return the exact same broken code without quotes around parentheses and ampersands, the system will crash again.`;
 
-    const { text } = await generateText({ model, prompt, temperature: 0.2, maxRetries: 3 });
+    const { text, usage } = await generateText({ model, prompt, temperature: 0.2, maxRetries: 3 });
+
+    aiUsageService.logUsage({
+      userId: "system",
+      workspaceId: "system",
+      feature: "DOC",
+      provider: "openrouter",
+      model: DEFAULT_AI_MODEL,
+      inputTokens: usage?.inputTokens || 0,
+      outputTokens: usage?.outputTokens || 0,
+    }).catch(() => {});
 
     // Extract code from backticks if present
     const match = text.match(/```(?:mermaid)?\s*([\s\S]*?)```/);

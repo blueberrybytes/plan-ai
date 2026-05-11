@@ -661,6 +661,18 @@ export class ProjectTranscriptService {
         if (investigation.text) {
           finalContextSection += `\n\n### Codebase Investigation Context:\n${investigation.text}\n`;
         }
+
+        aiUsageService
+          .logUsage({
+            userId,
+            workspaceId,
+            feature: "TASK_EXTRACTION",
+            provider: "openrouter",
+            model: "openai/gpt-4o-mini",
+            inputTokens: investigation.usage?.inputTokens || 0,
+            outputTokens: investigation.usage?.outputTokens || 0,
+          })
+          .catch(() => {});
       } catch (err) {
         logger.error("Failed during MCP agentic investigation step for transcript", err);
       }
