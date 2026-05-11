@@ -180,6 +180,7 @@ const Onboarding: React.FC = () => {
           justifyContent: "center",
           p: 3,
           transition: "background-color 0.3s ease",
+          color: "text.primary",
         }}
       >
         <Paper
@@ -191,6 +192,8 @@ const Onboarding: React.FC = () => {
             borderRadius: 4,
             border: "1px solid rgba(128,128,128,0.1)",
             transition: "all 0.3s ease",
+            bgcolor: "background.paper",
+            color: "text.primary",
           }}
         >
           {step === 1 && (

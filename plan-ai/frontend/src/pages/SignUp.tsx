@@ -63,8 +63,21 @@ export default function SignUp() {
   }, [dispatch]);
 
   // Parse URL parameters for Desktop Auth OOB flow
-  const isDesktopAuth = new URLSearchParams(window.location.search).get("desktop_auth") === "true";
-  const localPort = new URLSearchParams(window.location.search).get("local_port");
+  const searchParams = new URLSearchParams(window.location.search);
+  const urlDesktopAuth = searchParams.get("desktop_auth");
+  const urlLocalPort = searchParams.get("local_port");
+
+  useEffect(() => {
+    if (urlDesktopAuth === "true") {
+      sessionStorage.setItem("desktop_auth", "true");
+    }
+    if (urlLocalPort) {
+      sessionStorage.setItem("local_port", urlLocalPort);
+    }
+  }, [urlDesktopAuth, urlLocalPort]);
+
+  const isDesktopAuth = urlDesktopAuth === "true" || sessionStorage.getItem("desktop_auth") === "true";
+  const localPort = urlLocalPort || sessionStorage.getItem("local_port");
   const desktopParams = isDesktopAuth
     ? `?desktop_auth=true${localPort ? `&local_port=${localPort}` : ""}`
     : "";
@@ -73,6 +86,8 @@ export default function SignUp() {
   useEffect(() => {
     if (user?.emailVerified) {
       if (isDesktopAuth) {
+        sessionStorage.removeItem("desktop_auth");
+        sessionStorage.removeItem("local_port");
         if (localPort) {
           navigate(`/auth/desktop?local_port=${localPort}`);
         } else {

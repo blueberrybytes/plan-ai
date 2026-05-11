@@ -63,9 +63,22 @@ export default function Login() {
   }, [dispatch]);
 
   // Parse URL parameters for Desktop Auth OOB flow
-  const isDesktopAuthMode =
-    new URLSearchParams(window.location.search).get("desktop_auth") === "true";
-  const autoTrigger = new URLSearchParams(window.location.search).get("auto_trigger");
+  const searchParams = new URLSearchParams(window.location.search);
+  const urlDesktopAuth = searchParams.get("desktop_auth");
+  const urlLocalPort = searchParams.get("local_port");
+  const autoTrigger = searchParams.get("auto_trigger");
+
+  useEffect(() => {
+    if (urlDesktopAuth === "true") {
+      sessionStorage.setItem("desktop_auth", "true");
+    }
+    if (urlLocalPort) {
+      sessionStorage.setItem("local_port", urlLocalPort);
+    }
+  }, [urlDesktopAuth, urlLocalPort]);
+
+  const isDesktopAuthMode = urlDesktopAuth === "true" || sessionStorage.getItem("desktop_auth") === "true";
+  const localPort = urlLocalPort || sessionStorage.getItem("local_port");
 
   useEffect(() => {
     // If Electron spawned a hidden BrowserWindow specifically for Apple, auto-trigger it!
@@ -76,7 +89,6 @@ export default function Login() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoTrigger]);
 
-  const localPort = new URLSearchParams(window.location.search).get("local_port");
   const desktopParams = isDesktopAuthMode
     ? `?desktop_auth=true${localPort ? `&local_port=${localPort}` : ""}`
     : "";
@@ -85,6 +97,8 @@ export default function Login() {
   useEffect(() => {
     if (user?.emailVerified) {
       if (isDesktopAuthMode) {
+        sessionStorage.removeItem("desktop_auth");
+        sessionStorage.removeItem("local_port");
         if (localPort) {
           navigate(`/auth/desktop?local_port=${localPort}`);
         } else {
