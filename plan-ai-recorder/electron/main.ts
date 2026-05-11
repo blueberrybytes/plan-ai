@@ -83,7 +83,29 @@ function startAuthCallbackServer(): void {
       res.setHeader("Content-Type", "text/html; charset=utf-8");
       res.writeHead(200);
       res.end(
-        "<html><body><h2>Authenticated! ✓</h2><p>You can close this tab and return to the app.</p><script>window.close()</script></body></html>",
+        `<html>
+<head><title>Plan AI — Authenticated</title>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; background: #0f1117; color: #fff; }
+  .card { text-align: center; padding: 2rem; }
+  h2 { font-size: 1.5rem; margin-bottom: 0.5rem; }
+  p { color: #aaa; margin-bottom: 1.5rem; }
+  kbd { background: #222; border: 1px solid #444; border-radius: 4px; padding: 2px 8px; font-size: 0.9rem; }
+  button { background: #6c63ff; color: #fff; border: none; border-radius: 8px; padding: 0.6rem 1.4rem; font-size: 1rem; cursor: pointer; }
+</style>
+</head>
+<body>
+  <div class="card">
+    <h2>✅ Signed in successfully!</h2>
+    <p>You can return to the Plan AI Recorder app.<br>Press <kbd>⌘ W</kbd> to close this tab.</p>
+    <button onclick="window.close()">Close Tab</button>
+  </div>
+  <script>
+    // Works if tab was opened via window.open(); silently fails if via external link
+    setTimeout(() => { try { window.close(); } catch(e) {} }, 300);
+  </script>
+</body>
+</html>`,
       );
 
       if (code) handleAuthCode(code);

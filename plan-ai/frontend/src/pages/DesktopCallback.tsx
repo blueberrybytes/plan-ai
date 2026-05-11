@@ -170,7 +170,17 @@ const DesktopCallback: React.FC = () => {
             <CheckCircleOutlineIcon sx={{ fontSize: 56, color: "success.main" }} />
             <Typography variant="h6">You&apos;re signed in!</Typography>
             <Typography variant="body2" color="text.secondary">
-              Return to the Plan AI Recorder app. You can close this tab safely.
+              Return to the Plan AI Recorder app.
+            </Typography>
+            <Button
+              variant="contained"
+              onClick={() => window.close()}
+              sx={{ mt: 1 }}
+            >
+              Close Tab
+            </Button>
+            <Typography variant="caption" color="text.secondary">
+              Or press <kbd>⌘ W</kbd> to close this tab.
             </Typography>
           </>
         )}
