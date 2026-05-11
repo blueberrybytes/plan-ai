@@ -1,0 +1,77 @@
+{
+  "name": "plan-ai-recorder",
+  "version": "2.0.2",
+  "license": "BUSL-1.1",
+  "private": true,
+  "author": {
+    "name": "BLUEBERRYBYTES SERVICES FZCO",
+    "email": "projects@blueberrybytes.com"
+  },
+  "homepage": "https://plan-ai.blueberrybytes.com",
+  "description": "Plan AI Desktop Recorder — capture any meeting and generate tasks with AI",
+  "main": "dist-electron/main/index.js",
+  "engines": {
+    "node": "22.17.1"
+  },
+  "scripts": {
+    "prebuild": "node scripts/prebuild-native.js",
+    "predev": "node scripts/prebuild-native.js || true",
+    "dev": "electron-vite dev",
+    "dev:housegroup": "export BRAND_KEY=housegroup && set -a && source .env.housegroup && set +a && electron-vite dev",
+    "build": "electron-vite build",
+    "sentry-sourcemaps": "npx @sentry/wizard@latest -i sourcemaps --saas --org blueberrybytes-services-fzco --project plan-ai-recorder-electron",
+    "preview": "electron-vite preview",
+    "package": "npm run package:mac && npm run package:win && npm run package:linux",
+    "package:mac": "export BRAND_KEY=blueberrybytes && set -a && source .env.production && set +a && node scripts/bump-version.js && electron-vite build && electron-builder --mac -c electron-builder.config.js",
+    "package:mac:housegroup": "export BRAND_KEY=housegroup && set -a && source .env.housegroup.production && set +a && node scripts/bump-version.js && electron-vite build && electron-builder --mac -c electron-builder.config.js",
+    "package:win": "export BRAND_KEY=blueberrybytes && set -a && source .env.production && set +a && node scripts/bump-version.js && electron-vite build && electron-builder --win --x64 -c electron-builder.config.js",
+    "package:win:housegroup": "export BRAND_KEY=housegroup && set -a && source .env.housegroup.production && set +a && node scripts/bump-version.js && electron-vite build && electron-builder --win --x64 -c electron-builder.config.js",
+    "package:linux": "export BRAND_KEY=blueberrybytes && set -a && source .env.production && set +a && node scripts/bump-version.js && electron-vite build && electron-builder --linux -c electron-builder.config.js",
+    "release:win": "export BRAND_KEY=blueberrybytes && set -a && source .env.production && set +a && electron-vite build && electron-builder --win --x64 -p always -c electron-builder.config.js",
+    "release:linux": "export BRAND_KEY=blueberrybytes && set -a && source .env.production && set +a && electron-vite build && electron-builder --linux -p always -c electron-builder.config.js",
+    "release:win:housegroup": "export BRAND_KEY=housegroup && set -a && source .env.housegroup.production && set +a && electron-vite build && electron-builder --win --x64 -p always -c electron-builder.config.js",
+    "release:linux:housegroup": "export BRAND_KEY=housegroup && set -a && source .env.housegroup.production && set +a && electron-vite build && electron-builder --linux -p always -c electron-builder.config.js",
+    "build:local:mac": "export BRAND_KEY=blueberrybytes && set -a && source .env.production && set +a && electron-vite build && electron-builder --mac -p never -c electron-builder.config.js",
+    "build:local:mac:housegroup": "export BRAND_KEY=housegroup && set -a && source .env.housegroup.production && set +a && electron-vite build && electron-builder --mac -p never -c electron-builder.config.js",
+    "release:mixed": "node scripts/bump-version.js && yarn release:win && yarn release:linux && export BRAND_KEY=blueberrybytes && set -a && source .env.production && set +a && electron-vite build && electron-builder --mac -p never -c electron-builder.config.js",
+    "release:mixed:housegroup": "node scripts/bump-version.js && yarn release:win:housegroup && yarn release:linux:housegroup && export BRAND_KEY=housegroup && set -a && source .env.housegroup.production && set +a && electron-vite build && electron-builder --mac -p never -c electron-builder.config.js",
+    "release:all": "node scripts/bump-version.js && yarn release:win && yarn release:linux && export BRAND_KEY=blueberrybytes && set -a && source .env.production && set +a && electron-vite build && electron-builder --mac -p never -c electron-builder.config.js && yarn release:win:housegroup && yarn release:linux:housegroup && export BRAND_KEY=housegroup && set -a && source .env.housegroup.production && set +a && electron-vite build && electron-builder --mac -p never -c electron-builder.config.js",
+    "publish-release": "node scripts/publish-draft.js",
+    "generate:types": "npx openapi-typescript ../plan-ai/backend/src/swagger/swagger.json -o src/types/api.d.ts",
+    "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json",
+    "prepare": "husky"
+  },
+  "dependencies": {
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.1",
+    "@mui/icons-material": "^7.3.8",
+    "@mui/material": "^5.15.18",
+    "@sentry/electron": "^7.11.0",
+    "axios": "^1.13.6",
+    "electron-updater": "^6.8.3",
+    "firebase": "^10.12.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-markdown": "^10.1.0",
+    "react-router-dom": "^6.23.1"
+  },
+  "devDependencies": {
+    "@sentry/vite-plugin": "^5.2.0",
+    "@types/node": "^20.14.2",
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^4.3.1",
+    "electron": "^31.0.0",
+    "electron-builder": "^24.13.3",
+    "electron-vite": "^2.3.0",
+    "husky": "^9.1.5",
+    "lint-staged": "^15.2.2",
+    "typescript": "^5.4.5",
+    "vite": "^5.3.1"
+  },
+  "lint-staged": {
+    "*.{ts,tsx}": [
+      "bash -c 'yarn typecheck'"
+    ]
+  }
+}

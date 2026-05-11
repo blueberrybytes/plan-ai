@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "AiUsageLog" ADD COLUMN     "blueberryTokens" INTEGER NOT NULL DEFAULT 0,
+ADD COLUMN     "estimatedCost" DOUBLE PRECISION NOT NULL DEFAULT 0;

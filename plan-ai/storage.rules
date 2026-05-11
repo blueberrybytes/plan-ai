@@ -1,0 +1,75 @@
+rules_version = '2';
+
+// Craft rules based on data in your Firestore database
+// allow write: if firestore.get(
+//    /databases/(default)/documents/users/$(request.auth.uid)).data.isAdmin;
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+    match /users/{userId}/profile/{fileName} {
+      allow read: if true; // Public read access for profile images
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+    match /content-images/{userId}/{contentId}/{imageId} {
+      // Public read access for content images
+      allow read: if true;
+      
+      // Allow write only if the authenticated user matches the userId in the path
+      allow write: if request.auth != null && request.auth.uid == userId;
+      
+      // Validate uploads (only images allowed for content)
+      allow create: if request.resource.size < 5 * 1024 * 1024 && // 5MB max
+                     request.resource.contentType.matches('image/.*');
+    }
+    match /companies/{companyId}/logo/{fileName} {
+      allow read: if true; // Public read access for logos
+      allow write: if request.auth != null && exists(/databases/$(database)/documents/companies/$(companyId)) && 
+                    get(/databases/$(database)/documents/companies/$(companyId)).data.userId == request.auth.uid;
+      
+      // Validate uploads (only images allowed for logos)
+      allow create: if request.resource.size < 5 * 1024 * 1024 && // 5MB max
+                     request.resource.contentType.matches('image/.*');
+    }
+
+    // New storage location for company logos, organized by authenticated user ID and company ID
+    match /company-logos/{userId}/{companyId}/{fileName} {
+      // Public read access for company logos
+      allow read: if true;
+
+      // Only the authenticated user matching userId and owner of the company can write/delete
+      allow write: if request.auth != null &&
+                    request.auth.uid == userId &&
+                    exists(/databases/$(database)/documents/companies/$(companyId)) &&
+                    get(/databases/$(database)/documents/companies/$(companyId)).data.userId == request.auth.uid;
+
+      // Validate uploads (images only, up to 5MB)
+      allow create: if request.resource.size < 5 * 1024 * 1024 &&
+                     request.resource.contentType.matches('image/.*');
+    }
+     match /contexts/{userId}/{contextId}/{allPaths=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    match /presentations/{userId}/{presentationId}/{imageId} {
+      allow read: if true;
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    match /themes/{userId}/logos/{imageId} {
+      allow read: if true;
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    match /packages/{allPaths=**} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+    
+    match /public/{allPaths=**} {
+      allow read;
+      allow write: if request.auth != null;
+    }
+  }
+}

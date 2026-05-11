@@ -1,0 +1,39 @@
+{
+  "compilerOptions": {
+    "target": "es6",
+    "lib": ["dom", "dom.iterable", "esnext"],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "strict": true,
+    "forceConsistentCasingInFileNames": true,
+    "noFallthroughCasesInSwitch": true,
+    "module": "esnext",
+    "moduleResolution": "node",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "jsx": "react-jsx",
+    "types": ["node"],
+    "typeRoots": ["./node_modules/@types"],
+    "baseUrl": "src",
+    "paths": {
+      "@components/*": ["components/*"],
+      "@errors/*": ["errors/*"],
+      "@firebase/*": ["firebase/*"],
+      "@hooks/*": ["hooks/*"],
+      "@i18n/*": ["i18n/*"],
+      "@icons/*": ["icons/*"],
+      "@mock/*": ["mock/*"],
+      "@providers/*": ["providers/*"],
+      "@routes/*": ["routes/*"],
+      "@store/*": ["store/*"],
+      "@pages/*": ["pages/*"],
+      "@theme/*": ["theme/*"],
+      "@types/*": ["types/*"],
+      "@utils/*": ["utils/*"]
+    }
+  },
+  "include": ["src"]
+}

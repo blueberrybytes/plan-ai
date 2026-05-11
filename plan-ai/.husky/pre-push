@@ -1,0 +1,6 @@
+#!/bin/sh
+
+
+echo "Running lint..."
+yarn lint
+

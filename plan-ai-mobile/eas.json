@@ -1,0 +1,69 @@
+{
+  "cli": {
+    "version": ">= 16.17.0",
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "development-debug": {
+      "node": "22.17.1",
+      "env": {
+        "NODE_ENV": "development"
+      },
+      "credentialsSource": "local",
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      },
+      "autoIncrement": true
+    },
+    "production-debug": {
+      "node": "22.17.1",
+      "env": {
+        "NODE_ENV": "production"
+      },
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      },
+      "autoIncrement": true
+    },
+    "production": {
+      "node": "22.17.1",
+      "developmentClient": false,
+      "env": {
+        "NODE_ENV": "production"
+      },
+      "distribution": "store",
+      "credentialsSource": "remote",
+      "android": {
+        "buildType": "app-bundle",
+        "gradleCommand": ":app:bundleRelease"
+      },
+      "ios": {
+        "buildConfiguration": "Release",
+        "image": "latest"
+      },
+      "autoIncrement": true
+    },
+    "production-apk": {
+      "extends": "production",
+      "android": {
+        "buildType": "apk",
+        "gradleCommand": ":app:assembleRelease"
+      }
+    }
+  },
+  "submit": {
+    "production": {
+      "android": {
+        "track": "internal",
+        "releaseStatus": "draft"
+      },
+      "ios": {
+        "appleId": "xaviermasle@gmail.com",
+        "appleTeamId": "8NN84K7QKJ",
+        "sku": "com.blueberrybytes.planai"
+      }
+    }
+  }
+}
