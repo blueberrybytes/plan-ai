@@ -52,3 +52,13 @@ This document outlines the high-priority features, technical debt, and quality-o
 - **Database Connection Limits:** Prisma opens direct connections to PostgreSQL. Sudden bursts of background workers and API requests will exhaust connections. **Fix:** Implement Prisma Connection Pooling (PgBouncer) or use Railway's built-in connection pooler for serverless scaling.
 - **Vector Database (Qdrant) Costs:** Storing massive codebase vectors for thousands of users will become expensive as Qdrant requires high RAM for fast RAG search. **Fix:** Optimize vector embeddings by discarding noisy code (e.g. minified files, lockfiles) and experiment with quantization.
 - **External API Rate Limiting:** Even with background queues, hammering Deepgram or OpenRouter with 500 concurrent requests will trigger HTTP 429 Too Many Requests. **Fix:** Implement rate-limit aware job concurrency in BullMQ, dynamically throttling workers when APIs respond with 429s.
+
+## 9. Context Graph Visualization (The Commercial "WOW" Effect)
+**Problem:** The AI processing (GitNexus RAG) happens in the background, making it feel like a "black box" to the user. To sell this to technical leads and CTOs, we need a visual proof of work that generates immediate trust and a "WOW" factor during demos.
+**Solution:**
+- Do NOT render the entire codebase graph (500k+ nodes will cause the browser to OOM and create a visual "hairball").
+- Instead, implement a **"Local Context Graph"** button under each generated ticket in the UI.
+- When clicked, open a WebGL interactive canvas (using `react-force-graph-2d` or `cytoscape.js`).
+- Render only the **exact path** of nodes (10-30 files/functions) that the AI investigated to generate that specific ticket. 
+- Example: `Ticket` -> `userController.ts` -> `AuthService` -> `schema.prisma`. 
+- **Impact:** Negligible performance cost in React, but massive commercial impact. It visually proves the AI's "train of thought" and architectural understanding.

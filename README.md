@@ -2,7 +2,7 @@
 
 Plan AI is an open-source, AI-assisted meeting planning and execution platform. It records your meetings, generates accurate transcripts using Deepgram, and extracts structured insights, Jira/Linear/Trello tasks, and action items using advanced LLMs via OpenRouter.
 
-[![Plan AI Demo](https://img.youtube.com/vi/NqpvMhQBYqU/maxresdefault.jpg)](https://www.youtube.com/watch?v=NqpvMhQBYqU)
+[![Plan AI Demo](https://img.youtube.com/vi/NqpvMhQBYqU/hqdefault.jpg)](https://www.youtube.com/watch?v=NqpvMhQBYqU)
 
 ## 🌐 Try It Live
 - **Application:** [plan-ai.blueberrybytes.com](https://plan-ai.blueberrybytes.com)
