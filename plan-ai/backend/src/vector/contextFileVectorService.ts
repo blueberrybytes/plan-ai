@@ -248,6 +248,23 @@ export const queryContexts = async (
     const vector = await embeddings.embedQuery(queryText);
     const points = await queryVectors(contextIds, vector, limit);
 
+    // Track AI Usage centrally for querying embeddings
+    const contextRecord = await prisma.context.findUnique({ where: { id: contextIds[0] } });
+    if (contextRecord) {
+      const estimatedTokens = Math.ceil(queryText.length / 4);
+      aiUsageService
+        .logUsage({
+          userId: contextRecord.userId,
+          workspaceId: contextRecord.workspaceId,
+          feature: "DOC",
+          provider: "OPENAI",
+          model: EMBEDDING_MODEL,
+          inputTokens: estimatedTokens,
+          outputTokens: 0,
+        })
+        .catch((err) => logger.warn("Failed to log embedding query usage:", err));
+    }
+
     return points
       .map((p: ContextVectorPoint) => p.payload?.text)
       .filter((t: unknown): t is string => typeof t === "string" && t.trim().length > 0);

@@ -1,13 +1,21 @@
 import { openai } from "@ai-sdk/openai";
-import { experimental_generateImage as generateImage } from "ai";
+import { generateImage } from "ai";
+import { createOpenRouter } from "@openrouter/ai-sdk-provider";
 import { logger } from "../utils/logger";
 import { firebaseAdmin } from "../firebase/firebaseAdmin";
 import { v4 as uuidv4 } from "uuid";
+import prisma from "../prisma/prismaClient";
+import { aiUsageService } from "./aiUsageService";
+import EnvUtils from "../utils/EnvUtils";
+
+const openrouter = createOpenRouter({
+  apiKey: EnvUtils.get("OPENROUTER_API_KEY"),
+});
 
 export class ImageGenerationService {
   /**
-   * Generate an image from a prompt using DALL-E 3 and save it to Firebase Storage.
-   * Returns the public URL of the uploaded image.
+   * Generate an image from a prompt using Flux via OpenRouter (with a fallback to DALL-E 3)
+   * and save it to Firebase Storage. Returns the public URL of the uploaded image.
    */
   public async generateAndStoreImage(
     prompt: string,
@@ -17,16 +25,30 @@ export class ImageGenerationService {
     try {
       logger.info(`Generating image for presentation ${presentationId} with prompt: "${prompt}"`);
 
-      // 1. Generate image using Vercel AI SDK (OpenAI DALL-E 3)
-      // Note: We use OpenAI provider directly as OpenRouter image support via AI SDK might differ
-      // Ensuring we use 'dall-e-3' model.
-      const { image } = await generateImage({
-        model: openai.image("dall-e-3"),
-        prompt,
-        n: 1,
-        // DALL-E 3 standard size
-        size: "1024x1024",
-      });
+      let image;
+      let usedModel = "black-forest-labs/flux.2-klein-4b";
+      let usedProvider = "openrouter";
+
+      try {
+        const result = await generateImage({
+          model: openrouter.imageModel("black-forest-labs/flux.2-klein-4b"),
+          prompt,
+          n: 1,
+          size: "1024x1024",
+        });
+        image = result.image;
+      } catch (fluxErr) {
+        logger.warn("Flux generation failed, falling back to DALL-E 3", fluxErr);
+        const result = await generateImage({
+          model: openai.image("dall-e-3"),
+          prompt,
+          n: 1,
+          size: "1024x1024",
+        });
+        image = result.image;
+        usedModel = "dall-e-3";
+        usedProvider = "OPENAI";
+      }
 
       if (!image || !image.base64) {
         logger.error("No image generated from AI provider");
@@ -56,8 +78,28 @@ export class ImageGenerationService {
       // file.publicUrl() is available in newer SDKs or we can verify.
 
       const publicUrl = file.publicUrl();
-
       logger.info(`Generated and stored image at ${publicUrl}`);
+
+      // Log AI Usage
+      try {
+        const presentation = await prisma.presentation.findUnique({
+          where: { id: presentationId },
+        });
+        if (presentation?.workspaceId) {
+          await aiUsageService.logUsage({
+            userId,
+            workspaceId: presentation.workspaceId,
+            feature: "SLIDES",
+            provider: usedProvider,
+            model: usedModel,
+            inputTokens: 0,
+            outputTokens: 1,
+          });
+        }
+      } catch (usageErr) {
+        logger.warn("Failed to log image generation usage:", usageErr);
+      }
+
       return publicUrl;
     } catch (error) {
       logger.error("Failed to generate and store image", error);

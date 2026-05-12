@@ -130,7 +130,7 @@ class DiagramGenerationService {
           workspaceId,
           feature: "DIAGRAM",
           provider: "openrouter",
-          model: "anthropic/claude-opus-4.7",
+          model: getConfiguredModel().modelId || "anthropic/claude-sonnet-4.6",
           inputTokens: usageData.inputTokens || 0,
           outputTokens: usageData.outputTokens || 0,
         });
@@ -247,7 +247,7 @@ ${transcriptContent ? `## Source Transcripts\n${transcriptContent}` : ""}`;
           workspaceId,
           feature: "DIAGRAM",
           provider: "openrouter",
-          model: "anthropic/claude-opus-4.7",
+          model: getConfiguredModel().modelId || "anthropic/claude-sonnet-4.6",
           inputTokens: usageData.inputTokens || 0,
           outputTokens: usageData.outputTokens || 0,
         });

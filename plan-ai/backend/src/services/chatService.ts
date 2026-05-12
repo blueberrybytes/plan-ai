@@ -181,17 +181,7 @@ export class ChatService {
       },
     });
 
-    aiUsageService
-      .logUsage({
-        userId,
-        workspaceId: thread.workspaceId,
-        feature: "CHAT",
-        provider: "openrouter",
-        model: "default",
-        inputTokens: usage?.inputTokens || 0,
-        outputTokens: usage?.outputTokens || 0,
-      })
-      .catch(() => {});
+    // (Duplicate aiUsageService block removed)
 
     return {
       message: userMessage,

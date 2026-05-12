@@ -4,7 +4,7 @@ import { BrandTheme, Prisma } from "@prisma/client";
 export type PresentationWithRelations = Prisma.PresentationGetPayload<{
   include: { template: true; theme: true };
 }>;
-import { getConfiguredModel, getFallbackProviderOptions } from "../utils/aiModelUtils";
+import { getConfiguredModel, getFallbackProviderOptions, DEFAULT_AI_MODEL } from "../utils/aiModelUtils";
 import { generateText, Output } from "ai";
 import { z } from "zod";
 import { logger } from "../utils/logger";
@@ -34,7 +34,7 @@ const SlideOutlineSchema = z.object({
 });
 
 export class SlideGenerationService {
-  private readonly modelName = "anthropic/claude-opus-4.7";
+  private readonly modelName = DEFAULT_AI_MODEL;
 
   /**
    * Generate a presentation from a template, context, and user prompt.
@@ -187,7 +187,7 @@ export class SlideGenerationService {
                 workspaceId,
                 feature: "SLIDES",
                 provider: "openrouter",
-                model: this.modelName,
+                model: activeModel,
                 inputTokens: generationResult.totalUsage.inputTokens || 0,
                 outputTokens: generationResult.totalUsage.outputTokens || 0,
               })
@@ -265,7 +265,7 @@ Provide ONLY the required JSON parameters for this slide type matching the schem
                   workspaceId,
                   feature: "SLIDES",
                   provider: "openrouter",
-                  model: this.modelName,
+                  model: activeModel,
                   inputTokens: slideGen.totalUsage.inputTokens || 0,
                   outputTokens: slideGen.totalUsage.outputTokens || 0,
                 })

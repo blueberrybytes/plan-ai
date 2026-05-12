@@ -208,7 +208,7 @@ export class ProjectTranscriptService {
   private async diarizeAudio(
     micUrl: string | null,
     sysUrl: string | null,
-  ): Promise<{ combinedText: string; utterances: Utterance[] }> {
+  ): Promise<{ combinedText: string; utterances: Utterance[]; totalSeconds: number }> {
     const deepgram = new DeepgramClient({ key: process.env.DEEPGRAM_API_KEY! });
 
     const resolveDiarization = async (url: string, speakerPrefix: string): Promise<Utterance[]> => {
@@ -267,7 +267,10 @@ export class ProjectTranscriptService {
     const utterances = [...micUtterances, ...sysUtterances].sort((a, b) => a.start - b.start);
 
     const combinedText = utterances.map((u) => `${u.speaker}: ${u.transcript}`).join("\n");
-    return { combinedText, utterances };
+    const totalSeconds =
+      utterances.length > 0 ? Math.ceil(utterances[utterances.length - 1].end) : 0;
+
+    return { combinedText, utterances, totalSeconds };
   }
 
   public async createPendingTranscript(
@@ -377,13 +380,24 @@ export class ProjectTranscriptService {
 
     if (existing.rawMicUrl || existing.rawSysUrl) {
       logger.info(`Starting batch diarization for ${existing.id}...`);
-      let { combinedText, utterances } = await this.diarizeAudio(
-        existing.rawMicUrl,
-        existing.rawSysUrl,
-      );
-      console.log(
-        `[Diarization] Result: ${utterances.length} utterances, ${combinedText.length} chars`,
-      );
+      const diarizationResult = await this.diarizeAudio(existing.rawMicUrl, existing.rawSysUrl);
+      let { combinedText, utterances } = diarizationResult;
+      const { totalSeconds } = diarizationResult;
+
+      // Log Deepgram Usage
+      if (totalSeconds > 0) {
+        aiUsageService
+          .logUsage({
+            userId: input.userId,
+            workspaceId: input.workspaceId,
+            feature: "RECORDER",
+            provider: "DEEPGRAM",
+            model: "nova-3-prerecorded",
+            inputTokens: totalSeconds,
+            outputTokens: 0,
+          })
+          .catch((err) => logger.warn("Failed to log Deepgram diarization usage:", err));
+      }
 
       // Check for Voice Profile to enforce Speaker Identification
       if (existing.rawMicUrl && user?.voiceProfileUrl) {
@@ -429,9 +443,8 @@ export class ProjectTranscriptService {
 
     // PHASE 1: Fast Summary to Unlock UI Early
     try {
-      logger.info(`Generating fast summary to unlock UI early for ${existing.id}`);
       const fastModel = await getWorkspaceModel(input.workspaceId, "openai/gpt-4o-mini");
-      const { output: fastParsed } = await generateText({
+      const { output: fastParsed, usage } = await generateText({
         model: fastModel,
         providerOptions: getFallbackProviderOptions("openai/gpt-4o-mini"),
         output: Output.object({
@@ -441,10 +454,25 @@ export class ProjectTranscriptService {
             summary: z.string(),
           }),
         }),
-        system: "Extract a short title (max 6 words), language (e.g. 'english'), and a 2-sentence summary.",
+        system:
+          "Extract a short title (max 6 words), language (e.g. 'english'), and a 2-sentence summary.",
         prompt: `Transcript:\n${processedContent.slice(0, 8000)}`,
         maxRetries: 1,
       });
+
+      if (usage) {
+        aiUsageService
+          .logUsage({
+            userId: input.userId,
+            workspaceId: input.workspaceId,
+            feature: "TASK_EXTRACTION",
+            provider: "openrouter", // or get fallback provider
+            model: "openai/gpt-4o-mini",
+            inputTokens: usage.inputTokens || 0,
+            outputTokens: usage.outputTokens || 0,
+          })
+          .catch(() => {});
+      }
 
       const currentMetadata = (existing.metadata as Record<string, unknown>) || {};
       await prisma.transcript.update({
@@ -508,14 +536,13 @@ export class ProjectTranscriptService {
         { id: "ai", name: "Plan AI Extractor", group: "function", val: 30 },
         { id: "recording", name: existing.title || "Recording", group: "database", val: 25 },
       ];
-      const transcriptGraphLinks: Prisma.JsonArray = [
-        { source: "ai", target: "recording" },
-      ];
+      const transcriptGraphLinks: Prisma.JsonArray = [{ source: "ai", target: "recording" }];
       for (const [idx, taskCandidate] of analysisRaw.tasks.entries()) {
         const taskId = `task-${idx}`;
-        const taskName = taskCandidate.title.length > 25
-          ? taskCandidate.title.substring(0, 25) + "..."
-          : taskCandidate.title;
+        const taskName =
+          taskCandidate.title.length > 25
+            ? taskCandidate.title.substring(0, 25) + "..."
+            : taskCandidate.title;
         transcriptGraphNodes.push({ id: taskId, name: taskName, group: "ticket", val: 18 });
         transcriptGraphLinks.push({ source: "recording", target: taskId });
       }
@@ -580,8 +607,21 @@ export class ProjectTranscriptService {
                 aiGraphTrace: {
                   nodes: [
                     { id: "ai", name: "Plan AI Extractor", group: "function" as const, val: 30 },
-                    { id: "transcript", name: transcript.title || "Recording", group: "database" as const, val: 25 },
-                    { id: `task-${index}`, name: taskCandidate.title.length > 25 ? taskCandidate.title.substring(0, 25) + "..." : taskCandidate.title, group: "ticket" as const, val: 20 },
+                    {
+                      id: "transcript",
+                      name: transcript.title || "Recording",
+                      group: "database" as const,
+                      val: 25,
+                    },
+                    {
+                      id: `task-${index}`,
+                      name:
+                        taskCandidate.title.length > 25
+                          ? taskCandidate.title.substring(0, 25) + "..."
+                          : taskCandidate.title,
+                      group: "ticket" as const,
+                      val: 20,
+                    },
                   ],
                   links: [
                     { source: "ai", target: "transcript" },

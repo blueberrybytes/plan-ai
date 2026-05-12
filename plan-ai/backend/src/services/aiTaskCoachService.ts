@@ -72,6 +72,18 @@ export class AiTaskCoachService {
         if (investigation.text) {
           investigationContext = `\n\n### Codebase Investigation Context:\n${investigation.text}`;
         }
+
+        if (investigation.totalUsage) {
+          await aiUsageService.logUsage({
+            userId: input.userId,
+            workspaceId: input.workspaceId,
+            feature: "TASK_EXTRACTION",
+            provider: "openrouter",
+            model: defaultModel,
+            inputTokens: investigation.totalUsage.inputTokens || 0,
+            outputTokens: investigation.totalUsage.outputTokens || 0,
+          });
+        }
       } catch (err) {
         console.error("Failed during MCP agentic investigation step for task refinement", err);
       }
