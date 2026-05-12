@@ -76,3 +76,23 @@ graph LR
     B --> C[🎫 3. Push to Jira<br><span style='font-size:12px;color:#94a3b8'>Perfectly Scoped Tickets</span>]:::action
 ```
 </div>
+
+<div style="text-align: center; max-width: 1000px; margin: 0 auto; padding: 2rem 0;">
+  <h2 style="font-size: 2.5rem; font-weight: 700; margin-bottom: 1rem; letter-spacing: -0.02em;">Bridging Tech & Non-Tech (AI RAG)</h2>
+  <p style="color: var(--vp-c-text-2); margin-bottom: 3rem; font-size: 1.125rem;">Plan AI isn't just a meeting transcriber; it's a context bridge between Product Managers and AI Coding Assistants.</p>
+
+  <div style="display: flex; justify-content: space-between; gap: 15px; margin-bottom: 3rem; text-align: left;">
+    <div style="width: 32%; display: flex; flex-direction: column; gap: 10px;">
+      <h3 style="margin: 0; font-size: 1.1rem; font-weight: 600;">📦 Repomix Integration</h3>
+      <p style="margin: 0; font-size: 0.9rem; color: var(--vp-c-text-2);">We bundle your entire monorepo into a single, AI-optimized markdown file, allowing Cursor or Cline to ingest context instantly.</p>
+    </div>
+    <div style="width: 32%; display: flex; flex-direction: column; gap: 10px;">
+      <h3 style="margin: 0; font-size: 1.1rem; font-weight: 600;">🧠 Semantic Memory (Qdrant)</h3>
+      <p style="margin: 0; font-size: 0.9rem; color: var(--vp-c-text-2);">Meeting transcripts are chunked and vectorized, creating a long-term semantic memory of every architectural decision.</p>
+    </div>
+    <div style="width: 32%; display: flex; flex-direction: column; gap: 10px;">
+      <h3 style="margin: 0; font-size: 1.1rem; font-weight: 600;">🌐 GitNexus (MCP)</h3>
+      <p style="margin: 0; font-size: 0.9rem; color: var(--vp-c-text-2);">We ship with a native Model Context Protocol (MCP) server that maps out the codebase graph to avoid AI hallucinations.</p>
+    </div>
+  </div>
+</div>

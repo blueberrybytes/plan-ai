@@ -71,6 +71,17 @@ Instantly convert meeting insights, proposals, or architecture plans into profes
 
 <img src="./images/slide.png" alt="Slide Generation" />
 
+## 🧠 Bridging Tech & Non-Tech (AI Context & RAG)
+
+Plan AI is designed to completely eliminate the friction between non-technical stakeholders (Product Managers, Designers) and technical execution (Developers and AI Agents). 
+
+We achieve this through advanced Retrieval-Augmented Generation (RAG) and intelligent repository indexing:
+*   **Repomix Integration:** With a simple `yarn repomix` command, the entire monorepo is efficiently packed into a single, AI-optimized markdown file.
+*   **Semantic Memory (Qdrant):** Meeting transcripts are instantly chunked, vectorized, and embedded in Qdrant, creating a long-term semantic memory of every architectural decision.
+*   **GitNexus (MCP):** We ship with a native Model Context Protocol (MCP) server that maps out the codebase graph. 
+
+**The Magic Workflow:** A non-technical Product Manager records a sprint planning meeting. Plan AI extracts a perfectly scoped GitHub Issue using historical context from Qdrant. The Developer assigns that issue to an AI Agent (like Cursor or Cline). The Agent reads the issue, consumes the `repomix.md` repository context, safely checks the blast radius using `gitnexus_impact()`, and autonomously writes the Pull Request. 
+
 ## 📦 Project Structure & Architecture
 
 Plan AI is built as a monorepo.
