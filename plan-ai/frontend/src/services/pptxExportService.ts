@@ -165,84 +165,89 @@ export const exportToPptx = async (options: ExportOptions) => {
         break;
 
       case "text_block": {
+        let tbNextY = 0.5;
         if (params.badge) {
           addSlideText(slidePage, String(params.badge).toUpperCase(), {
             x: 0.8,
-            y: 0.6,
+            y: tbNextY,
             w: 8.4,
             h: 0.3,
             fontFace: safeBodyFont,
-            fontSize: 12,
+            fontSize: 11,
             color: secondaryColor.replace("#", ""),
             bold: true,
           });
+          tbNextY += 0.3;
         }
         addSlideText(slidePage, String(params.title || ""), {
           x: 0.8,
-          y: 0.9,
+          y: tbNextY,
           w: 8.4,
-          h: 0.8,
+          h: 0.7,
           fontFace: safeHeadingFont,
-          fontSize: 36,
+          fontSize: 28,
           color: primaryColor.replace("#", ""),
           bold: true,
         });
-        let bodyStartY = 1.9;
+        tbNextY += 0.75;
         if (params.subtitle) {
           addSlideText(slidePage, String(params.subtitle), {
             x: 0.8,
-            y: 1.6,
+            y: tbNextY,
             w: 8.4,
-            h: 0.6,
+            h: 0.4,
             fontFace: safeBodyFont,
-            fontSize: 22,
+            fontSize: 16,
             color: mutedTextColor,
           });
-          bodyStartY = 2.4;
+          tbNextY += 0.45;
         }
         addSlideText(slidePage, String(params.body || ""), {
           x: 0.8,
-          y: bodyStartY,
+          y: tbNextY,
           w: 8.4,
-          h: 5.625 - bodyStartY - 0.5,
+          h: 5.625 - tbNextY - 0.3,
           fontFace: safeBodyFont,
-          fontSize: 18,
+          fontSize: 14,
           color: bodyTextColor,
           valign: "top",
         });
         break;
       }
 
-      case "text_image":
+      case "text_image": {
+        let tiNextY = 0.5;
         if (params.badge) {
           addSlideText(slidePage, String(params.badge).toUpperCase(), {
             x: 0.8,
-            y: 0.5,
+            y: tiNextY,
             w: 4.2,
             h: 0.3,
             fontFace: safeBodyFont,
-            fontSize: 12,
+            fontSize: 11,
             color: secondaryColor.replace("#", ""),
             bold: true,
           });
+          tiNextY += 0.3;
         }
         addSlideText(slidePage, String(params.title || ""), {
           x: 0.8,
-          y: 0.8,
+          y: tiNextY,
           w: 4.2,
-          h: 1.2,
+          h: 0.9,
           fontFace: safeHeadingFont,
-          fontSize: 32,
+          fontSize: 28,
           color: primaryColor.replace("#", ""),
           bold: true,
         });
+        tiNextY += 0.95;
         addSlideText(slidePage, String(params.body || ""), {
           x: 0.8,
-          y: 2.1,
+          y: tiNextY,
           w: 4.2,
-          h: 3.0,
+          h: 5.625 - tiNextY - 0.3,
           fontFace: safeBodyFont,
-          fontSize: 16,
+          fontSize: 14,
           color: bodyTextColor,
           valign: "top",
         });
@@ -252,43 +257,45 @@ export const exportToPptx = async (options: ExportOptions) => {
             slidePage.addImage({
               data: proxiedData,
               x: 5.5,
-              y: 0.8,
-              sizing: { type: "cover", w: 3.7, h: 4.0 },
+              y: 0.5,
+              sizing: { type: "cover", w: 4.0, h: 4.5 },
             });
           } else {
             slidePage.addImage({
               path: params.imageUrl as string,
               x: 5.5,
-              y: 0.8,
-              sizing: { type: "cover", w: 3.7, h: 4.0 },
+              y: 0.5,
+              sizing: { type: "cover", w: 4.0, h: 4.5 },
             });
           }
         } else {
           slidePage.addShape(pptx.ShapeType.roundRect, {
             x: 5.5,
-            y: 0.8,
-            w: 3.7,
-            h: 4.0,
+            y: 0.5,
+            w: 4.0,
+            h: 4.5,
             fill: { color: rootCardBgColor },
             rectRadius: 0.08,
           });
           addSlideText(slidePage, "Image Placeholder", {
             x: 5.5,
-            y: 0.8,
-            w: 3.7,
-            h: 4.0,
+            y: 0.5,
+            w: 4.0,
+            h: 4.5,
             align: "center",
             color: mutedTextColor,
             fontFace: safeBodyFont,
           });
         }
         break;
+      }
 
       case "bullet_list": {
+        let blNextY = 0.5;
         if (params.badge) {
           addSlideText(slidePage, String(params.badge).toUpperCase(), {
             x: 0.8,
-            y: 0.6,
+            y: blNextY,
             w: 8.4,
             h: 0.3,
             fontFace: safeBodyFont,
@@ -296,30 +303,31 @@ export const exportToPptx = async (options: ExportOptions) => {
             color: secondaryColor.replace("#", ""),
             bold: true,
           });
+          blNextY += 0.35;
         }
         addSlideText(slidePage, String(params.title || ""), {
           x: 0.8,
-          y: 0.9,
+          y: blNextY,
           w: 8.4,
-          h: 0.8,
+          h: 1.0,
           fontFace: safeHeadingFont,
-          fontSize: 32,
+          fontSize: 28,
           color: primaryColor.replace("#", ""),
           bold: true,
         });
+        blNextY += 1.05;
 
-        let listStartY = 1.8;
         if (params.subtitle) {
           addSlideText(slidePage, String(params.subtitle), {
             x: 0.8,
-            y: 1.5,
+            y: blNextY,
             w: 8.4,
-            h: 0.6,
+            h: 0.45,
             fontFace: safeBodyFont,
-            fontSize: 20,
+            fontSize: 16,
             color: mutedTextColor,
           });
-          listStartY = 2.2;
+          blNextY += 0.5;
         }
 
         const bullets = Array.isArray(params.bullets)
@@ -338,78 +346,83 @@ export const exportToPptx = async (options: ExportOptions) => {
             breakLine: true,
             bullet: { code: "2022", color: primaryColor.replace("#", "") },
             marginPt: 0,
-            paraSpaceBefore: 12, // add breathing room between bullet points
+            paraSpaceBefore: 10,
           },
         }));
         addSlideText(slidePage, bulletText as PptxGenJS.TextProps[], {
           x: 0.8,
-          y: listStartY,
+          y: blNextY,
           w: 8.4,
-          h: 5.625 - listStartY - 0.5,
+          h: 5.625 - blNextY - 0.3,
           fontFace: safeBodyFont,
-          fontSize: 18,
+          fontSize: 16,
           color: bodyTextColor,
           valign: "top",
-          lineSpacing: 24, // spacing between lines of a SINGLE bullet point
+          lineSpacing: 22,
         });
         break;
       }
 
-      case "two_columns":
+      case "two_columns": {
+        let tcNextY = 0.4;
         if (params.badge) {
           addSlideText(slidePage, String(params.badge).toUpperCase(), {
             x: 1,
-            y: 0.3,
+            y: tcNextY,
             w: 8,
             h: 0.3,
             fontFace: safeBodyFont,
-            fontSize: 12,
+            fontSize: 11,
             color: secondaryColor.replace("#", ""),
             bold: true,
             align: "center",
           });
+          tcNextY += 0.3;
         }
         addSlideText(slidePage, String(params.title || ""), {
           x: 1,
-          y: 0.6,
+          y: tcNextY,
           w: 8,
           h: 0.6,
           fontFace: safeHeadingFont,
-          fontSize: 32,
+          fontSize: 28,
           color: primaryColor.replace("#", ""),
           bold: true,
           align: "center",
         });
+        tcNextY += 0.7;
+
+        const colTop = tcNextY + 0.1;
+        const colH = 5.625 - colTop - 0.3;
 
         // Left Column
         slidePage.addShape(pptx.ShapeType.roundRect, {
           x: 0.6,
-          y: 1.5,
+          y: colTop,
           w: 4.2,
-          h: 3.8,
+          h: colH,
           fill: { color: rootCardBgColor },
           rectRadius: 0.08,
         });
-
         if (params.leftTitle) {
           addSlideText(slidePage, String(params.leftTitle), {
             x: 0.8,
-            y: 1.7,
+            y: colTop + 0.15,
             w: 3.8,
-            h: 0.4,
+            h: 0.35,
             fontFace: safeHeadingFont,
-            fontSize: 20,
+            fontSize: 18,
             color: primaryColor.replace("#", ""),
             bold: true,
           });
         }
         addSlideText(slidePage, String(params.leftBody || ""), {
           x: 0.8,
-          y: 2.2,
+          y: colTop + 0.55,
           w: 3.8,
-          h: 2.9,
+          h: colH - 0.7,
           fontFace: safeBodyFont,
-          fontSize: 15,
+          fontSize: 13,
           color: mutedTextColor,
           valign: "top",
         });
@@ -417,36 +430,36 @@ export const exportToPptx = async (options: ExportOptions) => {
         // Right Column
         slidePage.addShape(pptx.ShapeType.roundRect, {
           x: 5.2,
-          y: 1.5,
+          y: colTop,
           w: 4.2,
-          h: 3.8,
+          h: colH,
           fill: { color: rootCardBgColor },
           rectRadius: 0.08,
         });
-
         if (params.rightTitle) {
           addSlideText(slidePage, String(params.rightTitle), {
             x: 5.4,
-            y: 1.7,
+            y: colTop + 0.15,
             w: 3.8,
-            h: 0.4,
+            h: 0.35,
             fontFace: safeHeadingFont,
-            fontSize: 20,
+            fontSize: 18,
             color: primaryColor.replace("#", ""),
             bold: true,
           });
         }
         addSlideText(slidePage, String(params.rightBody || ""), {
           x: 5.4,
-          y: 2.2,
+          y: colTop + 0.55,
           w: 3.8,
-          h: 2.9,
+          h: colH - 0.7,
           fontFace: safeBodyFont,
-          fontSize: 15,
+          fontSize: 13,
           color: mutedTextColor,
           valign: "top",
         });
         break;
+      }
 
       case "showcase":
         addSlideText(slidePage, String(params.title || ""), {
@@ -532,38 +545,44 @@ export const exportToPptx = async (options: ExportOptions) => {
           valign: "top",
         });
 
-        // Right column KPIs
+        // Right column KPIs — dynamically sized
         const kpis = Array.isArray(params.kpis) ? params.kpis : [];
+        const kpiAvailH = 5.625 - 0.8; // top margin 0.4 each side
+        const kpiGap = 0.2;
+        const kpiTotalGaps = Math.max(0, kpis.length - 1) * kpiGap;
+        const kpiRowH = Math.min(1.4, (kpiAvailH - kpiTotalGaps) / Math.max(1, kpis.length));
+
         kpis.forEach((kpi: Record<string, unknown>, idx) => {
-          const yPos = 1 + idx * 1.5;
+          const yPos = 0.4 + idx * (kpiRowH + kpiGap);
+          const valFontSize = kpiRowH >= 1.2 ? 48 : 36;
           addSlideText(slidePage, String(kpi.value || ""), {
             x: 5.2,
             y: yPos,
             w: 4.2,
-            h: 0.8,
+            h: kpiRowH * 0.55,
             fontFace: safeHeadingFont,
-            fontSize: 54,
+            fontSize: valFontSize,
             color: primaryColor.replace("#", ""),
             bold: true,
           });
           addSlideText(slidePage, String(kpi.label || ""), {
             x: 5.2,
-            y: yPos + 0.8,
+            y: yPos + kpiRowH * 0.55,
             w: 4.2,
-            h: 0.4,
+            h: kpiRowH * 0.3,
             fontFace: safeHeadingFont,
-            fontSize: 18,
+            fontSize: 16,
             color: cardTitleColor,
             bold: true,
           });
           if (kpi.description) {
             addSlideText(slidePage, String(kpi.description), {
               x: 5.2,
-              y: yPos + 1.2,
+              y: yPos + kpiRowH * 0.85,
               w: 4.2,
-              h: 0.3,
+              h: kpiRowH * 0.15,
               fontFace: safeBodyFont,
-              fontSize: 13,
+              fontSize: 11,
               color: mutedTextColor,
             });
           }
@@ -602,7 +621,7 @@ export const exportToPptx = async (options: ExportOptions) => {
         }
 
         // Right column (x: 4.8)
-        let currentY = 0.6;
+        let currentY = 0.5;
         if (params.badge) {
           addSlideText(slidePage, String(params.badge).toUpperCase(), {
             x: 4.8,
@@ -610,31 +629,33 @@ export const exportToPptx = async (options: ExportOptions) => {
             w: 4.8,
             h: 0.3,
             fontFace: safeBodyFont,
-            fontSize: 13,
+            fontSize: 12,
             color: secondaryColor.replace("#", ""),
             bold: true,
           });
-          currentY += 0.35;
+          currentY += 0.3;
         }
 
-        const titleH = 1.2;
+        const scTitleH = 1.0;
         addSlideText(slidePage, String(params.title || ""), {
           x: 4.8,
           y: currentY,
           w: 4.8,
-          h: titleH,
+          h: scTitleH,
           fontFace: safeHeadingFont,
-          fontSize: 32,
+          fontSize: 28,
           color: primaryColor.replace("#", ""),
           bold: true,
           valign: "top",
         });
-        currentY += titleH + 0.1;
+        currentY += scTitleH + 0.05;
 
-        // Cards
+        // Cards — dynamically size to fit available space
         const cards = Array.isArray(params.cards) ? params.cards : [];
-        const cardH = cards.length >= 3 ? 1.0 : 1.2;
-        const cardGap = cards.length >= 3 ? 0.15 : 0.4;
+        const availableH = 5.625 - currentY - 0.2; // bottom margin
+        const cardGap = 0.12;
+        const totalGaps = Math.max(0, cards.length - 1) * cardGap;
+        const cardH = Math.min(1.1, (availableH - totalGaps) / Math.max(1, cards.length));
 
         cards.forEach((card: Record<string, unknown>, idx) => {
           const yPos = currentY + idx * (cardH + cardGap);
@@ -649,7 +670,7 @@ export const exportToPptx = async (options: ExportOptions) => {
             fill: { color: rootCardBgColor },
           });
 
-          // Thick left border (Using standard Rect to emulate the CSS border-left)
+          // Thick left border
           slidePage.addShape(pptx.ShapeType.rect, {
             x: 4.8,
             y: yPos,
@@ -658,14 +679,14 @@ export const exportToPptx = async (options: ExportOptions) => {
             fill: { color: primaryColor.replace("#", "") },
           });
 
-          // Checkmark (✔) simulating the DynamicIcon
+          // Checkmark
           addSlideText(slidePage, "✔", {
             x: 4.95,
-            y: yPos + 0.1,
+            y: yPos + 0.05,
             w: 0.3,
-            h: 0.3,
+            h: 0.25,
             fontFace: "Arial",
-            fontSize: 16,
+            fontSize: 14,
             color: primaryColor.replace("#", ""),
             bold: true,
             align: "center",
@@ -673,26 +694,28 @@ export const exportToPptx = async (options: ExportOptions) => {
           });
 
           // Card Title
+          const titleFontSize = cardH < 0.9 ? 14 : 16;
           addSlideText(slidePage, String(card.title || ""), {
             x: 5.3,
-            y: yPos + 0.1,
-            w: 4.2,
-            h: 0.3,
+            y: yPos + 0.05,
+            w: 4.1,
+            h: 0.25,
             fontFace: safeHeadingFont,
-            fontSize: 18,
+            fontSize: titleFontSize,
             color: cardTitleColor,
             bold: true,
             valign: "middle",
           });
 
           // Card Body
+          const bodyFontSize = cardH < 0.9 ? 11 : 12;
           addSlideText(slidePage, String(card.body || ""), {
             x: 5.3,
-            y: yPos + 0.4,
-            w: 4.2,
-            h: cardH - 0.45,
+            y: yPos + 0.32,
+            w: 4.1,
+            h: cardH - 0.37,
             fontFace: safeBodyFont,
-            fontSize: 13,
+            fontSize: bodyFontSize,
             color: mutedTextColor,
             valign: "top",
           });
@@ -754,31 +777,34 @@ export const exportToPptx = async (options: ExportOptions) => {
           });
         }
 
-        // Right list
+        // Right list — dynamically sized
         const features = Array.isArray(params.features) ? params.features : [];
-        const isDense = features.length >= 4;
-        const startY = isDense ? 1.3 : 1.6;
-        const spacing = isDense ? 1.0 : 1.1;
+        const featItems = features.slice(0, 4);
+        const featAvail = 5.625 - 1.5 - 0.3; // from image top to bottom margin
+        const featGap = 0.1;
+        const featTotalGaps = Math.max(0, featItems.length - 1) * featGap;
+        const featRowH = Math.min(1.0, (featAvail - featTotalGaps) / Math.max(1, featItems.length));
 
-        features.slice(0, 4).forEach((feat: Record<string, unknown>, idx) => {
-          const yPos = startY + idx * spacing;
+        featItems.forEach((feat: Record<string, unknown>, idx) => {
+          const yPos = 1.5 + idx * (featRowH + featGap);
+          const titleH = Math.min(0.3, featRowH * 0.35);
           addSlideText(slidePage, String(feat.title || ""), {
             x: 4.9,
             y: yPos,
             w: 4.7,
-            h: isDense ? 0.35 : 0.4,
+            h: titleH,
             fontFace: safeHeadingFont,
-            fontSize: isDense ? 16 : 18,
+            fontSize: featRowH < 0.85 ? 14 : 16,
             color: cardTitleColor,
             bold: true,
           });
           addSlideText(slidePage, String(feat.description || ""), {
             x: 4.9,
-            y: yPos + (isDense ? 0.35 : 0.4),
+            y: yPos + titleH,
             w: 4.7,
-            h: isDense ? 0.6 : 0.6,
+            h: featRowH - titleH - 0.05,
             fontFace: safeBodyFont,
-            fontSize: isDense ? 12 : 13,
+            fontSize: featRowH < 0.85 ? 11 : 12,
             color: mutedTextColor,
             valign: "top",
           });
@@ -787,56 +813,61 @@ export const exportToPptx = async (options: ExportOptions) => {
       }
 
       case "three_columns": {
+        let tcColNextY = 0.35;
         if (params.badge) {
           addSlideText(slidePage, String(params.badge || "").toUpperCase(), {
             x: 0.5,
-            y: 0.3,
+            y: tcColNextY,
             w: 9,
             h: 0.3,
             fontFace: safeBodyFont,
-            fontSize: 12,
+            fontSize: 11,
             color: secondaryColor.replace("#", ""),
             bold: true,
             align: "center",
           });
+          tcColNextY += 0.3;
         }
         addSlideText(slidePage, String(params.title || ""), {
           x: 0.5,
-          y: 0.6,
+          y: tcColNextY,
           w: 9,
           h: 0.6,
           fontFace: safeHeadingFont,
-          fontSize: 32,
+          fontSize: 28,
           color: primaryColor.replace("#", ""),
           bold: true,
           align: "center",
         });
+        tcColNextY += 0.65;
         if (params.subtitle) {
           addSlideText(slidePage, String(params.subtitle || ""), {
             x: 1,
-            y: 1.2,
+            y: tcColNextY,
             w: 8,
-            h: 0.5,
+            h: 0.4,
             fontFace: safeBodyFont,
-            fontSize: 16,
+            fontSize: 14,
             color: bodyTextColor,
             align: "center",
           });
+          tcColNextY += 0.45;
         }
 
         const columns = Array.isArray(params.columns) ? params.columns : [];
         const colWidth = 2.8;
         const startX = 0.5;
-        const spacing = 0.3;
+        const colSpacing = 0.3;
+        const iconY = tcColNextY + 0.15;
+        const colBodyEnd = 5.625 - 0.3; // bottom margin
 
         columns.slice(0, 3).forEach((col: Record<string, unknown>, idx) => {
-          const cx = startX + idx * (colWidth + spacing);
+          const cx = startX + idx * (colWidth + colSpacing);
 
-          // Draw circular icon (pill) instead of card backgrounds
-          const iconSize = 0.5;
+          const iconSize = 0.45;
           slidePage.addShape(pptx.ShapeType.ellipse, {
             x: cx + colWidth / 2 - iconSize / 2,
-            y: 2.0,
+            y: iconY,
             w: iconSize,
             h: iconSize,
             fill: { color: primaryColor.replace("#", "") },
@@ -844,33 +875,35 @@ export const exportToPptx = async (options: ExportOptions) => {
 
           addSlideText(slidePage, "✔", {
             x: cx + colWidth / 2 - iconSize / 2,
-            y: 2.02,
+            y: iconY + 0.02,
             w: iconSize,
             h: iconSize,
             fontFace: "Arial",
-            fontSize: 14,
+            fontSize: 13,
             color: "FFFFFF",
             align: "center",
           });
 
+          const colTitleY = iconY + iconSize + 0.1;
           addSlideText(slidePage, String(col.title || ""), {
             x: cx + 0.1,
-            y: 2.7,
+            y: colTitleY,
             w: colWidth - 0.2,
-            h: 0.5,
+            h: 0.4,
             fontFace: safeHeadingFont,
-            fontSize: 20,
+            fontSize: 18,
             color: cardTitleColor,
             bold: true,
             align: "center",
           });
+          const colBodyY = colTitleY + 0.45;
           addSlideText(slidePage, String(col.body || ""), {
             x: cx,
-            y: 3.2,
+            y: colBodyY,
             w: colWidth,
-            h: 2.0,
+            h: colBodyEnd - colBodyY,
             fontFace: safeBodyFont,
-            fontSize: 14,
+            fontSize: 13,
             color: mutedTextColor,
             align: "center",
             valign: "top",
@@ -888,25 +921,27 @@ export const exportToPptx = async (options: ExportOptions) => {
           fill: { color: primaryColor.replace("#", "") },
         });
 
-        addSlideText(slidePage, String(params.badge || "").toUpperCase(), {
-          x: 1,
-          y: 1.5,
-          w: 8,
-          h: 0.5,
-          fontFace: safeBodyFont,
-          fontSize: 14,
-          color: backgroundColor.replace("#", ""),
-          bold: true,
-          align: "center",
-        });
+        if (params.badge) {
+          addSlideText(slidePage, String(params.badge).toUpperCase(), {
+            x: 1,
+            y: 0.6,
+            w: 8,
+            h: 0.4,
+            fontFace: safeBodyFont,
+            fontSize: 13,
+            color: backgroundColor.replace("#", ""),
+            bold: true,
+            align: "center",
+          });
+        }
 
         addSlideText(slidePage, `"${String(params.statement || "")}"`, {
           x: 1,
-          y: 2,
+          y: 1.2,
           w: 8,
-          h: 2.5,
+          h: 3.6,
           fontFace: safeHeadingFont,
-          fontSize: 42,
+          fontSize: 32,
           color: backgroundColor.replace("#", ""),
           bold: true,
           align: "center",
@@ -957,12 +992,12 @@ export const exportToPptx = async (options: ExportOptions) => {
         const isThree = stats.length === 3;
         const maxCols = isThree ? 3 : 2;
         const statW = isThree ? 2.8 : 3.5;
-        const statH = 1.5;
+        const statH = 1.3;
         const gapX = isThree ? 0.3 : 0.5;
-        const gapY = 0.4;
+        const gapY = 0.3;
 
         const itemsToRender = stats.slice(0, 4);
-        const startY = 2.4; // Push down slightly
+        const startY = 1.8;
 
         itemsToRender.forEach((stat: Record<string, unknown>, idx) => {
           const row = Math.floor(idx / maxCols);
@@ -1090,53 +1125,9 @@ export const exportToPptx = async (options: ExportOptions) => {
       }
 
       case "diagram_slide": {
-        if (params.badge) {
-          addSlideText(slidePage, String(params.badge).toUpperCase(), {
-            x: 0.5,
-            y: 0.4,
-            w: 9,
-            h: 0.3,
-            fontFace: safeBodyFont,
-            fontSize: 12,
-            color: secondaryColor.replace("#", ""),
-            bold: true,
-          });
-        }
-        addSlideText(slidePage, String(params.title || "System Diagram"), {
-          x: 0.5,
-          y: 0.7,
-          w: 9,
-          h: 0.6,
-          fontFace: safeHeadingFont,
-          fontSize: 32,
-          color: primaryColor.replace("#", ""),
-          bold: true,
-        });
-
-        slidePage.addShape(pptx.ShapeType.roundRect, {
-          x: 0.5,
-          y: 1.5,
-          w: 9,
-          h: 3.5,
-          fill: { color: "0F172A" },
-          rectRadius: 0.05,
-        });
-
-        addSlideText(
-          slidePage,
-          "Mermaid Diagram Source Code:\n\n" + String(params.mermaidCode || ""),
-          {
-            x: 0.7,
-            y: 1.7,
-            w: 8.6,
-            h: 3.1,
-            fontFace: "Courier New",
-            fontSize: 12,
-            color: "38BDF8",
-            valign: "top",
-          },
-        );
-
+        // Mermaid diagrams cannot be rendered in PPTX — skip entirely
+        // Remove the empty slide that was already added
+        pptx.slides.pop();
         break;
       }
 
