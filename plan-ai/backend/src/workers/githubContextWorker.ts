@@ -13,7 +13,6 @@ import path from "path";
 import * as tar from "tar";
 import { uploadContextFileToFirebaseStorage } from "../firebase/firebaseStorage";
 import { contextService } from "../services/contextService";
-import { diagramGenerationService } from "../services/diagramGenerationService";
 
 const execAsync = util.promisify(exec);
 const prisma = new PrismaClient();
@@ -167,67 +166,11 @@ export const githubContextWorker = new Worker<GithubContextJobPayload>(
         });
 
         // ----------------------------------------------------
-        // Auto-Architect Generation Fire & Forget
+        // Auto-Architect Generation Fire & Forget (DISABLED)
         // ----------------------------------------------------
-        logger.info(`Scaffolding Auto-Architect diagrams for ${githubRepoId}...`);
-
-        try {
-          const erDiagram = await prisma.diagram.create({
-            data: {
-              userId: context.userId,
-              workspaceId: context.workspaceId,
-              title: `Database Schema: ${githubRepoId}`,
-              prompt:
-                "Map out the entity relationship diagram for the entire database architecture found in this codebase.",
-              type: "ER",
-              contextIds: [contextId],
-              status: "GENERATING",
-            },
-          });
-
-          const archDiagram = await prisma.diagram.create({
-            data: {
-              userId: context.userId,
-              workspaceId: context.workspaceId,
-              title: `System Architecture: ${githubRepoId}`,
-              prompt:
-                "Map out the system architecture boundaries, services, namespaces, and core modules in this codebase.",
-              type: "ARCHITECTURE",
-              contextIds: [contextId],
-              status: "GENERATING",
-            },
-          });
-
-          diagramGenerationService
-            .triggerGeneration({
-              diagramId: erDiagram.id,
-              userId: context.userId,
-              workspaceId: context.workspaceId,
-              prompt:
-                "Map out the entity relationship diagram for the entire database architecture found in this codebase.",
-              type: "ER",
-              contextIds: [contextId],
-              transcriptIds: [],
-              overrideSystemContext: xmlText,
-            })
-            .catch(console.error);
-
-          diagramGenerationService
-            .triggerGeneration({
-              diagramId: archDiagram.id,
-              userId: context.userId,
-              workspaceId: context.workspaceId,
-              prompt:
-                "Map out the system architecture boundaries, services, namespaces, and core modules in this codebase.",
-              type: "ARCHITECTURE",
-              contextIds: [contextId],
-              transcriptIds: [],
-              overrideSystemContext: xmlText,
-            })
-            .catch(console.error);
-        } catch (autoArchErr) {
-          logger.error(`Failed to trigger Auto-Architect diagrams`, autoArchErr);
-        }
+        // logger.info(`Scaffolding Auto-Architect diagrams for ${githubRepoId}...`);
+        // We no longer automatically generate ER and Architecture diagrams upon repo sync
+        // to save AI tokens and prevent cluttering the user's workspace.
       }
 
       logger.info(`Successfully completed GithubContextJob ${job.id}`);
