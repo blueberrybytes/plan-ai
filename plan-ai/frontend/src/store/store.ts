@@ -40,7 +40,7 @@ const migrations = {
 const persistConfig = {
   key: "root",
   storage,
-  blacklist: ["docApi", "slideApi"],
+  blacklist: ["docApi", "slideApi", "authApi"],
   version: 1,
   migrate: createMigrate(migrations, { debug: false }),
 };

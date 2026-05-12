@@ -65,19 +65,16 @@ export const useTokenRefresh = (): void => {
       try {
         // Ensure we have a valid token before calculating refresh time
         if (!user?.token) {
-          console.log("No valid token available for refresh scheduling");
           return;
         }
 
         // Calculate time until refresh (TokenService uses 5 minutes before expiration)
         const timeUntilRefresh = TokenService.getTimeUntilRefresh(user.token);
 
-        console.log(`Scheduling token refresh in ${Math.round(timeUntilRefresh / 1000)} seconds`);
-
         // If token is already expired or about to expire, refresh immediately
         if (timeUntilRefresh <= 60000) {
           // 1 minute or less - refresh immediately
-          console.log("Token expires soon or has expired, refreshing immediately");
+
           refreshToken();
           // Schedule next check after 2 minutes to allow for recovery
           refreshTimerRef.current = setTimeout(scheduleNextRefresh, 120000);

@@ -69,13 +69,12 @@ const AppContent: React.FC = () => {
   const dispatch = useDispatch();
   const { isAuthInitialized } = useAuth();
   const user = useSelector(selectUser);
-  console.log("App.tsx user", user);
 
   // Only make API calls if auth is initialized and we have a user
   const { data: currentUserData, isSuccess } = useGetCurrentUserQuery(undefined, {
     skip: !isAuthInitialized || !user,
+    refetchOnMountOrArgChange: true, // Force network fetch to bypass Redux Persist cache
   });
-  console.log("App.tsx currentUserData", currentUserData);
 
   // Fetch current user data and update Redux store
   useEffect(() => {
@@ -91,6 +90,7 @@ const AppContent: React.FC = () => {
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
           hasCompletedOnboarding: currentUserData.data.hasCompletedOnboarding,
+          hasCompletedHomeTour: currentUserData.data.hasCompletedHomeTour,
         }),
       );
     }
@@ -240,7 +240,6 @@ const AppRoutes: React.FC = () => {
 
 // Helper component to log when routes are rendered
 const RouteLogger: React.FC<{ name: string; children: React.ReactNode }> = ({ name, children }) => {
-  console.log(`Route rendering: ${name} at ${window.location.pathname}`);
   return <>{children}</>;
 };
 

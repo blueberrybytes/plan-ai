@@ -30,6 +30,7 @@ interface UserResponse {
   isMicrosoftAccount: boolean;
   role: Role;
   hasCompletedOnboarding: boolean;
+  hasCompletedHomeTour: boolean;
   hasVoiceProfile: boolean;
   voiceProfileUrl: string | null;
 }
@@ -262,6 +263,7 @@ export class SessionController {
         isMicrosoftAccount: user.isMicrosoftAccount,
         role: user.role,
         hasCompletedOnboarding: customTheme !== null,
+        hasCompletedHomeTour: user.hasCompletedHomeTour,
         hasVoiceProfile: user.hasVoiceProfile,
         voiceProfileUrl: user.voiceProfileUrl,
       };
@@ -331,6 +333,7 @@ export class SessionController {
         isMicrosoftAccount: user.isMicrosoftAccount,
         role: user.role,
         hasCompletedOnboarding: user.customTheme !== null,
+        hasCompletedHomeTour: user.hasCompletedHomeTour,
         hasVoiceProfile: user.hasVoiceProfile,
         voiceProfileUrl: user.voiceProfileUrl,
       };
@@ -404,6 +407,7 @@ export class SessionController {
         isMicrosoftAccount: updatedUser.isMicrosoftAccount,
         role: updatedUser.role,
         hasCompletedOnboarding: updatedUser.customTheme !== null,
+        hasCompletedHomeTour: updatedUser.hasCompletedHomeTour,
         hasVoiceProfile: updatedUser.hasVoiceProfile,
         voiceProfileUrl: updatedUser.voiceProfileUrl,
       };
@@ -414,6 +418,67 @@ export class SessionController {
       };
     } catch (error: any) {
       console.error("Error saving voice profile:", error);
+      throw {
+        status: error.status || 500,
+        message: error.message || "Internal Server Error",
+      };
+    }
+  }
+
+  /**
+   * Mark home tour as completed.
+   */
+  @Post("me/home-tour")
+  @Security("BearerAuth")
+  @Response<ApiResponse<UserResponse>>(200, "Successfully marked home tour as completed")
+  @Response<GenericResponse>(401, "Unauthorized")
+  @Response<GenericResponse>(500, "Internal Server Error")
+  public async completeHomeTour(
+    @Request() request: AuthenticatedRequest,
+  ): Promise<ApiResponse<UserResponse>> {
+    try {
+      if (!request.user) throw { status: 401, message: "Unauthorized" };
+
+      const user = await prisma.user.findFirst({
+        where: { firebaseUid: request.user.uid },
+        include: { customTheme: true },
+      });
+
+      if (!user) throw { status: 404, message: "User not found" };
+
+      const updatedUser = await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          hasCompletedHomeTour: true,
+        },
+        include: { customTheme: true },
+      });
+
+      const userResponse: UserResponse = {
+        id: updatedUser.id,
+        firebaseUid: updatedUser.firebaseUid,
+        email: updatedUser.email,
+        name: updatedUser.name,
+        avatarUrl: updatedUser.avatarUrl,
+        googleId: updatedUser.googleId,
+        appleId: updatedUser.appleId,
+        microsoftId: updatedUser.microsoftId,
+        isGoogleAccount: updatedUser.isGoogleAccount,
+        isAppleAccount: updatedUser.isAppleAccount,
+        isMicrosoftAccount: updatedUser.isMicrosoftAccount,
+        role: updatedUser.role,
+        hasCompletedOnboarding: updatedUser.customTheme !== null,
+        hasCompletedHomeTour: updatedUser.hasCompletedHomeTour,
+        hasVoiceProfile: updatedUser.hasVoiceProfile,
+        voiceProfileUrl: updatedUser.voiceProfileUrl,
+      };
+
+      return {
+        status: 200,
+        data: userResponse,
+      };
+    } catch (error: any) {
+      console.error("Error saving home tour:", error);
       throw {
         status: error.status || 500,
         message: error.message || "Internal Server Error",

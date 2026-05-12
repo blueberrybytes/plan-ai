@@ -9,6 +9,7 @@ export type LoginRequest = operations["Login"]["requestBody"]["content"]["applic
 export const authApi = createApi({
   reducerPath: "authApi",
   baseQuery: baseQueryWithReauth,
+  tagTypes: ["User"],
   endpoints: (builder) => ({
     login: builder.mutation<ApiResponseUserResponse, LoginRequest>({
       query: (credentials) => ({
@@ -16,9 +17,11 @@ export const authApi = createApi({
         method: "POST",
         body: credentials,
       }),
+      invalidatesTags: ["User"],
     }),
     getCurrentUser: builder.query<ApiResponseUserResponse, void>({
       query: () => "/api/session/me",
+      providesTags: ["User"],
     }),
     getDesktopToken: builder.mutation<ApiResponseCustomToken, void>({
       query: () => ({
@@ -26,7 +29,14 @@ export const authApi = createApi({
         method: "POST",
       }),
     }),
+    completeHomeTour: builder.mutation<ApiResponseUserResponse, void>({
+      query: () => ({
+        url: "/api/session/me/home-tour",
+        method: "POST",
+      }),
+      invalidatesTags: ["User"],
+    }),
   }),
 });
 
-export const { useLoginMutation, useGetCurrentUserQuery, useGetDesktopTokenMutation } = authApi;
+export const { useLoginMutation, useGetCurrentUserQuery, useGetDesktopTokenMutation, useCompleteHomeTourMutation } = authApi;

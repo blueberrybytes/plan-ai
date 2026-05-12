@@ -2289,6 +2289,9 @@
 					"hasCompletedOnboarding": {
 						"type": "boolean"
 					},
+					"hasCompletedHomeTour": {
+						"type": "boolean"
+					},
 					"hasVoiceProfile": {
 						"type": "boolean"
 					},
@@ -2311,6 +2314,7 @@
 					"isMicrosoftAccount",
 					"role",
 					"hasCompletedOnboarding",
+					"hasCompletedHomeTour",
 					"hasVoiceProfile",
 					"voiceProfileUrl"
 				],
@@ -5528,7 +5532,7 @@
 	},
 	"info": {
 		"title": "backend",
-		"version": "2.0.3",
+		"version": "2.0.4",
 		"license": {
 			"name": "BUSL-1.1"
 		},
@@ -7920,6 +7924,53 @@
 						}
 					}
 				}
+			}
+		},
+		"/api/session/me/home-tour": {
+			"post": {
+				"operationId": "CompleteHomeTour",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiResponse_UserResponse_"
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Unauthorized",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/GenericResponse"
+								}
+							}
+						}
+					},
+					"500": {
+						"description": "Internal Server Error",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/GenericResponse"
+								}
+							}
+						}
+					}
+				},
+				"description": "Mark home tour as completed.",
+				"tags": [
+					"Session"
+				],
+				"security": [
+					{
+						"BearerAuth": []
+					}
+				],
+				"parameters": []
 			}
 		},
 		"/api/session/desktop-token": {

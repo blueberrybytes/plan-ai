@@ -29,17 +29,17 @@ enum WorkspaceTier {
 }
 
 model Workspace {
-  id        String          @id @default(cuid())
-  name      String
-  stripeId  String?
-  tier           WorkspaceTier   @default(FREE)
-  maxInvitations Int             @default(5)
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
-  openRouterKey  String?
-  deepgramKey    String?
-  isCourtesy     Boolean         @default(false)
-  monthlyTokenLimit Int @default(200000)
+  id                String        @id @default(cuid())
+  name              String
+  stripeId          String?
+  tier              WorkspaceTier @default(FREE)
+  maxInvitations    Int           @default(5)
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  openRouterKey     String?
+  deepgramKey       String?
+  isCourtesy        Boolean       @default(false)
+  monthlyTokenLimit Int           @default(200000)
 
   members        WorkspaceMember[]
   integrations   WorkspaceIntegration[]
@@ -57,15 +57,15 @@ model Workspace {
 }
 
 model WorkspaceMember {
-  id          String        @id @default(cuid())
-  workspaceId String
-  userId      String
-  role        WorkspaceRole @default(MEMBER)
-  personas    UserPersona[] @default([])
-  personaNotes String?      @db.Text
+  id           String        @id @default(cuid())
+  workspaceId  String
+  userId       String
+  role         WorkspaceRole @default(MEMBER)
+  personas     UserPersona[] @default([])
+  personaNotes String?       @db.Text
 
-  workspace   Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([workspaceId, userId])
   @@index([userId])
@@ -85,63 +85,64 @@ model WorkspaceIntegration {
   metadata     Json?
   createdAt    DateTime            @default(now())
   updatedAt    DateTime            @updatedAt
-  
-  workspace    Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   @@unique([workspaceId, provider])
 }
 
 model WorkspaceInvitation {
-  id          String        @id @default(cuid())
-  email       String
-  role        WorkspaceRole
-  personas    UserPersona[] @default([])
-  personaNotes String?      @db.Text
-  workspaceId String
-  workspace   Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  inviterId   String
-  inviter     User          @relation("InvitationSender", fields: [inviterId], references: [id], onDelete: Cascade)
-  status      String        @default("PENDING") // PENDING | ACCEPTED
-  expiresAt   DateTime?
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
+  id           String        @id @default(cuid())
+  email        String
+  role         WorkspaceRole
+  personas     UserPersona[] @default([])
+  personaNotes String?       @db.Text
+  workspaceId  String
+  workspace    Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  inviterId    String
+  inviter      User          @relation("InvitationSender", fields: [inviterId], references: [id], onDelete: Cascade)
+  status       String        @default("PENDING") // PENDING | ACCEPTED
+  expiresAt    DateTime?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
 
   @@unique([email, workspaceId])
   @@index([email])
 }
 
 model User {
-  id                 String            @id @default(cuid())
-  firebaseUid        String            @unique
-  email              String            @unique
-  name               String?
-  avatarUrl          String?
-  googleId           String?           @unique
-  appleId            String?           @unique
-  microsoftId        String?           @unique
-  createdAt          DateTime          @default(now())
-  updatedAt          DateTime          @updatedAt
-  role               Role              @default(PENDING)
-  isGoogleAccount    Boolean           @default(false)
-  isAppleAccount     Boolean           @default(false)
-  isMicrosoftAccount Boolean           @default(false)
-  hasVoiceProfile    Boolean           @default(false)
-  voiceProfileUrl    String?
-  threads            ChatThread[]
-  contexts           Context[]
-  customTheme        CustomTheme?
-  documents          DocDocument[]
-  brandThemes        BrandTheme[]
-  slideTemplates     SlideTemplate[]
-  assignedTasks      Task[]            @relation("TaskAssignee")
-  transcripts        Transcript[]
-  integrations       UserIntegration[]
-  sentInvitations    WorkspaceInvitation[] @relation("InvitationSender")
-  projects           Project[]
-  diagrams           Diagram[]
-  desktopAuthCodes   DesktopAuthCode[]
-  aiUsageLogs        AiUsageLog[]
-  workspaceMembers   WorkspaceMember[]
+  id                   String                @id @default(cuid())
+  firebaseUid          String                @unique
+  email                String                @unique
+  name                 String?
+  avatarUrl            String?
+  googleId             String?               @unique
+  appleId              String?               @unique
+  microsoftId          String?               @unique
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  role                 Role                  @default(PENDING)
+  isGoogleAccount      Boolean               @default(false)
+  isAppleAccount       Boolean               @default(false)
+  isMicrosoftAccount   Boolean               @default(false)
+  hasVoiceProfile      Boolean               @default(false)
+  hasCompletedHomeTour Boolean               @default(false)
+  voiceProfileUrl      String?
+  threads              ChatThread[]
+  contexts             Context[]
+  customTheme          CustomTheme?
+  documents            DocDocument[]
+  brandThemes          BrandTheme[]
+  slideTemplates       SlideTemplate[]
+  assignedTasks        Task[]                @relation("TaskAssignee")
+  transcripts          Transcript[]
+  integrations         UserIntegration[]
+  sentInvitations      WorkspaceInvitation[] @relation("InvitationSender")
+  projects             Project[]
+  diagrams             Diagram[]
+  desktopAuthCodes     DesktopAuthCode[]
+  aiUsageLogs          AiUsageLog[]
+  workspaceMembers     WorkspaceMember[]
 }
 
 model DesktopAuthCode {
@@ -206,11 +207,11 @@ model Project {
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
   workspaceId String
-  
-  workspace   Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  workspace   Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   tasks       Task[]
   transcripts Transcript[]
-  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   aiUsageLogs AiUsageLog[]
 
   @@index([userId])
@@ -220,25 +221,25 @@ model Project {
 }
 
 model Transcript {
-  id         String               @id @default(cuid())
-  title      String?
-  source     TranscriptSource     @default(MANUAL)
-  language   String?
-  summary    String?
-  transcript String?
-  utterances Json?
+  id              String           @id @default(cuid())
+  title           String?
+  source          TranscriptSource @default(MANUAL)
+  language        String?
+  summary         String?
+  transcript      String?
+  utterances      Json?
   rawMicUrl       String?
   rawSysUrl       String?
   durationSeconds Int?
   speakerCount    Int?
-  sentiment       String?              @db.VarChar(24)
+  sentiment       String?          @db.VarChar(24)
   metadata        Json?
   recordedAt      DateTime?
-  createdAt  DateTime             @default(now())
-  updatedAt  DateTime             @updatedAt
-  projectId  String?
-  userId     String
-  workspaceId String
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  projectId       String?
+  userId          String
+  workspaceId     String
 
   workspace  Workspace            @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   taskLinks  TaskTranscriptLink[]
@@ -315,19 +316,19 @@ model TaskTranscriptLink {
 }
 
 model Context {
-  id          String        @id @default(cuid())
+  id          String   @id @default(cuid())
   userId      String
-  name        String        @db.VarChar(120)
+  name        String   @db.VarChar(120)
   description String?
-  color       String?       @db.VarChar(24)
+  color       String?  @db.VarChar(24)
   metadata    Json?
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
   workspaceId String
-  
-  workspace   Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  files       ContextFile[]
+
+  workspace Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  files     ContextFile[]
 
   @@index([userId, name])
   @@index([workspaceId])
@@ -348,20 +349,20 @@ model ContextFile {
 }
 
 model ChatThread {
-  id              String        @id @default(cuid())
+  id              String   @id @default(cuid())
   userId          String
-  title           String        @default("New Chat")
+  title           String   @default("New Chat")
   contextIds      String[]
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
   complexityLevel String?
-  transcriptId    String?       @unique
+  transcriptId    String?  @unique
   workspaceId     String
-  
-  workspace       Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  messages        ChatMessage[]
-  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  transcript      Transcript?   @relation(fields: [transcriptId], references: [id], onDelete: Cascade)
+
+  workspace  Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  messages   ChatMessage[]
+  user       User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transcript Transcript?   @relation(fields: [transcriptId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([workspaceId])
@@ -379,14 +380,14 @@ model ChatMessage {
 }
 
 model SlideTemplate {
-  id            String            @id @default(cuid())
-  userId        String
-  name          String            @db.VarChar(120)
-  description   String?
-  logoUrl       String?
-  createdAt     DateTime          @default(now())
-  updatedAt     DateTime          @updatedAt
-  workspaceId   String
+  id          String   @id @default(cuid())
+  userId      String
+  name        String   @db.VarChar(120)
+  description String?
+  logoUrl     String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  workspaceId String
 
   workspace     Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   presentations Presentation[]
@@ -412,23 +413,23 @@ model SlideTypeConfig {
 }
 
 model Presentation {
-  id         String         @id @default(cuid())
-  userId     String
-  templateId String?
-  themeId    String?
-  title      String
-  prompt     String?        @db.Text
-  slidesJson Json
-  contextIds String[]
-  status     String         @default("DRAFT") @db.VarChar(24)
-  createdAt  DateTime       @default(now())
-  updatedAt  DateTime       @updatedAt
+  id          String   @id @default(cuid())
+  userId      String
+  templateId  String?
+  themeId     String?
+  title       String
+  prompt      String?  @db.Text
+  slidesJson  Json
+  contextIds  String[]
+  status      String   @default("DRAFT") @db.VarChar(24)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
   workspaceId String
 
-  workspace   Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  template   SlideTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
-  theme      BrandTheme?    @relation(fields: [themeId], references: [id])
-  
+  workspace Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  template  SlideTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  theme     BrandTheme?    @relation(fields: [themeId], references: [id])
+
   @@index([workspaceId])
 }
 
@@ -449,7 +450,7 @@ model BrandTheme {
   updatedAt       DateTime @updatedAt
   workspaceId     String
 
-  workspace     Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workspace     Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   documents     DocDocument[]
   presentations Presentation[]
   diagrams      Diagram[]
@@ -461,23 +462,23 @@ model BrandTheme {
 }
 
 model DocDocument {
-  id            String      @id @default(cuid())
+  id            String   @id @default(cuid())
   userId        String
   themeId       String?
   title         String
   content       String
-  status        String      @default("DRAFT") @db.VarChar(24)
-  isPublic      Boolean     @default(false)
+  status        String   @default("DRAFT") @db.VarChar(24)
+  isPublic      Boolean  @default(false)
   contextIds    String[]
   transcriptIds String[]
   prompt        String?
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
   workspaceId   String
 
-  workspace     Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  theme         BrandTheme? @relation(fields: [themeId], references: [id])
-  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  theme     BrandTheme? @relation(fields: [themeId], references: [id])
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([isPublic])
@@ -527,9 +528,9 @@ model Diagram {
   updatedAt     DateTime      @updatedAt
   workspaceId   String
 
-  workspace     Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  theme BrandTheme? @relation(fields: [themeId], references: [id])
-  user  User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  theme     BrandTheme? @relation(fields: [themeId], references: [id])
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([workspaceId])
@@ -603,23 +604,23 @@ enum ChatRole {
 }
 
 model AiUsageLog {
-  id           String   @id @default(cuid())
-  userId       String
-  projectId    String?
-  feature      String   @db.VarChar(64)
-  provider     String   @db.VarChar(64)
-  model        String   @db.VarChar(128)
-  inputTokens  Int      @default(0)
-  outputTokens Int      @default(0)
-  totalTokens  Int      @default(0)
-  estimatedCost Float   @default(0)
-  blueberryTokens Int   @default(0)
-  createdAt    DateTime @default(now())
-  workspaceId  String
+  id              String   @id @default(cuid())
+  userId          String
+  projectId       String?
+  feature         String   @db.VarChar(64)
+  provider        String   @db.VarChar(64)
+  model           String   @db.VarChar(128)
+  inputTokens     Int      @default(0)
+  outputTokens    Int      @default(0)
+  totalTokens     Int      @default(0)
+  estimatedCost   Float    @default(0)
+  blueberryTokens Int      @default(0)
+  createdAt       DateTime @default(now())
+  workspaceId     String
 
-  workspace Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  project Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project   Project?  @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([workspaceId])

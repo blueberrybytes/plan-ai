@@ -23,19 +23,7 @@ const AuthenticatedRoute: React.FC = () => {
     skip: !isAuthInitialized || !user,
   });
 
-  console.log("[AuthRoute] render", {
-    path: location.pathname,
-    hasUser: !!user,
-    emailVerified: user?.emailVerified,
-    isAuthInitialized,
-    isLoading,
-    isUninitialized,
-    serverRole: currentUserData?.data?.role,
-    hasCompletedOnboarding: currentUserData?.data?.hasCompletedOnboarding,
-  });
-
   if (!user || !user.emailVerified) {
-    console.log("[AuthRoute] → no user/unverified, redirect /");
     return <Navigate to="/" replace />;
   }
 
@@ -53,7 +41,7 @@ const AuthenticatedRoute: React.FC = () => {
         { level: "error" },
       );
     }
-    console.log("[AuthRoute] → spinner (waiting for auth/data)");
+
     return (
       <Box
         sx={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100vh" }}
@@ -67,24 +55,16 @@ const AuthenticatedRoute: React.FC = () => {
   const hasCompletedOnboarding = currentUserData?.data?.hasCompletedOnboarding === true;
   const isPending = role === "PENDING";
 
-  console.log("[AuthRoute] routing decision", { role, hasCompletedOnboarding, isPending });
-
   // ANY ROLE + hasn't completed onboarding → wizard
   if (!hasCompletedOnboarding && location.pathname !== "/onboarding") {
-    console.log("[AuthRoute] → redirect /onboarding (missing workflow setup)");
     return <Navigate to="/onboarding" replace />;
   }
 
   // Approved users cannot revisit onboarding
-  if (
-    hasCompletedOnboarding &&
-    location.pathname === "/onboarding"
-  ) {
-    console.log("[AuthRoute] → redirect /home (approved user in restricted route)");
+  if (hasCompletedOnboarding && location.pathname === "/onboarding") {
     return <Navigate to="/home" replace />;
   }
 
-  console.log("[AuthRoute] → outlet");
   return <Outlet />;
 };
 

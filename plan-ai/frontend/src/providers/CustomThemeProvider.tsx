@@ -230,10 +230,6 @@ const CustomThemeProvider: React.FC<CustomThemeProviderProps> = ({ children }) =
     }
 
     const builtTheme = createTheme(overrides);
-    console.log(
-      "CustomThemeProvider - Built Theme complete with palette:",
-      builtTheme.palette.background,
-    );
 
     return builtTheme;
   }, [customTheme, brandThemeOptions]);

@@ -587,6 +587,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/session/me/home-tour": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Mark home tour as completed. */
+        post: operations["CompleteHomeTour"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/session/desktop-token": {
         parameters: {
             query?: never;
@@ -2397,6 +2414,7 @@ export interface components {
             isMicrosoftAccount: boolean;
             role: components["schemas"]["Role"];
             hasCompletedOnboarding: boolean;
+            hasCompletedHomeTour: boolean;
             hasVoiceProfile: boolean;
             voiceProfileUrl: string | null;
         };
@@ -4720,6 +4738,44 @@ export interface operations {
                 };
             };
         };
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_UserResponse_"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GenericResponse"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GenericResponse"];
+                };
+            };
+        };
+    };
+    CompleteHomeTour: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
         responses: {
             /** @description Ok */
             200: {

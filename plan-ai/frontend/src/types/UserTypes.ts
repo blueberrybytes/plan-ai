@@ -8,4 +8,5 @@ export type User = {
   createdAt: string;
   updatedAt: string;
   hasCompletedOnboarding?: boolean;
+  hasCompletedHomeTour?: boolean;
 };

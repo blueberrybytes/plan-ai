@@ -48,18 +48,7 @@ export class TokenService {
       (provider) => provider.providerId !== "password",
     );
 
-    console.log(
-      "TokenService.updateUserInStore: evaluated provider data",
-      user.providerData.map((provider) => ({
-        providerId: provider.providerId,
-        email: provider.email,
-      })),
-      "hasNonPasswordProvider=",
-      hasNonPasswordProvider,
-    );
-
     if (!user.emailVerified && !hasNonPasswordProvider) {
-      console.log("TokenService.updateUserInStore: email not verified, skipping Redux user set");
       return;
     }
 
@@ -88,7 +77,6 @@ export class TokenService {
     // If we're not already refreshing the token
     if (!TokenService.isRefreshing) {
       TokenService.isRefreshing = true;
-      console.log("Starting token refresh process...");
 
       try {
         // Check if we're actually logged in first
@@ -99,9 +87,6 @@ export class TokenService {
         // If no user initially, wait longer for auth state to potentially recover
         while (!firebaseUser && waitAttempts < maxWaitAttempts) {
           waitAttempts++;
-          console.log(
-            `No Firebase user found initially, waiting for auth state recovery... (attempt ${waitAttempts}/${maxWaitAttempts})`,
-          );
 
           // Progressive wait times: 2s, 3s, 4s
           const waitTime = 1000 + waitAttempts * 1000;
@@ -109,7 +94,6 @@ export class TokenService {
           firebaseUser = auth.currentUser;
 
           if (firebaseUser) {
-            console.log(`Firebase user recovered after ${waitAttempts} attempts`);
             break;
           }
         }
@@ -121,8 +105,6 @@ export class TokenService {
           return null; // Return null but don't throw an error or logout
         }
 
-        console.log("Firebase user found, attempting token refresh");
-
         // Create a single refresh promise that all concurrent requests can use
         TokenService.refreshPromise = this.refreshToken();
         const newToken = await TokenService.refreshPromise;
@@ -130,7 +112,6 @@ export class TokenService {
         // Update the token in Redux store
         await this.updateUserInStore(dispatch, newToken);
 
-        console.log("Token refresh successful - new token obtained and stored");
         return newToken;
       } catch (error) {
         console.error("Error refreshing token:", error);
@@ -142,7 +123,6 @@ export class TokenService {
           errorMessage.includes("auth/id-token-expired") ||
           errorMessage.includes("Token has already expired")
         ) {
-          console.log("Token expired - this is expected, will attempt recovery");
           // Don't logout immediately for expired tokens, let the auth flow handle it
           return null;
         }
@@ -154,28 +134,19 @@ export class TokenService {
             errorMessage.includes("auth/user-not-found") ||
             errorMessage.includes("auth/invalid-user-token"))
         ) {
-          console.log("Token refresh failed with fatal auth error, logging out");
           dispatch(logout());
-        } else {
-          console.log(
-            "Token refresh failed, ignoring to prevent false-positive logouts on network errors",
-          );
         }
         return null;
       } finally {
         TokenService.isRefreshing = false;
         TokenService.refreshPromise = null;
-        console.log("Token refresh process completed");
       }
     } else if (TokenService.refreshPromise) {
       // If another request is already refreshing, wait for that to complete
-      console.log("Token refresh already in progress, waiting for completion...");
+
       try {
         const newToken = await TokenService.refreshPromise;
-        console.log(
-          "Waited for existing token refresh, got result:",
-          newToken ? "success" : "failed",
-        );
+
         return newToken;
       } catch (err) {
         console.error("Error waiting for existing token refresh:", err);

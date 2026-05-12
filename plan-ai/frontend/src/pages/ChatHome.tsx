@@ -17,6 +17,7 @@ import { useSelector, useDispatch } from "react-redux";
 import { RootState } from "../store/store";
 import { setChatHomeMessages } from "../store/slices/chatHome/chatHomeSlice";
 import AssistantMessageRenderer from "../components/chat/AssistantMessageRenderer";
+import HomeTour from "../components/onboarding/HomeTour";
 
 // Standardize message interface similar to UIMessage but basic
 interface UIMessage {
@@ -216,6 +217,7 @@ const ChatHome: React.FC = () => {
 
   return (
     <SidebarLayout fullHeight>
+      <HomeTour />
       <Box sx={{ display: "flex", flexDirection: "column", height: "100%", position: "relative" }}>
         {/* Messages Area */}
         <Box
@@ -250,7 +252,7 @@ const ChatHome: React.FC = () => {
               >
                 <AutoAwesomeIcon sx={{ fontSize: 32 }} />
               </Box>
-              <Typography variant="h3" sx={{ fontWeight: 800, mb: 1 }}>
+              <Typography id="tour-welcome" variant="h3" sx={{ fontWeight: 800, mb: 1 }}>
                 How can I help you today?
               </Typography>
               <Typography variant="h6" color="text.secondary" sx={{ mb: 6, fontWeight: 400 }}>
@@ -258,7 +260,7 @@ const ChatHome: React.FC = () => {
                 documents.
               </Typography>
 
-              <Grid container spacing={2} maxWidth="md">
+              <Grid id="tour-suggestions" container spacing={2} maxWidth="md">
                 {suggestions.map((s, i) => (
                   <Grid item xs={12} sm={6} key={i}>
                     <Paper
@@ -391,6 +393,7 @@ const ChatHome: React.FC = () => {
         >
           <Box sx={{ maxWidth: "md", mx: "auto" }}>
             <Paper
+              id="tour-chat-input"
               component="form"
               onSubmit={handleSubmit}
               elevation={2}
