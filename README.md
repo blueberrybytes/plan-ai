@@ -54,6 +54,26 @@ Once the meeting ends, Plan AI instantly generates perfectly scoped engineering 
 
 <br>
 
+### 4. Meeting Documents & Summaries
+Export comprehensive, well-formatted markdown documents summarizing key decisions, technical discussions, and action items.
+
+<img src="./images/doc.png" alt="Document Generation" />
+
+<br>
+
+### 5. AI Generated Diagrams
+Plan AI understands technical discussions and can automatically generate Mermaid.js architecture diagrams directly from your meeting context.
+
+<img src="./images/diagram.png" alt="Mermaid Diagram Generation" />
+
+<br>
+
+### 6. Presentation Slides
+Instantly convert meeting insights, proposals, or architecture plans into professional PowerPoint (.pptx) slides ready for presentation.
+
+<img src="./images/slide.png" alt="Slide Generation" />
+
+<br>
 ## 📦 Project Structure & Architecture
 
 Plan AI is built as a monorepo.
