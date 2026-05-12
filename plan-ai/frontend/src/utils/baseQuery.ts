@@ -29,9 +29,6 @@ const createBaseQuery = (customBaseUrl?: string) =>
 
       if (user?.token) {
         headers.set("Authorization", `Bearer ${user.token}`);
-        console.log(
-          `Setting Authorization header with token for endpoint: ${endpoint}, path: ${currentPath}`,
-        );
       } else {
         console.warn(
           `No token available for request to ${endpoint}, path: ${currentPath}. Authentication may fail.`,
@@ -74,19 +71,10 @@ const createBaseQueryWithReauth =
     // Use the baseQuery with the provided baseUrl or default
     const customBaseQuery = createBaseQuery(options?.baseUrl);
 
-    // Debug logging for request
-    console.log("RTK Query request:", {
-      endpoint: typeof args === "string" ? args : args.url,
-      method: typeof args === "string" ? "GET" : args.method || "GET",
-      params: typeof args !== "string" && args.params ? args.params : undefined,
-    });
-
     // Check if token refresh is already in progress before making the request
     if (TokenService.isRefreshing && TokenService.refreshPromise) {
-      console.log("Token refresh in progress, waiting before making request");
       try {
         await TokenService.refreshPromise;
-        console.log("Token refresh completed, proceeding with request");
       } catch (error) {
         console.error("Error while waiting for token refresh:", error);
         clientLogger.error("Error while waiting for token refresh", error as Error, {
@@ -97,14 +85,6 @@ const createBaseQueryWithReauth =
 
     // Make the request with current token (which should now be fresh)
     let result = await customBaseQuery(args, api, extraOptions);
-
-    // Debug logging for response
-    console.log("RTK Query response:", {
-      endpoint: typeof args === "string" ? args : args.url,
-      status: result.error ? `Error: ${result.error.status}` : "Success",
-      data: result.data ? "Data received" : "No data",
-      error: result.error || null,
-    });
 
     // Get the request URL for platform detection
     const requestUrl = typeof args === "string" ? args : args.url;
@@ -183,17 +163,13 @@ const createBaseQueryWithReauth =
       const user = selectUser(api.getState() as RootState);
       if (user?.token) {
         try {
-          console.log("Attempting token refresh for 401 error...");
-
           // Use TokenService to handle token refresh
           const newToken = await TokenService.handleTokenRefresh(api.dispatch);
 
           if (newToken) {
-            console.log("Token refreshed reactively after 401 error");
-
             // Wait longer for the auth state to fully propagate and stabilize
             // This is critical for ensuring the new token is properly set
-            console.log("Waiting for auth state to stabilize after token refresh...");
+
             await new Promise((resolve) => setTimeout(resolve, 2000)); // Increased to 2 seconds
 
             // Verify we still have a user and token before retrying
@@ -204,7 +180,7 @@ const createBaseQueryWithReauth =
             }
 
             // Retry the initial query with new token
-            console.log("Retrying original request with new token");
+
             const retryResult = await customBaseQuery(args, api, extraOptions);
             const retryHttpStatus = getHttpStatus(retryResult.error);
 
@@ -218,7 +194,7 @@ const createBaseQueryWithReauth =
               });
 
               // If retry still fails, wait a bit more and try once more
-              console.log("Attempting final retry after additional delay...");
+
               await new Promise((resolve) => setTimeout(resolve, 1000));
 
               const finalRetryResult = await customBaseQuery(args, api, extraOptions);
@@ -245,16 +221,14 @@ const createBaseQueryWithReauth =
 
                 return result; // Return original error
               } else {
-                console.log("Final retry succeeded");
                 return finalRetryResult;
               }
             } else {
-              console.log("Request succeeded after token refresh");
               return retryResult;
             }
           } else {
             // If token refresh fails or returns null, the TokenService will have already handled the situation
-            console.log("Token refresh failed or returned null - no retry will be attempted");
+
             clientLogger.warn("Token refresh did not return a token after auth error", {
               endpoint: typeof args === "string" ? args : args.url,
             });
@@ -277,7 +251,6 @@ const createBaseQueryWithReauth =
           // Error is already handled by TokenService, no need to dispatch logout here
         }
       } else {
-        console.log("No user in store, skipping token refresh attempt");
         clientLogger.warn("Auth error encountered but no user present for token refresh", {
           endpoint: typeof args === "string" ? args : args.url,
         });

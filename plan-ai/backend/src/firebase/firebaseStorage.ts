@@ -55,9 +55,13 @@ export async function uploadContextFileToFirebaseStorage(
     const storagePath = `${CONTEXT_PREFIX}/${userId}/${contextId}/${uuidv4()}-${sanitizedFileName}`;
     const file = bucket.file(storagePath);
 
+    // Repomix generates .xml files that don't start with a valid XML tag, breaking browser previews
+    // Force them to be served as text/plain so they render nicely in the browser
+    const finalContentType = originalFileName.endsWith(".xml") ? "text/plain" : contentType;
+
     await file.save(fileBuffer, {
       metadata: {
-        contentType,
+        contentType: finalContentType,
         cacheControl: "private, max-age=0",
       },
     });

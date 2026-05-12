@@ -86,7 +86,6 @@ const FirebaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       // Mark authentication as initialized after first check
       setIsAuthInitialized((prev) => {
         if (!prev) {
-          console.log("Auth initialization completed");
           return true;
         }
         return prev;
