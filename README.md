@@ -20,16 +20,16 @@ The engineer and CEO of the Company:
 ## 📥 Downloads
 
 ### 💻 Desktop Recorder
-| Platform | Where to get it |
-| :--- | :--- |
-| 🍏 **macOS** | [Mac App Store](https://apps.apple.com/es/app/plan-ai-recorder/id6759553699?l=en-GB&mt=12) or [GitHub Releases (.dmg)](https://github.com/blueberrybytes/plan-ai-recorder-releases/releases) |
-| 🪟 **Windows** & 🐧 **Linux** | [GitHub Releases (.exe, .AppImage)](https://github.com/blueberrybytes/plan-ai-recorder-releases/releases) |
+| Platform                    | Where to get it                                                                                                                                                                              |
+| :-------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 🍏 **macOS**                 | [Mac App Store](https://apps.apple.com/es/app/plan-ai-recorder/id6759553699?l=en-GB&mt=12) or [GitHub Releases (.dmg)](https://github.com/blueberrybytes/plan-ai-recorder-releases/releases) |
+| 🪟 **Windows** & 🐧 **Linux** | [GitHub Releases (.exe, .AppImage)](https://github.com/blueberrybytes/plan-ai-recorder-releases/releases)                                                                                    |
 
 ### 📱 Mobile Companion App
-| Platform | Where to get it |
-| :--- | :--- |
-| 🤖 **Android** | [Google Play — Plan AI](https://play.google.com/store/apps/details?id=com.blueberrybytes.planai) |
-| 🍏 **iOS** | [App Store — Plan AI Recorder](https://apps.apple.com/us/app/plan-ai-mobile-recorder/id6762671958) |
+| Platform      | Where to get it                                                                                    |
+| :------------ | :------------------------------------------------------------------------------------------------- |
+| 🤖 **Android** | [Google Play — Plan AI](https://play.google.com/store/apps/details?id=com.blueberrybytes.planai)   |
+| 🍏 **iOS**     | [App Store — Plan AI Recorder](https://apps.apple.com/us/app/plan-ai-mobile-recorder/id6762671958) |
 
 ## 📸 Sneak Peek
 
@@ -52,28 +52,24 @@ Once the meeting ends, Plan AI instantly generates perfectly scoped engineering 
 
 <img src="./images/tasks.png" alt="Automated Task Generation" />
 
-<br>
 
 ### 4. Meeting Documents & Summaries
 Export comprehensive, well-formatted markdown documents summarizing key decisions, technical discussions, and action items.
 
 <img src="./images/doc.png" alt="Document Generation" />
 
-<br>
 
 ### 5. AI Generated Diagrams
 Plan AI understands technical discussions and can automatically generate Mermaid.js architecture diagrams directly from your meeting context.
 
 <img src="./images/diagram.png" alt="Mermaid Diagram Generation" />
 
-<br>
 
 ### 6. Presentation Slides
 Instantly convert meeting insights, proposals, or architecture plans into professional PowerPoint (.pptx) slides ready for presentation.
 
 <img src="./images/slide.png" alt="Slide Generation" />
 
-<br>
 ## 📦 Project Structure & Architecture
 
 Plan AI is built as a monorepo.
@@ -325,12 +321,12 @@ const status = (item.metadata as Record<string, unknown>)?.processingStatus;
 
 ### Per-app `generate:types` commands
 
-| App                | Command                                            | Backend required?         |
-| ------------------ | -------------------------------------------------- | ------------------------- |
-| `plan-ai/frontend` | `yarn --cwd plan-ai/frontend generate:types:local` | No                        |
-| `plan-ai-recorder` | `yarn --cwd plan-ai-recorder generate:types`       | No                        |
-| `plan-ai-mobile`   | `yarn --cwd plan-ai-mobile generate:types`         | No                        |
-| All at once        | `yarn update`                                      | No (includes DB migrate)  |
+| App                | Command                                            | Backend required?        |
+| ------------------ | -------------------------------------------------- | ------------------------ |
+| `plan-ai/frontend` | `yarn --cwd plan-ai/frontend generate:types:local` | No                       |
+| `plan-ai-recorder` | `yarn --cwd plan-ai-recorder generate:types`       | No                       |
+| `plan-ai-mobile`   | `yarn --cwd plan-ai-mobile generate:types`         | No                       |
+| All at once        | `yarn update`                                      | No (includes DB migrate) |
 
 ## 🔒 Security, Roles & Self-Hosting
 
