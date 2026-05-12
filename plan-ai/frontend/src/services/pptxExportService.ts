@@ -97,6 +97,9 @@ export const exportToPptx = async (options: ExportOptions) => {
   pptx.defineSlideMaster(masterProps);
 
   for (const slide of options.slides) {
+    if (slide.slideTypeKey === "diagram_slide") {
+      continue; // Mermaid diagrams cannot be rendered in PPTX natively
+    }
     const slidePage = pptx.addSlide({ masterName: "MASTER_SLIDE" });
     const params = slide.parameters;
 
@@ -880,7 +883,7 @@ export const exportToPptx = async (options: ExportOptions) => {
             h: iconSize,
             fontFace: "Arial",
             fontSize: 13,
-            color: "FFFFFF",
+            color: backgroundColor.replace("#", ""),
             align: "center",
           });
 
@@ -1083,7 +1086,7 @@ export const exportToPptx = async (options: ExportOptions) => {
             y: 1.8,
             w: 1.2,
             h: 1.2,
-            fill: { color: "334155" },
+            fill: { color: mutedTextColor },
           });
 
           addSlideText(slidePage, String(mem.name || ""), {
@@ -1124,13 +1127,6 @@ export const exportToPptx = async (options: ExportOptions) => {
         break;
       }
 
-      case "diagram_slide": {
-        // Mermaid diagrams cannot be rendered in PPTX — skip entirely
-        // Remove the empty slide that was already added
-        pptx.slides.pop();
-        break;
-      }
-
       // Fallback for others
       default:
         addSlideText(slidePage, String(params.title || "Untitled Slide"), {
@@ -1150,7 +1146,7 @@ export const exportToPptx = async (options: ExportOptions) => {
           h: 1,
           fontFace: safeBodyFont,
           fontSize: 14,
-          color: "888888",
+          color: mutedTextColor,
           align: "center",
         });
         break;
