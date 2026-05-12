@@ -9,6 +9,7 @@ export interface TranscriptListResult {
 export interface TranscriptListOptions {
   projectId?: string;
   source?: TranscriptSource;
+  query?: string;
   page?: number;
   pageSize?: number;
   workspaceId: string;
@@ -77,9 +78,16 @@ export class TranscriptCrudService {
 
     const where: Prisma.TranscriptWhereInput = {
       workspaceId: options.workspaceId,
-      // If projectId is provided, filter by it. If undefined, return all transcripts.
       ...(options.projectId !== undefined ? { projectId: options.projectId } : {}),
       ...(options.source ? { source: options.source } : {}),
+      ...(options.query && options.query.trim().length > 0
+        ? {
+            OR: [
+              { title: { contains: options.query, mode: "insensitive" } },
+              { summary: { contains: options.query, mode: "insensitive" } },
+            ],
+          }
+        : {}),
     };
 
     const [transcripts, total] = await Promise.all([

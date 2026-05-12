@@ -23,29 +23,19 @@ This document outlines the high-priority features, technical debt, and quality-o
 - Transition the backend to use secure, official OAuth 2.0 flows tied to these registered applications.
 - This will increase brand trust, simplify the user onboarding experience, and ensure compliance with strict corporate IT policies.
 
-## 4. Acoustic Echo Cancellation (AEC) for Desktop Recorder
-**Problem:** When recording a meeting on Desktop without headphones, the system audio (other people speaking) comes out of the loudspeakers and feeds directly back into the user's microphone, resulting in echo, duplicate transcription, and hallucinated tasks.
-**Solution:**
-- Research and implement an Acoustic Echo Cancellation (AEC) strategy within the Electron/Vite audio capture pipeline.
-- Consider utilizing WebRTC's native `echoCancellation: true` constraint for the microphone stream.
-- Alternatively, implement a backend audio post-processing step to subtract the system audio waveform from the microphone waveform before sending it to Deepgram.
-
-## 5. Notion Integration (Knowledge Base Sync)
+## 4. Notion Integration (Knowledge Base Sync)
 **Problem:** While Plan AI is excellent at extracting actionable tasks, many meetings result in long-term decisions, wikis, or general knowledge that belongs in a documentation hub rather than an issue tracker.
 **Solution:**
 - Build an official integration with the Notion API.
 - Allow users to automatically export full formatted transcripts, executive summaries, and action item lists directly into a selected Notion Database or Page.
 - Enable a "Sync to Notion" toggle alongside the existing Jira/Linear/Trello options in the recording flow.
 
-## 6. If transcript generation fails
+## 5. If transcript generation fails
 **Problem:** If transcript generation fails, the user is left without tasks and no easy way to try again.
 **Solution:**
 - Add a "Retry Generation" button in the UI for users if an AI extraction job fails due to rate limits or timeouts. We need to store somehow that htis failed so in the recorder ui and mobile we can retry
 
-## 7. Migrate all to generateText and telemetry all the usage including retries
-**Problem:** We are using generateObject which is a wrapper around generateText and there is no usage telemetry. We need to migrate all to generateText and telemetry all the usage including retries.
-
-## 8. Backend Scaling Bottlenecks (Infrastructure)
+## 6. Backend Scaling Bottlenecks (Infrastructure)
 **Problem:** As concurrent users grow, the current infrastructure has a few architectural weak points that will fail under heavy load.
 **Solutions to Implement:**
 - **Redis Memory Exhaustion:** BullMQ currently stores massive payloads (like raw transcript texts and context strings) directly in Redis. If hundreds of large meetings are uploaded simultaneously, Redis RAM will OOM. **Fix:** Upload payloads to S3/Cloud Storage and pass a lightweight reference ID into the BullMQ job.
@@ -53,7 +43,7 @@ This document outlines the high-priority features, technical debt, and quality-o
 - **Vector Database (Qdrant) Costs:** Storing massive codebase vectors for thousands of users will become expensive as Qdrant requires high RAM for fast RAG search. **Fix:** Optimize vector embeddings by discarding noisy code (e.g. minified files, lockfiles) and experiment with quantization.
 - **External API Rate Limiting:** Even with background queues, hammering Deepgram or OpenRouter with 500 concurrent requests will trigger HTTP 429 Too Many Requests. **Fix:** Implement rate-limit aware job concurrency in BullMQ, dynamically throttling workers when APIs respond with 429s.
 
-## 9. Context Graph Visualization (The Commercial "WOW" Effect)
+## 7. Context Graph Visualization (The Commercial "WOW" Effect)
 **Problem:** The AI processing (GitNexus RAG) happens in the background, making it feel like a "black box" to the user. To sell this to technical leads and CTOs, we need a visual proof of work that generates immediate trust and a "WOW" factor during demos.
 **Solution:**
 - Do NOT render the entire codebase graph (500k+ nodes will cause the browser to OOM and create a visual "hairball").

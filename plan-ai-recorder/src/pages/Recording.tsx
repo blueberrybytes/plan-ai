@@ -757,6 +757,19 @@ const Recording: React.FC = () => {
           >
             Save Recording Only (Discard Tasks)
           </Button>
+          <Button
+            variant="text"
+            size="small"
+            onClick={() => navigate("/")}
+            sx={{ 
+              textDecoration: "underline", 
+              color: "error.main", 
+              fontSize: "0.8rem",
+              "&:hover": { color: "error.dark" } 
+            }}
+          >
+            Ignore all and do not store
+          </Button>
         </Stack>
       </Box>
     );

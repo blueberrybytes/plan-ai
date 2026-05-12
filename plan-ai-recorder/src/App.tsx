@@ -207,8 +207,14 @@ const AppRoutes: React.FC = () => {
 };
 
 const App: React.FC = () => {
-  const { masUpdate, otaAvailable, otaDownloaded, handleMasUpdate } =
-    useAutoUpdater();
+  const { 
+    masUpdate, 
+    otaAvailable, 
+    otaDownloaded, 
+    handleMasUpdate,
+    dismissMasUpdate,
+    dismissOtaDownloaded
+  } = useAutoUpdater();
 
   return (
     <HashRouter>
@@ -218,9 +224,11 @@ const App: React.FC = () => {
       <Snackbar
         open={!!masUpdate}
         anchorOrigin={{ vertical: "top", horizontal: "center" }}
+        onClose={dismissMasUpdate}
       >
         <Alert
           severity="warning"
+          onClose={dismissMasUpdate}
           action={
             <Button color="inherit" size="small" onClick={handleMasUpdate}>
               UPDATE NOW
@@ -244,8 +252,9 @@ const App: React.FC = () => {
       <Snackbar
         open={!!otaDownloaded}
         anchorOrigin={{ vertical: "top", horizontal: "center" }}
+        onClose={dismissOtaDownloaded}
       >
-        <Alert severity="success">
+        <Alert severity="success" onClose={dismissOtaDownloaded}>
           Update downloaded! Restart the application to install.
         </Alert>
       </Snackbar>

@@ -3876,6 +3876,7 @@ export interface operations {
             query?: {
                 page?: number;
                 pageSize?: number;
+                q?: string;
             };
             header?: never;
             path: {
@@ -4275,6 +4276,7 @@ export interface operations {
                 page?: number;
                 pageSize?: number;
                 source?: components["schemas"]["TranscriptSource"];
+                q?: string;
             };
             header?: never;
             path?: never;

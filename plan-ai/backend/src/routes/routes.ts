@@ -2359,6 +2359,7 @@ export function RegisterRoutes(app: Router,opts?:{multer?:ReturnType<typeof mult
                 projectId: {"in":"path","name":"projectId","required":true,"dataType":"string"},
                 page: {"default":1,"in":"query","name":"page","dataType":"double"},
                 pageSize: {"default":20,"in":"query","name":"pageSize","dataType":"double"},
+                q: {"in":"query","name":"q","dataType":"string"},
         };
         app.get('/api/projects/:projectId/transcripts',
             authenticateMiddleware([{"ClientLevel":[]}]),
@@ -2923,6 +2924,7 @@ export function RegisterRoutes(app: Router,opts?:{multer?:ReturnType<typeof mult
                 page: {"default":1,"in":"query","name":"page","dataType":"double"},
                 pageSize: {"default":20,"in":"query","name":"pageSize","dataType":"double"},
                 source: {"in":"query","name":"source","ref":"TranscriptSource"},
+                q: {"in":"query","name":"q","dataType":"string"},
         };
         app.get('/api/transcripts',
             authenticateMiddleware([{"ClientLevel":[]}]),

@@ -6449,6 +6449,14 @@
 							"format": "double",
 							"type": "number"
 						}
+					},
+					{
+						"in": "query",
+						"name": "q",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
 					}
 				]
 			},
@@ -7176,6 +7184,14 @@
 						"required": false,
 						"schema": {
 							"$ref": "#/components/schemas/TranscriptSource"
+						}
+					},
+					{
+						"in": "query",
+						"name": "q",
+						"required": false,
+						"schema": {
+							"type": "string"
 						}
 					}
 				]

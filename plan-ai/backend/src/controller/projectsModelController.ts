@@ -517,6 +517,7 @@ export class ProjectsModelController extends BaseWorkspaceController {
     @Path() projectId: string,
     @Query() page = 1,
     @Query() pageSize = 20,
+    @Query() q?: string,
   ): Promise<ApiResponse<TranscriptListResponse>> {
     const { user, workspaceId } = await this.getAuthorizedWorkspaceAccess(request);
     await this.getProjectForWorkspace(request, projectId, workspaceId);
@@ -526,6 +527,7 @@ export class ProjectsModelController extends BaseWorkspaceController {
       workspaceId,
       page,
       pageSize,
+      query: q,
     };
     const { transcripts, total } = await transcriptCrudService.listTranscriptsForUser(
       user.id,

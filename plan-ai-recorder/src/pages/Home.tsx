@@ -92,12 +92,22 @@ const Home: React.FC = () => {
     systemSourceId,
   );
 
+  const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+    }, 500);
+    return () => clearTimeout(handler);
+  }, [searchQuery]);
+
   const fetchData = useCallback(async () => {
     if (!token) return;
     setLoading(true);
     setError(null);
     try {
-      const list = await api.listTranscripts();
+      const list = await api.listTranscripts(debouncedSearch);
       setTranscripts(list);
     } catch (err) {
       setError(
@@ -106,7 +116,7 @@ const Home: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [token, activeWorkspaceId]);
+  }, [token, activeWorkspaceId, debouncedSearch]);
 
   useEffect(() => {
     void fetchData();
@@ -312,6 +322,19 @@ const Home: React.FC = () => {
               </IconButton>
             </Tooltip>
           </Stack>
+
+          <Box sx={{ px: 2, pb: 1.5 }}>
+            <TextField
+              size="small"
+              fullWidth
+              placeholder="Search recordings..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              InputProps={{
+                sx: { fontSize: "0.875rem", borderRadius: 2 },
+              }}
+            />
+          </Box>
 
           <Divider sx={{ opacity: 0.4 }} />
 

@@ -14,7 +14,10 @@ export interface AudioRecorderOptions {
   /** Called when a real-time transcript delta or final sentence arrives */
   onTranscript: (source: "mic" | "sys", text: string, isFinal: boolean) => void;
   /** Called when VAD detects speech starting or stopping */
-  onSpeechEvent?: (source: "mic" | "sys", type: "speech_started" | "utterance_end") => void;
+  onSpeechEvent?: (
+    source: "mic" | "sys",
+    type: "speech_started" | "utterance_end",
+  ) => void;
   /** Called when recording fully stops and the socket closes */
   onStop: () => void;
   /** Called on any error */
@@ -91,7 +94,6 @@ export class AudioRecorder {
           const result = await window.electron.startSystemAudio();
           if (result === "use_web_api") {
             useWebApiForSysAudio = true;
-            console.log("[AudioRecorder] Windows/Linux — system audio will use getDisplayMedia.");
           }
         }
       } catch (e) {
@@ -102,7 +104,6 @@ export class AudioRecorder {
       }
 
       // 2. Establish the WebSocket connection
-      console.log("[AudioRecorder] Connecting to Realtime backend...");
       const config = loadConfig();
       this.ws = await this.options.api.startAudioStream(config?.language);
 
@@ -110,10 +111,12 @@ export class AudioRecorder {
         this.ws.onmessage = (event) => {
           try {
             const data = JSON.parse(event.data);
-            console.log("[AudioRecorder WS RX RAW]", data);
             if (data.type === "transcript") {
               this.options.onTranscript(data.source, data.text, data.isFinal);
-            } else if (data.type === "speech_started" || data.type === "utterance_end") {
+            } else if (
+              data.type === "speech_started" ||
+              data.type === "utterance_end"
+            ) {
               if (this.options.onSpeechEvent) {
                 this.options.onSpeechEvent(data.source, data.type);
               }
@@ -131,9 +134,18 @@ export class AudioRecorder {
         this.ws.onerror = (e) => {
           // WebSockets only provide an 'Event', which hides the exact raw network failure.
           // By pulling type and isTrusted, we can at least confirm it fired.
-          const errorDetails = e instanceof Event ? `Type: ${e.type}, isTrusted: ${e.isTrusted}` : String(e);
-          console.error(`WebSocket error encountered. Details: ${errorDetails}`);
-          this.options.onError(new Error("Audio streaming connection failed. Check your network or VPN."));
+          const errorDetails =
+            e instanceof Event
+              ? `Type: ${e.type}, isTrusted: ${e.isTrusted}`
+              : String(e);
+          console.error(
+            `WebSocket error encountered. Details: ${errorDetails}`,
+          );
+          this.options.onError(
+            new Error(
+              "Audio streaming connection failed. Check your network or VPN.",
+            ),
+          );
           this.stop();
         };
 
@@ -144,39 +156,38 @@ export class AudioRecorder {
       }
 
       // 3. Microphone stream acquisition
-      console.log("[AudioRecorder] Requesting Microphone...");
+
       const micDeviceId = config?.micDeviceId;
       this.micStream = await navigator.mediaDevices.getUserMedia({
         audio: {
           echoCancellation: true,
           noiseSuppression: true,
           autoGainControl: true,
-          ...(micDeviceId && micDeviceId !== "default" ? { deviceId: { exact: micDeviceId } } : {}),
+          ...(micDeviceId && micDeviceId !== "default"
+            ? { deviceId: { exact: micDeviceId } }
+            : {}),
         },
         video: false,
       });
 
-      const audioTrack = this.micStream.getAudioTracks()[0];
-      console.log(`[AudioRecorder] Microphone Acquired! Label: "${audioTrack.label}", ID: ${audioTrack.id}, muted: ${audioTrack.muted}, enabled: ${audioTrack.enabled}`);
+      //const audioTrack = this.micStream.getAudioTracks()[0];
 
-      // Setup MediaRecorder for Mic Blob capture
+      // We will setup micMediaRecorder later, after the AudioContext and Worklet are ready,
+      // so that we can record the processed audio (with ducking/AEC applied) instead of the raw mic stream.
       this.micChunks = [];
-      this.micMediaRecorder = new MediaRecorder(this.micStream, { mimeType: "audio/webm;codecs=opus" });
-      this.micMediaRecorder.ondataavailable = (e) => {
-        if (e.data.size > 0) this.micChunks.push(e.data);
-      };
-      this.micMediaRecorder.start(1000);
 
       // 4. Windows system audio via getDisplayMedia
       //    We request only the audio track. Electron's desktopCapturer bridge lets
       //    us pass a chromeMediaSourceId so the user doesn't have to pick again.
       if (useWebApiForSysAudio) {
         useWebApiForSysAudio = await this.startWindowsSysAudio();
-        
+
         // Setup MediaRecorder for Windows/Linux Sys Blob capture
         if (this.sysStream) {
           this.sysChunks = [];
-          this.sysMediaRecorder = new MediaRecorder(this.sysStream, { mimeType: "audio/webm;codecs=opus" });
+          this.sysMediaRecorder = new MediaRecorder(this.sysStream, {
+            mimeType: "audio/webm;codecs=opus",
+          });
           this.sysMediaRecorder.ondataavailable = (e) => {
             if (e.data.size > 0) this.sysChunks.push(e.data);
           };
@@ -189,25 +200,37 @@ export class AudioRecorder {
       this.audioContext = new AudioContext({ sampleRate: 24000 });
       if (this.audioContext.state === "suspended") {
         await this.audioContext.resume();
-        console.log("[AudioRecorder] AudioContext resumed.");
       }
 
-      console.log("[AudioRecorder] Loading AudioWorklet processor...");
-      // For Windows Electron (file://), using a real file path instantly crashes with 
+      // For Windows Electron (file://), using a real file path instantly crashes with
       // 'The user aborted a request' due to chromium site isolation.
       // We bundle the code as a string, make a Blob, and generate a safe object URL.
-      const blob = new Blob([rawAudioWorklet], { type: "application/javascript" });
+      const blob = new Blob([rawAudioWorklet], {
+        type: "application/javascript",
+      });
       const workletUrl = URL.createObjectURL(blob);
 
       await this.audioContext.audioWorklet.addModule(workletUrl);
 
       URL.revokeObjectURL(workletUrl);
 
-      this.sourceNode = this.audioContext.createMediaStreamSource(this.micStream);
+      this.sourceNode = this.audioContext.createMediaStreamSource(
+        this.micStream,
+      );
 
       // Two independent worklets for mic and system audio in parallel
-      this.micWorkletNode = new AudioWorkletNode(this.audioContext, "pcm-processor");
-      this.sysWorkletNode = new AudioWorkletNode(this.audioContext, "pcm-processor");
+      // micWorkletNode has 2 inputs: [0] = mic, [1] = sys (for echo suppression)
+      this.micWorkletNode = new AudioWorkletNode(
+        this.audioContext,
+        "pcm-processor",
+        {
+          numberOfInputs: 2,
+        },
+      );
+      this.sysWorkletNode = new AudioWorkletNode(
+        this.audioContext,
+        "pcm-processor",
+      );
 
       // 6. Mic chunks → WebSocket
       let debugMicCounter = 0;
@@ -215,44 +238,61 @@ export class AudioRecorder {
       this.micWorkletNode.port.onmessage = (event) => {
         if (event.data?.type === "debug") {
           debugMicCounter++;
-          // Print the direct worklet debug message (includes RMS)
-          if (event.data.message) {
-            console.log(event.data.message);
-          } else if (debugMicCounter % 6 === 0) {
-            console.log(`[AudioRecorder] LIVE PIPELINE CHECK -> rmsMic: ${event.data.rmsMic}, rmsSys: ${event.data.rmsSys}`);
-          }
-          window.dispatchEvent(new CustomEvent("plan-ai-audio-level", { detail: event.data }));
+          window.dispatchEvent(
+            new CustomEvent("plan-ai-audio-level", { detail: event.data }),
+          );
           return;
         }
         if (!(event.data instanceof ArrayBuffer)) return;
-        if (this.state !== "recording" || !this.ws || this.ws.readyState !== WebSocket.OPEN) return;
+        if (
+          this.state !== "recording" ||
+          !this.ws ||
+          this.ws.readyState !== WebSocket.OPEN
+        )
+          return;
 
         const base64Audio = this.bufferToBase64(event.data);
         if (!base64Audio) return;
-        
+
         micChunksSent++;
-        if (micChunksSent % 100 === 0) {
-             console.log(`[AudioRecorder] Uploaded ${micChunksSent} active mic chunks to WebSocket`);
-        }
-        
-        this.ws.send(JSON.stringify({ type: "input_audio", source: "mic", audio: base64Audio }));
+
+        this.ws.send(
+          JSON.stringify({
+            type: "input_audio",
+            source: "mic",
+            audio: base64Audio,
+          }),
+        );
       };
 
       // 7. System audio chunks → WebSocket
       this.sysWorkletNode.port.onmessage = (event) => {
         if (event.data?.type === "debug") {
           // sysWorkletNode gets system audio on inputs[0], so its 'rmsMic' is actually the system audio level
-          window.dispatchEvent(new CustomEvent("plan-ai-audio-level", { 
-            detail: { type: "debug", rmsSys: event.data.rmsMic } 
-          }));
+          window.dispatchEvent(
+            new CustomEvent("plan-ai-audio-level", {
+              detail: { type: "debug", rmsSys: event.data.rmsMic },
+            }),
+          );
           return;
         }
         if (!(event.data instanceof ArrayBuffer)) return;
-        if (this.state !== "recording" || !this.ws || this.ws.readyState !== WebSocket.OPEN) return;
+        if (
+          this.state !== "recording" ||
+          !this.ws ||
+          this.ws.readyState !== WebSocket.OPEN
+        )
+          return;
 
         const base64Audio = this.bufferToBase64(event.data);
         if (!base64Audio) return;
-        this.ws.send(JSON.stringify({ type: "input_audio", source: "sys", audio: base64Audio }));
+        this.ws.send(
+          JSON.stringify({
+            type: "input_audio",
+            source: "sys",
+            audio: base64Audio,
+          }),
+        );
       };
 
       // To prevent the microphone and delayed system audio from playing back through the user's speakers,
@@ -262,48 +302,83 @@ export class AudioRecorder {
       silentGain.connect(this.audioContext.destination);
 
       // Connect mic graph
-      this.sourceNode.connect(this.micWorkletNode);
+      this.sourceNode.connect(this.micWorkletNode, 0, 0); // mic to input 0
       this.micWorkletNode.connect(silentGain);
+
+      // Create a destination so we can record the PROCESSED mic audio (with ducking/AEC applied)
+      // instead of the raw mic stream that still has the loudspeaker echo in it.
+      const micDest = this.audioContext.createMediaStreamDestination();
+      this.micWorkletNode.connect(micDest);
+      this.micMediaRecorder = new MediaRecorder(micDest.stream, {
+        mimeType: "audio/webm;codecs=opus",
+      });
+
+      this.micMediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) {
+          this.micChunks.push(e.data);
+        }
+      };
+      this.micMediaRecorder.onstart = () =>
+        console.log("[AudioRecorder] micMediaRecorder STARTED");
+      this.micMediaRecorder.onerror = (err) =>
+        console.error("[AudioRecorder] micMediaRecorder ERROR", err);
+
+      this.micMediaRecorder.start(1000);
 
       // Connect system audio graph
       this.sysWorkletNode.connect(silentGain);
 
       if (this.sysStream && this.audioContext) {
         // Windows: wire the live getDisplayMedia stream directly into the worklet
-        this.sysSourceNode = this.audioContext.createMediaStreamSource(this.sysStream);
+        this.sysSourceNode = this.audioContext.createMediaStreamSource(
+          this.sysStream,
+        );
         this.sysSourceNode.connect(this.sysWorkletNode);
-        console.log("[AudioRecorder] Windows system audio stream connected to worklet.");
+
+        // Route system audio into micWorkletNode for Echo Suppression!
+        this.sysSourceNode.connect(this.micWorkletNode, 0, 1);
       } else {
         // macOS: We must also capture this sysWorkletNode into a WebM Blob
         const macSysDest = this.audioContext.createMediaStreamDestination();
         this.sysWorkletNode.connect(macSysDest);
         this.sysChunks = [];
-        this.sysMediaRecorder = new MediaRecorder(macSysDest.stream, { mimeType: "audio/webm;codecs=opus" });
+        this.sysMediaRecorder = new MediaRecorder(macSysDest.stream, {
+          mimeType: "audio/webm;codecs=opus",
+        });
         this.sysMediaRecorder.ondataavailable = (e) => {
           if (e.data.size > 0) this.sysChunks.push(e.data);
         };
         this.sysMediaRecorder.start(1000);
 
         // macOS: poll the native binary's SIGUSR1 chunks every 2 s
-        console.log("[AudioRecorder] Realtime Audio Pipe active. Starting macOS system audio polling...");
         this.sysAudioPlaybackTime = this.audioContext.currentTime;
         this.sysAudioInterval = setInterval(async () => {
-          if (this.state !== "recording" || !this.audioContext || !this.sysWorkletNode) return;
+          if (
+            this.state !== "recording" ||
+            !this.audioContext ||
+            !this.sysWorkletNode ||
+            !this.micWorkletNode
+          )
+            return;
           try {
             const chunk = await window.electron.chunkSystemAudio();
             if (chunk && chunk.byteLength > 0) {
               const originalSize = chunk.byteLength;
-              const audioBuffer = await this.audioContext.decodeAudioData(chunk.buffer as ArrayBuffer);
+              const audioBuffer = await this.audioContext.decodeAudioData(
+                chunk.buffer as ArrayBuffer,
+              );
               const source = this.audioContext.createBufferSource();
               source.buffer = audioBuffer;
               source.connect(this.sysWorkletNode);
+
+              // Route system audio into micWorkletNode for Echo Suppression!
+              source.connect(this.micWorkletNode, 0, 1);
 
               if (this.sysAudioPlaybackTime < this.audioContext.currentTime) {
                 this.sysAudioPlaybackTime = this.audioContext.currentTime;
               }
               source.start(this.sysAudioPlaybackTime);
               this.sysAudioPlaybackTime += audioBuffer.duration;
-              console.log(`[AudioRecorder] Multiplexed ${originalSize} byte system audio chunk (${audioBuffer.duration.toFixed(2)}s).`);
             }
           } catch (err) {
             console.error(
@@ -316,10 +391,14 @@ export class AudioRecorder {
     } catch (err) {
       console.error(
         "[AudioRecorder] Critical start failure:",
-        err instanceof Error ? `${err.message}\n${err.stack}` : JSON.stringify(err),
+        err instanceof Error
+          ? `${err.message}\n${err.stack}`
+          : JSON.stringify(err),
       );
       this.cleanup();
-      this.options.onError(err instanceof Error ? err : new Error("Failed to start audio."));
+      this.options.onError(
+        err instanceof Error ? err : new Error("Failed to start audio."),
+      );
     }
   }
 
@@ -357,13 +436,11 @@ export class AudioRecorder {
           : false,
       };
 
-      console.log("[AudioRecorder] Requesting system audio via getDisplayMedia...");
       this.sysStream = await navigator.mediaDevices.getUserMedia(constraints);
 
       // Drop the video track if one was included (we only needed audio)
       this.sysStream.getVideoTracks().forEach((t) => t.stop());
 
-      console.log("[AudioRecorder] Windows system audio stream acquired.");
       return true;
     } catch (err) {
       console.warn(
@@ -377,26 +454,26 @@ export class AudioRecorder {
   async stop(): Promise<{ micBlob?: Blob; sysBlob?: Blob }> {
     if (this.state !== "recording") return {};
     this.state = "stopping";
-    
+
     // Sever the inputs to the Worklet so no new audio is sent to OpenAI
     if (this.micWorkletNode) this.micWorkletNode.port.onmessage = null;
     if (this.sysWorkletNode) this.sysWorkletNode.port.onmessage = null;
 
-    // Grace period: allow OpenAI's Realtime API 2.5 seconds to flush the final pending 
+    // Grace period: allow OpenAI's Realtime API 2.5 seconds to flush the final pending
     // audio buffer transcriptions back to us over the WebSocket!
-    await new Promise(resolve => setTimeout(resolve, 2500));
+    await new Promise((resolve) => setTimeout(resolve, 2500));
 
     return new Promise((resolve) => {
       let micBlob: Blob | undefined;
       let sysBlob: Blob | undefined;
-      
+
       let pendingRecorders = 0;
-      
+
       const checkDone = () => {
         if (pendingRecorders === 0) {
-           this.cleanup();
-           this.options.onStop();
-           resolve({ micBlob, sysBlob });
+          this.cleanup();
+          this.options.onStop();
+          resolve({ micBlob, sysBlob });
         }
       };
 
@@ -473,10 +550,11 @@ export class AudioRecorder {
 
   changeLanguage(language: string): void {
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-      console.log(`[AudioRecorder] Requesting dynamic language change to: ${language}`);
       this.ws.send(JSON.stringify({ type: "change_language", language }));
     } else {
-      console.warn("[AudioRecorder] Cannot change language: WebSocket not open");
+      console.warn(
+        "[AudioRecorder] Cannot change language: WebSocket not open",
+      );
     }
   }
 }

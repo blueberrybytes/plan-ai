@@ -37,5 +37,16 @@ export function useAutoUpdater() {
     // For now, restarting manually works too.
   };
 
-  return { masUpdate, otaAvailable, otaDownloaded, handleMasUpdate, handleOtaRestart };
+  const dismissMasUpdate = () => setMasUpdate(null);
+  const dismissOtaDownloaded = () => setOtaDownloaded(null);
+
+  return { 
+    masUpdate, 
+    otaAvailable, 
+    otaDownloaded, 
+    handleMasUpdate, 
+    handleOtaRestart,
+    dismissMasUpdate,
+    dismissOtaDownloaded
+  };
 }

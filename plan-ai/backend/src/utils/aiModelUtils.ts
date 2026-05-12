@@ -4,6 +4,7 @@ import { AI_MODEL_LIMITS } from "../services/aiContextRouter";
 import prisma from "../prisma/prismaClient";
 
 export const DEFAULT_AI_MODEL = "anthropic/claude-sonnet-4.6";
+export const FAST_AI_MODEL = "google/gemini-2.5-flash";
 export const FALLBACK_MODELS = [
   "openai/gpt-5.5",
   "google/gemini-2.5-flash",

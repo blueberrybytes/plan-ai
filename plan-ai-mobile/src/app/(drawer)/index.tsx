@@ -34,12 +34,20 @@ export default function DashboardScreen() {
   const [syncingIds, setSyncingIds] = useState<string[]>([]);
   const [retryingIds, setRetryingIds] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
 
   const insets = useSafeAreaInsets();
   const theme = useTheme();
   const router = useRouter();
   const navigation = useNavigation();
   const { api, activeWorkspaceId, user } = useAuth();
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+    }, 500);
+    return () => clearTimeout(handler);
+  }, [searchQuery]);
 
   const handleRetry = async (transcriptId: string) => {
     setRetryingIds((prev) => [...prev, transcriptId]);
@@ -55,7 +63,7 @@ export default function DashboardScreen() {
 
   const fetchTranscripts = async () => {
     try {
-      const data = await api.listTranscripts();
+      const data = await api.listTranscripts(debouncedSearch);
       setTranscripts(data || []);
     } catch (e) {
       console.error("Failed to fetch transcripts", e);
@@ -91,7 +99,7 @@ export default function DashboardScreen() {
     useCallback(() => {
       if (activeWorkspaceId === null) return; // Prevent premature fetches causing 'no recordings' false positive
       fetchTranscripts();
-    }, [activeWorkspaceId]),
+    }, [activeWorkspaceId, debouncedSearch]),
   );
 
   // Smart polling mechanism if any transcripts are currently processing
@@ -461,18 +469,20 @@ export default function DashboardScreen() {
           )}
           <FlatList
             data={[
-              ...pendingSyncs.map((p) => ({ ...p, isLocalPending: true })),
+              ...pendingSyncs
+                .map((p) => ({ ...p, isLocalPending: true }))
+                .filter(t => {
+                  if (!searchQuery) return true;
+                  const q = searchQuery.toLowerCase();
+                  return (
+                    t.title?.toLowerCase().includes(q) ||
+                    t.summary?.toLowerCase().includes(q) ||
+                    t.sentiment?.toLowerCase().includes(q) ||
+                    t.transcript?.toLowerCase().includes(q)
+                  );
+                }),
               ...transcripts,
-            ].filter(t => {
-              if (!searchQuery) return true;
-              const q = searchQuery.toLowerCase();
-              return (
-                t.title?.toLowerCase().includes(q) ||
-                t.summary?.toLowerCase().includes(q) ||
-                t.sentiment?.toLowerCase().includes(q) ||
-                t.transcript?.toLowerCase().includes(q)
-              );
-            })}
+            ]}
             keyExtractor={(item) => item.id}
           renderItem={renderItem}
           contentContainerStyle={

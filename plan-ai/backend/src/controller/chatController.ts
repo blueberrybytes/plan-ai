@@ -11,6 +11,7 @@ import {
   getConfiguredModel,
   getFallbackProviderOptions,
   DEFAULT_AI_MODEL,
+  FAST_AI_MODEL,
 } from "../utils/aiModelUtils";
 import { mcpClientService } from "../services/mcpClientService";
 import { aiUsageService } from "../services/aiUsageService";
@@ -518,7 +519,7 @@ CRITICAL: You MUST respond in the EXACT same language that the user used to ask 
     // 4. Generate stateless response using Vercel AI
     try {
       const selectedModel =
-        body.modelKey && body.modelKey.length > 0 ? body.modelKey : DEFAULT_AI_MODEL;
+        body.modelKey && body.modelKey.length > 0 ? body.modelKey : FAST_AI_MODEL;
       const aiResponse = await generateText({
         model: getConfiguredModel(selectedModel),
         providerOptions: getFallbackProviderOptions(selectedModel),
@@ -603,7 +604,7 @@ Format your response exclusively in clean Markdown. Use headings like "### Live 
 
     try {
       const selectedModel =
-        body.modelKey && body.modelKey.length > 0 ? body.modelKey : DEFAULT_AI_MODEL;
+        body.modelKey && body.modelKey.length > 0 ? body.modelKey : FAST_AI_MODEL;
       const aiResponse = await generateText({
         model: getConfiguredModel(selectedModel),
         providerOptions: getFallbackProviderOptions(selectedModel),

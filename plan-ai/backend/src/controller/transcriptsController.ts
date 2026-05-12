@@ -141,9 +141,10 @@ export class TranscriptsController extends BaseWorkspaceController {
     @Query() page = 1,
     @Query() pageSize = 20,
     @Query() source?: TranscriptSource,
+    @Query() q?: string,
   ): Promise<ApiResponse<StandaloneTranscriptListResponse>> {
     const { user, workspaceId } = await this.getAuthorizedWorkspaceAccess(request);
-    const options: TranscriptListOptions = { workspaceId, page, pageSize, source };
+    const options: TranscriptListOptions = { workspaceId, page, pageSize, source, query: q };
 
     const result = await transcriptCrudService.listTranscriptsForUser(user.id, options);
 

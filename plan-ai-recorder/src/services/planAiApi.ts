@@ -163,11 +163,17 @@ export const createPlanAiApi = (
       return handleResponseWithRetry<AiModel[]>(res, () => req(true));
     },
 
-    async listTranscripts(): Promise<Transcript[]> {
-      const req = async (force: boolean) =>
-        safeFetch(`${BASE_URL}/api/transcripts?pageSize=50&source=RECORDING`, {
+    async listTranscripts(q?: string): Promise<Transcript[]> {
+      const req = async (force: boolean) => {
+        const url = new URL(`${BASE_URL}/api/transcripts`);
+        url.searchParams.set("pageSize", "50");
+        url.searchParams.set("source", "RECORDING");
+        if (q) url.searchParams.set("q", q);
+
+        return safeFetch(url.toString(), {
           headers: await getAuthHeaders(force),
         });
+      };
 
       const res = await req(false);
       return handleResponseWithRetry<{ transcripts: Transcript[] }>(res, () => req(true)).then(
