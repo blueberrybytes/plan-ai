@@ -59,7 +59,7 @@ export const githubContextWorker = new Worker<GithubContextJobPayload>(
 
       logger.info(`Executing Repomix on ${githubRepoId}...`);
       const ignorePatterns =
-        "node_modules/**,dist/**,public/**,coverage/**,.env,assets/**,.vscode/**,.git/**,.mypy_cache/**,.pytest_cache/**,.ruff_cache/**,.venv/**,env/**,build/**,.dart_tool/**,ios/**,android/**,windows/**,macos/**,linux/**,jmeter/**,data/**,models/**,ml_models/**,htmlcov/**,.husky/**,.vite/**,.next/**,test/**,tests/**,e2e/**,__tests__/**,fixtures/**,*.json,*.lock,*.yaml,*.sql,*.csv,*.md,*.jmx,*.log,docs/**,*.txt";
+        "node_modules/**,dist/**,public/**,coverage/**,.env,assets/**,.vscode/**,.idea/**,.git/**,.mypy_cache/**,.pytest_cache/**,.ruff_cache/**,.venv/**,env/**,build/**,out/**,.dart_tool/**,ios/**,android/**,windows/**,macos/**,linux/**,jmeter/**,data/**,models/**,ml_models/**,htmlcov/**,.husky/**,.vite/**,.next/**,.nuxt/**,test/**,tests/**,e2e/**,__tests__/**,fixtures/**,*.lock,package-lock.json,yarn.lock,pnpm-lock.yaml,*.sql,*.csv,*.jmx,*.log,*.txt,.DS_Store";
 
       await execAsync(
         `npx repomix . --style xml --compress --ignore "${ignorePatterns}" -o repomix.xml`,
