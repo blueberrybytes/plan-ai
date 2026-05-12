@@ -30,13 +30,30 @@ export class ImageGenerationService {
       let usedProvider = "openrouter";
 
       try {
-        const result = await generateImage({
-          model: openrouter.imageModel("black-forest-labs/flux.2-klein-4b"),
-          prompt,
-          n: 1,
-          size: "1024x1024",
+        const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${EnvUtils.get("OPENROUTER_API_KEY")}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            model: "black-forest-labs/flux.2-klein-4b",
+            messages: [{ role: "user", content: prompt }]
+          })
         });
-        image = result.image;
+
+        if (!response.ok) {
+          throw new Error(`OpenRouter API error: ${await response.text()}`);
+        }
+
+        const data = await response.json();
+        const imageUrl = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+        
+        if (imageUrl && imageUrl.startsWith("data:image/")) {
+          image = { base64: imageUrl.split(",")[1] };
+        } else {
+          throw new Error("No image data returned from OpenRouter Flux");
+        }
       } catch (fluxErr) {
         logger.warn("Flux generation failed, falling back to DALL-E 3", fluxErr);
         const result = await generateImage({
