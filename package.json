@@ -39,7 +39,7 @@
     "coverage": "yarn --cwd plan-ai/backend test:coverage && yarn --cwd plan-ai/frontend test:coverage",
     "register-protocol": "/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -r -domain local -domain system -domain user",
     "studio": "cd plan-ai/backend && npx prisma studio",
-    "tag": "bash -c 'git tag $1 && git push origin $1' --"
+    "push-tag": "bash -c 'git tag $1 && git push origin $1' --"
   },
   "keywords": [
     "plan-ai",
