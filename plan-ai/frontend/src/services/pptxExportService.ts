@@ -52,6 +52,47 @@ const addSlideText = (
   opts: PptxGenJS.TextPropsOptions,
 ) => slide.addText(text, { shrinkText: true, ...opts });
 
+export interface FontConfig {
+  size: number;
+  lineSpacing?: number;
+  paraSpace?: number;
+}
+
+/**
+ * Calculates dynamic font configuration (size, spacing) based on string length.
+ * Allows each slide type to define precise bounding box breakpoints.
+ */
+export const calculateDynamicFontConfig = (
+  textLength: number,
+  baseConfig: FontConfig,
+  breakpoints: Array<{ chars: number; config: FontConfig }>,
+): FontConfig => {
+  let finalConfig = { ...baseConfig };
+  const sorted = [...breakpoints].sort((a, b) => a.chars - b.chars);
+  for (const bp of sorted) {
+    if (textLength >= bp.chars) {
+      finalConfig = { ...finalConfig, ...bp.config };
+    }
+  }
+  return finalConfig;
+};
+
+export const tintShadeHex = (hex: string, percent: number): string => {
+  const cleanHex = hex.replace("#", "");
+  const r = parseInt(cleanHex.substring(0, 2), 16);
+  const g = parseInt(cleanHex.substring(2, 4), 16);
+  const b = parseInt(cleanHex.substring(4, 6), 16);
+
+  const t = percent < 0 ? 0 : 255;
+  const p = Math.abs(percent);
+
+  const R = Math.round((t - r) * p) + r;
+  const G = Math.round((t - g) * p) + g;
+  const B = Math.round((t - b) * p) + b;
+
+  return ((1 << 24) + (R << 16) + (G << 8) + B).toString(16).slice(1).toUpperCase();
+};
+
 export const exportToPptx = async (options: ExportOptions) => {
   const pptx = new PptxGenJS();
   pptx.layout = "LAYOUT_16x9";
@@ -68,10 +109,11 @@ export const exportToPptx = async (options: ExportOptions) => {
   const b = parseInt(bgHex.substring(4, 6), 16) || 0;
   const isDarkMode = (r * 299 + g * 587 + b * 114) / 1000 < 128;
 
-  const bodyTextColor = isDarkMode ? "CBD5E1" : "334155";
-  const mutedTextColor = isDarkMode ? "94A3B8" : "64748B";
-  const cardTitleColor = isDarkMode ? "F8FAFC" : "0F172A";
-  const rootCardBgColor = isDarkMode ? "1E293B" : "F1F5F9";
+  // Deriving tonal palette from the actual background color
+  const bodyTextColor = tintShadeHex(bgHex, isDarkMode ? 0.75 : -0.75);
+  const mutedTextColor = tintShadeHex(bgHex, isDarkMode ? 0.5 : -0.6);
+  const cardTitleColor = tintShadeHex(bgHex, isDarkMode ? 0.95 : -0.95);
+  const rootCardBgColor = tintShadeHex(bgHex, isDarkMode ? 0.08 : -0.05);
 
   const objectsArray: Exclude<PptxGenJS.SlideMasterProps["objects"], undefined> = [];
 
@@ -205,13 +247,21 @@ export const exportToPptx = async (options: ExportOptions) => {
           });
           tbNextY += 0.45;
         }
-        addSlideText(slidePage, String(params.body || ""), {
+        const bodyText = String(params.body || "");
+        const fontConf = calculateDynamicFontConfig(bodyText.length, { size: 14 }, [
+          { chars: 400, config: { size: 13 } },
+          { chars: 600, config: { size: 12 } },
+          { chars: 900, config: { size: 11 } },
+          { chars: 1200, config: { size: 10 } },
+        ]);
+
+        addSlideText(slidePage, bodyText, {
           x: 0.8,
           y: tbNextY,
           w: 8.4,
           h: 5.625 - tbNextY - 0.3,
           fontFace: safeBodyFont,
-          fontSize: 14,
+          fontSize: fontConf.size,
           color: bodyTextColor,
           valign: "top",
         });
@@ -233,24 +283,43 @@ export const exportToPptx = async (options: ExportOptions) => {
           });
           tiNextY += 0.3;
         }
-        addSlideText(slidePage, String(params.title || ""), {
+        const titleText = String(params.title || "");
+        const tConf = calculateDynamicFontConfig(titleText.length, { size: 28 }, [
+          { chars: 40, config: { size: 24 } },
+          { chars: 80, config: { size: 20 } },
+          { chars: 120, config: { size: 18 } },
+        ]);
+        const estLines = Math.max(1, Math.ceil(titleText.length / 25));
+        const tHeight = Math.min(1.5, estLines * (tConf.size * 0.015));
+
+        addSlideText(slidePage, titleText, {
           x: 0.8,
           y: tiNextY,
           w: 4.2,
-          h: 0.9,
+          h: tHeight,
           fontFace: safeHeadingFont,
-          fontSize: 28,
+          fontSize: tConf.size,
           color: primaryColor.replace("#", ""),
           bold: true,
         });
-        tiNextY += 0.95;
-        addSlideText(slidePage, String(params.body || ""), {
+        tiNextY += tHeight + 0.05;
+
+        const bodyText = String(params.body || "");
+        const bConf = calculateDynamicFontConfig(bodyText.length, { size: 14 }, [
+          { chars: 300, config: { size: 13 } },
+          { chars: 500, config: { size: 12 } },
+          { chars: 700, config: { size: 11 } },
+          { chars: 1000, config: { size: 10 } },
+          { chars: 1500, config: { size: 9 } },
+        ]);
+
+        addSlideText(slidePage, bodyText, {
           x: 0.8,
           y: tiNextY,
           w: 4.2,
           h: 5.625 - tiNextY - 0.3,
           fontFace: safeBodyFont,
-          fontSize: 14,
+          fontSize: bConf.size,
           color: bodyTextColor,
           valign: "top",
         });
@@ -308,29 +377,44 @@ export const exportToPptx = async (options: ExportOptions) => {
           });
           blNextY += 0.35;
         }
-        addSlideText(slidePage, String(params.title || ""), {
+        const titleText = String(params.title || "");
+        const tConf = calculateDynamicFontConfig(titleText.length, { size: 28 }, [
+          { chars: 50, config: { size: 24 } },
+          { chars: 100, config: { size: 20 } },
+        ]);
+        const estTitleLines = Math.max(1, Math.ceil(titleText.length / 40));
+        const titleH = Math.min(1.2, estTitleLines * (tConf.size * 0.018));
+
+        addSlideText(slidePage, titleText, {
           x: 0.8,
           y: blNextY,
           w: 8.4,
-          h: 1.0,
+          h: titleH,
           fontFace: safeHeadingFont,
-          fontSize: 28,
+          fontSize: tConf.size,
           color: primaryColor.replace("#", ""),
           bold: true,
         });
-        blNextY += 1.05;
+        blNextY += titleH + 0.05;
 
         if (params.subtitle) {
-          addSlideText(slidePage, String(params.subtitle), {
+          const subText = String(params.subtitle);
+          const subConf = calculateDynamicFontConfig(subText.length, { size: 16 }, [
+            { chars: 80, config: { size: 14 } },
+          ]);
+          const estSubLines = Math.max(1, Math.ceil(subText.length / 60));
+          const subH = Math.min(0.8, estSubLines * (subConf.size * 0.018));
+
+          addSlideText(slidePage, subText, {
             x: 0.8,
             y: blNextY,
             w: 8.4,
-            h: 0.45,
+            h: subH,
             fontFace: safeBodyFont,
-            fontSize: 16,
+            fontSize: subConf.size,
             color: mutedTextColor,
           });
-          blNextY += 0.5;
+          blNextY += subH + 0.05;
         }
 
         const bullets = Array.isArray(params.bullets)
@@ -343,13 +427,32 @@ export const exportToPptx = async (options: ExportOptions) => {
                 .filter(Boolean)
             : [];
 
+        const totalChars = bullets.reduce((sum, b) => sum + b.length, 0);
+        const bulletCount = bullets.length;
+        const effectiveLength = totalChars + bulletCount * 50; // Add weight for bullet line breaks
+
+        const fontConf = calculateDynamicFontConfig(
+          effectiveLength,
+          { size: 18, lineSpacing: 24, paraSpace: 12 }, // Base layout
+          [
+            { chars: 300, config: { size: 16, lineSpacing: 22, paraSpace: 10 } },
+            { chars: 500, config: { size: 14, lineSpacing: 18, paraSpace: 8 } },
+            { chars: 700, config: { size: 12, lineSpacing: 16, paraSpace: 6 } },
+            { chars: 900, config: { size: 11, lineSpacing: 14, paraSpace: 4 } },
+            { chars: 1200, config: { size: 10, lineSpacing: 12, paraSpace: 2 } },
+            { chars: 1600, config: { size: 9, lineSpacing: 11, paraSpace: 1 } },
+            { chars: 2200, config: { size: 8, lineSpacing: 10, paraSpace: 0 } },
+            { chars: 3000, config: { size: 7, lineSpacing: 9, paraSpace: 0 } },
+          ],
+        );
+
         const bulletText = bullets.map((b) => ({
           text: b,
           options: {
             breakLine: true,
             bullet: { code: "2022", color: primaryColor.replace("#", "") },
             marginPt: 0,
-            paraSpaceBefore: 10,
+            paraSpaceBefore: fontConf.paraSpace,
           },
         }));
         addSlideText(slidePage, bulletText as PptxGenJS.TextProps[], {
@@ -358,10 +461,10 @@ export const exportToPptx = async (options: ExportOptions) => {
           w: 8.4,
           h: 5.625 - blNextY - 0.3,
           fontFace: safeBodyFont,
-          fontSize: 16,
+          fontSize: fontConf.size,
           color: bodyTextColor,
           valign: "top",
-          lineSpacing: 22,
+          lineSpacing: fontConf.lineSpacing,
         });
         break;
       }
@@ -407,28 +510,50 @@ export const exportToPptx = async (options: ExportOptions) => {
           fill: { color: rootCardBgColor },
           rectRadius: 0.08,
         });
-        if (params.leftTitle) {
-          addSlideText(slidePage, String(params.leftTitle), {
+
+        let leftCurrentY = colTop + 0.15;
+        const leftTitle = String(params.leftTitle || "");
+        if (leftTitle) {
+          const tConf = calculateDynamicFontConfig(leftTitle.length, { size: 18 }, [
+            { chars: 40, config: { size: 16 } },
+            { chars: 80, config: { size: 14 } },
+            { chars: 150, config: { size: 12 } },
+          ]);
+          const estLines = Math.max(1, Math.ceil(leftTitle.length / 35));
+          const tHeight = Math.min(1.0, estLines * (tConf.size * 0.015));
+
+          addSlideText(slidePage, leftTitle, {
             x: 0.8,
-            y: colTop + 0.15,
+            y: leftCurrentY,
             w: 3.8,
-            h: 0.35,
+            h: tHeight,
             fontFace: safeHeadingFont,
-            fontSize: 18,
+            fontSize: tConf.size,
             color: primaryColor.replace("#", ""),
             bold: true,
           });
+          leftCurrentY += tHeight + 0.05;
         }
-        addSlideText(slidePage, String(params.leftBody || ""), {
-          x: 0.8,
-          y: colTop + 0.55,
-          w: 3.8,
-          h: colH - 0.7,
-          fontFace: safeBodyFont,
-          fontSize: 13,
-          color: mutedTextColor,
-          valign: "top",
-        });
+
+        const leftBody = String(params.leftBody || "");
+        if (leftBody) {
+          const bConf = calculateDynamicFontConfig(leftBody.length, { size: 13 }, [
+            { chars: 200, config: { size: 12 } },
+            { chars: 400, config: { size: 11 } },
+            { chars: 600, config: { size: 10 } },
+            { chars: 800, config: { size: 9 } },
+          ]);
+          addSlideText(slidePage, leftBody, {
+            x: 0.8,
+            y: leftCurrentY,
+            w: 3.8,
+            h: colTop + colH - 0.15 - leftCurrentY,
+            fontFace: safeBodyFont,
+            fontSize: bConf.size,
+            color: mutedTextColor,
+            valign: "top",
+          });
+        }
 
         // Right Column
         slidePage.addShape(pptx.ShapeType.roundRect, {
@@ -439,28 +564,50 @@ export const exportToPptx = async (options: ExportOptions) => {
           fill: { color: rootCardBgColor },
           rectRadius: 0.08,
         });
-        if (params.rightTitle) {
-          addSlideText(slidePage, String(params.rightTitle), {
+
+        let rightCurrentY = colTop + 0.15;
+        const rightTitle = String(params.rightTitle || "");
+        if (rightTitle) {
+          const tConf = calculateDynamicFontConfig(rightTitle.length, { size: 18 }, [
+            { chars: 40, config: { size: 16 } },
+            { chars: 80, config: { size: 14 } },
+            { chars: 150, config: { size: 12 } },
+          ]);
+          const estLines = Math.max(1, Math.ceil(rightTitle.length / 35));
+          const tHeight = Math.min(1.0, estLines * (tConf.size * 0.015));
+
+          addSlideText(slidePage, rightTitle, {
             x: 5.4,
-            y: colTop + 0.15,
+            y: rightCurrentY,
             w: 3.8,
-            h: 0.35,
+            h: tHeight,
             fontFace: safeHeadingFont,
-            fontSize: 18,
+            fontSize: tConf.size,
             color: primaryColor.replace("#", ""),
             bold: true,
           });
+          rightCurrentY += tHeight + 0.05;
         }
-        addSlideText(slidePage, String(params.rightBody || ""), {
-          x: 5.4,
-          y: colTop + 0.55,
-          w: 3.8,
-          h: colH - 0.7,
-          fontFace: safeBodyFont,
-          fontSize: 13,
-          color: mutedTextColor,
-          valign: "top",
-        });
+
+        const rightBody = String(params.rightBody || "");
+        if (rightBody) {
+          const bConf = calculateDynamicFontConfig(rightBody.length, { size: 13 }, [
+            { chars: 200, config: { size: 12 } },
+            { chars: 400, config: { size: 11 } },
+            { chars: 600, config: { size: 10 } },
+            { chars: 800, config: { size: 9 } },
+          ]);
+          addSlideText(slidePage, rightBody, {
+            x: 5.4,
+            y: rightCurrentY,
+            w: 3.8,
+            h: colTop + colH - 0.15 - rightCurrentY,
+            fontFace: safeBodyFont,
+            fontSize: bConf.size,
+            color: mutedTextColor,
+            valign: "top",
+          });
+        }
         break;
       }
 
@@ -536,13 +683,20 @@ export const exportToPptx = async (options: ExportOptions) => {
             bold: true,
           });
         }
-        addSlideText(slidePage, String(params.title || ""), {
+        const titleText = String(params.title || "");
+        const tConf = calculateDynamicFontConfig(titleText.length, { size: 40 }, [
+          { chars: 40, config: { size: 32 } },
+          { chars: 80, config: { size: 24 } },
+          { chars: 150, config: { size: 20 } },
+        ]);
+
+        addSlideText(slidePage, titleText, {
           x: 0.6,
           y: 2,
           w: 3.3,
           h: 2.5,
           fontFace: safeHeadingFont,
-          fontSize: 40,
+          fontSize: tConf.size,
           color: backgroundColor.replace("#", ""),
           bold: true,
           valign: "top",
@@ -568,24 +722,36 @@ export const exportToPptx = async (options: ExportOptions) => {
             color: primaryColor.replace("#", ""),
             bold: true,
           });
-          addSlideText(slidePage, String(kpi.label || ""), {
+          const labelText = String(kpi.label || "");
+          const lConf = calculateDynamicFontConfig(labelText.length, { size: 16 }, [
+            { chars: 30, config: { size: 14 } },
+            { chars: 60, config: { size: 12 } },
+            { chars: 100, config: { size: 10 } },
+          ]);
+          addSlideText(slidePage, labelText, {
             x: 5.2,
             y: yPos + kpiRowH * 0.55,
             w: 4.2,
             h: kpiRowH * 0.3,
             fontFace: safeHeadingFont,
-            fontSize: 16,
+            fontSize: lConf.size,
             color: cardTitleColor,
             bold: true,
           });
           if (kpi.description) {
-            addSlideText(slidePage, String(kpi.description), {
+            const descText = String(kpi.description);
+            const dConf = calculateDynamicFontConfig(descText.length, { size: 11 }, [
+              { chars: 60, config: { size: 10 } },
+              { chars: 120, config: { size: 9 } },
+              { chars: 200, config: { size: 8 } },
+            ]);
+            addSlideText(slidePage, descText, {
               x: 5.2,
               y: yPos + kpiRowH * 0.85,
               w: 4.2,
               h: kpiRowH * 0.15,
               fontFace: safeBodyFont,
-              fontSize: 11,
+              fontSize: dConf.size,
               color: mutedTextColor,
             });
           }
@@ -639,14 +805,22 @@ export const exportToPptx = async (options: ExportOptions) => {
           currentY += 0.3;
         }
 
-        const scTitleH = 1.0;
-        addSlideText(slidePage, String(params.title || ""), {
+        const titleText = String(params.title || "");
+        const tConf = calculateDynamicFontConfig(titleText.length, { size: 28 }, [
+          { chars: 40, config: { size: 24 } },
+          { chars: 80, config: { size: 20 } },
+          { chars: 150, config: { size: 16 } },
+        ]);
+        const estLines = Math.max(1, Math.ceil(titleText.length / 30));
+        const scTitleH = Math.min(1.5, estLines * (tConf.size * 0.015));
+
+        addSlideText(slidePage, titleText, {
           x: 4.8,
           y: currentY,
           w: 4.8,
           h: scTitleH,
           fontFace: safeHeadingFont,
-          fontSize: 28,
+          fontSize: tConf.size,
           color: primaryColor.replace("#", ""),
           bold: true,
           valign: "top",
@@ -697,28 +871,47 @@ export const exportToPptx = async (options: ExportOptions) => {
           });
 
           // Card Title
-          const titleFontSize = cardH < 0.9 ? 14 : 16;
-          addSlideText(slidePage, String(card.title || ""), {
+          const titleText = String(card.title || "");
+          const titleConf = calculateDynamicFontConfig(
+            titleText.length,
+            { size: cardH < 0.9 ? 14 : 16 },
+            [
+              { chars: 30, config: { size: 12 } },
+              { chars: 60, config: { size: 10 } },
+              { chars: 100, config: { size: 9 } },
+            ],
+          );
+          addSlideText(slidePage, titleText, {
             x: 5.3,
             y: yPos + 0.05,
             w: 4.1,
             h: 0.25,
             fontFace: safeHeadingFont,
-            fontSize: titleFontSize,
+            fontSize: titleConf.size,
             color: cardTitleColor,
             bold: true,
             valign: "middle",
           });
 
           // Card Body
-          const bodyFontSize = cardH < 0.9 ? 11 : 12;
-          addSlideText(slidePage, String(card.body || ""), {
+          const bodyText = String(card.body || "");
+          const bodyConf = calculateDynamicFontConfig(
+            bodyText.length,
+            { size: cardH < 0.9 ? 11 : 12 },
+            [
+              { chars: 100, config: { size: 10 } },
+              { chars: 200, config: { size: 9 } },
+              { chars: 300, config: { size: 8 } },
+              { chars: 500, config: { size: 7 } },
+            ],
+          );
+          addSlideText(slidePage, bodyText, {
             x: 5.3,
             y: yPos + 0.32,
             w: 4.1,
             h: cardH - 0.37,
             fontFace: safeBodyFont,
-            fontSize: bodyFontSize,
+            fontSize: bodyConf.size,
             color: mutedTextColor,
             valign: "top",
           });
@@ -740,13 +933,20 @@ export const exportToPptx = async (options: ExportOptions) => {
           });
         }
 
-        addSlideText(slidePage, String(params.title || ""), {
+        const titleText = String(params.title || "");
+        const tConf = calculateDynamicFontConfig(titleText.length, { size: 32 }, [
+          { chars: 40, config: { size: 28 } },
+          { chars: 80, config: { size: 24 } },
+          { chars: 120, config: { size: 20 } },
+        ]);
+
+        addSlideText(slidePage, titleText, {
           x: 0.6,
           y: 0.7,
           w: 8.8,
           h: 0.6,
           fontFace: safeHeadingFont,
-          fontSize: 32,
+          fontSize: tConf.size,
           color: primaryColor.replace("#", ""),
           bold: true,
         });
@@ -790,24 +990,45 @@ export const exportToPptx = async (options: ExportOptions) => {
 
         featItems.forEach((feat: Record<string, unknown>, idx) => {
           const yPos = 1.5 + idx * (featRowH + featGap);
+          const fTitleText = String(feat.title || "");
+          const fTitleConf = calculateDynamicFontConfig(
+            fTitleText.length,
+            { size: featRowH < 0.85 ? 14 : 16 },
+            [
+              { chars: 40, config: { size: 12 } },
+              { chars: 80, config: { size: 11 } },
+            ],
+          );
           const titleH = Math.min(0.3, featRowH * 0.35);
-          addSlideText(slidePage, String(feat.title || ""), {
+
+          addSlideText(slidePage, fTitleText, {
             x: 4.9,
             y: yPos,
             w: 4.7,
             h: titleH,
             fontFace: safeHeadingFont,
-            fontSize: featRowH < 0.85 ? 14 : 16,
+            fontSize: fTitleConf.size,
             color: cardTitleColor,
             bold: true,
           });
-          addSlideText(slidePage, String(feat.description || ""), {
+
+          const fDescText = String(feat.description || "");
+          const fDescConf = calculateDynamicFontConfig(
+            fDescText.length,
+            { size: featRowH < 0.85 ? 11 : 12 },
+            [
+              { chars: 100, config: { size: 10 } },
+              { chars: 200, config: { size: 9 } },
+              { chars: 300, config: { size: 8 } },
+            ],
+          );
+          addSlideText(slidePage, fDescText, {
             x: 4.9,
             y: yPos + titleH,
             w: 4.7,
             h: featRowH - titleH - 0.05,
             fontFace: safeBodyFont,
-            fontSize: featRowH < 0.85 ? 11 : 12,
+            fontSize: fDescConf.size,
             color: mutedTextColor,
             valign: "top",
           });
@@ -888,25 +1109,42 @@ export const exportToPptx = async (options: ExportOptions) => {
           });
 
           const colTitleY = iconY + iconSize + 0.1;
-          addSlideText(slidePage, String(col.title || ""), {
+          const colTitleText = String(col.title || "");
+          const titleConf = calculateDynamicFontConfig(colTitleText.length, { size: 18 }, [
+            { chars: 30, config: { size: 16 } },
+            { chars: 60, config: { size: 14 } },
+            { chars: 100, config: { size: 12 } },
+          ]);
+          const estLines = Math.max(1, Math.ceil(colTitleText.length / 25));
+          const tHeight = Math.min(0.8, estLines * (titleConf.size * 0.015));
+
+          addSlideText(slidePage, colTitleText, {
             x: cx + 0.1,
             y: colTitleY,
             w: colWidth - 0.2,
-            h: 0.4,
+            h: tHeight,
             fontFace: safeHeadingFont,
-            fontSize: 18,
+            fontSize: titleConf.size,
             color: cardTitleColor,
             bold: true,
             align: "center",
           });
-          const colBodyY = colTitleY + 0.45;
-          addSlideText(slidePage, String(col.body || ""), {
+
+          const colBodyText = String(col.body || "");
+          const bodyConf = calculateDynamicFontConfig(colBodyText.length, { size: 13 }, [
+            { chars: 100, config: { size: 12 } },
+            { chars: 200, config: { size: 11 } },
+            { chars: 300, config: { size: 10 } },
+            { chars: 400, config: { size: 9 } },
+          ]);
+          const colBodyY = colTitleY + tHeight + 0.05;
+          addSlideText(slidePage, colBodyText, {
             x: cx,
             y: colBodyY,
             w: colWidth,
             h: colBodyEnd - colBodyY,
             fontFace: safeBodyFont,
-            fontSize: 13,
+            fontSize: bodyConf.size,
             color: mutedTextColor,
             align: "center",
             valign: "top",
@@ -938,13 +1176,22 @@ export const exportToPptx = async (options: ExportOptions) => {
           });
         }
 
-        addSlideText(slidePage, `"${String(params.statement || "")}"`, {
+        const quoteText = String(params.statement || "");
+        const fontConf = calculateDynamicFontConfig(quoteText.length, { size: 36 }, [
+          { chars: 150, config: { size: 28 } },
+          { chars: 300, config: { size: 24 } },
+          { chars: 500, config: { size: 20 } },
+          { chars: 800, config: { size: 16 } },
+          { chars: 1200, config: { size: 14 } },
+        ]);
+
+        addSlideText(slidePage, `"${quoteText}"`, {
           x: 1,
           y: 1.2,
           w: 8,
           h: 3.6,
           fontFace: safeHeadingFont,
-          fontSize: 32,
+          fontSize: fontConf.size,
           color: backgroundColor.replace("#", ""),
           bold: true,
           align: "center",
@@ -979,13 +1226,20 @@ export const exportToPptx = async (options: ExportOptions) => {
             align: "center",
           });
         }
-        addSlideText(slidePage, String(params.title || ""), {
+        const titleText = String(params.title || "");
+        const tConf = calculateDynamicFontConfig(titleText.length, { size: 34 }, [
+          { chars: 40, config: { size: 28 } },
+          { chars: 80, config: { size: 24 } },
+          { chars: 120, config: { size: 20 } },
+        ]);
+
+        addSlideText(slidePage, titleText, {
           x: 0.5,
           y: 0.8,
           w: 9,
           h: 0.6,
           fontFace: safeHeadingFont,
-          fontSize: 34,
+          fontSize: tConf.size,
           color: primaryColor.replace("#", ""),
           bold: true,
           align: "center",
@@ -1023,25 +1277,37 @@ export const exportToPptx = async (options: ExportOptions) => {
             rectRadius: 0.15,
           });
 
-          addSlideText(slidePage, String(stat.value || ""), {
+          const valText = String(stat.value || "");
+          const valConf = calculateDynamicFontConfig(valText.length, { size: isThree ? 38 : 42 }, [
+            { chars: 15, config: { size: 28 } },
+            { chars: 30, config: { size: 20 } },
+          ]);
+
+          addSlideText(slidePage, valText, {
             x: cx,
             y: cy + 0.3,
             w: statW,
             h: 0.6,
             fontFace: safeHeadingFont,
-            fontSize: isThree ? 38 : 42,
+            fontSize: valConf.size,
             color: secondaryColor.replace("#", ""),
             bold: true,
             align: "center",
           });
 
-          addSlideText(slidePage, String(stat.label || "").toUpperCase(), {
+          const labelText = String(stat.label || "").toUpperCase();
+          const lblConf = calculateDynamicFontConfig(labelText.length, { size: 13 }, [
+            { chars: 30, config: { size: 11 } },
+            { chars: 60, config: { size: 9 } },
+          ]);
+
+          addSlideText(slidePage, labelText, {
             x: cx,
             y: cy + 0.9,
             w: statW,
             h: 0.4,
             fontFace: safeBodyFont,
-            fontSize: 13,
+            fontSize: lblConf.size,
             color: cardTitleColor,
             align: "center",
             bold: true,
@@ -1051,13 +1317,20 @@ export const exportToPptx = async (options: ExportOptions) => {
       }
 
       case "team_grid": {
-        addSlideText(slidePage, String(params.title || ""), {
+        const titleText = String(params.title || "");
+        const tConf = calculateDynamicFontConfig(titleText.length, { size: 32 }, [
+          { chars: 40, config: { size: 28 } },
+          { chars: 80, config: { size: 24 } },
+          { chars: 120, config: { size: 20 } },
+        ]);
+
+        addSlideText(slidePage, titleText, {
           x: 0.5,
           y: 0.5,
           w: 9,
           h: 0.6,
           fontFace: safeHeadingFont,
-          fontSize: 32,
+          fontSize: tConf.size,
           color: primaryColor.replace("#", ""),
           bold: true,
           align: "center",
@@ -1089,36 +1362,55 @@ export const exportToPptx = async (options: ExportOptions) => {
             fill: { color: mutedTextColor },
           });
 
-          addSlideText(slidePage, String(mem.name || ""), {
+          const nameText = String(mem.name || "");
+          const nameConf = calculateDynamicFontConfig(nameText.length, { size: 16 }, [
+            { chars: 25, config: { size: 14 } },
+            { chars: 50, config: { size: 12 } },
+          ]);
+          addSlideText(slidePage, nameText, {
             x: cx + 0.1,
             y: 3.2,
             w: memW - 0.2,
             h: 0.4,
             fontFace: safeHeadingFont,
-            fontSize: 16,
+            fontSize: nameConf.size,
             color: cardTitleColor,
             bold: true,
             align: "center",
           });
 
-          addSlideText(slidePage, String(mem.role || ""), {
+          const roleText = String(mem.role || "");
+          const roleConf = calculateDynamicFontConfig(roleText.length, { size: 12 }, [
+            { chars: 30, config: { size: 11 } },
+            { chars: 60, config: { size: 9 } },
+          ]);
+          addSlideText(slidePage, roleText, {
             x: cx + 0.1,
             y: 3.6,
             w: memW - 0.2,
             h: 0.3,
             fontFace: safeBodyFont,
-            fontSize: 12,
+            fontSize: roleConf.size,
             color: primaryColor.replace("#", ""),
             align: "center",
           });
 
-          addSlideText(slidePage, String(mem.bio || ""), {
+          const bioText = String(mem.bio || "");
+          const fontConf = calculateDynamicFontConfig(bioText.length, { size: 12 }, [
+            { chars: 80, config: { size: 11 } },
+            { chars: 120, config: { size: 10 } },
+            { chars: 160, config: { size: 9 } },
+            { chars: 250, config: { size: 8 } },
+            { chars: 400, config: { size: 7 } },
+          ]);
+
+          addSlideText(slidePage, bioText, {
             x: cx + 0.1,
             y: 4.0,
             w: memW - 0.2,
             h: 0.8,
             fontFace: safeBodyFont,
-            fontSize: 11,
+            fontSize: fontConf.size,
             color: mutedTextColor,
             align: "center",
             valign: "top",

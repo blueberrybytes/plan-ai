@@ -28,6 +28,10 @@ import SidebarLayout from "../components/layout/SidebarLayout";
 import PptxSlidePreview from "../components/slides/PptxSlidePreview";
 import { SLIDE_TYPES, SlideTypeDefinition } from "../components/slides/slideTypes";
 import { exportToPptx } from "../services/pptxExportService";
+import MenuItem from "@mui/material/MenuItem";
+import Select from "@mui/material/Select";
+import FormControl from "@mui/material/FormControl";
+import InputLabel from "@mui/material/InputLabel";
 
 const DEFAULT_THEME = {
   primaryColor: "#6366f1",
@@ -37,11 +41,71 @@ const DEFAULT_THEME = {
   bodyFont: "Arial",
 };
 
+type TextDensity = "low" | "medium" | "high";
+
+const LOREM_IPSUM =
+  "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.";
+
+function applyTextDensity(
+  data: Record<string, unknown>,
+  density: TextDensity,
+): Record<string, unknown> {
+  if (density === "low") return data;
+
+  const clone = JSON.parse(JSON.stringify(data));
+  const multiplyString = (str: string) => {
+    if (density === "medium") return str + " " + LOREM_IPSUM.substring(0, 80);
+    if (density === "high") return str + " " + LOREM_IPSUM + " " + LOREM_IPSUM;
+    return str;
+  };
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const walk = (obj: any) => {
+    if (Array.isArray(obj)) {
+      for (let i = 0; i < obj.length; i++) {
+        if (typeof obj[i] === "string") {
+          obj[i] = multiplyString(obj[i]);
+        } else {
+          walk(obj[i]);
+        }
+      }
+    } else if (typeof obj === "object" && obj !== null) {
+      for (const key of Object.keys(obj)) {
+        if (typeof obj[key] === "string") {
+          const skipKeys = [
+            "title",
+            "badge",
+            "label",
+            "value",
+            "name",
+            "role",
+            "subtitle",
+            "imageQuery",
+            "iconName",
+            "mermaidCode",
+          ];
+          if (!skipKeys.includes(key)) {
+            obj[key] = multiplyString(obj[key]);
+          }
+        } else {
+          walk(obj[key]);
+        }
+      }
+    }
+  };
+
+  walk(clone);
+  return clone;
+}
+
 const AdminPptxPreview: React.FC = () => {
   const navigate = useNavigate();
   const [selected, setSelected] = useState<SlideTypeDefinition>(SLIDE_TYPES[0]);
+  const [density, setDensity] = useState<TextDensity>("low");
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
+
+  const currentSampleData = applyTextDensity(selected.sampleData, density);
 
   const handleExportSelected = async () => {
     setExporting(true);
@@ -49,7 +113,7 @@ const AdminPptxPreview: React.FC = () => {
     try {
       await exportToPptx({
         title: `PPTX Preview — ${selected.name}`,
-        slides: [{ slideTypeKey: selected.key, parameters: selected.sampleData }],
+        slides: [{ slideTypeKey: selected.key, parameters: currentSampleData }],
         theme: DEFAULT_THEME,
       });
     } catch (err) {
@@ -67,7 +131,7 @@ const AdminPptxPreview: React.FC = () => {
         title: "PPTX Preview — All Slide Types",
         slides: SLIDE_TYPES.map((st) => ({
           slideTypeKey: st.key,
-          parameters: st.sampleData,
+          parameters: applyTextDensity(st.sampleData, density),
         })),
         theme: DEFAULT_THEME,
       });
@@ -112,6 +176,23 @@ const AdminPptxPreview: React.FC = () => {
           </Box>
 
           <Divider />
+
+          {/* Options */}
+          <Box sx={{ p: 1.5, pb: 0 }}>
+            <FormControl fullWidth size="small">
+              <InputLabel id="density-select-label">Text Density</InputLabel>
+              <Select
+                labelId="density-select-label"
+                value={density}
+                label="Text Density"
+                onChange={(e) => setDensity(e.target.value as TextDensity)}
+              >
+                <MenuItem value="low">Low Text (Default)</MenuItem>
+                <MenuItem value="medium">Medium Text</MenuItem>
+                <MenuItem value="high">High Text (A lot of text)</MenuItem>
+              </Select>
+            </FormControl>
+          </Box>
 
           {/* Export buttons */}
           <Box sx={{ p: 1.5, display: "flex", flexDirection: "column", gap: 1 }}>
@@ -218,7 +299,7 @@ const AdminPptxPreview: React.FC = () => {
             </Typography>
             <PptxSlidePreview
               slideTypeKey={selected.key}
-              params={selected.sampleData}
+              params={currentSampleData}
               theme={DEFAULT_THEME}
               width={900}
             />
@@ -236,7 +317,7 @@ const AdminPptxPreview: React.FC = () => {
               fullWidth
               multiline
               rows={10}
-              value={JSON.stringify(selected.sampleData, null, 2)}
+              value={JSON.stringify(currentSampleData, null, 2)}
               InputProps={{
                 readOnly: true,
                 sx: {

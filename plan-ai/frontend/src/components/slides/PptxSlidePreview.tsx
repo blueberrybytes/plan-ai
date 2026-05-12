@@ -15,6 +15,7 @@
  */
 
 import React from "react";
+import { calculateDynamicFontConfig, tintShadeHex } from "../../services/pptxExportService";
 
 // --------------------------------------------------------------------------
 // PPTX canvas dimensions (inches)
@@ -35,6 +36,11 @@ interface PptxTheme {
   primaryColor: string;
   secondaryColor: string;
   backgroundColor: string;
+  logoUrl?: string;
+  bodyTextColor?: string;
+  mutedTextColor?: string;
+  cardTitleColor?: string;
+  rootCardBgColor?: string;
 }
 
 const DEFAULT_THEME: PptxTheme = {
@@ -188,7 +194,7 @@ const TitleOnlyPreview: React.FC<{ params: Params; theme: PptxTheme & { logoUrl?
       />
     ) : params.iconName ? (
       <React.Fragment>
-        <PptxOval x={4.5} y={0.8} w={1} h={1} fill="#1E293B" />
+        <PptxOval x={4.5} y={0.8} w={1} h={1} fill={theme.rootCardBgColor} />
         <PptxText
           x={4.5}
           y={0.8}
@@ -263,7 +269,7 @@ const TextBlockPreview: React.FC<{ params: Params; theme: PptxTheme }> = ({ para
             w={8.4}
             h={0.6}
             text={str(params.subtitle)}
-            color="#94A3B8"
+            color={theme.mutedTextColor}
             fontSize={22}
           />
           <div style={{ display: "none" }}>{(bodyStartY = 2.4)}</div>
@@ -275,7 +281,7 @@ const TextBlockPreview: React.FC<{ params: Params; theme: PptxTheme }> = ({ para
         w={8.4}
         h={5.625 - bodyStartY - 0.5}
         text={str(params.body)}
-        color="#CBD5E1"
+        color={theme.bodyTextColor}
         fontSize={18}
       />
     </>
@@ -313,7 +319,7 @@ const TextImagePreview: React.FC<{ params: Params; theme: PptxTheme }> = ({ para
       w={4.2}
       h={3.0}
       text={str(params.body)}
-      color="#CBD5E1"
+      color={theme.bodyTextColor}
       fontSize={16}
     />
     {/* Image placeholder */}
@@ -322,7 +328,7 @@ const TextImagePreview: React.FC<{ params: Params; theme: PptxTheme }> = ({ para
       y={0.8}
       w={3.7}
       h={4.0}
-      fill="#1E293B"
+      fill={theme.rootCardBgColor}
       style={{ display: "flex", alignItems: "center", justifyContent: "center" }}
     >
       <span style={{ color: "#475569", fontSize: "0.7em", fontFamily: "Arial" }}>
@@ -343,6 +349,25 @@ const BulletListPreview: React.FC<{ params: Params; theme: PptxTheme }> = ({ par
           .map((b) => b.trim().replace(/^- /, ""))
           .filter(Boolean)
       : [];
+
+  const totalChars = bullets.reduce((sum, b) => sum + b.length, 0);
+  const bulletCount = bullets.length;
+  const effectiveLength = totalChars + bulletCount * 50;
+  const fontConf = calculateDynamicFontConfig(
+    effectiveLength,
+    { size: 18, lineSpacing: 24, paraSpace: 12 },
+    [
+      { chars: 300, config: { size: 16, lineSpacing: 22, paraSpace: 10 } },
+      { chars: 500, config: { size: 14, lineSpacing: 18, paraSpace: 8 } },
+      { chars: 700, config: { size: 12, lineSpacing: 16, paraSpace: 6 } },
+      { chars: 900, config: { size: 11, lineSpacing: 14, paraSpace: 4 } },
+      { chars: 1200, config: { size: 10, lineSpacing: 12, paraSpace: 2 } },
+      { chars: 1600, config: { size: 9, lineSpacing: 11, paraSpace: 1 } },
+      { chars: 2200, config: { size: 8, lineSpacing: 10, paraSpace: 0 } },
+      { chars: 3000, config: { size: 7, lineSpacing: 9, paraSpace: 0 } },
+    ],
+  );
+
   let listStartY = 1.8;
   return (
     <>
@@ -376,7 +401,7 @@ const BulletListPreview: React.FC<{ params: Params; theme: PptxTheme }> = ({ par
             w={8.4}
             h={0.6}
             text={str(params.subtitle)}
-            color="#94A3B8"
+            color={theme.mutedTextColor}
             fontSize={20}
           />
           <div style={{ display: "none" }}>{(listStartY = 2.2)}</div>
@@ -389,20 +414,34 @@ const BulletListPreview: React.FC<{ params: Params; theme: PptxTheme }> = ({ par
           top: py(listStartY),
           width: pw(8.4),
           height: ph(5.625 - listStartY - 0.5),
+          overflow: "hidden",
         }}
       >
         {bullets.map((b, i) => (
-          <div key={i} style={{ display: "flex", alignItems: "flex-start", marginBottom: px(0.2) }}>
+          <div
+            key={i}
+            style={{
+              display: "flex",
+              alignItems: "flex-start",
+              marginBottom: px(fontConf.paraSpace ? fontConf.paraSpace * 0.01 : 0.2),
+            }}
+          >
             <span
               style={{
                 color: theme.primaryColor,
                 marginRight: px(0.15),
-                fontSize: scaleFontSize(18),
+                fontSize: scaleFontSize(fontConf.size),
               }}
             >
               •
             </span>
-            <span style={{ color: "#CBD5E1", fontSize: scaleFontSize(18), lineHeight: 1.33 }}>
+            <span
+              style={{
+                color: theme.bodyTextColor,
+                fontSize: scaleFontSize(fontConf.size),
+                lineHeight: 1.2,
+              }}
+            >
               {b}
             </span>
           </div>
@@ -440,7 +479,7 @@ const TwoColumnsPreview: React.FC<{ params: Params; theme: PptxTheme }> = ({ par
       align="center"
     />
     {/* Left column */}
-    <PptxBox x={0.6} y={1.5} w={4.2} h={3.8} fill="#1E293B" />
+    <PptxBox x={0.6} y={1.5} w={4.2} h={3.8} fill={theme.rootCardBgColor} />
     {params.leftTitle && (
       <PptxText
         x={0.8}
@@ -459,11 +498,11 @@ const TwoColumnsPreview: React.FC<{ params: Params; theme: PptxTheme }> = ({ par
       w={3.8}
       h={2.9}
       text={str(params.leftBody)}
-      color="#94A3B8"
+      color={theme.mutedTextColor}
       fontSize={15}
     />
     {/* Right column */}
-    <PptxBox x={5.2} y={1.5} w={4.2} h={3.8} fill="#1E293B" />
+    <PptxBox x={5.2} y={1.5} w={4.2} h={3.8} fill={theme.rootCardBgColor} />
     {params.rightTitle && (
       <PptxText
         x={5.4}
@@ -482,7 +521,7 @@ const TwoColumnsPreview: React.FC<{ params: Params; theme: PptxTheme }> = ({ par
       w={3.8}
       h={2.9}
       text={str(params.rightBody)}
-      color="#94A3B8"
+      color={theme.mutedTextColor}
       fontSize={15}
     />
   </>
@@ -507,7 +546,7 @@ const ShowcasePreview: React.FC<{ params: Params; theme: PptxTheme }> = ({ param
       y={1.2}
       w={7}
       h={3.5}
-      fill="#1E293B"
+      fill={theme.rootCardBgColor}
       style={{ display: "flex", alignItems: "center", justifyContent: "center" }}
     >
       <span style={{ color: "#475569", fontSize: "0.8em", fontFamily: "Arial" }}>📷 Image</span>
@@ -519,7 +558,7 @@ const ShowcasePreview: React.FC<{ params: Params; theme: PptxTheme }> = ({ param
         w={8}
         h={0.5}
         text={str(params.caption)}
-        color="#94A3B8"
+        color={theme.mutedTextColor}
         fontSize={14}
         align="center"
       />
@@ -575,7 +614,7 @@ const SplitKpiPreview: React.FC<{ params: Params; theme: PptxTheme }> = ({ param
               w={4.2}
               h={0.4}
               text={str(kpi.label)}
-              color="#F8FAFC"
+              color={theme.cardTitleColor}
               fontSize={18}
               bold
             />
@@ -586,7 +625,7 @@ const SplitKpiPreview: React.FC<{ params: Params; theme: PptxTheme }> = ({ param
                 w={4.2}
                 h={0.3}
                 text={str(kpi.description)}
-                color="#94A3B8"
+                color={theme.mutedTextColor}
                 fontSize={13}
               />
             )}
@@ -628,14 +667,14 @@ const SplitCardsPreview: React.FC<{ params: Params; theme: PptxTheme }> = ({ par
         const yPos = 0.8 + idx * 1.6;
         return (
           <React.Fragment key={idx}>
-            <PptxBox x={4.5} y={yPos} w={5} h={1.4} fill="#1E293B" />
+            <PptxBox x={4.5} y={yPos} w={5} h={1.4} fill={theme.rootCardBgColor} />
             <PptxText
               x={4.8}
               y={yPos + 0.2}
               w={4.4}
               h={0.4}
               text={str(card.title)}
-              color="#F8FAFC"
+              color={theme.cardTitleColor}
               fontSize={20}
               bold
             />
@@ -645,7 +684,7 @@ const SplitCardsPreview: React.FC<{ params: Params; theme: PptxTheme }> = ({ par
               w={4.4}
               h={0.6}
               text={str(card.body)}
-              color="#94A3B8"
+              color={theme.mutedTextColor}
               fontSize={14}
             />
           </React.Fragment>
@@ -690,7 +729,7 @@ const ImageWithListPreview: React.FC<{ params: Params; theme: PptxTheme }> = ({
         y={1.5}
         w={4}
         h={3.5}
-        fill="#1E293B"
+        fill={theme.rootCardBgColor}
         style={{ display: "flex", alignItems: "center", justifyContent: "center" }}
       >
         <span style={{ color: "#475569", fontSize: "0.7em", fontFamily: "Arial" }}>📷</span>
@@ -705,7 +744,7 @@ const ImageWithListPreview: React.FC<{ params: Params; theme: PptxTheme }> = ({
               w={4.7}
               h={0.4}
               text={str(feat.title)}
-              color="#F8FAFC"
+              color={theme.cardTitleColor}
               fontSize={18}
               bold
             />
@@ -715,7 +754,7 @@ const ImageWithListPreview: React.FC<{ params: Params; theme: PptxTheme }> = ({
               w={4.7}
               h={0.6}
               text={str(feat.description)}
-              color="#94A3B8"
+              color={theme.mutedTextColor}
               fontSize={13}
             />
           </React.Fragment>
@@ -764,7 +803,7 @@ const ThreeColumnsPreview: React.FC<{ params: Params; theme: PptxTheme }> = ({ p
           w={8}
           h={0.5}
           text={str(params.subtitle)}
-          color="#CBD5E1"
+          color={theme.bodyTextColor}
           fontSize={16}
           align="center"
         />
@@ -773,7 +812,7 @@ const ThreeColumnsPreview: React.FC<{ params: Params; theme: PptxTheme }> = ({ p
         const cx = startX + idx * (colWidth + spacing);
         return (
           <React.Fragment key={idx}>
-            <PptxBox x={cx} y={1.8} w={colWidth} h={3.5} fill="#1E293B" />
+            <PptxBox x={cx} y={1.8} w={colWidth} h={3.5} fill={theme.rootCardBgColor} />
             <PptxText
               x={cx + 0.2}
               y={2.1}
@@ -791,7 +830,7 @@ const ThreeColumnsPreview: React.FC<{ params: Params; theme: PptxTheme }> = ({ p
               w={colWidth - 0.4}
               h={2.5}
               text={str(col.body)}
-              color="#94A3B8"
+              color={theme.mutedTextColor}
               fontSize={14}
               align="center"
             />
@@ -806,36 +845,47 @@ const ThreeColumnsPreview: React.FC<{ params: Params; theme: PptxTheme }> = ({ p
 const QuoteShowcasePreview: React.FC<{ params: Params; theme: PptxTheme }> = ({
   params,
   theme,
-}) => (
-  <>
-    <PptxBox x={0} y={0} w={10} h={5.625} fill={theme.primaryColor} />
-    {params.badge && (
+}) => {
+  const quoteText = str(params.statement);
+  const fontConf = calculateDynamicFontConfig(quoteText.length, { size: 36 }, [
+    { chars: 150, config: { size: 28 } },
+    { chars: 300, config: { size: 24 } },
+    { chars: 500, config: { size: 20 } },
+    { chars: 800, config: { size: 16 } },
+    { chars: 1200, config: { size: 14 } },
+  ]);
+
+  return (
+    <>
+      <PptxBox x={0} y={0} w={10} h={5.625} fill={theme.primaryColor} />
+      {params.badge && (
+        <PptxText
+          x={1}
+          y={0.6}
+          w={8}
+          h={0.4}
+          text={str(params.badge).toUpperCase()}
+          color={theme.backgroundColor}
+          fontSize={13}
+          bold
+          align="center"
+        />
+      )}
       <PptxText
         x={1}
-        y={1.5}
+        y={1.2}
         w={8}
-        h={0.5}
-        text={str(params.badge).toUpperCase()}
+        h={3.6}
+        text={`"${quoteText}"`}
         color={theme.backgroundColor}
-        fontSize={14}
+        fontSize={fontConf.size}
         bold
         align="center"
+        valign="middle"
       />
-    )}
-    <PptxText
-      x={1}
-      y={2}
-      w={8}
-      h={2.5}
-      text={`"${str(params.statement)}"`}
-      color={theme.backgroundColor}
-      fontSize={42}
-      bold
-      align="center"
-      valign="middle"
-    />
-  </>
-);
+    </>
+  );
+};
 
 // --- stats ---
 const StatsPreview: React.FC<{ params: Params; theme: PptxTheme }> = ({ params, theme }) => {
@@ -878,7 +928,7 @@ const StatsPreview: React.FC<{ params: Params; theme: PptxTheme }> = ({ params, 
         const cy = startY + row * (statH + 0.3);
         return (
           <React.Fragment key={idx}>
-            <PptxBox x={cx} y={cy} w={statW} h={statH} fill="#1E293B" />
+            <PptxBox x={cx} y={cy} w={statW} h={statH} fill={theme.rootCardBgColor} />
             <PptxText
               x={cx}
               y={cy + 0.3}
@@ -896,7 +946,7 @@ const StatsPreview: React.FC<{ params: Params; theme: PptxTheme }> = ({ params, 
               w={statW}
               h={0.4}
               text={str(stat.label)}
-              color="#F8FAFC"
+              color={theme.cardTitleColor}
               fontSize={16}
               align="center"
             />
@@ -930,7 +980,7 @@ const TeamGridPreview: React.FC<{ params: Params; theme: PptxTheme }> = ({ param
         const cx = startX + idx * (memW + spacing);
         return (
           <React.Fragment key={idx}>
-            <PptxBox x={cx} y={1.5} w={memW} h={3.5} fill="#1E293B" />
+            <PptxBox x={cx} y={1.5} w={memW} h={3.5} fill={theme.rootCardBgColor} />
             <PptxOval x={cx + memW / 2 - 0.6} y={1.8} w={1.2} h={1.2} fill="#334155" />
             <PptxText
               x={cx + 0.1}
@@ -938,7 +988,7 @@ const TeamGridPreview: React.FC<{ params: Params; theme: PptxTheme }> = ({ param
               w={memW - 0.2}
               h={0.4}
               text={str(mem.name)}
-              color="#F8FAFC"
+              color={theme.cardTitleColor}
               fontSize={16}
               bold
               align="center"
@@ -959,7 +1009,7 @@ const TeamGridPreview: React.FC<{ params: Params; theme: PptxTheme }> = ({ param
               w={memW - 0.2}
               h={0.8}
               text={str(mem.bio)}
-              color="#94A3B8"
+              color={theme.mutedTextColor}
               fontSize={11}
               align="center"
             />
@@ -1050,6 +1100,18 @@ const PptxSlidePreview: React.FC<PptxSlidePreviewProps> = ({
   label,
 }) => {
   const mergedTheme: PptxTheme = { ...DEFAULT_THEME, ...theme };
+
+  const bgHex = mergedTheme.backgroundColor.replace("#", "");
+  const r = parseInt(bgHex.substring(0, 2), 16) || 0;
+  const g = parseInt(bgHex.substring(2, 4), 16) || 0;
+  const b = parseInt(bgHex.substring(4, 6), 16) || 0;
+  const isDarkMode = (r * 299 + g * 587 + b * 114) / 1000 < 128;
+
+  mergedTheme.bodyTextColor = "#" + tintShadeHex(bgHex, isDarkMode ? 0.75 : -0.75);
+  mergedTheme.mutedTextColor = "#" + tintShadeHex(bgHex, isDarkMode ? 0.5 : -0.6);
+  mergedTheme.cardTitleColor = "#" + tintShadeHex(bgHex, isDarkMode ? 0.95 : -0.95);
+  mergedTheme.rootCardBgColor = "#" + tintShadeHex(bgHex, isDarkMode ? 0.08 : -0.05);
+
   const height = width * (PPTX_H / PPTX_W);
   const SlideContent = SLIDE_RENDERERS[slideTypeKey];
 
