@@ -503,6 +503,7 @@ class JiraIntegrationService {
 
     const task = await prisma.task.findUnique({
       where: { id: taskId },
+      include: { project: true },
     });
 
     if (!task) {
@@ -531,6 +532,11 @@ class JiraIntegrationService {
     const cleanUrl = siteUrl.replace(/\/$/, "");
 
     const documentContent: Record<string, unknown>[] = [];
+    documentContent.push({
+      type: "paragraph",
+      content: [{ type: "text", text: `🤖 Plan AI Auto-Task | 📁 Project: ${task.project.title}` }],
+    });
+    
     if (task.summary) {
       documentContent.push({
         type: "paragraph",
@@ -588,7 +594,7 @@ class JiraIntegrationService {
     const payload: Record<string, unknown> = {
       fields: {
         project: { id: projectId },
-        summary: (task.title || `Extracted Task ${task.id}`).substring(0, 250),
+        summary: (`[📁 ${task.project.title}] ` + (task.title || `Extracted Task ${task.id}`)).substring(0, 250),
         duedate: task.dueDate ? new Date(task.dueDate).toISOString().split("T")[0] : undefined,
         description: {
           type: "doc",

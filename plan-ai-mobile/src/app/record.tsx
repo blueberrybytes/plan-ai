@@ -369,6 +369,22 @@ export default function RecordScreen() {
     };
   }, [phase, api]);
 
+  const getDefaultMeetingTitle = () => {
+    const now = new Date();
+    const hour = now.getHours();
+    let timeLabel = "Meeting";
+    if (hour < 12) timeLabel = "Morning Sync";
+    else if (hour < 17) timeLabel = "Afternoon Sync";
+    else timeLabel = "Evening Sync";
+    const formattedDate = new Intl.DateTimeFormat(undefined, {
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+    }).format(now);
+    return `${timeLabel} (${formattedDate})`;
+  };
+
   const handleSendChat = async () => {
     const msg = chatMessage.trim();
     if (!msg || !api) return;
@@ -767,7 +783,7 @@ export default function RecordScreen() {
 
       await api.saveRecording({
         content: transcript,
-        title: title || `Mobile Meeting - ${new Date().toLocaleDateString()}`,
+        title: title || getDefaultMeetingTitle(),
         recordedAt: new Date().toISOString(),
         projectId: selectedProjectId || undefined,
         contextIds:
@@ -807,7 +823,7 @@ export default function RecordScreen() {
 
         const payload = {
           id: uuid,
-          title: title || `Mobile Meeting - ${new Date().toLocaleDateString()}`,
+          title: title || getDefaultMeetingTitle(),
           transcript,
           projectId: selectedProjectId || undefined,
           contextIds: selectedContextIds,
@@ -954,7 +970,7 @@ export default function RecordScreen() {
               <TextInput
                 value={title}
                 onChangeText={setTitle}
-                placeholder={`Mobile Meeting - ${new Date().toLocaleDateString()}`}
+                placeholder={getDefaultMeetingTitle()}
                 mode="outlined"
               />
             </View>

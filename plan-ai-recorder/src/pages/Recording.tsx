@@ -352,10 +352,38 @@ const Recording: React.FC = () => {
 
       let targetProjectId = selectedProjectId;
 
-      // If no project selected, automatically create a new one to hold the generated tasks
       if (!targetProjectId) {
+        const now = new Date();
+        const hour = now.getHours();
+        let timeLabel = "Meeting";
+        if (hour < 12) timeLabel = "Morning Sync";
+        else if (hour < 17) timeLabel = "Afternoon Sync";
+        else timeLabel = "Evening Sync";
+
+        const formattedDate = new Intl.DateTimeFormat(navigator.language || 'en-US', {
+          month: 'short',
+          day: 'numeric',
+          hour: 'numeric',
+          minute: '2-digit'
+        }).format(now);
+
+        let aiTitle: string | null = null;
+        try {
+          if (!skipAi && fullPayload.length > 50) {
+            const res = await api.sendLiveChatMessage({
+              content: "Generate a short, concise, 3-5 word title for this meeting based on the transcript. Reply ONLY with the title string, no quotes.",
+              liveTranscript: fullPayload,
+            });
+            if (res.response) {
+              aiTitle = res.response.replace(/["']/g, "").trim();
+            }
+          }
+        } catch (e) {
+          console.warn("Failed to generate AI project title", e);
+        }
+
         const newProject = await api.createProject({
-          title: `Recording on ${new Date().toLocaleDateString()}`,
+          title: aiTitle || `${timeLabel} (${formattedDate})`,
           description:
             "Automatically created to hold tasks generated from your recent audio recording.",
         });

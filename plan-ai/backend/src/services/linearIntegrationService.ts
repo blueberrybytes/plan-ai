@@ -153,6 +153,7 @@ class LinearIntegrationService {
 
     const task = await prisma.task.findUnique({
       where: { id: taskId },
+      include: { project: true },
     });
 
     if (!task) {
@@ -161,7 +162,7 @@ class LinearIntegrationService {
 
     const client = new LinearClient({ apiKey: integration.accessToken });
 
-    let description = "Generated via Blueberry Plan AI\n\n";
+    let description = `🤖 **Plan AI Auto-Task** | 📁 **Project:** ${task.project.title}\n---\n\n`;
     if (task.summary) {
       description += `${task.summary}\n\n`;
     }
@@ -185,9 +186,10 @@ class LinearIntegrationService {
       }
     }
 
+    const prefix = `[📁 ${task.project.title}] `;
     const issuePayload = await client.createIssue({
       teamId,
-      title: task.title || `Extracted Task ${task.id}`,
+      title: `${prefix}${task.title || `Extracted Task ${task.id}`}`,
       description,
       estimate: task.storyPoints ?? undefined,
       dueDate: task.dueDate ? new Date(task.dueDate).toISOString().split("T")[0] : undefined,

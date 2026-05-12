@@ -239,6 +239,7 @@ model Transcript {
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
   projectId       String?
+  contextIds      String[]
   userId          String
   workspaceId     String
 

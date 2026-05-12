@@ -324,6 +324,7 @@ export class TranscriptsController extends BaseWorkspaceController {
         recordedAt: recordedAt ? new Date(recordedAt) : null,
         rawMicUrl,
         rawSysUrl,
+        contextIds: contextIdsArray,
         metadata: {
           processingStatus: skipAi === "true" ? "DONE" : "PENDING",
           ...(locationObj ? { location: locationObj } : {}),

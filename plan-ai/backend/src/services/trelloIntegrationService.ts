@@ -194,10 +194,14 @@ class TrelloIntegrationService {
       throw new Error("Trello is not connected");
     }
 
-    const task = await prisma.task.findUnique({ where: { id: taskId } });
+    const task = await prisma.task.findUnique({
+      where: { id: taskId },
+      include: { project: true },
+    });
     if (!task) throw new Error("Task not found");
 
     const descLines = [];
+    descLines.push(`🤖 **Plan AI Auto-Task** | 📁 **Project:** ${task.project.title}\n---\n`);
     if (task.summary) descLines.push(`**Summary**\n${task.summary}\n`);
     if (task.description) descLines.push(`**Description**\n${task.description}\n`);
     if (task.acceptanceCriteria)
@@ -210,8 +214,9 @@ class TrelloIntegrationService {
 
     const { apiKey, token } = this.getCredentials(integration.accessToken);
 
+    const prefix = `[📁 ${task.project.title}] `;
     const qsParams: Record<string, string> = {
-      name: task.title,
+      name: `${prefix}${task.title}`,
       desc: descLines.join("\n"),
       idList: listId,
     };
