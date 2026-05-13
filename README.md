@@ -349,4 +349,4 @@ Plan AI is built with privacy in mind. When you self-host, your data remains com
 * **Secrets:** All `.env` files and Google service accounts are strictly excluded from version control to prevent accidental leaks.
 
 ## 📄 License
-This project is licensed under the **Business Source License (BSL 1.1)**. You are free to use Plan AI internally for your business operations. However, you may not use this code to offer a competing commercial SaaS product. On May 1st, 2030, the license automatically converts to the **GNU Affero General Public License v3.0 (AGPLv3)**. See the `LICENSE` file for details.
+This project is licensed under the **PolyForm Noncommercial License 1.0.0**. This allows you to use, modify, and run the software for personal, academic, or non-profit purposes, but strictly prohibits commercial use or monetization. Commercial support, custom enterprise builds, and commercial licensing are available via Blueberrybytes. See the `LICENSE` file for details.

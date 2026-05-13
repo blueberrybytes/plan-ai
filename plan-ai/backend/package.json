@@ -33,7 +33,7 @@
     "backend"
   ],
   "author": "",
-  "license": "BUSL-1.1",
+  "license": "PolyForm-Noncommercial-1.0.0",
   "resolutions": {
     "rollup": "4.52.5"
   },

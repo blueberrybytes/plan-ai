@@ -53,7 +53,7 @@
     "blueberrybytes"
   ],
   "author": "Xavier Masleszkiewicz",
-  "license": "BUSL-1.1",
+  "license": "PolyForm-Noncommercial-1.0.0",
   "devDependencies": {
     "@types/node": "^22.15.17",
     "concurrently": "^9.2.1",

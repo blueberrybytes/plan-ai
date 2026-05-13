@@ -1,6 +1,6 @@
 # Plan AI – From meeting to done, in seconds
 
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![License: PolyForm Noncommercial 1.0.0](https://img.shields.io/badge/license-PolyForm%20Noncommercial-blue.svg)](LICENSE)
 [![Status](https://img.shields.io/badge/status-alpha-orange.svg)](#roadmap--status)
 [![Made by Blueberrybytes](https://img.shields.io/badge/made%20by-Blueberry%20Bytes-5027FF.svg)](https://www.blueberrybytes.com)
 
@@ -358,7 +358,7 @@ We follow semantic versioning (`vMAJOR.MINOR.PATCH`). See [`docs/RELEASES.md`](d
 
 ## License
 
-Plan AI is released under the [MIT License](LICENSE). Commercial support and custom builds are available via Blueberrybytes.
+Plan AI is released under the [PolyForm Noncommercial License 1.0.0](LICENSE). This allows you to use, modify, and run the software for personal, academic, or non-profit purposes, but strictly prohibits commercial use or monetization. Commercial support, custom enterprise builds, and commercial licensing are available via Blueberrybytes.
 
 ---
 
