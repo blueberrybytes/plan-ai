@@ -40,6 +40,12 @@ export const linearApi = createApi({
       }),
       invalidatesTags: ["LinearIntegration"],
     }),
+    getLinearAuthUrl: builder.query<{ data: { authorizationUrl: string } }, void>({
+      query: () => ({
+        url: "/api/linear/auth-url",
+        method: "GET",
+      }),
+    }),
   }),
 });
 
@@ -48,4 +54,5 @@ export const {
   useGetLinearSummaryQuery,
   useGetLinearTeamsQuery,
   useSetLinearDefaultTeamMutation,
+  useLazyGetLinearAuthUrlQuery,
 } = linearApi;

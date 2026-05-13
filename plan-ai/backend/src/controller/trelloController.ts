@@ -1,4 +1,4 @@
-import { Body, Get, Post, Request, Route, Security, Tags, Response, Path } from "tsoa";
+import { Body, Get, Post, Request, Route, Security, Tags, Response, Path, Query } from "tsoa";
 import { BaseWorkspaceController } from "./BaseWorkspaceController";
 import type { AuthenticatedRequest } from "../middleware/authMiddleware";
 import type { ApiResponse } from "./controllerTypes";
@@ -21,10 +21,10 @@ export class TrelloController extends BaseWorkspaceController {
     @Request() request: AuthenticatedRequest,
     @Body() body: TrelloManualConnectRequest,
   ): Promise<ApiResponse<null>> {
-    const { user } = await this.getAuthorizedWorkspaceAccess(request);
+    const { workspaceId } = await this.requireAdminOrOwner(request);
 
     try {
-      await trelloIntegrationService.verifyManualCredentials(user.id, body);
+      await trelloIntegrationService.verifyManualCredentials(workspaceId, body);
       return {
         status: 200,
         data: null,
@@ -39,15 +39,55 @@ export class TrelloController extends BaseWorkspaceController {
     }
   }
 
+  @Get("auth")
+  @Security("ClientLevel")
+  public async getAuthorizationUrl(
+    @Request() request: AuthenticatedRequest,
+    @Query() returnUrl: string,
+  ): Promise<ApiResponse<{ authorizationUrl: string }>> {
+    await this.requireAdminOrOwner(request);
+    
+    const apiKey = process.env.TRELLO_GLOBAL_API_KEY;
+    if (!apiKey) {
+      this.setStatus(500);
+      return { status: 500, data: null as any, message: "Trello Global API Key is not configured" };
+    }
+
+    const authorizationUrl = `https://trello.com/1/authorize?key=${apiKey}&name=Plan%20AI&scope=read,write&expiration=never&response_type=token&return_url=${encodeURIComponent(returnUrl)}`;
+    return { status: 200, data: { authorizationUrl } };
+  }
+
+  @Post("auto-connect")
+  @Security("ClientLevel")
+  @Response<ApiResponse<null>>(400, "Validation Error")
+  public async autoConnect(
+    @Request() request: AuthenticatedRequest,
+    @Body() body: { token: string },
+  ): Promise<ApiResponse<null>> {
+    const { workspaceId } = await this.requireAdminOrOwner(request);
+
+    try {
+      await trelloIntegrationService.verifyAutoConnectToken(workspaceId, body.token);
+      return { status: 200, data: null };
+    } catch (error) {
+      this.setStatus(400);
+      return {
+        status: 400,
+        data: null,
+        message: error instanceof Error ? error.message : "Failed to auto-connect to Trello",
+      };
+    }
+  }
+
   @Get("summary")
   @Security("ClientLevel")
   public async getSummary(
     @Request() request: AuthenticatedRequest,
   ): Promise<ApiResponse<TrelloSummaryResponse>> {
-    const { user } = await this.getAuthorizedWorkspaceAccess(request);
+    const { workspaceId } = await this.getAuthorizedWorkspaceAccess(request);
 
     try {
-      const summary = await trelloIntegrationService.getTrelloSummary(user.id);
+      const summary = await trelloIntegrationService.getTrelloSummary(workspaceId);
       return {
         status: 200,
         data: summary,
@@ -67,9 +107,9 @@ export class TrelloController extends BaseWorkspaceController {
   public async getBoards(
     @Request() request: AuthenticatedRequest,
   ): Promise<ApiResponse<TrelloBoardItem[]>> {
-    const { user } = await this.getAuthorizedWorkspaceAccess(request);
+    const { workspaceId } = await this.getAuthorizedWorkspaceAccess(request);
     try {
-      const boards = await trelloIntegrationService.listTrelloBoards(user.id);
+      const boards = await trelloIntegrationService.listTrelloBoards(workspaceId);
       return { status: 200, data: boards };
     } catch (error) {
       this.setStatus(400);
@@ -87,9 +127,9 @@ export class TrelloController extends BaseWorkspaceController {
     @Request() request: AuthenticatedRequest,
     @Path() boardId: string,
   ): Promise<ApiResponse<TrelloListItem[]>> {
-    const { user } = await this.getAuthorizedWorkspaceAccess(request);
+    const { workspaceId } = await this.getAuthorizedWorkspaceAccess(request);
     try {
-      const lists = await trelloIntegrationService.listTrelloLists(user.id, boardId);
+      const lists = await trelloIntegrationService.listTrelloLists(workspaceId, boardId);
       return { status: 200, data: lists };
     } catch (error) {
       this.setStatus(400);
@@ -107,10 +147,10 @@ export class TrelloController extends BaseWorkspaceController {
     @Request() request: AuthenticatedRequest,
     @Body() body: SetDefaultTrelloBoardListRequest,
   ): Promise<ApiResponse<null>> {
-    const { user } = await this.getAuthorizedWorkspaceAccess(request);
+    const { workspaceId } = await this.requireAdminOrOwner(request);
     try {
       await trelloIntegrationService.setDefaultTrelloBoardAndList(
-        user.id,
+        workspaceId,
         body.boardId,
         body.listId,
       );

@@ -592,6 +592,7 @@ enum IntegrationProvider {
   GITHUB
   GOOGLE_DRIVE
   TRELLO
+  NOTION
 }
 
 enum IntegrationStatus {

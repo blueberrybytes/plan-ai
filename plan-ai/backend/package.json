@@ -49,6 +49,7 @@
     "@linear/sdk": "^81.0.0",
     "@modelcontextprotocol/sdk": "^1.29.0",
     "@mozilla/readability": "^0.6.0",
+    "@notionhq/client": "^5.21.0",
     "@octokit/auth-app": "^8.2.0",
     "@octokit/webhooks": "^14.2.0",
     "@openrouter/ai-sdk-provider": "^2.2.3",

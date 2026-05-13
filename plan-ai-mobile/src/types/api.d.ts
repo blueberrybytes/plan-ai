@@ -157,6 +157,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/trello/auth": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetAuthorizationUrl"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/trello/auto-connect": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AutoConnect"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/trello/summary": {
         parameters: {
             query?: never;
@@ -828,6 +860,86 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/notion/auth-url": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetAuthUrl"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/notion/callback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["HandleNotionCallback"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/notion/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetSummary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/notion/databases": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetDatabases"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/notion/default-database": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["SetDefaultDatabase"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/linear/manual-connect": {
         parameters: {
             query?: never;
@@ -838,6 +950,38 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["ManualConnect"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/linear/auth-url": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetAuthUrl"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/linear/callback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["HandleLinearCallback"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -1014,7 +1158,7 @@ export interface paths {
         get: operations["GetIntegration"];
         put?: never;
         post?: never;
-        delete?: never;
+        delete: operations["DisconnectIntegration"];
         options?: never;
         head?: never;
         patch?: never;
@@ -1886,6 +2030,14 @@ export interface components {
             apiKey: string;
             token: string;
         };
+        "ApiResponse__authorizationUrl-string__": {
+            message?: string;
+            data: {
+                authorizationUrl: string;
+            } | null;
+            /** Format: double */
+            status: number;
+        };
         TrelloSummaryResponse: {
             /** Format: double */
             totalBoards: number;
@@ -2282,6 +2434,7 @@ export interface components {
             syncToJira?: boolean;
             syncToLinear?: boolean;
             syncToTrello?: boolean;
+            syncToNotion?: boolean;
             /** @enum {string} */
             taskStrategy?: "AUTO" | "SINGLE_TICKET" | "SPECIFIC_COUNT";
             /** Format: double */
@@ -2321,6 +2474,10 @@ export interface components {
                 shortLink: string;
                 url: string;
                 cardId: string;
+            };
+            notion?: {
+                url: string;
+                pageId: string;
             };
         };
         ApiResponse_TaskMetadata_: {
@@ -2607,6 +2764,31 @@ export interface components {
             openRouterKey?: string;
             deepgramKey?: string;
         };
+        NotionSummaryResponse: {
+            /** Format: double */
+            totalDatabases: number;
+            latestDatabases: string[];
+        };
+        ApiResponse_NotionSummaryResponse_: {
+            message?: string;
+            data: components["schemas"]["NotionSummaryResponse"] | null;
+            /** Format: double */
+            status: number;
+        };
+        NotionDatabaseItem: {
+            id: string;
+            name: string;
+            url: string;
+        };
+        "ApiResponse_NotionDatabaseItem-Array_": {
+            message?: string;
+            data: components["schemas"]["NotionDatabaseItem"][] | null;
+            /** Format: double */
+            status: number;
+        };
+        SetDefaultDatabaseRequest: {
+            databaseId: string;
+        };
         LinearManualConnectRequest: {
             apiKey: string;
         };
@@ -2677,7 +2859,7 @@ export interface components {
             projectId: string;
         };
         /** @enum {string} */
-        "_36_Enums.IntegrationProvider": "JIRA" | "LINEAR" | "GITHUB" | "GOOGLE_DRIVE" | "TRELLO";
+        "_36_Enums.IntegrationProvider": "JIRA" | "LINEAR" | "GITHUB" | "GOOGLE_DRIVE" | "TRELLO" | "NOTION";
         IntegrationProvider: components["schemas"]["_36_Enums.IntegrationProvider"];
         /** @enum {string} */
         "_36_Enums.IntegrationStatus": "CONNECTED" | "DISCONNECTED" | "ERROR";
@@ -2698,6 +2880,7 @@ export interface components {
             updatedAt: string;
             hasRefreshToken: boolean;
             defaultBoardUrl?: string | null;
+            isWorkspaceLevel: boolean;
         };
         "ApiResponse_IntegrationSummaryResponse-Array_": {
             message?: string;
@@ -2714,14 +2897,6 @@ export interface components {
         ApiResponse_string_: {
             message?: string;
             data: string | null;
-            /** Format: double */
-            status: number;
-        };
-        "ApiResponse__authorizationUrl-string__": {
-            message?: string;
-            data: {
-                authorizationUrl: string;
-            } | null;
             /** Format: double */
             status: number;
         };
@@ -3695,6 +3870,63 @@ export interface operations {
             };
         };
     };
+    GetAuthorizationUrl: {
+        parameters: {
+            query: {
+                returnUrl: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse__authorizationUrl-string__"];
+                };
+            };
+        };
+    };
+    AutoConnect: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    token: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_null_"];
+                };
+            };
+            /** @description Validation Error */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_null_"];
+                };
+            };
+        };
+    };
     GetSummary: {
         parameters: {
             query?: never;
@@ -4341,6 +4573,7 @@ export interface operations {
                     syncToJira?: string;
                     syncToLinear?: string;
                     syncToTrello?: string;
+                    syncToNotion?: string;
                     skipAi?: string;
                     taskStrategy?: string;
                     taskCount?: string;
@@ -5150,6 +5383,113 @@ export interface operations {
             };
         };
     };
+    GetAuthUrl: {
+        parameters: {
+            query?: {
+                redirectPath?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description URL fetched successfully */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse__authorizationUrl-string__"];
+                };
+            };
+        };
+    };
+    HandleNotionCallback: {
+        parameters: {
+            query: {
+                code: string;
+                state?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Redirect */
+            302: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    GetSummary: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_NotionSummaryResponse_"];
+                };
+            };
+        };
+    };
+    GetDatabases: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_NotionDatabaseItem-Array_"];
+                };
+            };
+        };
+    };
+    SetDefaultDatabase: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetDefaultDatabaseRequest"];
+            };
+        };
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_null_"];
+                };
+            };
+        };
+    };
     ManualConnect: {
         parameters: {
             query?: never;
@@ -5180,6 +5520,49 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["ApiResponse_null_"];
                 };
+            };
+        };
+    };
+    GetAuthUrl: {
+        parameters: {
+            query?: {
+                redirectPath?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description URL fetched successfully */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse__authorizationUrl-string__"];
+                };
+            };
+        };
+    };
+    HandleLinearCallback: {
+        parameters: {
+            query: {
+                code: string;
+                state?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Redirect */
+            302: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
@@ -5418,6 +5801,28 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ApiResponse_IntegrationSummaryResponse-or-null_"];
+                };
+            };
+        };
+    };
+    DisconnectIntegration: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                provider: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_null_"];
                 };
             };
         };

@@ -8,6 +8,7 @@ import { IntegrationProvider } from "@prisma/client";
 import { jiraIntegrationService } from "../services/jiraIntegrationService";
 import { linearIntegrationService } from "../services/linearIntegrationService";
 import { trelloIntegrationService } from "../services/trelloIntegrationService";
+import { notionIntegrationService } from "../services/notionIntegrationService";
 import type { TaskMetadata } from "../services/taskMetadataTypes";
 
 interface SyncTaskRequest {
@@ -48,7 +49,8 @@ export class TaskIntegrationController extends BaseWorkspaceController {
       !providerEnum ||
       (providerEnum !== IntegrationProvider.JIRA &&
         providerEnum !== IntegrationProvider.LINEAR &&
-        providerEnum !== IntegrationProvider.TRELLO)
+        providerEnum !== IntegrationProvider.TRELLO &&
+        providerEnum !== IntegrationProvider.NOTION)
     ) {
       this.setStatus(400);
       throw { status: 400, message: "Invalid provider for task synchronization" };
@@ -69,10 +71,10 @@ export class TaskIntegrationController extends BaseWorkspaceController {
     let responseData: SyncTaskResponse | null = null;
 
     if (providerEnum === IntegrationProvider.JIRA) {
-      const userIntegration = await prisma.userIntegration.findUnique({
-        where: { userId_provider: { userId: user.id, provider: IntegrationProvider.JIRA } },
+      const wsIntegration = await prisma.workspaceIntegration.findUnique({
+        where: { workspaceId_provider: { workspaceId, provider: IntegrationProvider.JIRA } },
       });
-      const meta = userIntegration?.metadata as any;
+      const meta = wsIntegration?.metadata as any;
       const targetId = body.targetTeamId || meta?.defaultProjectId;
 
       if (!targetId) {
@@ -83,7 +85,7 @@ export class TaskIntegrationController extends BaseWorkspaceController {
         };
       }
 
-      const jiraResult = await jiraIntegrationService.createJiraIssue(user.id, taskId, targetId);
+      const jiraResult = await jiraIntegrationService.createJiraIssue(workspaceId, taskId, targetId);
       existingMetadata.jira = {
         issueId: jiraResult.issueId,
         issueKey: jiraResult.issueKey,
@@ -96,10 +98,10 @@ export class TaskIntegrationController extends BaseWorkspaceController {
         url: jiraResult.url,
       };
     } else if (providerEnum === IntegrationProvider.LINEAR) {
-      const userIntegration = await prisma.userIntegration.findUnique({
-        where: { userId_provider: { userId: user.id, provider: IntegrationProvider.LINEAR } },
+      const wsIntegration = await prisma.workspaceIntegration.findUnique({
+        where: { workspaceId_provider: { workspaceId, provider: IntegrationProvider.LINEAR } },
       });
-      const meta = userIntegration?.metadata as any;
+      const meta = wsIntegration?.metadata as any;
       const targetId = body.targetTeamId || meta?.defaultTeamId;
 
       if (!targetId) {
@@ -111,7 +113,7 @@ export class TaskIntegrationController extends BaseWorkspaceController {
       }
 
       const linearResult = await linearIntegrationService.createLinearIssue(
-        user.id,
+        workspaceId,
         taskId,
         targetId,
       );
@@ -127,10 +129,10 @@ export class TaskIntegrationController extends BaseWorkspaceController {
         url: linearResult.url,
       };
     } else if (providerEnum === IntegrationProvider.TRELLO) {
-      const userIntegration = await prisma.userIntegration.findUnique({
-        where: { userId_provider: { userId: user.id, provider: IntegrationProvider.TRELLO } },
+      const wsIntegration = await prisma.workspaceIntegration.findUnique({
+        where: { workspaceId_provider: { workspaceId, provider: IntegrationProvider.TRELLO } },
       });
-      const meta = userIntegration?.metadata as any;
+      const meta = wsIntegration?.metadata as any;
       const targetBoard = body.targetTeamId || meta?.defaultBoardId;
       const targetList = meta?.defaultListId;
 
@@ -143,7 +145,7 @@ export class TaskIntegrationController extends BaseWorkspaceController {
       }
 
       const trelloResult = await trelloIntegrationService.createTrelloCard(
-        user.id,
+        workspaceId,
         taskId,
         targetBoard,
         targetList,
@@ -158,6 +160,38 @@ export class TaskIntegrationController extends BaseWorkspaceController {
         externalIssueId: trelloResult.cardId,
         externalIssueKey: trelloResult.shortLink,
         url: trelloResult.url,
+      };
+    } else if (providerEnum === IntegrationProvider.NOTION) {
+      const wsIntegration = await prisma.workspaceIntegration.findUnique({
+        where: { workspaceId_provider: { workspaceId, provider: IntegrationProvider.NOTION } },
+      });
+      const meta = wsIntegration?.metadata as Record<string, unknown> | null;
+      const targetId = (body.targetTeamId as string) || (meta?.defaultDatabaseId as string);
+
+      if (!targetId) {
+        this.setStatus(400);
+        throw {
+          status: 400,
+          message: "Target Database ID is required for Notion sync (no default configured)",
+        };
+      }
+
+      const notionResult = await notionIntegrationService.createNotionPage(
+        workspaceId,
+        taskId,
+        targetId,
+      );
+
+      existingMetadata.notion = {
+        pageId: notionResult.pageId,
+        url: notionResult.url,
+      };
+
+      responseData = {
+        success: true,
+        externalIssueId: notionResult.pageId,
+        externalIssueKey: notionResult.pageId,
+        url: notionResult.url,
       };
     }
 
@@ -209,23 +243,29 @@ export class TaskIntegrationController extends BaseWorkspaceController {
       },
     });
 
-    const jiraIntegration = await prisma.userIntegration.findUnique({
-      where: { userId_provider: { userId: user.id, provider: IntegrationProvider.JIRA } },
+    const jiraIntegration = await prisma.workspaceIntegration.findUnique({
+      where: { workspaceId_provider: { workspaceId, provider: IntegrationProvider.JIRA } },
     });
-    const linearIntegration = await prisma.userIntegration.findUnique({
-      where: { userId_provider: { userId: user.id, provider: IntegrationProvider.LINEAR } },
+    const linearIntegration = await prisma.workspaceIntegration.findUnique({
+      where: { workspaceId_provider: { workspaceId, provider: IntegrationProvider.LINEAR } },
     });
-    const trelloIntegration = await prisma.userIntegration.findUnique({
-      where: { userId_provider: { userId: user.id, provider: IntegrationProvider.TRELLO } },
+    const trelloIntegration = await prisma.workspaceIntegration.findUnique({
+      where: { workspaceId_provider: { workspaceId, provider: IntegrationProvider.TRELLO } },
+    });
+    const notionIntegration = await prisma.workspaceIntegration.findUnique({
+      where: { workspaceId_provider: { workspaceId, provider: IntegrationProvider.NOTION } },
     });
 
     const jiraMeta = jiraIntegration?.metadata as Record<string, unknown> | null;
     const linearMeta = linearIntegration?.metadata as Record<string, unknown> | null;
     const trelloMeta = trelloIntegration?.metadata as Record<string, unknown> | null;
+    const notionMeta = notionIntegration?.metadata as Record<string, unknown> | null;
+    
     const jiraDefaultProjectId = jiraMeta?.defaultProjectId as string | undefined;
     const linearDefaultTeamId = linearMeta?.defaultTeamId as string | undefined;
     const trelloDefaultBoardId = trelloMeta?.defaultBoardId as string | undefined;
     const trelloDefaultListId = trelloMeta?.defaultListId as string | undefined;
+    const notionDefaultDatabaseId = notionMeta?.defaultDatabaseId as string | undefined;
 
     let pushed = 0;
     let skipped = 0;
@@ -235,7 +275,7 @@ export class TaskIntegrationController extends BaseWorkspaceController {
       tasks.map(async (task) => {
         const taskMeta = (task.metadata as Record<string, unknown> | null) ?? {};
 
-        if (!jiraDefaultProjectId && !linearDefaultTeamId && !trelloDefaultListId) {
+        if (!jiraDefaultProjectId && !linearDefaultTeamId && !trelloDefaultListId && !notionDefaultDatabaseId) {
           skipped++;
           return;
         }
@@ -243,7 +283,7 @@ export class TaskIntegrationController extends BaseWorkspaceController {
         if (jiraIntegration?.status === "CONNECTED" && jiraDefaultProjectId) {
           try {
             const result = await jiraIntegrationService.createJiraIssue(
-              user.id,
+              workspaceId,
               task.id,
               jiraDefaultProjectId,
             );
@@ -259,7 +299,7 @@ export class TaskIntegrationController extends BaseWorkspaceController {
         if (linearIntegration?.status === "CONNECTED" && linearDefaultTeamId) {
           try {
             const result = await linearIntegrationService.createLinearIssue(
-              user.id,
+              workspaceId,
               task.id,
               linearDefaultTeamId,
             );
@@ -283,7 +323,7 @@ export class TaskIntegrationController extends BaseWorkspaceController {
         ) {
           try {
             const result = await trelloIntegrationService.createTrelloCard(
-              user.id,
+              workspaceId,
               task.id,
               trelloDefaultBoardId,
               trelloDefaultListId,
@@ -297,6 +337,25 @@ export class TaskIntegrationController extends BaseWorkspaceController {
           } catch (err) {
             errors.push(
               `Trello task ${task.id}: ${err instanceof Error ? err.message : "Unknown error"}`,
+            );
+          }
+        }
+
+        if (notionIntegration?.status === "CONNECTED" && notionDefaultDatabaseId) {
+          try {
+            const result = await notionIntegrationService.createNotionPage(
+              workspaceId,
+              task.id,
+              notionDefaultDatabaseId,
+            );
+            taskMeta.notion = {
+              pageId: result.pageId,
+              url: result.url,
+            };
+            pushed++;
+          } catch (err) {
+            errors.push(
+              `Notion task ${task.id}: ${err instanceof Error ? err.message : "Unknown error"}`,
             );
           }
         }

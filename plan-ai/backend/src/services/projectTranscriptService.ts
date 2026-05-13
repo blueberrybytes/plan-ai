@@ -24,6 +24,7 @@ import { IntegrationProvider, IntegrationStatus } from "@prisma/client";
 import { jiraIntegrationService } from "./jiraIntegrationService";
 import { linearIntegrationService } from "./linearIntegrationService";
 import { trelloIntegrationService } from "./trelloIntegrationService";
+import { notionIntegrationService } from "./notionIntegrationService";
 import { aiUsageService } from "./aiUsageService";
 import type { TaskMetadata } from "./taskMetadataTypes";
 import { getPersonaInstructions } from "./personaService";
@@ -151,6 +152,7 @@ export interface CreateTranscriptInput {
   syncToJira?: boolean;
   syncToLinear?: boolean;
   syncToTrello?: boolean;
+  syncToNotion?: boolean;
   workspaceId: string;
   taskStrategy?: "AUTO" | "SINGLE_TICKET" | "SPECIFIC_COUNT";
   taskCount?: number;
@@ -708,10 +710,11 @@ export class ProjectTranscriptService {
 
     // Auto-Sync extraction to active integrations (if defaults exist)
     if (result.createdTasks.length > 0) {
-      this.autoSyncTasks(input.userId, result.createdTasks, {
+      this.autoSyncTasks(input.workspaceId, result.createdTasks, {
         syncToJira: input.syncToJira,
         syncToLinear: input.syncToLinear,
         syncToTrello: input.syncToTrello,
+        syncToNotion: input.syncToNotion,
       }).catch((err) => {
         logger.warn("Failed to auto-sync tasks for transcript import", err);
       });
@@ -1058,13 +1061,13 @@ ${content}`;
   }
 
   private async autoSyncTasks(
-    userId: string,
+    workspaceId: string,
     tasks: Task[],
-    options?: { syncToJira?: boolean; syncToLinear?: boolean; syncToTrello?: boolean },
+    options?: { syncToJira?: boolean; syncToLinear?: boolean; syncToTrello?: boolean; syncToNotion?: boolean },
   ): Promise<void> {
-    const integrations = await prisma.userIntegration.findMany({
+    const integrations = await prisma.workspaceIntegration.findMany({
       where: {
-        userId,
+        workspaceId,
         status: IntegrationStatus.CONNECTED,
       },
     });
@@ -1084,7 +1087,7 @@ ${content}`;
         ) {
           for (const task of tasks) {
             const syncResult = await jiraIntegrationService.createJiraIssue(
-              userId,
+              workspaceId,
               task.id,
               metadata.defaultProjectId,
             );
@@ -1101,7 +1104,7 @@ ${content}`;
         ) {
           for (const task of tasks) {
             const syncResult = await linearIntegrationService.createLinearIssue(
-              userId,
+              workspaceId,
               task.id,
               metadata.defaultTeamId,
             );
@@ -1119,14 +1122,32 @@ ${content}`;
         ) {
           for (const task of tasks) {
             const syncResult = await trelloIntegrationService.createTrelloCard(
-              userId,
+              workspaceId,
               task.id,
               metadata.defaultBoardId,
               metadata.defaultListId,
             );
+            logger.info(`Auto-synced task ${task.id} to Trello card ${syncResult.cardId}`);
             await this.updateTaskTargetMetadata(task.id, "trello", {
               cardId: syncResult.cardId,
               shortLink: syncResult.shortLink,
+              url: syncResult.url,
+            });
+          }
+        } else if (
+          integration.provider === IntegrationProvider.NOTION &&
+          metadata.defaultDatabaseId &&
+          options?.syncToNotion !== false
+        ) {
+          for (const task of tasks) {
+            const syncResult = await notionIntegrationService.createNotionPage(
+              workspaceId,
+              task.id,
+              metadata.defaultDatabaseId,
+            );
+            logger.info(`Auto-synced task ${task.id} to Notion page ${syncResult.pageId}`);
+            await this.updateTaskTargetMetadata(task.id, "notion", {
+              pageId: syncResult.pageId,
               url: syncResult.url,
             });
           }
@@ -1139,7 +1160,7 @@ ${content}`;
 
   private async updateTaskTargetMetadata(
     taskId: string,
-    provider: "jira" | "linear" | "trello",
+    provider: "jira" | "linear" | "trello" | "notion",
     payload: unknown,
   ) {
     const task = await prisma.task.findUnique({

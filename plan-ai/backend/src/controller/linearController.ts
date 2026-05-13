@@ -1,8 +1,22 @@
-import { Body, Get, Post, Request, Route, Security, Tags, Response } from "tsoa";
+import {
+  Body,
+  Get,
+  Post,
+  Request,
+  Route,
+  Security,
+  Tags,
+  Response,
+  Query,
+  SuccessResponse,
+} from "tsoa";
+import * as express from "express";
 import { BaseWorkspaceController } from "./BaseWorkspaceController";
 import type { AuthenticatedRequest } from "../middleware/authMiddleware";
 import type { ApiResponse } from "./controllerTypes";
 import { linearIntegrationService } from "../services/linearIntegrationService";
+import EnvUtils from "../utils/EnvUtils";
+import prisma from "../prisma/prismaClient";
 
 interface LinearManualConnectRequest {
   apiKey: string;
@@ -33,10 +47,10 @@ export class LinearController extends BaseWorkspaceController {
     @Request() request: AuthenticatedRequest,
     @Body() body: LinearManualConnectRequest,
   ): Promise<ApiResponse<null>> {
-    const { user } = await this.getAuthorizedWorkspaceAccess(request);
+    const { workspaceId } = await this.requireAdminOrOwner(request);
 
     try {
-      await linearIntegrationService.verifyManualCredentials(user.id, body);
+      await linearIntegrationService.verifyManualCredentials(workspaceId, body);
       return {
         status: 200,
         data: null,
@@ -51,15 +65,142 @@ export class LinearController extends BaseWorkspaceController {
     }
   }
 
+  @SuccessResponse("200", "URL fetched successfully")
+  @Security("ClientLevel")
+  @Get("auth-url")
+  public async getAuthUrl(
+    @Request() request: AuthenticatedRequest,
+    @Query() redirectPath?: string,
+  ): Promise<ApiResponse<{ authorizationUrl: string }>> {
+    const { workspaceId } = await this.requireAdminOrOwner(request);
+
+    if (!request.user) {
+      this.setStatus(401);
+      throw new Error("Unauthorized.");
+    }
+
+    const stateObj = { uid: request.user.uid, workspaceId, redirectPath };
+    const state = encodeURIComponent(JSON.stringify(stateObj));
+    const url = linearIntegrationService.getAuthUrl(state);
+
+    return {
+      status: 200,
+      data: {
+        authorizationUrl: url,
+      },
+    };
+  }
+
+  @SuccessResponse("302", "Redirect")
+  @Get("callback")
+  public async handleLinearCallback(
+    @Request() request: express.Request, // Express specific
+    @Query() code: string,
+    @Query() state?: string,
+  ): Promise<void> {
+    const res = request.res;
+
+    const baseUrl = EnvUtils.get("FRONTEND_URL", "http://localhost:3000");
+
+    if (!state) {
+      if (res) {
+        const targetUrl = new URL("/integrations", baseUrl);
+        targetUrl.searchParams.set("provider", "linear");
+        targetUrl.searchParams.set("status", "error");
+        targetUrl.searchParams.set("message", "MissingState");
+        return res.redirect(targetUrl.toString());
+      }
+      throw new Error("Missing state");
+    }
+
+    try {
+      const stateObj = JSON.parse(decodeURIComponent(state));
+      const firebaseUid = stateObj.uid;
+      const workspaceId = stateObj.workspaceId;
+      const redirectPath = stateObj.redirectPath || "/integrations?provider=linear";
+
+      if (!workspaceId) {
+        if (res) {
+          const targetUrl = new URL(redirectPath, baseUrl);
+          targetUrl.searchParams.set("status", "error");
+          targetUrl.searchParams.set("message", "MissingWorkspace");
+          return res.redirect(targetUrl.toString());
+        }
+        throw new Error("Missing workspaceId in state");
+      }
+
+      const user = await prisma.user.findUnique({
+        where: { firebaseUid },
+      });
+
+      if (!user) {
+        if (res) {
+          const targetUrl = new URL(redirectPath, baseUrl);
+          targetUrl.searchParams.set("status", "error");
+          targetUrl.searchParams.set("message", "UserNotFound");
+          return res.redirect(targetUrl.toString());
+        }
+        throw new Error("User not found.");
+      }
+
+      // Exchange code via service
+      const tokens = await linearIntegrationService.exchangeCode(code);
+
+      // Upsert the workspace integration record
+      await prisma.workspaceIntegration.upsert({
+        where: {
+          workspaceId_provider: {
+            workspaceId,
+            provider: "LINEAR",
+          },
+        },
+        update: {
+          status: "CONNECTED",
+          accessToken: tokens.accessToken,
+          accountId: tokens.accountId,
+          accountName: tokens.accountName,
+          metadata: { authType: "OAUTH" },
+        },
+        create: {
+          workspaceId,
+          provider: "LINEAR",
+          status: "CONNECTED",
+          accessToken: tokens.accessToken,
+          accountId: tokens.accountId,
+          accountName: tokens.accountName,
+          metadata: { authType: "OAUTH" },
+        },
+      });
+
+      if (res) {
+        const targetUrl = new URL(redirectPath, baseUrl);
+        targetUrl.searchParams.set("status", "success");
+        return res.redirect(targetUrl.toString());
+      }
+    } catch (err: unknown) {
+      console.error("Linear OAuth Callback Error:", err);
+      if (res) {
+        const targetUrl = new URL("/integrations", baseUrl);
+        targetUrl.searchParams.set("provider", "linear");
+        targetUrl.searchParams.set("status", "error");
+        targetUrl.searchParams.set("message", "ExchangeFailed");
+        return res.redirect(targetUrl.toString());
+      }
+
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      throw new Error(`Linear binding failed: ${errorMessage}`);
+    }
+  }
+
   @Get("summary")
   @Security("ClientLevel")
   public async getSummary(
     @Request() request: AuthenticatedRequest,
   ): Promise<ApiResponse<LinearSummaryResponse>> {
-    const { user } = await this.getAuthorizedWorkspaceAccess(request);
+    const { workspaceId } = await this.getAuthorizedWorkspaceAccess(request);
 
     try {
-      const summary = await linearIntegrationService.getLinearSummary(user.id);
+      const summary = await linearIntegrationService.getLinearSummary(workspaceId);
       return {
         status: 200,
         data: summary,
@@ -79,9 +220,9 @@ export class LinearController extends BaseWorkspaceController {
   public async getTeams(
     @Request() request: AuthenticatedRequest,
   ): Promise<ApiResponse<LinearTeamItem[]>> {
-    const { user } = await this.getAuthorizedWorkspaceAccess(request);
+    const { workspaceId } = await this.getAuthorizedWorkspaceAccess(request);
     try {
-      const teams = await linearIntegrationService.listLinearTeams(user.id);
+      const teams = await linearIntegrationService.listLinearTeams(workspaceId);
       return { status: 200, data: teams };
     } catch (error) {
       this.setStatus(400);
@@ -99,11 +240,14 @@ export class LinearController extends BaseWorkspaceController {
     @Request() request: AuthenticatedRequest,
     @Body() body: SetDefaultTeamRequest,
   ): Promise<ApiResponse<null>> {
-    const { user } = await this.getAuthorizedWorkspaceAccess(request);
-    console.log(`[LinearController] setDefaultTeam called by ${user.id} with body:`, body);
+    const { workspaceId } = await this.requireAdminOrOwner(request);
+    console.log(
+      `[LinearController] setDefaultTeam called for workspace ${workspaceId} with body:`,
+      body,
+    );
     try {
-      await linearIntegrationService.setDefaultLinearTeam(user.id, body.teamId);
-      console.log(`[LinearController] setDefaultTeam SUCCESS for ${user.id}`);
+      await linearIntegrationService.setDefaultLinearTeam(workspaceId, body.teamId);
+      console.log(`[LinearController] setDefaultTeam SUCCESS for workspace ${workspaceId}`);
       return { status: 200, data: null };
     } catch (error) {
       this.setStatus(400);

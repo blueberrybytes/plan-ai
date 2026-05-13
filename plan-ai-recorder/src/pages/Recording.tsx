@@ -202,6 +202,7 @@ const Recording: React.FC = () => {
   const [syncToJira, setSyncToJira] = useState<boolean>(false);
   const [syncToLinear, setSyncToLinear] = useState<boolean>(false);
   const [syncToTrello, setSyncToTrello] = useState<boolean>(false);
+  const [syncToNotion, setSyncToNotion] = useState<boolean>(false);
   
   const [taskStrategy, setTaskStrategy] = useState<"AUTO" | "SINGLE_TICKET" | "SPECIFIC_COUNT">("AUTO");
   const [taskCount, setTaskCount] = useState<number>(5);
@@ -401,6 +402,7 @@ const Recording: React.FC = () => {
         syncToJira,
         syncToLinear,
         syncToTrello,
+        syncToNotion,
         taskStrategy,
         taskCount,
         skipAi,
@@ -430,6 +432,7 @@ const Recording: React.FC = () => {
     syncToJira,
     syncToLinear,
     syncToTrello,
+    syncToNotion,
     taskStrategy,
     taskCount,
   ]);
@@ -457,6 +460,10 @@ const Recording: React.FC = () => {
           const trello = ints.find((i) => i.provider === "TRELLO" && i.status === "CONNECTED");
           if (trello && (trello.metadata as Record<string, unknown>)?.defaultBoardId) {
             setSyncToTrello(true);
+          }
+          const notion = ints.find((i) => i.provider === "NOTION" && i.status === "CONNECTED");
+          if (notion && (notion.metadata as Record<string, unknown>)?.defaultDatabaseId) {
+            setSyncToNotion(true);
           }
         }).catch(console.error);
       }
@@ -762,6 +769,21 @@ const Recording: React.FC = () => {
               label={
                 <Typography variant="body2">
                   Sync generated tasks to Trello
+                </Typography>
+              }
+            />
+          )}
+          {integrations.some((i) => i.provider === "NOTION" && i.status === "CONNECTED") && (
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={syncToNotion}
+                  onChange={(e) => setSyncToNotion(e.target.checked)}
+                />
+              }
+              label={
+                <Typography variant="body2">
+                  Sync generated tasks to Notion
                 </Typography>
               }
             />

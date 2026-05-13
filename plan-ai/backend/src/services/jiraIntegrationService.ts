@@ -2,7 +2,7 @@
 import { createHmac, randomUUID, timingSafeEqual } from "node:crypto";
 import { URL } from "node:url";
 import { IntegrationProvider, IntegrationStatus, Prisma } from "@prisma/client";
-import type { UserIntegration } from "@prisma/client";
+import type { WorkspaceIntegration } from "@prisma/client";
 import EnvUtils from "../utils/EnvUtils";
 import { logger } from "../utils/logger";
 import prisma from "../prisma/prismaClient";
@@ -23,14 +23,14 @@ type JiraTokenResponse = {
 };
 
 type AuthorizationStatePayload = {
-  userId: string;
+  workspaceId: string;
   nonce: string;
   issuedAt: number;
   clientState?: string | null;
 };
 
 type AuthorizationStateInput = {
-  userId: string;
+  workspaceId: string;
   nonce?: string;
   issuedAt?: number;
   clientState?: string | null;
@@ -59,7 +59,7 @@ const ATLASSIAN_AUTH_URL = "https://auth.atlassian.com/authorize";
 const ATLASSIAN_TOKEN_URL = "https://auth.atlassian.com/oauth/token";
 const ATLASSIAN_AUDIENCE = "api.atlassian.com";
 const DEFAULT_CALLBACK_PATH = "/api/jira/callback";
-const DEFAULT_FRONTEND_REDIRECT_PATH = "/integrations/jira";
+const DEFAULT_FRONTEND_REDIRECT_PATH = "/integrations?provider=jira";
 
 class JiraIntegrationService {
   private readonly clientId = EnvUtils.get("JIRA_CLIENT_ID");
@@ -97,6 +97,9 @@ class JiraIntegrationService {
   }
 
   public buildRedirectUri(baseUrl: string) {
+    if (process.env.JIRA_REDIRECT_URI) {
+      return process.env.JIRA_REDIRECT_URI;
+    }
     return new URL(this.callbackPath, this.ensureTrailingSlash(baseUrl)).toString();
   }
 
@@ -190,13 +193,13 @@ class JiraIntegrationService {
   }
 
   public async upsertIntegration(params: {
-    userId: string;
+    workspaceId: string;
     accessToken: string;
     refreshToken?: string;
     expiresInSeconds?: number;
     scope?: string;
     resource: JiraAccessibleResource;
-  }): Promise<UserIntegration> {
+  }): Promise<WorkspaceIntegration> {
     const expiresAt = this.computeExpiry(params.expiresInSeconds);
     const metadata: JiraIntegrationMetadata = {
       authType: "OAUTH",
@@ -206,10 +209,10 @@ class JiraIntegrationService {
       connectedAt: new Date().toISOString(),
     };
 
-    const integration = await prisma.userIntegration.upsert({
+    const integration = await prisma.workspaceIntegration.upsert({
       where: {
-        userId_provider: {
-          userId: params.userId,
+        workspaceId_provider: {
+          workspaceId: params.workspaceId,
           provider: IntegrationProvider.JIRA,
         },
       },
@@ -224,7 +227,7 @@ class JiraIntegrationService {
         metadata: metadata as unknown as Prisma.InputJsonObject,
       },
       create: {
-        userId: params.userId,
+        workspaceId: params.workspaceId,
         provider: IntegrationProvider.JIRA,
         status: IntegrationStatus.CONNECTED,
         accessToken: params.accessToken,
@@ -241,11 +244,11 @@ class JiraIntegrationService {
   }
 
   public async verifyManualCredentials(
-    userId: string,
+    workspaceId: string,
     siteUrl: string,
     email: string,
     apiToken: string,
-  ): Promise<UserIntegration> {
+  ): Promise<WorkspaceIntegration> {
     const cleanUrl = siteUrl.trim().replace(/\/$/, "");
     const basicAuth = Buffer.from(`${email.trim()}:${apiToken.trim()}`).toString("base64");
 
@@ -270,10 +273,10 @@ class JiraIntegrationService {
     const accountId = userData.accountId || email;
     const accountName = userData.displayName || email;
 
-    const integration = await prisma.userIntegration.upsert({
+    const integration = await prisma.workspaceIntegration.upsert({
       where: {
-        userId_provider: {
-          userId,
+        workspaceId_provider: {
+          workspaceId,
           provider: IntegrationProvider.JIRA,
         },
       },
@@ -294,7 +297,7 @@ class JiraIntegrationService {
         } as JiraIntegrationMetadata as unknown as Prisma.InputJsonObject,
       },
       create: {
-        userId,
+        workspaceId,
         provider: IntegrationProvider.JIRA,
         status: IntegrationStatus.CONNECTED,
         accessToken: basicAuth,
@@ -316,11 +319,11 @@ class JiraIntegrationService {
     return integration;
   }
 
-  public async getJiraSummary(userId: string): Promise<JiraSummaryResponse> {
-    const integration = await prisma.userIntegration.findUnique({
+  public async getJiraSummary(workspaceId: string): Promise<JiraSummaryResponse> {
+    const integration = await prisma.workspaceIntegration.findUnique({
       where: {
-        userId_provider: {
-          userId,
+        workspaceId_provider: {
+          workspaceId,
           provider: IntegrationProvider.JIRA,
         },
       },
@@ -342,10 +345,9 @@ class JiraIntegrationService {
       Authorization: isBasic ? `Basic ${accessToken}` : `Bearer ${accessToken}`,
     };
 
-    let siteUrl = meta?.jiraSiteUrl;
-    if (!siteUrl && !isBasic) {
-      siteUrl = `https://api.atlassian.com/ex/jira/${integration.accountId}`;
-    }
+    const siteUrl = isBasic
+      ? meta?.jiraSiteUrl
+      : `https://api.atlassian.com/ex/jira/${integration.accountId}`;
 
     if (!siteUrl) {
       throw new Error("Jira site URL is unavailable");
@@ -431,10 +433,10 @@ class JiraIntegrationService {
   }
 
   public async listJiraProjects(
-    userId: string,
+    workspaceId: string,
   ): Promise<{ id: string; name: string; key: string }[]> {
-    const integration = await prisma.userIntegration.findUnique({
-      where: { userId_provider: { userId, provider: IntegrationProvider.JIRA } },
+    const integration = await prisma.workspaceIntegration.findUnique({
+      where: { workspaceId_provider: { workspaceId, provider: IntegrationProvider.JIRA } },
     });
 
     if (!integration || integration.status !== IntegrationStatus.CONNECTED) {
@@ -450,10 +452,9 @@ class JiraIntegrationService {
         : `Bearer ${integration.accessToken}`,
     };
 
-    let siteUrl = meta?.jiraSiteUrl;
-    if (!siteUrl && !isBasic) {
-      siteUrl = `https://api.atlassian.com/ex/jira/${integration.accountId}`;
-    }
+    const siteUrl = isBasic
+      ? meta?.jiraSiteUrl
+      : `https://api.atlassian.com/ex/jira/${integration.accountId}`;
     if (!siteUrl) throw new Error("Jira site URL is unavailable");
 
     const response = await fetch(`${siteUrl.replace(/\/$/, "")}/rest/api/3/project`, { headers });
@@ -463,9 +464,9 @@ class JiraIntegrationService {
     return data.map((p) => ({ id: p.id, name: p.name, key: p.key }));
   }
 
-  public async setDefaultJiraProject(userId: string, projectId: string): Promise<void> {
-    const integration = await prisma.userIntegration.findUnique({
-      where: { userId_provider: { userId, provider: IntegrationProvider.JIRA } },
+  public async setDefaultJiraProject(workspaceId: string, projectId: string): Promise<void> {
+    const integration = await prisma.workspaceIntegration.findUnique({
+      where: { workspaceId_provider: { workspaceId, provider: IntegrationProvider.JIRA } },
     });
     if (!integration) throw new Error("Jira integration not found");
 
@@ -475,25 +476,25 @@ class JiraIntegrationService {
       defaultProjectId: projectId,
     } as unknown as Prisma.InputJsonObject;
     console.log(
-      `[jiraIntegrationService] Updating metadata for ${userId} to:`,
+      `[jiraIntegrationService] Updating metadata for workspace ${workspaceId} to:`,
       JSON.stringify(newMetadata),
     );
 
-    await prisma.userIntegration.update({
-      where: { userId_provider: { userId, provider: IntegrationProvider.JIRA } },
+    await prisma.workspaceIntegration.update({
+      where: { workspaceId_provider: { workspaceId, provider: IntegrationProvider.JIRA } },
       data: { metadata: newMetadata },
     });
-    console.log(`[jiraIntegrationService] update complete for ${userId}`);
+    console.log(`[jiraIntegrationService] update complete for workspace ${workspaceId}`);
   }
 
   public async createJiraIssue(
-    userId: string,
+    workspaceId: string,
     taskId: string,
     projectId: string,
   ): Promise<{ issueId: string; issueKey: string; url: string }> {
-    const integration = await prisma.userIntegration.findUnique({
+    const integration = await prisma.workspaceIntegration.findUnique({
       where: {
-        userId_provider: { userId, provider: IntegrationProvider.JIRA },
+        workspaceId_provider: { workspaceId, provider: IntegrationProvider.JIRA },
       },
     });
 
@@ -520,10 +521,9 @@ class JiraIntegrationService {
       Authorization: isBasic ? `Basic ${accessToken}` : `Bearer ${accessToken}`,
     };
 
-    let siteUrl = meta?.jiraSiteUrl;
-    if (!siteUrl && !isBasic) {
-      siteUrl = `https://api.atlassian.com/ex/jira/${integration.accountId}`;
-    }
+    const siteUrl = isBasic
+      ? meta?.jiraSiteUrl
+      : `https://api.atlassian.com/ex/jira/${integration.accountId}`;
 
     if (!siteUrl) {
       throw new Error("Jira site URL is unavailable");
@@ -536,7 +536,7 @@ class JiraIntegrationService {
       type: "paragraph",
       content: [{ type: "text", text: `🤖 Plan AI Auto-Task | 📁 Project: ${task.project.title}` }],
     });
-    
+
     if (task.summary) {
       documentContent.push({
         type: "paragraph",
@@ -594,7 +594,9 @@ class JiraIntegrationService {
     const payload: Record<string, unknown> = {
       fields: {
         project: { id: projectId },
-        summary: (`[📁 ${task.project.title}] ` + (task.title || `Extracted Task ${task.id}`)).substring(0, 250),
+        summary: (
+          `[📁 ${task.project.title}] ` + (task.title || `Extracted Task ${task.id}`)
+        ).substring(0, 250),
         duedate: task.dueDate ? new Date(task.dueDate).toISOString().split("T")[0] : undefined,
         description: {
           type: "doc",
@@ -649,7 +651,7 @@ class JiraIntegrationService {
   public createStateToken(payload: AuthorizationStateInput): string {
     const issuedAt = payload.issuedAt ?? Date.now();
     const data: AuthorizationStatePayload = {
-      userId: payload.userId,
+      workspaceId: payload.workspaceId,
       nonce: payload.nonce ?? randomUUID(),
       issuedAt,
       clientState: payload.clientState,
@@ -681,7 +683,7 @@ class JiraIntegrationService {
     try {
       const parsed = JSON.parse(payloadJson) as AuthorizationStatePayload;
 
-      if (!parsed.userId || !parsed.nonce || !parsed.issuedAt) {
+      if (!parsed.workspaceId || !parsed.nonce || !parsed.issuedAt) {
         return null;
       }
 

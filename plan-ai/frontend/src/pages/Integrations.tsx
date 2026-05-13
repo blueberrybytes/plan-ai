@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-empty-function */
 import React, { useEffect, useMemo, useState } from "react";
 import {
   Alert,
@@ -15,12 +16,15 @@ import {
   Stack,
   Tab,
   Tabs,
+  Tooltip,
   Typography,
   IconButton,
   TextField,
 } from "@mui/material";
 import SyncIcon from "@mui/icons-material/Sync";
 import AddIcon from "@mui/icons-material/Add";
+import BusinessIcon from "@mui/icons-material/Business";
+import PersonIcon from "@mui/icons-material/Person";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import SidebarLayout from "../components/layout/SidebarLayout";
@@ -36,9 +40,11 @@ import {
   useLazyGetGoogleAuthUrlQuery,
   GithubRepository,
   integrationApi,
+  useDisconnectIntegrationMutation,
 } from "../store/apis/integrationApi";
 import {
   useConnectJiraManuallyMutation,
+  useLazyGetJiraAuthorizationUrlQuery,
   useGetJiraSummaryQuery,
   useGetJiraProjectsQuery,
   useSetJiraDefaultProjectMutation,
@@ -48,6 +54,7 @@ import {
   useGetLinearSummaryQuery,
   useGetLinearTeamsQuery,
   useSetLinearDefaultTeamMutation,
+  useLazyGetLinearAuthUrlQuery,
 } from "../store/apis/linearApi";
 import {
   useConnectTrelloManuallyMutation,
@@ -55,7 +62,15 @@ import {
   useGetTrelloBoardsQuery,
   useGetTrelloListsQuery,
   useSetTrelloDefaultBoardListMutation,
+  useLazyGetTrelloAuthorizationUrlQuery,
+  useAutoConnectTrelloMutation,
 } from "../store/apis/trelloApi";
+import {
+  useLazyGetNotionAuthUrlQuery,
+  useGetNotionSummaryQuery,
+  useGetNotionDatabasesQuery,
+  useSetNotionDefaultDatabaseMutation,
+} from "../store/apis/notionApi";
 import type { components } from "../types/api";
 import { useTranslation } from "react-i18next";
 
@@ -66,7 +81,7 @@ const PROVIDER_TAB_PARAM = "provider";
 const STATUS_PARAM = "status";
 const MESSAGE_PARAM = "message";
 
-type ProviderTabValue = "jira" | "linear" | "trello" | "github" | "google";
+type ProviderTabValue = "jira" | "linear" | "trello" | "github" | "google" | "notion";
 
 type ProviderConfig = {
   tabValue: ProviderTabValue;
@@ -78,6 +93,7 @@ type ProviderConfig = {
   comingSoonMessageKey?: string;
   notConnectedKey?: string;
   isBeta?: boolean;
+  isWorkspaceLevel: boolean;
 };
 
 type UserIntegrationSummary = components["schemas"]["IntegrationSummaryResponse"];
@@ -91,6 +107,7 @@ const PROVIDER_CONFIGS: ProviderConfig[] = [
     connectCtaKey: "integrationsPage.providers.jira.connectCta",
     comingSoon: false,
     notConnectedKey: "integrationsPage.providers.jira.notConnected",
+    isWorkspaceLevel: true,
   },
   {
     tabValue: "linear",
@@ -100,6 +117,28 @@ const PROVIDER_CONFIGS: ProviderConfig[] = [
     connectCtaKey: "integrationsPage.providers.linear.connectCta",
     comingSoon: false,
     notConnectedKey: "integrationsPage.providers.linear.notConnected",
+    isWorkspaceLevel: true,
+  },
+  {
+    tabValue: "trello",
+    provider: "TRELLO",
+    labelKey: "integrationsPage.providers.trello.label",
+    descriptionKey: "integrationsPage.providers.trello.description",
+    connectCtaKey: "integrationsPage.providers.trello.connectCta",
+    comingSoon: false,
+    notConnectedKey: "integrationsPage.providers.trello.notConnected",
+    isWorkspaceLevel: true,
+  },
+  {
+    tabValue: "notion",
+    provider: "NOTION",
+    labelKey: "integrationsPage.providers.notion.label",
+    descriptionKey: "integrationsPage.providers.notion.description",
+    connectCtaKey: "integrationsPage.providers.notion.connectCta",
+    comingSoon: false,
+    notConnectedKey: "integrationsPage.providers.notion.notConnected",
+    isWorkspaceLevel: true,
+    isBeta: true,
   },
   {
     tabValue: "github",
@@ -109,6 +148,7 @@ const PROVIDER_CONFIGS: ProviderConfig[] = [
     connectCtaKey: "integrationsPage.providers.github.connectCta",
     comingSoon: false,
     notConnectedKey: "integrationsPage.providers.github.notConnected",
+    isWorkspaceLevel: false,
   },
   {
     tabValue: "google",
@@ -119,15 +159,7 @@ const PROVIDER_CONFIGS: ProviderConfig[] = [
     comingSoon: false,
     notConnectedKey: "integrationsPage.providers.google.notConnected",
     isBeta: true,
-  },
-  {
-    tabValue: "trello",
-    provider: "TRELLO",
-    labelKey: "integrationsPage.providers.trello.label",
-    descriptionKey: "integrationsPage.providers.trello.description",
-    connectCtaKey: "integrationsPage.providers.trello.connectCta",
-    comingSoon: false,
-    notConnectedKey: "integrationsPage.providers.trello.notConnected",
+    isWorkspaceLevel: false,
   },
 ];
 
@@ -164,21 +196,30 @@ const Integrations: React.FC = () => {
   const activeTab: ProviderTabValue = providerFromPath ?? providerFromQuery ?? defaultTab;
   const navigate = useNavigate();
 
+  const [triggerJiraAuthorization, { isFetching: isJiraAuthLoading }] =
+    useLazyGetJiraAuthorizationUrlQuery();
+
   const [jiraAuthError, setJiraAuthError] = useState<string | null>(null);
   const [jiraSiteUrl, setJiraSiteUrl] = useState("");
   const [jiraEmail, setJiraEmail] = useState("");
   const [jiraApiToken, setJiraApiToken] = useState("");
+  const [connectJiraManually, { isLoading: isJiraManualConnecting }] =
+    useConnectJiraManuallyMutation();
+
   const [trelloAuthError, setTrelloAuthError] = useState<string | null>(null);
 
   const [helpDialogProvider, setHelpDialogProvider] = useState<HowToProvider | null>(null);
-
-  const [connectJiraManually, { isLoading: isJiraManualConnecting }] =
-    useConnectJiraManuallyMutation();
 
   const [linearAuthError, setLinearAuthError] = useState<string | null>(null);
   const [linearApiKey, setLinearApiKey] = useState("");
   const [connectLinearManually, { isLoading: isLinearManualConnecting }] =
     useConnectLinearManuallyMutation();
+  const [triggerLinearAuthorization, { isFetching: isLinearAuthLoading }] =
+    useLazyGetLinearAuthUrlQuery();
+
+  const [triggerNotionAuthorization, { isFetching: isNotionAuthLoading }] =
+    useLazyGetNotionAuthUrlQuery();
+  const [notionAuthError, setNotionAuthError] = useState<string | null>(null);
 
   const [trelloApiKey, setTrelloApiKey] = useState("");
   const [trelloApiToken, setTrelloApiToken] = useState("");
@@ -201,6 +242,34 @@ const Integrations: React.FC = () => {
   const isSuccessStatus = status === "success";
   const isErrorStatus = status === "error";
 
+  const [triggerTrelloAuthorization, { isFetching: isTrelloAuthLoading }] =
+    useLazyGetTrelloAuthorizationUrlQuery();
+  const [autoConnectTrello] = useAutoConnectTrelloMutation();
+
+  const handleConnectTrello = async () => {
+    try {
+      const returnUrl = `${window.location.origin}/integrations?provider=trello`;
+      const result = await triggerTrelloAuthorization(returnUrl).unwrap();
+      window.location.href = result.data.authorizationUrl;
+    } catch (error) {
+      console.error(error);
+      setTrelloAuthError(
+        "Failed to fetch Trello authorization URL. Is TRELLO_GLOBAL_API_KEY configured?",
+      );
+    }
+  };
+
+  const handleConnectNotion = async () => {
+    try {
+      const redirectPath = "/integrations?provider=notion";
+      const result = await triggerNotionAuthorization({ redirectPath }).unwrap();
+      window.location.href = result.data.authorizationUrl;
+    } catch (error) {
+      console.error(error);
+      setNotionAuthError("Failed to fetch Notion authorization URL.");
+    }
+  };
+
   useEffect(() => {
     if (isSuccessStatus) {
       refetchIntegrations();
@@ -212,6 +281,29 @@ const Integrations: React.FC = () => {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isSuccessStatus, isErrorStatus]);
+
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (hash && hash.includes("token=")) {
+      const params = new URLSearchParams(hash.substring(1));
+      const token = params.get("token");
+      if (token) {
+        window.history.replaceState(null, "", window.location.pathname + window.location.search);
+
+        autoConnectTrello({ token })
+          .unwrap()
+          .then(() => {
+            dispatch(
+              setToastMessage({ severity: "success", message: "Trello connected successfully" }),
+            );
+            refetchIntegrations();
+          })
+          .catch((e) => {
+            setTrelloAuthError(e?.data?.message || "Failed to connect Trello automatically.");
+          });
+      }
+    }
+  }, [autoConnectTrello, dispatch, refetchIntegrations]);
 
   const [bindGithub, { isLoading: isBindingGithub }] = useBindGithubInstallationMutation();
   const [triggerGoogleAuthorization, { isFetching: isGoogleAuthLoading }] =
@@ -250,7 +342,7 @@ const Integrations: React.FC = () => {
   }, [searchParams, user, bindGithub, navigate]);
 
   const handleChangeTab = (_event: React.SyntheticEvent, newValue: ProviderTabValue) => {
-    navigate(`/integrations/${newValue}`);
+    navigate(`/integrations?provider=${newValue}`);
   };
 
   const handleManualJiraConnect = async () => {
@@ -280,6 +372,20 @@ const Integrations: React.FC = () => {
     }
   };
 
+  const handleConnectJira = async () => {
+    try {
+      const response = await triggerJiraAuthorization("/integrations?provider=jira").unwrap();
+      if (response?.data?.authorizationUrl) {
+        window.location.href = response.data.authorizationUrl;
+      } else {
+        throw new Error("No authorization URL returned");
+      }
+    } catch (error) {
+      console.error("Failed to fetch Jira authorization URL", error);
+      dispatch(setToastMessage({ severity: "error", message: "Failed to start Jira Auth" }));
+    }
+  };
+
   const handleManualLinearConnect = async () => {
     setLinearAuthError(null);
     try {
@@ -300,6 +406,19 @@ const Integrations: React.FC = () => {
       console.error("Failed to connect to Linear manually", err);
       const rtkError = err as { data?: { message?: string } };
       setLinearAuthError(rtkError?.data?.message || t("integrationsPage.statusAlert.error"));
+    }
+  };
+
+  const handleConnectLinear = async () => {
+    try {
+      const response = await triggerLinearAuthorization().unwrap();
+      const authorizationUrl = response.data?.authorizationUrl;
+      if (authorizationUrl) {
+        window.location.href = authorizationUrl;
+      }
+    } catch (error) {
+      console.error("Failed to fetch Linear authorization URL", error);
+      dispatch(setToastMessage({ severity: "error", message: "Failed to start Linear Auth" }));
     }
   };
 
@@ -359,6 +478,7 @@ const Integrations: React.FC = () => {
 
   const renderProviderContent = (config: ProviderConfig) => {
     const integration = findIntegration(config.provider);
+    const canEdit = config.isWorkspaceLevel ? canManageIntegrations : true;
 
     return (
       <Paper elevation={2} sx={{ p: 3 }}>
@@ -375,6 +495,28 @@ const Integrations: React.FC = () => {
                   sx={{ fontWeight: "bold" }}
                 />
               )}
+              <Tooltip
+                title={
+                  config.isWorkspaceLevel
+                    ? "Shared across the entire workspace. Only Admins and Owners can manage."
+                    : "Connected per user. Each member manages their own."
+                }
+              >
+                <Chip
+                  icon={
+                    config.isWorkspaceLevel ? (
+                      <BusinessIcon sx={{ fontSize: 16 }} />
+                    ) : (
+                      <PersonIcon sx={{ fontSize: 16 }} />
+                    )
+                  }
+                  label={config.isWorkspaceLevel ? "Workspace" : "Personal"}
+                  size="small"
+                  variant="outlined"
+                  color={config.isWorkspaceLevel ? "primary" : "default"}
+                  sx={{ fontWeight: 500, height: 24, fontSize: "0.75rem" }}
+                />
+              </Tooltip>
             </Stack>
             <Typography variant="body1" color="text.secondary">
               {t(config.descriptionKey)}
@@ -393,10 +535,18 @@ const Integrations: React.FC = () => {
             <ConnectedIntegrationDetails
               integration={integration}
               onAddMore={config.tabValue === "github" ? handleConnectGithub : undefined}
+              canEdit={canEdit}
             />
           ) : null}
 
-          {!config.comingSoon && !integration ? (
+          {!config.comingSoon && !integration && !canEdit ? (
+            <Alert severity="info" sx={{ mt: 1 }}>
+              This integration is managed by workspace Admins/Owners. Contact your administrator to
+              connect it.
+            </Alert>
+          ) : null}
+
+          {!config.comingSoon && !integration && canEdit ? (
             <Box>
               <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
                 {config.notConnectedKey
@@ -407,152 +557,229 @@ const Integrations: React.FC = () => {
               </Typography>
               {config.tabValue === "jira" && (
                 <Box
-                  component="form"
-                  sx={{ mt: 2, display: "flex", flexDirection: "column", gap: 2, maxWidth: 400 }}
+                  sx={{ mt: 2, display: "flex", flexDirection: "column", gap: 3, maxWidth: 400 }}
                 >
-                  <TextField
-                    size="small"
-                    label={t("integrationsPage.providers.jira.manualForm.siteUrlLabel")}
-                    value={jiraSiteUrl}
-                    onChange={(e) => setJiraSiteUrl(e.target.value)}
-                    placeholder="https://my-company.atlassian.net"
-                    required
-                  />
-                  <TextField
-                    size="small"
-                    label={t("integrationsPage.providers.jira.manualForm.emailLabel")}
-                    value={jiraEmail}
-                    onChange={(e) => setJiraEmail(e.target.value)}
-                    type="email"
-                    required
-                  />
-                  <TextField
-                    size="small"
-                    label={t("integrationsPage.providers.jira.manualForm.apiTokenLabel")}
-                    value={jiraApiToken}
-                    onChange={(e) => setJiraApiToken(e.target.value)}
-                    type="password"
-                    required
-                  />
-                  <Stack direction="row" spacing={2} sx={{ mt: 1 }}>
+                  <Box>
+                    <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
+                      Option 1: Connect via Atlassian (Recommended)
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                      Authorize Plan AI to access your Jira workspace securely.
+                    </Typography>
                     <Button
                       variant="contained"
-                      color="primary"
-                      onClick={handleManualJiraConnect}
-                      disabled={
-                        isJiraManualConnecting || !jiraSiteUrl || !jiraEmail || !jiraApiToken
-                      }
+                      onClick={handleConnectJira}
+                      disabled={isJiraAuthLoading}
                     >
-                      {isJiraManualConnecting
-                        ? t("integrationsPage.loading")
-                        : t("integrationsPage.providers.jira.connectManualSubmit")}
+                      {isJiraAuthLoading
+                        ? t("integrationsPage.connect.redirecting", {
+                            defaultValue: "Redirecting...",
+                          })
+                        : t("integrationsPage.providers.jira.connectCta", {
+                            defaultValue: "Connect Jira",
+                          })}
                     </Button>
-                    <Button
-                      variant="text"
-                      color="secondary"
-                      onClick={() => setHelpDialogProvider("jira")}
-                    >
-                      {"How to find my token?"}
-                    </Button>
-                  </Stack>
-                  {jiraAuthError && (
-                    <Typography variant="body2" color="error">
-                      {jiraAuthError}
+                  </Box>
+
+                  <Box sx={{ borderTop: 1, borderColor: "divider", pt: 3 }}>
+                    <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
+                      Option 2: Connect Manually
                     </Typography>
-                  )}
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                      For custom or restricted setups.
+                    </Typography>
+                    <Box component="form" sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                      <TextField
+                        size="small"
+                        label={t("integrationsPage.providers.jira.manualForm.siteUrlLabel")}
+                        value={jiraSiteUrl}
+                        onChange={(e) => setJiraSiteUrl(e.target.value)}
+                        placeholder="https://my-company.atlassian.net"
+                        required
+                      />
+                      <TextField
+                        size="small"
+                        label={t("integrationsPage.providers.jira.manualForm.emailLabel")}
+                        value={jiraEmail}
+                        onChange={(e) => setJiraEmail(e.target.value)}
+                        type="email"
+                        required
+                      />
+                      <TextField
+                        size="small"
+                        label={t("integrationsPage.providers.jira.manualForm.apiTokenLabel")}
+                        value={jiraApiToken}
+                        onChange={(e) => setJiraApiToken(e.target.value)}
+                        type="password"
+                        required
+                      />
+                      <Stack direction="row" spacing={2} sx={{ mt: 1 }}>
+                        <Button
+                          variant="outlined"
+                          onClick={handleManualJiraConnect}
+                          disabled={
+                            isJiraManualConnecting || !jiraSiteUrl || !jiraEmail || !jiraApiToken
+                          }
+                        >
+                          {isJiraManualConnecting
+                            ? t("integrationsPage.loading")
+                            : t("integrationsPage.providers.jira.connectManualSubmit")}
+                        </Button>
+                        <Button
+                          variant="text"
+                          color="secondary"
+                          onClick={() => setHelpDialogProvider("jira")}
+                        >
+                          {"How to find my token?"}
+                        </Button>
+                      </Stack>
+                      {jiraAuthError && (
+                        <Typography variant="body2" color="error">
+                          {jiraAuthError}
+                        </Typography>
+                      )}
+                    </Box>
+                  </Box>
                 </Box>
               )}
               {config.tabValue === "linear" && (
                 <Box
-                  component="form"
-                  sx={{ mt: 2, display: "flex", flexDirection: "column", gap: 2, maxWidth: 400 }}
+                  sx={{ mt: 2, display: "flex", flexDirection: "column", gap: 3, maxWidth: 400 }}
                 >
-                  <TextField
-                    size="small"
-                    label="Personal API Key"
-                    value={linearApiKey}
-                    onChange={(e) => setLinearApiKey(e.target.value)}
-                    placeholder="lin_api_..."
-                    required
-                  />
-                  <Stack direction="row" spacing={2} sx={{ mt: 1 }}>
+                  <Box>
+                    <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
+                      Option 1: Connect via Linear App (Recommended)
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                      Authorize Plan AI to access your Linear workspace securely.
+                    </Typography>
                     <Button
                       variant="contained"
-                      onClick={handleManualLinearConnect}
-                      disabled={isLinearManualConnecting || !linearApiKey.trim()}
+                      onClick={handleConnectLinear}
+                      disabled={isLinearAuthLoading}
                     >
-                      {isLinearManualConnecting
-                        ? t("integrationsPage.loading")
-                        : t("integrationsPage.providers.linear.connectCta")}
+                      {isLinearAuthLoading
+                        ? t("integrationsPage.connect.redirecting", {
+                            defaultValue: "Redirecting...",
+                          })
+                        : "Connect with Linear"}
                     </Button>
-                    <Button
-                      variant="text"
-                      color="secondary"
-                      onClick={() => setHelpDialogProvider("linear")}
-                    >
-                      {"How to find my key?"}
-                    </Button>
-                  </Stack>
-                  {linearAuthError && (
-                    <Typography variant="body2" color="error">
-                      {linearAuthError}
+                  </Box>
+
+                  <Box sx={{ borderTop: 1, borderColor: "divider", pt: 3 }}>
+                    <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
+                      Option 2: Connect Manually with API Key
                     </Typography>
-                  )}
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                      For custom or restricted setups.
+                    </Typography>
+                    <Box component="form" sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                      <TextField
+                        size="small"
+                        label="Personal API Key"
+                        value={linearApiKey}
+                        onChange={(e) => setLinearApiKey(e.target.value)}
+                        placeholder="lin_api_..."
+                        required
+                      />
+                      <Stack direction="row" spacing={2} sx={{ mt: 1 }}>
+                        <Button
+                          variant="outlined"
+                          onClick={handleManualLinearConnect}
+                          disabled={isLinearManualConnecting || !linearApiKey.trim()}
+                        >
+                          {isLinearManualConnecting
+                            ? t("integrationsPage.loading")
+                            : t("integrationsPage.providers.linear.connectCta")}
+                        </Button>
+                        <Button
+                          variant="text"
+                          color="secondary"
+                          onClick={() => setHelpDialogProvider("linear")}
+                        >
+                          {"How to find my key?"}
+                        </Button>
+                      </Stack>
+                      {linearAuthError && (
+                        <Typography variant="body2" color="error">
+                          {linearAuthError}
+                        </Typography>
+                      )}
+                    </Box>
+                  </Box>
                 </Box>
               )}
               {config.tabValue === "trello" && (
                 <Box
-                  component="form"
-                  sx={{ mt: 2, display: "flex", flexDirection: "column", gap: 2, maxWidth: 400 }}
+                  sx={{ mt: 2, display: "flex", flexDirection: "column", gap: 3, maxWidth: 500 }}
                 >
-                  <Alert severity="info">
-                    Generate your app key and token directly from{" "}
-                    <a href="https://trello.com/app-key" target="_blank" rel="noopener noreferrer">
-                      Trello
-                    </a>
-                    .
-                  </Alert>
-                  <TextField
-                    size="small"
-                    label="Trello App Key"
-                    value={trelloApiKey}
-                    onChange={(e) => setTrelloApiKey(e.target.value)}
-                    required
-                  />
-                  <TextField
-                    size="small"
-                    label="Trello Token"
-                    value={trelloApiToken}
-                    onChange={(e) => setTrelloApiToken(e.target.value)}
-                    required
-                  />
-                  <Stack direction="row" spacing={2} sx={{ mt: 1 }}>
+                  <Box>
+                    <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
+                      Option 1: Connect via Trello (Recommended)
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                      Click the button below to authorize Plan AI to access your Trello boards.
+                    </Typography>
                     <Button
                       variant="contained"
-                      onClick={handleManualTrelloConnect}
-                      disabled={
-                        isTrelloManualConnecting || !trelloApiKey.trim() || !trelloApiToken.trim()
-                      }
+                      onClick={handleConnectTrello}
+                      disabled={isTrelloAuthLoading}
                     >
-                      {isTrelloManualConnecting
-                        ? t("integrationsPage.loading")
-                        : config.connectCtaKey
-                          ? t(config.connectCtaKey)
-                          : "Connect Trello"}
+                      {isTrelloAuthLoading ? "Redirecting..." : "Connect with Trello"}
                     </Button>
-                    <Button
-                      variant="text"
-                      color="secondary"
-                      onClick={() => setHelpDialogProvider("trello")}
-                    >
-                      {"How to find my token?"}
-                    </Button>
-                  </Stack>
-                  {trelloAuthError && (
-                    <Typography variant="body2" color="error">
-                      {trelloAuthError}
+                  </Box>
+
+                  <Box sx={{ borderTop: 1, borderColor: "divider", pt: 3 }}>
+                    <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
+                      Option 2: Connect Manually
                     </Typography>
-                  )}
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                      For custom or restricted setups where the global connection is unavailable.
+                    </Typography>
+                    <Box component="form" sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                      <TextField
+                        size="small"
+                        label="Trello App Key"
+                        value={trelloApiKey}
+                        onChange={(e) => setTrelloApiKey(e.target.value)}
+                        required
+                      />
+                      <TextField
+                        size="small"
+                        label="Trello Token"
+                        value={trelloApiToken}
+                        onChange={(e) => setTrelloApiToken(e.target.value)}
+                        required
+                      />
+                      <Stack direction="row" spacing={2} sx={{ mt: 1 }}>
+                        <Button
+                          variant="outlined"
+                          onClick={handleManualTrelloConnect}
+                          disabled={
+                            isTrelloManualConnecting ||
+                            !trelloApiKey.trim() ||
+                            !trelloApiToken.trim()
+                          }
+                        >
+                          {isTrelloManualConnecting
+                            ? t("integrationsPage.loading")
+                            : "Connect Trello"}
+                        </Button>
+                        <Button
+                          variant="text"
+                          color="secondary"
+                          onClick={() => setHelpDialogProvider("trello")}
+                        >
+                          {"How to find my token?"}
+                        </Button>
+                      </Stack>
+                      {trelloAuthError && (
+                        <Typography variant="body2" color="error">
+                          {trelloAuthError}
+                        </Typography>
+                      )}
+                    </Box>
+                  </Box>
                 </Box>
               )}
               {config.tabValue === "github" && (
@@ -574,11 +801,44 @@ const Integrations: React.FC = () => {
                       : undefined}
                 </Button>
               )}
+              {config.tabValue === "notion" && (
+                <Box
+                  sx={{ mt: 2, display: "flex", flexDirection: "column", gap: 3, maxWidth: 400 }}
+                >
+                  <Box>
+                    <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
+                      Connect via Notion
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                      Authorize Plan AI to access your Notion workspace and databases securely.
+                    </Typography>
+                    <Button
+                      variant="contained"
+                      onClick={handleConnectNotion}
+                      disabled={isNotionAuthLoading}
+                    >
+                      {isNotionAuthLoading
+                        ? t("integrationsPage.connect.redirecting", {
+                            defaultValue: "Redirecting...",
+                          })
+                        : config.connectCtaKey
+                          ? t(config.connectCtaKey)
+                          : "Connect Notion"}
+                    </Button>
+                    {notionAuthError && (
+                      <Typography variant="body2" color="error" sx={{ mt: 2 }}>
+                        {notionAuthError}
+                      </Typography>
+                    )}
+                  </Box>
+                </Box>
+              )}
               {config.tabValue !== "jira" &&
                 config.tabValue !== "linear" &&
                 config.tabValue !== "trello" &&
                 config.tabValue !== "github" &&
-                config.tabValue !== "google" && (
+                config.tabValue !== "google" &&
+                config.tabValue !== "notion" && (
                   <Button variant="contained" color="primary" disabled>
                     {config.connectCtaKey ? t(config.connectCtaKey) : undefined}
                   </Button>
@@ -604,18 +864,7 @@ const Integrations: React.FC = () => {
     );
   }
 
-  if (!canManageIntegrations) {
-    return (
-      <SidebarLayout>
-        <Box sx={{ p: 4 }}>
-          <Alert severity="warning">
-            Only workspace Owners and Admins can manage integrations. Please contact your workspace
-            administrator.
-          </Alert>
-        </Box>
-      </SidebarLayout>
-    );
-  }
+  // Removed the blanket block — members can now view integrations, just can't configure workspace-level ones
 
   return (
     <SidebarLayout>
@@ -637,29 +886,43 @@ const Integrations: React.FC = () => {
               variant="scrollable"
               allowScrollButtonsMobile
             >
-              {PROVIDER_CONFIGS.map((config) => (
-                <Tab
-                  key={config.tabValue}
-                  label={
-                    config.isBeta ? (
+              {PROVIDER_CONFIGS.map((config) => {
+                const isConnected = integrations.some(
+                  (i) => i.provider === config.provider && i.status === "CONNECTED",
+                );
+
+                return (
+                  <Tab
+                    key={config.tabValue}
+                    label={
                       <Stack direction="row" alignItems="center" spacing={1}>
                         <Typography variant="body2" sx={{ fontWeight: "inherit" }}>
                           {t(config.labelKey)}
                         </Typography>
-                        <Chip
-                          label="BETA"
-                          size="small"
-                          color="secondary"
-                          sx={{ height: 18, fontSize: "0.65rem", fontWeight: "bold" }}
-                        />
+                        {isConnected && (
+                          <Box
+                            sx={{
+                              width: 8,
+                              height: 8,
+                              borderRadius: "50%",
+                              bgcolor: "success.main",
+                            }}
+                          />
+                        )}
+                        {config.isBeta && (
+                          <Chip
+                            label="BETA"
+                            size="small"
+                            color="secondary"
+                            sx={{ height: 18, fontSize: "0.65rem", fontWeight: "bold" }}
+                          />
+                        )}
                       </Stack>
-                    ) : (
-                      t(config.labelKey)
-                    )
-                  }
-                  value={config.tabValue}
-                />
-              ))}
+                    }
+                    value={config.tabValue}
+                  />
+                );
+              })}
             </Tabs>
           </Box>
 
@@ -711,7 +974,8 @@ const Integrations: React.FC = () => {
 const ConnectedIntegrationDetails: React.FC<{
   integration: UserIntegrationSummary;
   onAddMore?: () => void;
-}> = ({ integration, onAddMore }) => {
+  canEdit?: boolean;
+}> = ({ integration, onAddMore, canEdit = true }) => {
   const { t } = useTranslation();
   const statusColorMap: Record<UserIntegrationSummary["status"], "success" | "default" | "error"> =
     {
@@ -721,6 +985,8 @@ const ConnectedIntegrationDetails: React.FC<{
     };
 
   const dispatch = useDispatch();
+  const [disconnectIntegration, { isLoading: isDisconnecting }] =
+    useDisconnectIntegrationMutation();
 
   const { data: jiraProjectsData, isLoading: isJiraProjectsLoading } = useGetJiraProjectsQuery(
     undefined,
@@ -744,6 +1010,25 @@ const ConnectedIntegrationDetails: React.FC<{
     () => ((integration.metadata as Record<string, unknown> | null)?.defaultTeamId as string) ?? "",
   );
 
+  const {
+    data: notionSummaryResponse,
+    isLoading: isNotionSummaryLoading,
+    isFetching: isNotionSummaryFetching,
+    refetch: refetchNotionSummary,
+  } = useGetNotionSummaryQuery(undefined, {
+    skip: integration.provider !== "NOTION" || integration.status !== "CONNECTED",
+  });
+  const { data: notionDatabasesData, isLoading: isNotionDatabasesLoading } =
+    useGetNotionDatabasesQuery(undefined, {
+      skip: integration.provider !== "NOTION" || integration.status !== "CONNECTED",
+    });
+  const [setNotionDefaultDatabase, { isLoading: isSavingNotionDatabase }] =
+    useSetNotionDefaultDatabaseMutation();
+  const [selectedNotionDatabaseId, setSelectedNotionDatabaseId] = React.useState(
+    () =>
+      ((integration.metadata as Record<string, unknown> | null)?.defaultDatabaseId as string) ?? "",
+  );
+
   const { data: trelloBoardsData, isLoading: isTrelloBoardsLoading } = useGetTrelloBoardsQuery(
     undefined,
     { skip: integration.provider !== "TRELLO" || integration.status !== "CONNECTED" },
@@ -757,14 +1042,6 @@ const ConnectedIntegrationDetails: React.FC<{
   const [selectedTrelloListId, setSelectedTrelloListId] = React.useState(
     () => ((integration.metadata as Record<string, unknown> | null)?.defaultListId as string) ?? "",
   );
-
-  React.useEffect(() => {
-    const meta = integration.metadata as Record<string, unknown> | null;
-    setSelectedJiraProjectId((meta?.defaultProjectId as string) ?? "");
-    setSelectedLinearTeamId((meta?.defaultTeamId as string) ?? "");
-    setSelectedTrelloBoardId((meta?.defaultBoardId as string) ?? "");
-    setSelectedTrelloListId((meta?.defaultListId as string) ?? "");
-  }, [integration.metadata]);
 
   const { data: trelloListsData, isLoading: isTrelloListsLoading } = useGetTrelloListsQuery(
     selectedTrelloBoardId,
@@ -787,11 +1064,170 @@ const ConnectedIntegrationDetails: React.FC<{
     const teamId = (meta?.defaultTeamId as string) ?? "";
     const boardId = (meta?.defaultBoardId as string) ?? "";
     const listId = (meta?.defaultListId as string) ?? "";
+    const notionDbId = (meta?.defaultDatabaseId as string) ?? "";
     setSelectedJiraProjectId(projectId);
     setSelectedLinearTeamId(teamId);
     setSelectedTrelloBoardId(boardId);
     setSelectedTrelloListId(listId);
+    setSelectedNotionDatabaseId(notionDbId);
   }, [integration.metadata, integration.provider]);
+
+  // Use a ref to prevent race conditions / duplicate auto-selects
+  const autoSelectRef = React.useRef({
+    jira: false,
+    linear: false,
+    trelloBoard: false,
+    trelloList: false,
+    notion: false,
+  });
+
+  // Auto-select first options if none selected
+  React.useEffect(() => {
+    if (
+      integration.provider === "JIRA" &&
+      integration.status === "CONNECTED" &&
+      !selectedJiraProjectId &&
+      jiraProjectsData?.data?.length &&
+      canEdit &&
+      !autoSelectRef.current.jira
+    ) {
+      autoSelectRef.current.jira = true;
+      const firstProjectId = jiraProjectsData.data[0].id;
+      setSelectedJiraProjectId(firstProjectId);
+      setJiraDefaultProject({ projectId: firstProjectId })
+        .unwrap()
+        .then(() => dispatch(integrationApi.util.invalidateTags(["Integration"])))
+        .catch(() => {
+          autoSelectRef.current.jira = false;
+        });
+    }
+  }, [
+    integration.provider,
+    integration.status,
+    selectedJiraProjectId,
+    jiraProjectsData,
+    canEdit,
+    setJiraDefaultProject,
+    dispatch,
+  ]);
+
+  React.useEffect(() => {
+    if (
+      integration.provider === "LINEAR" &&
+      integration.status === "CONNECTED" &&
+      !selectedLinearTeamId &&
+      linearTeamsData?.data?.length &&
+      canEdit &&
+      !autoSelectRef.current.linear
+    ) {
+      autoSelectRef.current.linear = true;
+      const firstTeamId = linearTeamsData.data[0].id;
+      setSelectedLinearTeamId(firstTeamId);
+      setLinearDefaultTeam({ teamId: firstTeamId })
+        .unwrap()
+        .then(() => dispatch(integrationApi.util.invalidateTags(["Integration"])))
+        .catch(() => {
+          autoSelectRef.current.linear = false;
+        });
+    }
+  }, [
+    integration.provider,
+    integration.status,
+    selectedLinearTeamId,
+    linearTeamsData,
+    canEdit,
+    setLinearDefaultTeam,
+    dispatch,
+  ]);
+
+  React.useEffect(() => {
+    if (
+      integration.provider === "TRELLO" &&
+      integration.status === "CONNECTED" &&
+      !selectedTrelloBoardId &&
+      trelloBoardsData?.data?.length &&
+      canEdit &&
+      !autoSelectRef.current.trelloBoard
+    ) {
+      autoSelectRef.current.trelloBoard = true;
+      const firstBoardId = trelloBoardsData.data[0].id;
+      setSelectedTrelloBoardId(firstBoardId);
+      setTrelloDefaultBoardList({ boardId: firstBoardId, listId: "" })
+        .unwrap()
+        .then(() => dispatch(integrationApi.util.invalidateTags(["Integration"])))
+        .catch(() => {
+          autoSelectRef.current.trelloBoard = false;
+        });
+    }
+  }, [
+    integration.provider,
+    integration.status,
+    selectedTrelloBoardId,
+    trelloBoardsData,
+    canEdit,
+    setTrelloDefaultBoardList,
+    dispatch,
+  ]);
+
+  React.useEffect(() => {
+    if (
+      integration.provider === "TRELLO" &&
+      integration.status === "CONNECTED" &&
+      selectedTrelloBoardId &&
+      !selectedTrelloListId &&
+      trelloListsData?.data?.length &&
+      canEdit &&
+      !autoSelectRef.current.trelloList
+    ) {
+      autoSelectRef.current.trelloList = true;
+      const firstListId = trelloListsData.data[0].id;
+      setSelectedTrelloListId(firstListId);
+      setTrelloDefaultBoardList({ boardId: selectedTrelloBoardId, listId: firstListId })
+        .unwrap()
+        .then(() => dispatch(integrationApi.util.invalidateTags(["Integration"])))
+        .catch(() => {
+          autoSelectRef.current.trelloList = false;
+        });
+    }
+  }, [
+    integration.provider,
+    integration.status,
+    selectedTrelloBoardId,
+    selectedTrelloListId,
+    trelloListsData,
+    canEdit,
+    setTrelloDefaultBoardList,
+    dispatch,
+  ]);
+
+  React.useEffect(() => {
+    if (
+      integration.provider === "NOTION" &&
+      integration.status === "CONNECTED" &&
+      !selectedNotionDatabaseId &&
+      notionDatabasesData?.data?.length &&
+      canEdit &&
+      !autoSelectRef.current.notion
+    ) {
+      autoSelectRef.current.notion = true;
+      const firstDbId = notionDatabasesData.data[0].id;
+      setSelectedNotionDatabaseId(firstDbId);
+      setNotionDefaultDatabase({ databaseId: firstDbId })
+        .unwrap()
+        .then(() => dispatch(integrationApi.util.invalidateTags(["Integration"])))
+        .catch(() => {
+          autoSelectRef.current.notion = false;
+        });
+    }
+  }, [
+    integration.provider,
+    integration.status,
+    selectedNotionDatabaseId,
+    notionDatabasesData,
+    canEdit,
+    setNotionDefaultDatabase,
+    dispatch,
+  ]);
 
   const {
     data: reposData,
@@ -869,6 +1305,43 @@ const ConnectedIntegrationDetails: React.FC<{
             {integration.accountName}
           </Typography>
         ) : null}
+        <Box sx={{ flexGrow: 1 }} />
+        {canEdit ? (
+          <Button
+            size="small"
+            color="error"
+            variant="outlined"
+            onClick={async () => {
+              if (window.confirm("Are you sure you want to disconnect this integration?")) {
+                try {
+                  await disconnectIntegration(integration.provider).unwrap();
+                  dispatch(
+                    setToastMessage({
+                      severity: "success",
+                      message: "Integration disconnected successfully",
+                    }),
+                  );
+                } catch (e) {
+                  dispatch(
+                    setToastMessage({
+                      severity: "error",
+                      message: "Failed to disconnect integration",
+                    }),
+                  );
+                }
+              }
+            }}
+            disabled={isDisconnecting}
+          >
+            {isDisconnecting ? "Disconnecting..." : "Disconnect"}
+          </Button>
+        ) : (
+          <Tooltip title="Only workspace Admins or Owners can disconnect this integration">
+            <span>
+              <Chip label="Read-only" size="small" variant="outlined" color="default" />
+            </span>
+          </Tooltip>
+        )}
       </Stack>
 
       <Typography variant="body2" color="text.secondary">
@@ -953,7 +1426,7 @@ const ConnectedIntegrationDetails: React.FC<{
               <Select
                 label="Select Default Project"
                 value={selectedJiraProjectId}
-                disabled={isSavingJiraProject}
+                disabled={isSavingJiraProject || !canEdit}
                 onChange={async (e) => {
                   const projectId = e.target.value as string;
                   setSelectedJiraProjectId(projectId);
@@ -1051,7 +1524,7 @@ const ConnectedIntegrationDetails: React.FC<{
               <Select
                 label="Select Default Team"
                 value={selectedLinearTeamId}
-                disabled={isSavingLinearTeam}
+                disabled={isSavingLinearTeam || !canEdit}
                 onChange={async (e) => {
                   const teamId = e.target.value as string;
                   setSelectedLinearTeamId(teamId);
@@ -1136,7 +1609,7 @@ const ConnectedIntegrationDetails: React.FC<{
                 <Select
                   label="Select Default Board"
                   value={selectedTrelloBoardId}
-                  disabled={isSavingTrelloDefault}
+                  disabled={isSavingTrelloDefault || !canEdit}
                   onChange={async (e) => {
                     const boardId = e.target.value as string;
                     setSelectedTrelloBoardId(boardId);
@@ -1172,7 +1645,7 @@ const ConnectedIntegrationDetails: React.FC<{
                   <Select
                     label="Select Default List"
                     value={selectedTrelloListId}
-                    disabled={isSavingTrelloDefault}
+                    disabled={isSavingTrelloDefault || !canEdit}
                     onChange={async (e) => {
                       const listId = e.target.value as string;
                       setSelectedTrelloListId(listId);
@@ -1206,6 +1679,93 @@ const ConnectedIntegrationDetails: React.FC<{
                   </Select>
                 </FormControl>
               ))}
+          </Stack>
+        </Box>
+      )}
+
+      {integration.provider === "NOTION" && integration.status === "CONNECTED" && (
+        <Box sx={{ mt: 2 }}>
+          <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }}>
+            <Typography variant="subtitle2" sx={{ flexGrow: 1 }}>
+              Notion Workspace Overview
+            </Typography>
+            <IconButton
+              size="small"
+              onClick={() => refetchNotionSummary()}
+              disabled={isNotionSummaryFetching || isNotionSummaryLoading}
+            >
+              <SyncIcon fontSize="small" sx={{ color: "text.secondary" }} />
+            </IconButton>
+          </Stack>
+
+          {isNotionSummaryLoading || isNotionSummaryFetching ? (
+            <CircularProgress size={20} />
+          ) : notionSummaryResponse?.data ? (
+            <Stack spacing={2} sx={{ mt: 1, mb: 2 }}>
+              <Paper variant="outlined" sx={{ p: 2 }}>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                  <strong>Total Databases:</strong>{" "}
+                  {notionSummaryResponse.data.totalDatabases ?? "N/A"}
+                </Typography>
+                {notionSummaryResponse.data.latestDatabases?.length > 0 && (
+                  <Box>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                      <strong>Latest Databases:</strong>
+                    </Typography>
+                    <Stack direction="row" flexWrap="wrap" gap={1}>
+                      {notionSummaryResponse.data.latestDatabases.map((db: string) => (
+                        <Chip key={db} label={db} size="small" variant="outlined" />
+                      ))}
+                    </Stack>
+                  </Box>
+                )}
+              </Paper>
+            </Stack>
+          ) : null}
+
+          <Typography variant="subtitle2" sx={{ mb: 1, mt: 2 }}>
+            Default Destination Database
+          </Typography>
+          <Stack spacing={2}>
+            {isNotionDatabasesLoading ? (
+              <CircularProgress size={20} />
+            ) : (
+              <FormControl size="small" sx={{ minWidth: 280 }}>
+                <InputLabel>Select Default Database</InputLabel>
+                <Select
+                  label="Select Default Database"
+                  value={selectedNotionDatabaseId}
+                  disabled={isSavingNotionDatabase || !canEdit}
+                  onChange={async (e) => {
+                    const databaseId = e.target.value as string;
+                    setSelectedNotionDatabaseId(databaseId);
+                    try {
+                      await setNotionDefaultDatabase({ databaseId }).unwrap();
+                      dispatch(integrationApi.util.invalidateTags(["Integration"]));
+                      dispatch(
+                        setToastMessage({
+                          severity: "success",
+                          message: "Default Notion Database saved",
+                        }),
+                      );
+                    } catch {
+                      dispatch(
+                        setToastMessage({
+                          severity: "error",
+                          message: "Failed to save default Notion Database",
+                        }),
+                      );
+                    }
+                  }}
+                >
+                  {(notionDatabasesData?.data ?? []).map((db: { id: string; name: string }) => (
+                    <MenuItem key={db.id} value={db.id}>
+                      {db.name}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            )}
           </Stack>
         </Box>
       )}

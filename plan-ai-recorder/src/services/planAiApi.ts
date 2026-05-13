@@ -286,6 +286,7 @@ export const createPlanAiApi = (
         if (payload.syncToJira) formData.append("syncToJira", "true");
         if (payload.syncToLinear) formData.append("syncToLinear", "true");
         if (payload.syncToTrello) formData.append("syncToTrello", "true");
+        if (payload.syncToNotion) formData.append("syncToNotion", "true");
         if (payload.taskStrategy) formData.append("taskStrategy", payload.taskStrategy);
         if (payload.taskCount) formData.append("taskCount", payload.taskCount.toString());
         if (payload.skipAi) formData.append("skipAi", "true");

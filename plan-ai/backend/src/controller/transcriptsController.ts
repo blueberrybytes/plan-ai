@@ -80,6 +80,7 @@ interface CreateStandaloneTranscriptBody {
   syncToJira?: boolean;
   syncToLinear?: boolean;
   syncToTrello?: boolean;
+  syncToNotion?: boolean;
   taskStrategy?: "AUTO" | "SINGLE_TICKET" | "SPECIFIC_COUNT";
   taskCount?: number;
   agenticInvestigation?: boolean;
@@ -231,6 +232,7 @@ export class TranscriptsController extends BaseWorkspaceController {
     @FormField() syncToJira?: string,
     @FormField() syncToLinear?: string,
     @FormField() syncToTrello?: string,
+    @FormField() syncToNotion?: string,
     @FormField() skipAi?: string,
     @FormField() taskStrategy?: "AUTO" | "SINGLE_TICKET" | "SPECIFIC_COUNT",
     @FormField() taskCount?: string,
@@ -347,6 +349,7 @@ export class TranscriptsController extends BaseWorkspaceController {
         syncToJira: syncToJira === "true",
         syncToLinear: syncToLinear === "true",
         syncToTrello: syncToTrello === "true",
+        syncToNotion: syncToNotion === "true",
         taskStrategy,
         taskCount: taskCount ? parseInt(taskCount, 10) : undefined,
         contextPrompt: contextPrompt ?? undefined,

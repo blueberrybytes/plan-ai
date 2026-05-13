@@ -42,12 +42,12 @@ export class JiraController extends BaseWorkspaceController {
     @Request() request: AuthenticatedRequest,
     @Query() state?: string,
   ): Promise<ApiResponse<JiraAuthorizationResponse>> {
-    const { user } = await this.getAuthorizedWorkspaceAccess(request);
+    const { workspaceId } = await this.requireAdminOrOwner(request);
 
     const baseUrl = this.getBaseUrl(request);
     const redirectUri = jiraIntegrationService.buildRedirectUri(baseUrl);
     const stateToken = jiraIntegrationService.createStateToken({
-      userId: user.id,
+      workspaceId,
       issuedAt: Date.now(),
       clientState: state ?? null,
     });
@@ -106,13 +106,14 @@ export class JiraController extends BaseWorkspaceController {
       return;
     }
 
-    const user = await prisma.user.findUnique({
-      where: { id: statePayload.userId },
+    // Validate the workspaceId exists
+    const workspace = await prisma.workspace.findUnique({
+      where: { id: statePayload.workspaceId },
     });
 
-    if (!user) {
-      logger.warn("Jira callback received for unknown user", {
-        userId: statePayload.userId,
+    if (!workspace) {
+      logger.warn("Jira callback received for unknown workspace", {
+        workspaceId: statePayload.workspaceId,
       });
       return;
     }
@@ -130,7 +131,7 @@ export class JiraController extends BaseWorkspaceController {
       const primaryResource = accessibleResources[0];
 
       await jiraIntegrationService.upsertIntegration({
-        userId: user.id,
+        workspaceId: statePayload.workspaceId,
         accessToken: tokenResponse.access_token,
         refreshToken: tokenResponse.refresh_token,
         expiresInSeconds: tokenResponse.expires_in,
@@ -160,11 +161,11 @@ export class JiraController extends BaseWorkspaceController {
     @Request() request: AuthenticatedRequest,
     @Body() body: JiraManualConnectRequest,
   ): Promise<ApiResponse<{ success: boolean }>> {
-    const { user } = await this.getAuthorizedWorkspaceAccess(request);
+    const { workspaceId } = await this.requireAdminOrOwner(request);
 
     try {
       await jiraIntegrationService.verifyManualCredentials(
-        user.id,
+        workspaceId,
         body.siteUrl,
         body.email,
         body.apiToken,
@@ -190,14 +191,11 @@ export class JiraController extends BaseWorkspaceController {
   public async getSummary(
     @Request() request: AuthenticatedRequest,
   ): Promise<ApiResponse<JiraSummaryResponse>> {
-    const { user } = await this.getAuthorizedWorkspaceAccess(request);
+    const { workspaceId } = await this.getAuthorizedWorkspaceAccess(request);
 
     try {
-      const summary = await jiraIntegrationService.getJiraSummary(user.id);
-      return {
-        status: 200,
-        data: summary,
-      };
+      const summary = await jiraIntegrationService.getJiraSummary(workspaceId);
+      return { status: 200, data: summary };
     } catch (error) {
       this.setStatus(400);
       return {
@@ -213,9 +211,9 @@ export class JiraController extends BaseWorkspaceController {
   public async getProjects(
     @Request() request: AuthenticatedRequest,
   ): Promise<ApiResponse<JiraProjectItem[]>> {
-    const { user } = await this.getAuthorizedWorkspaceAccess(request);
+    const { workspaceId } = await this.getAuthorizedWorkspaceAccess(request);
     try {
-      const projects = await jiraIntegrationService.listJiraProjects(user.id);
+      const projects = await jiraIntegrationService.listJiraProjects(workspaceId);
       return { status: 200, data: projects };
     } catch (error) {
       this.setStatus(400);
@@ -233,11 +231,11 @@ export class JiraController extends BaseWorkspaceController {
     @Request() request: AuthenticatedRequest,
     @Body() body: SetDefaultProjectRequest,
   ): Promise<ApiResponse<null>> {
-    const { user } = await this.getAuthorizedWorkspaceAccess(request);
-    console.log(`[JiraController] setDefaultProject called by ${user.id} with body:`, body);
+    const { workspaceId } = await this.requireAdminOrOwner(request);
+    console.log(`[JiraController] setDefaultProject called for workspace ${workspaceId} with body:`, body);
     try {
-      await jiraIntegrationService.setDefaultJiraProject(user.id, body.projectId);
-      console.log(`[JiraController] setDefaultProject SUCCESS for ${user.id}`);
+      await jiraIntegrationService.setDefaultJiraProject(workspaceId, body.projectId);
+      console.log(`[JiraController] setDefaultProject SUCCESS for workspace ${workspaceId}`);
       return { status: 200, data: null };
     } catch (error) {
       this.setStatus(400);

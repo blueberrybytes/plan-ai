@@ -89,6 +89,16 @@ export const integrationApi = createApi({
         { type: "Integration" as const, id: "GOOGLE_DRIVE" },
       ],
     }),
+    disconnectIntegration: builder.mutation<{ success: boolean; message?: string }, string>({
+      query: (provider) => ({
+        url: `/api/integrations/${provider}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: (result, error, provider) => [
+        { type: "Integration" as const, id: "LIST" },
+        { type: "Integration" as const, id: provider },
+      ],
+    }),
   }),
 });
 
@@ -100,4 +110,5 @@ export const {
   useGetGithubRepositoryBranchesQuery,
   useLazyGetGoogleAuthUrlQuery,
   useBindGoogleAccountMutation,
+  useDisconnectIntegrationMutation,
 } = integrationApi;

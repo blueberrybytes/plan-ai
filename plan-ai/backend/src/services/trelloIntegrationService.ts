@@ -31,7 +31,7 @@ class TrelloIntegrationService {
     return response.json();
   }
 
-  public async verifyManualCredentials(userId: string, payload: TrelloManualConnectRequest) {
+  public async verifyManualCredentials(workspaceId: string, payload: TrelloManualConnectRequest) {
     const { apiKey, token } = payload;
     if (!apiKey || !token) {
       throw new Error("Missing Trello API Key or Token");
@@ -49,15 +49,15 @@ class TrelloIntegrationService {
         throw new Error("Invalid API Key or Token");
       }
 
-      await prisma.userIntegration.upsert({
+      await prisma.workspaceIntegration.upsert({
         where: {
-          userId_provider: {
-            userId,
+          workspaceId_provider: {
+            workspaceId,
             provider: IntegrationProvider.TRELLO,
           },
         },
         create: {
-          userId,
+          workspaceId,
           provider: IntegrationProvider.TRELLO,
           status: IntegrationStatus.CONNECTED,
           accessToken: `${apiKey}:${token}`, // Store them bound together to avoid adding a new column
@@ -86,14 +86,70 @@ class TrelloIntegrationService {
     }
   }
 
+  public async verifyAutoConnectToken(workspaceId: string, token: string) {
+    const apiKey = process.env.TRELLO_GLOBAL_API_KEY;
+    if (!apiKey) {
+      throw new Error("Trello Global API Key is not configured on the server");
+    }
+
+    if (!token) {
+      throw new Error("Missing Trello Token");
+    }
+
+    try {
+      const viewer = await this.fetchTrello<{ id: string; fullName: string }>(
+        "/members/me",
+        apiKey,
+        token,
+      );
+
+      if (!viewer || !viewer.id) {
+        throw new Error("Invalid Trello Token");
+      }
+
+      await prisma.workspaceIntegration.upsert({
+        where: {
+          workspaceId_provider: {
+            workspaceId,
+            provider: IntegrationProvider.TRELLO,
+          },
+        },
+        create: {
+          workspaceId,
+          provider: IntegrationProvider.TRELLO,
+          status: IntegrationStatus.CONNECTED,
+          accessToken: `${apiKey}:${token}`,
+          accountId: viewer.id,
+          accountName: viewer.fullName,
+          metadata: {
+            authType: "OAUTH", // We call this OAUTH to distinguish from MANUAL
+          } as TrelloIntegrationMetadata as unknown as Prisma.InputJsonObject,
+        },
+        update: {
+          status: IntegrationStatus.CONNECTED,
+          accessToken: `${apiKey}:${token}`,
+          accountId: viewer.id,
+          accountName: viewer.fullName,
+          metadata: {
+            authType: "OAUTH",
+          } as TrelloIntegrationMetadata as unknown as Prisma.InputJsonObject,
+        },
+      });
+      return { success: true };
+    } catch (error) {
+      logger.error("Trello auto connect verification failed", error);
+      throw new Error("Unauthorized Trello Token. Please try connecting again.");
+    }
+  }
+
   private getCredentials(accessToken: string): { apiKey: string; token: string } {
     const [apiKey, token] = accessToken.split(":");
     return { apiKey, token };
   }
 
-  public async getTrelloSummary(userId: string): Promise<TrelloSummaryResponse> {
-    const integration = await prisma.userIntegration.findUnique({
-      where: { userId_provider: { userId, provider: IntegrationProvider.TRELLO } },
+  public async getTrelloSummary(workspaceId: string): Promise<TrelloSummaryResponse> {
+    const integration = await prisma.workspaceIntegration.findUnique({
+      where: { workspaceId_provider: { workspaceId, provider: IntegrationProvider.TRELLO } },
     });
 
     if (!integration || integration.status !== IntegrationStatus.CONNECTED) {
@@ -123,9 +179,9 @@ class TrelloIntegrationService {
     }
   }
 
-  public async listTrelloBoards(userId: string): Promise<{ id: string; name: string }[]> {
-    const integration = await prisma.userIntegration.findUnique({
-      where: { userId_provider: { userId, provider: IntegrationProvider.TRELLO } },
+  public async listTrelloBoards(workspaceId: string): Promise<{ id: string; name: string }[]> {
+    const integration = await prisma.workspaceIntegration.findUnique({
+      where: { workspaceId_provider: { workspaceId, provider: IntegrationProvider.TRELLO } },
     });
     if (!integration || integration.status !== IntegrationStatus.CONNECTED) {
       throw new Error("Trello is not connected");
@@ -140,11 +196,11 @@ class TrelloIntegrationService {
   }
 
   public async listTrelloLists(
-    userId: string,
+    workspaceId: string,
     boardId: string,
   ): Promise<{ id: string; name: string }[]> {
-    const integration = await prisma.userIntegration.findUnique({
-      where: { userId_provider: { userId, provider: IntegrationProvider.TRELLO } },
+    const integration = await prisma.workspaceIntegration.findUnique({
+      where: { workspaceId_provider: { workspaceId, provider: IntegrationProvider.TRELLO } },
     });
     if (!integration || integration.status !== IntegrationStatus.CONNECTED) {
       throw new Error("Trello is not connected");
@@ -159,12 +215,12 @@ class TrelloIntegrationService {
   }
 
   public async setDefaultTrelloBoardAndList(
-    userId: string,
+    workspaceId: string,
     boardId: string,
     listId: string,
   ): Promise<void> {
-    const integration = await prisma.userIntegration.findUnique({
-      where: { userId_provider: { userId, provider: IntegrationProvider.TRELLO } },
+    const integration = await prisma.workspaceIntegration.findUnique({
+      where: { workspaceId_provider: { workspaceId, provider: IntegrationProvider.TRELLO } },
     });
     if (!integration) throw new Error("Trello integration not found");
 
@@ -175,20 +231,20 @@ class TrelloIntegrationService {
       defaultListId: listId,
     } as unknown as Prisma.InputJsonObject;
 
-    await prisma.userIntegration.update({
-      where: { userId_provider: { userId, provider: IntegrationProvider.TRELLO } },
+    await prisma.workspaceIntegration.update({
+      where: { workspaceId_provider: { workspaceId, provider: IntegrationProvider.TRELLO } },
       data: { metadata: newMetadata },
     });
   }
 
   public async createTrelloCard(
-    userId: string,
+    workspaceId: string,
     taskId: string,
     boardId: string,
     listId: string,
   ): Promise<{ cardId: string; shortLink: string; url: string }> {
-    const integration = await prisma.userIntegration.findUnique({
-      where: { userId_provider: { userId, provider: IntegrationProvider.TRELLO } },
+    const integration = await prisma.workspaceIntegration.findUnique({
+      where: { workspaceId_provider: { workspaceId, provider: IntegrationProvider.TRELLO } },
     });
     if (!integration || integration.status !== IntegrationStatus.CONNECTED) {
       throw new Error("Trello is not connected");

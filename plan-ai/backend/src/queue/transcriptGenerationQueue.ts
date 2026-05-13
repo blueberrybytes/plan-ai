@@ -30,6 +30,7 @@ export interface TranscriptGenerationJobPayload {
   syncToJira?: boolean;
   syncToLinear?: boolean;
   syncToTrello?: boolean;
+  syncToNotion?: boolean;
   contextPrompt?: string;
   agenticInvestigation?: boolean;
 }

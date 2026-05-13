@@ -296,9 +296,11 @@ export default function RecordScreen() {
   const [syncToJira, setSyncToJira] = useState(false);
   const [syncToLinear, setSyncToLinear] = useState(false);
   const [syncToTrello, setSyncToTrello] = useState(false);
+  const [syncToNotion, setSyncToNotion] = useState(false);
   const [hasJira, setHasJira] = useState(false);
   const [hasLinear, setHasLinear] = useState(false);
   const [hasTrello, setHasTrello] = useState(false);
+  const [hasNotion, setHasNotion] = useState(false);
 
   const [taskStrategy, setTaskStrategy] = useState<
     "AUTO" | "SINGLE_TICKET" | "SPECIFIC_COUNT"
@@ -533,14 +535,19 @@ export default function RecordScreen() {
           const trello = (ints as any[]).find(
             (i) => i.provider === "TRELLO" && i.status === "CONNECTED",
           );
+          const notion = (ints as any[]).find(
+            (i) => i.provider === "NOTION" && i.status === "CONNECTED",
+          );
           if (jira) setHasJira(true);
           if (linear) setHasLinear(true);
           if (trello) setHasTrello(true);
+          if (notion) setHasNotion(true);
 
           // As per UX requirement, default to OFF on mobile to avoid accidental spam
           setSyncToJira(false);
           setSyncToLinear(false);
           setSyncToTrello(false);
+          setSyncToNotion(false);
         })
         .finally(() => {
           setIsLoadingMetadata(false);
@@ -791,6 +798,7 @@ export default function RecordScreen() {
         syncToJira,
         syncToLinear,
         syncToTrello,
+        syncToNotion,
         taskStrategy,
         taskCount,
         skipAi,
@@ -830,6 +838,7 @@ export default function RecordScreen() {
           syncToJira,
           syncToLinear,
           syncToTrello,
+          syncToNotion,
           taskStrategy,
           taskCount,
           skipAi,
@@ -1093,6 +1102,22 @@ export default function RecordScreen() {
                   value={syncToTrello}
                   onValueChange={setSyncToTrello}
                   disabled={!hasTrello}
+                />
+              </View>
+              <View
+                style={{
+                  flexDirection: "row",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                }}
+              >
+                <Text style={{ opacity: hasNotion ? 1 : 0.5 }}>
+                  Sync to Notion
+                </Text>
+                <Switch
+                  value={syncToNotion}
+                  onValueChange={setSyncToNotion}
+                  disabled={!hasNotion}
                 />
               </View>
             </View>

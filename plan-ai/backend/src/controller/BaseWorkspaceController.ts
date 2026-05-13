@@ -41,4 +41,17 @@ export abstract class BaseWorkspaceController extends Controller {
 
     return { user, workspaceId, role: membership.role };
   }
+
+  /**
+   * Ensures the caller is an OWNER or ADMIN of the current workspace.
+   * Used to protect integration management endpoints (connect/edit/delete).
+   */
+  protected async requireAdminOrOwner(request: AuthenticatedRequest) {
+    const { user, workspaceId, role } = await this.getAuthorizedWorkspaceAccess(request);
+    if (role !== "OWNER" && role !== "ADMIN") {
+      this.setStatus(403);
+      throw { status: 403, message: "Only workspace Owners and Admins can manage integrations" };
+    }
+    return { user, workspaceId, role };
+  }
 }

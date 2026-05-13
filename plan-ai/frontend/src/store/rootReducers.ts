@@ -21,6 +21,7 @@ import { diagramApi } from "./apis/diagramApi";
 import { aiApi } from "./apis/aiApi";
 import { taskApi } from "./apis/taskApi";
 import { trelloApi } from "./apis/trelloApi";
+import { notionApi } from "./apis/notionApi";
 import { aiUsageApi } from "./apis/aiUsageApi";
 import { userApi } from "./apis/userApi";
 import { adminApi } from "./apis/adminApi";
@@ -49,6 +50,7 @@ const appReducers = combineReducers({
   [aiApi.reducerPath]: aiApi.reducer,
   [taskApi.reducerPath]: taskApi.reducer,
   [trelloApi.reducerPath]: trelloApi.reducer,
+  [notionApi.reducerPath]: notionApi.reducer,
   [aiUsageApi.reducerPath]: aiUsageApi.reducer,
   [userApi.reducerPath]: userApi.reducer,
   [adminApi.reducerPath]: adminApi.reducer,
@@ -84,6 +86,7 @@ const rootReducers = (state: any, action: any) => {
       [aiApi.reducerPath]: undefined,
       [taskApi.reducerPath]: undefined,
       [trelloApi.reducerPath]: undefined,
+      [notionApi.reducerPath]: undefined,
       [aiUsageApi.reducerPath]: undefined,
       // Note: We deliberately exclude authApi, accountApi, userApi, adminApi, onboardingApi
       // because their context is global (User-level) and doesn't rotate.

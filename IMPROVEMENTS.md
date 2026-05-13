@@ -2,6 +2,9 @@
 
 This document outlines the high-priority features, technical debt, and quality-of-life improvements planned for the Plan AI ecosystem (Web, Desktop Recorder, and Mobile App).
 
+## 0. Integrations must be for the Workspace
+Only ADMIN or OWNER of the workspace can create integrations. And an integration. Members can oly see not edit or delete integratios 
+
 ## 1. Asynchronous Task Generation & Resiliency
 **Problem:** Extracting tasks from transcripts via AI can take significant time, especially for long meetings. If the generation fails or the connection drops during this window, the user is left without tasks and no easy way to try again.
 **Solution:**
@@ -52,3 +55,5 @@ This document outlines the high-priority features, technical debt, and quality-o
 - Render only the **exact path** of nodes (10-30 files/functions) that the AI investigated to generate that specific ticket. 
 - Example: `Ticket` -> `userController.ts` -> `AuthService` -> `schema.prisma`. 
 - **Impact:** Negligible performance cost in React, but massive commercial impact. It visually proves the AI's "train of thought" and architectural understanding.
+
+## 8. Missing translations in a lot of pages that are hardcoded

@@ -1,9 +1,9 @@
-import { Get, Path, Request, Route, Security, Tags } from "tsoa";
+import { Get, Delete, Path, Request, Route, Security, Tags } from "tsoa";
 import { BaseWorkspaceController } from "./BaseWorkspaceController";
 import type { AuthenticatedRequest } from "../middleware/authMiddleware";
 import { type ApiResponse, type TsoaJsonObject } from "./controllerTypes";
 import { integrationService } from "../services/integrationService";
-import type { UserIntegrationSummary } from "../services/integrationService";
+import type { IntegrationSummary } from "../services/integrationService";
 import { IntegrationProvider, IntegrationStatus } from "@prisma/client";
 import type { TrelloIntegrationMetadata, JiraIntegrationMetadata } from "../services/integrationMetadataTypes";
 
@@ -20,6 +20,7 @@ interface IntegrationSummaryResponse {
   updatedAt: Date;
   hasRefreshToken: boolean;
   defaultBoardUrl?: string | null;
+  isWorkspaceLevel: boolean;
 }
 
 @Route("api/integrations")
@@ -30,8 +31,8 @@ export class IntegrationController extends BaseWorkspaceController {
   public async listIntegrations(
     @Request() request: AuthenticatedRequest,
   ): Promise<ApiResponse<IntegrationSummaryResponse[]>> {
-    const { user } = await this.getAuthorizedWorkspaceAccess(request);
-    const integrations = await integrationService.listIntegrationsForUser(user.id);
+    const { user, workspaceId } = await this.getAuthorizedWorkspaceAccess(request);
+    const integrations = await integrationService.listIntegrationsForContext(workspaceId, user.id);
 
     return {
       status: 200,
@@ -45,7 +46,7 @@ export class IntegrationController extends BaseWorkspaceController {
     @Request() request: AuthenticatedRequest,
     @Path() provider: string,
   ): Promise<ApiResponse<IntegrationSummaryResponse | null>> {
-    const { user } = await this.getAuthorizedWorkspaceAccess(request);
+    const { user, workspaceId } = await this.getAuthorizedWorkspaceAccess(request);
     const providerEnum = this.parseProvider(provider);
 
     if (!providerEnum) {
@@ -57,7 +58,7 @@ export class IntegrationController extends BaseWorkspaceController {
       };
     }
 
-    const integration = await integrationService.getIntegrationForUser(user.id, providerEnum);
+    const integration = await integrationService.getIntegrationForContext(workspaceId, user.id, providerEnum);
 
     if (!integration) {
       this.setStatus(404);
@@ -74,7 +75,51 @@ export class IntegrationController extends BaseWorkspaceController {
     };
   }
 
-  private mapIntegrationResponse(integration: UserIntegrationSummary): IntegrationSummaryResponse {
+  @Delete("{provider}")
+  @Security("ClientLevel")
+  public async disconnectIntegration(
+    @Request() request: AuthenticatedRequest,
+    @Path() provider: string,
+  ): Promise<ApiResponse<null>> {
+    const providerEnum = this.parseProvider(provider);
+
+    if (!providerEnum) {
+      this.setStatus(400);
+      return {
+        status: 400,
+        data: null,
+        message: "Unknown integration provider",
+      };
+    }
+
+    // Workspace-level integrations require ADMIN/OWNER to disconnect
+    if (integrationService.isWorkspaceProvider(providerEnum)) {
+      const { workspaceId } = await this.requireAdminOrOwner(request);
+      const success = await integrationService.deleteIntegrationForContext(workspaceId, "", providerEnum);
+
+      if (!success) {
+        this.setStatus(404);
+        return { status: 404, data: null, message: "Integration not found" };
+      }
+    } else {
+      // User-level integrations (GitHub, Google Drive) — user can disconnect their own
+      const { user, workspaceId } = await this.getAuthorizedWorkspaceAccess(request);
+      const success = await integrationService.deleteIntegrationForContext(workspaceId, user.id, providerEnum);
+
+      if (!success) {
+        this.setStatus(404);
+        return { status: 404, data: null, message: "Integration not found" };
+      }
+    }
+
+    return {
+      status: 200,
+      data: null,
+      message: "Integration disconnected successfully",
+    };
+  }
+
+  private mapIntegrationResponse(integration: IntegrationSummary): IntegrationSummaryResponse {
     let defaultBoardUrl = null;
 
     if (integration.provider === "TRELLO") {
@@ -102,6 +147,7 @@ export class IntegrationController extends BaseWorkspaceController {
       ...integration,
       metadata: integration.metadata as TsoaJsonObject | null,
       defaultBoardUrl,
+      isWorkspaceLevel: integration.isWorkspaceLevel,
     };
   }
 

@@ -20,6 +20,21 @@ export const trelloApi = createApi({
       }),
       invalidatesTags: ["TrelloSummary", "TrelloBoards"],
     }),
+    getTrelloAuthorizationUrl: builder.query<{ data: { authorizationUrl: string } }, string>({
+      query: (returnUrl: string) => ({
+        url: "/api/trello/auth",
+        method: "GET",
+        params: { returnUrl },
+      }),
+    }),
+    autoConnectTrello: builder.mutation<{ data: null }, { token: string }>({
+      query: (body: { token: string }) => ({
+        url: "/api/trello/auto-connect",
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["TrelloSummary", "TrelloBoards"],
+    }),
     getTrelloSummary: builder.query<{ data: TrelloSummaryResponse }, void>({
       query: () => ({
         url: "/api/trello/summary",
@@ -56,6 +71,8 @@ export const trelloApi = createApi({
 
 export const {
   useConnectTrelloManuallyMutation,
+  useLazyGetTrelloAuthorizationUrlQuery,
+  useAutoConnectTrelloMutation,
   useGetTrelloSummaryQuery,
   useGetTrelloBoardsQuery,
   useGetTrelloListsQuery,

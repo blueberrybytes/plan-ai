@@ -40,11 +40,17 @@ This is the most critical environment file. It handles database connections, API
 | **Integrations** | | |
 | `JIRA_CLIENT_ID` | OAuth Client ID for Jira integration. | `xxxx` |
 | `JIRA_CLIENT_SECRET` | OAuth Client Secret for Jira integration. | `xxxx` |
+| `JIRA_REDIRECT_URI` | Jira OAuth callback URL. | `http://localhost:8080/api/jira/callback` |
+| `TRELLO_GLOBAL_API_KEY` | Trello global API key for automated OAuth. | `xxxx` |
 | `GITHUB_APP_ID` | GitHub App ID for codebase connection. | `xxxx` |
 | `GITHUB_WEBHOOK_SECRET` | Secret for GitHub webhooks. | `xxxx` |
 | `GITHUB_PRIVATE_KEY` | The private key for the GitHub App. | `-----BEGIN RSA PRIVATE KEY-----...` |
 | `USE_GITNEXUS` | Enable local GitNexus MCP indexing. | `false` |
 | `GITNEXUS_MCP_URL` | URL for the GitNexus MCP Server. | `http://localhost:4747/api/mcp` |
+| `LINEAR_CLIENT_ID` | OAuth Client ID for Linear integration. | `xxxx` |
+| `LINEAR_CLIENT_SECRET` | OAuth Client Secret for Linear integration. | `xxxx` |
+| `LINEAR_REDIRECT_URI` | Linear OAuth callback URL. | `http://localhost:8080/api/linear/callback` |
+| `LINEAR_WEBHOOK_SECRET` | Secret for Linear webhooks (optional). | `xxxx` |
 | `GOOGLE_CLIENT_ID` | Google OAuth ID (Drive integration). | `xxxx` |
 | `GOOGLE_CLIENT_SECRET` | Google OAuth Secret. | `xxxx` |
 | `GOOGLE_REDIRECT_URI` | Google OAuth callback URL. | `http://localhost:8080/api/integrations/google/callback` |

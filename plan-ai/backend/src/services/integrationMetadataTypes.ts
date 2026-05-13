@@ -15,7 +15,7 @@ export interface JiraIntegrationMetadata extends BaseIntegrationMetadata {
 }
 
 export interface LinearIntegrationMetadata extends BaseIntegrationMetadata {
-  authType: "API_KEY";
+  authType: "API_KEY" | "OAUTH";
   defaultTeamId?: string;
   organizationUrlKey?: string;
   teamKey?: string;
@@ -31,9 +31,14 @@ export interface GithubIntegrationMetadata extends BaseIntegrationMetadata {
 }
 
 export interface TrelloIntegrationMetadata extends BaseIntegrationMetadata {
-  authType: "API_KEY";
+  authType: "API_KEY" | "OAUTH";
   defaultBoardId?: string;
   defaultListId?: string;
+}
+
+export interface NotionIntegrationMetadata extends BaseIntegrationMetadata {
+  authType: "OAUTH";
+  defaultDatabaseId?: string;
 }
 
 export type IntegrationMetadata =
@@ -41,4 +46,5 @@ export type IntegrationMetadata =
   | LinearIntegrationMetadata
   | GoogleIntegrationMetadata
   | GithubIntegrationMetadata
-  | TrelloIntegrationMetadata;
+  | TrelloIntegrationMetadata
+  | NotionIntegrationMetadata;

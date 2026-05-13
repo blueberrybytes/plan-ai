@@ -14,4 +14,8 @@ export interface TaskMetadata {
     url: string;
     shortLink: string;
   };
+  notion?: {
+    pageId: string;
+    url: string;
+  };
 }
