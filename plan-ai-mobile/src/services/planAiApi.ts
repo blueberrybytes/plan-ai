@@ -460,11 +460,7 @@ export const createPlanAiApi = (
     },
 
     async saveRecording(payload: CreateStandaloneTranscriptBody & {
-      taskStrategy?: "AUTO" | "SINGLE_TICKET" | "SPECIFIC_COUNT";
-      taskCount?: number;
       skipAi?: boolean;
-      exportToGoogleDrive?: boolean;
-      exportToOneDrive?: boolean;
       micFile?: Blob;
       sysFile?: Blob;
       location?: { latitude: number; longitude: number; accuracy?: number | null };
@@ -484,8 +480,11 @@ export const createPlanAiApi = (
         if (payload.syncToJira) formData.append("syncToJira", "true");
         if (payload.syncToLinear) formData.append("syncToLinear", "true");
         if (payload.syncToTrello) formData.append("syncToTrello", "true");
+        if (payload.syncToNotion) formData.append("syncToNotion", "true");
         if (payload.exportToGoogleDrive) formData.append("exportToGoogleDrive", "true");
         if (payload.exportToOneDrive) formData.append("exportToOneDrive", "true");
+        if (payload.createDoc) formData.append("createDoc", "true");
+        if (payload.createSlides) formData.append("createSlides", "true");
         if (payload.taskStrategy) formData.append("taskStrategy", payload.taskStrategy);
         if (payload.taskCount) formData.append("taskCount", payload.taskCount.toString());
         if (payload.skipAi) formData.append("skipAi", "true");

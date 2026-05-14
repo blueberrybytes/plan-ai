@@ -28,6 +28,8 @@ import { notionIntegrationService } from "./notionIntegrationService";
 import { googleIntegrationService } from "./googleIntegrationService";
 import { microsoftIntegrationService } from "./microsoftIntegrationService";
 import { DocumentGenerator } from "../utils/documentGenerator";
+import { docGenerationService } from "./docGenerationService";
+import { slideGenerationService } from "./slideGenerationService";
 import { aiUsageService } from "./aiUsageService";
 import type { TaskMetadata } from "./taskMetadataTypes";
 import type {
@@ -739,6 +741,36 @@ export class ProjectTranscriptService {
       }).catch((err) => {
         logger.warn("Failed to auto-export document to cloud storage", err);
       });
+    }
+
+    // Auto-Generate Document
+    if (input.createDoc) {
+      docGenerationService
+        .startGeneration(input.userId, input.workspaceId, {
+          title: result.transcript.title || "Meeting Document",
+          prompt: `Generate a comprehensive meeting document based on the following transcript summary and extracted tasks.`,
+          transcriptIds: [result.transcript.id],
+          contextIds: input.contextIds,
+        })
+        .then((doc) => logger.info(`Auto-generated document ${doc.id} for transcript ${result.transcript.id}`))
+        .catch((err) => logger.warn("Failed to auto-generate document for transcript", err));
+    }
+
+    // Auto-Generate Slides
+    if (input.createSlides) {
+      slideGenerationService
+        .startPresentationGeneration(
+          input.userId,
+          input.workspaceId,
+          undefined, // templateId
+          undefined, // themeId
+          input.contextIds ?? [],
+          [result.transcript.id], // transcriptIds
+          `Create a presentation summarizing the key points, decisions, and action items from the meeting.`,
+          result.transcript.title || "Meeting Slides",
+        )
+        .then((pres) => logger.info(`Auto-generated slides ${pres.id} for transcript ${result.transcript.id}`))
+        .catch((err) => logger.warn("Failed to auto-generate slides for transcript", err));
     }
 
     return {

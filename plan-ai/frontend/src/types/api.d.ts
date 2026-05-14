@@ -2522,6 +2522,8 @@ export interface components {
             /** Format: double */
             taskCount?: number;
             agenticInvestigation?: boolean;
+            createDoc?: boolean;
+            createSlides?: boolean;
         };
         UpdateStandaloneTranscriptBody: {
             title?: string | null;

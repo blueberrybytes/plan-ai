@@ -86,6 +86,8 @@ interface CreateStandaloneTranscriptBody {
   taskStrategy?: "AUTO" | "SINGLE_TICKET" | "SPECIFIC_COUNT";
   taskCount?: number;
   agenticInvestigation?: boolean;
+  createDoc?: boolean;
+  createSlides?: boolean;
 }
 
 interface UpdateStandaloneTranscriptBody {
@@ -446,6 +448,8 @@ export class TranscriptsController extends BaseWorkspaceController {
           taskStrategy: body.taskStrategy,
           taskCount: body.taskCount,
           agenticInvestigation: body.agenticInvestigation,
+          createDoc: body.createDoc,
+          createSlides: body.createSlides,
           contextPrompt: contextPrompt ?? undefined,
         };
 

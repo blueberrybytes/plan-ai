@@ -824,6 +824,8 @@ export default function RecordScreen() {
         syncToNotion,
         exportToGoogleDrive,
         exportToOneDrive,
+        createDoc,
+        createSlides,
         taskStrategy,
         taskCount,
         skipAi,

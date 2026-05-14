@@ -1867,6 +1867,12 @@
 					},
 					"agenticInvestigation": {
 						"type": "boolean"
+					},
+					"createDoc": {
+						"type": "boolean"
+					},
+					"createSlides": {
+						"type": "boolean"
 					}
 				},
 				"type": "object",
@@ -6080,7 +6086,7 @@
 	},
 	"info": {
 		"title": "backend",
-		"version": "2.0.4",
+		"version": "2.0.6",
 		"license": {
 			"name": "PolyForm-Noncommercial-1.0.0"
 		},

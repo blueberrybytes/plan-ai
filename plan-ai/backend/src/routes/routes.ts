@@ -685,6 +685,8 @@ const models: TsoaRoute.Models = {
             "taskStrategy": {"dataType":"union","subSchemas":[{"dataType":"enum","enums":["AUTO"]},{"dataType":"enum","enums":["SINGLE_TICKET"]},{"dataType":"enum","enums":["SPECIFIC_COUNT"]}]},
             "taskCount": {"dataType":"double"},
             "agenticInvestigation": {"dataType":"boolean"},
+            "createDoc": {"dataType":"boolean"},
+            "createSlides": {"dataType":"boolean"},
         },
         "additionalProperties": false,
     },

@@ -1,6 +1,22 @@
 import { ExpoConfig, ConfigContext } from "expo/config";
+import * as fs from "fs";
+import * as path from "path";
 
 export default ({ config }: ConfigContext): ExpoConfig => {
+  // --- EAS LOCAL BUILD WORKAROUND ---
+  // If the build is happening in a /tmp directory and the files were stripped,
+  // copy them directly from the original workspace.
+  const originalIosPath = "/Users/xavier/repositories/blueberrybytes/plan/plan-ai-mobile/GoogleService-Info.plist";
+  const originalAndroidPath = "/Users/xavier/repositories/blueberrybytes/plan/plan-ai-mobile/google-services.json";
+  
+  if (!fs.existsSync(path.join(__dirname, "GoogleService-Info.plist")) && fs.existsSync(originalIosPath)) {
+    fs.copyFileSync(originalIosPath, path.join(__dirname, "GoogleService-Info.plist"));
+  }
+  if (!fs.existsSync(path.join(__dirname, "google-services.json")) && fs.existsSync(originalAndroidPath)) {
+    fs.copyFileSync(originalAndroidPath, path.join(__dirname, "google-services.json"));
+  }
+  // ----------------------------------
+
   const isProduction = process.env.APP_ENV === "production";
   const appVersion = "2.0.6";
   const bundleIdentifier = "com.blueberrybytes.planai";
