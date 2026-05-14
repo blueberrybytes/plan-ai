@@ -459,6 +459,27 @@ const Home: React.FC = () => {
                                   </Typography>
                                 </Box>
                               )}
+                              {(t.metadata as any)?.processingStatus === "FAILED" && (
+                                <Tooltip title={(t.metadata as any)?.errorMessage || "Failed to process"}>
+                                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                    <Typography variant="caption" sx={{ border: '1px solid #f87171', px: 0.5, py: 0.2, borderRadius: 1, fontSize: '0.65rem', color: '#f87171', bgcolor: 'rgba(248, 113, 113, 0.1)' }}>
+                                      ⚠️ Failed
+                                    </Typography>
+                                    <Button
+                                      size="small"
+                                      variant="outlined"
+                                      color="error"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        api.reprocessTranscript(t.id).then(() => fetchData()).catch((err) => setError(err instanceof Error ? err.message : "Failed to retry transcript."));
+                                      }}
+                                      sx={{ fontSize: "0.6rem", py: 0, minWidth: 0 }}
+                                    >
+                                      Retry
+                                    </Button>
+                                  </Box>
+                                </Tooltip>
+                              )}
                             </Box>
                           </Box>
                         }

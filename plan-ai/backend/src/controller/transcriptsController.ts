@@ -316,6 +316,23 @@ export class TranscriptsController extends BaseWorkspaceController {
       if (!project) throw { status: 404, message: "Project not found or unauthorized." };
     }
 
+    const generationOptions = {
+      contextIds: contextIdsArray,
+      persona: undefined,
+      complexityLevel: complexityLevel || undefined,
+      modelKey: modelKey || undefined,
+      syncToJira: syncToJira === "true",
+      syncToLinear: syncToLinear === "true",
+      syncToTrello: syncToTrello === "true",
+      syncToNotion: syncToNotion === "true",
+      exportToGoogleDrive: exportToGoogleDrive === "true",
+      exportToOneDrive: exportToOneDrive === "true",
+      taskStrategy,
+      taskCount: taskCount ? parseInt(taskCount, 10) : undefined,
+      contextPrompt: contextPrompt ?? undefined,
+      agenticInvestigation: agenticInvestigation === "true",
+    };
+
     // Save initial metadata and live content fallback
     const transcript = await prisma.transcript.create({
       data: {
@@ -334,6 +351,7 @@ export class TranscriptsController extends BaseWorkspaceController {
         metadata: {
           processingStatus: skipAi === "true" ? "DONE" : "PENDING",
           ...(locationObj ? { location: locationObj } : {}),
+          generationOptions,
         } as Prisma.JsonObject,
       },
     });
@@ -346,19 +364,7 @@ export class TranscriptsController extends BaseWorkspaceController {
         userId: user.id,
         content: content ?? "",
         source: source ?? TranscriptSource.RECORDING,
-        contextIds: contextIdsArray,
-        persona: undefined,
-        complexityLevel: complexityLevel || undefined,
-        modelKey: modelKey || undefined,
-        syncToJira: syncToJira === "true",
-        syncToLinear: syncToLinear === "true",
-        syncToTrello: syncToTrello === "true",
-        syncToNotion: syncToNotion === "true",
-        exportToGoogleDrive: exportToGoogleDrive === "true",
-        exportToOneDrive: exportToOneDrive === "true",
-        taskStrategy,
-        taskCount: taskCount ? parseInt(taskCount, 10) : undefined,
-        contextPrompt: contextPrompt ?? undefined,
+        ...generationOptions,
       });
     }
 
@@ -421,27 +427,7 @@ export class TranscriptsController extends BaseWorkspaceController {
           }
         }
 
-        const pendingResult = await projectTranscriptService.createPendingTranscript({
-          projectId: body.projectId || "",
-          userId: user.id,
-          workspaceId,
-          content: body.content,
-          title: body.title ?? undefined,
-          source: body.source ?? TranscriptSource.MANUAL,
-          recordedAt: body.recordedAt ?? null,
-          metadata: body.metadata as Prisma.InputJsonValue | undefined,
-        });
-
-        transcript = pendingResult.transcript;
-
-        // Push to BullMQ Worker
-        await transcriptGenerationQueue.add("generate-transcript", {
-          transcriptId: transcript.id,
-          workspaceId,
-          projectId: body.projectId || undefined,
-          userId: user.id,
-          content: body.content,
-          source: body.source ?? TranscriptSource.MANUAL,
+        const generationOptions = {
           contextIds: body.contextIds,
           persona: body.persona,
           objective: body.objective ?? undefined,
@@ -457,6 +443,33 @@ export class TranscriptsController extends BaseWorkspaceController {
           taskCount: body.taskCount,
           agenticInvestigation: body.agenticInvestigation,
           contextPrompt: contextPrompt ?? undefined,
+        };
+
+        const pendingResult = await projectTranscriptService.createPendingTranscript({
+          projectId: body.projectId || "",
+          userId: user.id,
+          workspaceId,
+          content: body.content,
+          title: body.title ?? undefined,
+          source: body.source ?? TranscriptSource.MANUAL,
+          recordedAt: body.recordedAt ?? null,
+          metadata: {
+            ...(body.metadata as Record<string, unknown> || {}),
+            generationOptions,
+          } as Prisma.InputJsonValue,
+        });
+
+        transcript = pendingResult.transcript;
+
+        // Push to BullMQ Worker
+        await transcriptGenerationQueue.add("generate-transcript", {
+          transcriptId: transcript.id,
+          workspaceId,
+          projectId: body.projectId || undefined,
+          userId: user.id,
+          content: body.content,
+          source: body.source ?? TranscriptSource.MANUAL,
+          ...generationOptions,
         });
 
         // Save Chat History for both Standalone and Project-linked transcripts
@@ -592,6 +605,10 @@ export class TranscriptsController extends BaseWorkspaceController {
       },
     });
 
+    // Extract saved generation options if any
+    const metadata = existing.metadata as Record<string, unknown> || {};
+    const generationOptions = metadata.generationOptions as Record<string, unknown> || {};
+
     // Re-enqueue into the generation worker
     await transcriptGenerationQueue.add("generate-transcript", {
       transcriptId: id,
@@ -600,6 +617,7 @@ export class TranscriptsController extends BaseWorkspaceController {
       userId: user.id,
       content: existing.transcript ?? "",
       source: existing.source,
+      ...generationOptions,
     });
 
     return {

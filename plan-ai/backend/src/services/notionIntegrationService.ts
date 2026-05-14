@@ -3,10 +3,7 @@ import prisma from "../prisma/prismaClient";
 import EnvUtils from "../utils/EnvUtils";
 import { NotionIntegrationMetadata } from "./integrationMetadataTypes";
 import { Client as NotionClient } from "@notionhq/client";
-import type {
-  DataSourceObjectResponse,
-  PageObjectResponse,
-} from "@notionhq/client/build/src/api-endpoints";
+import type { PageObjectResponse } from "@notionhq/client/build/src/api-endpoints";
 import { logger } from "../utils/logger";
 
 export interface NotionSummaryResponse {
@@ -155,15 +152,18 @@ class NotionIntegrationService {
 
     try {
       const response = await notion.search({
-        filter: { property: "object", value: "database" as any },
+        filter: { property: "object", value: "data_source" },
       });
 
-      const databases = response.results as any[];
+      const databases = response.results;
       const totalDatabases = databases.length;
 
-      const latestDatabases = databases
-        .slice(0, 5)
-        .map((db) => db.title?.[0]?.plain_text || "Untitled Database");
+      const latestDatabases = databases.slice(0, 5).map((db) => {
+        if ("title" in db && Array.isArray(db.title)) {
+          return db.title[0]?.plain_text || "Untitled Database";
+        }
+        return "Untitled Database";
+      });
 
       return {
         totalDatabases,
@@ -186,15 +186,22 @@ class NotionIntegrationService {
 
     const notion = new NotionClient({ auth: integration.accessToken });
     const response = await notion.search({
-      filter: { property: "object", value: "database" as any },
+      filter: { property: "object", value: "data_source" },
     });
 
-    const databases = response.results as any[];
-    return databases.map((db) => ({
-      id: db.id,
-      name: db.title?.[0]?.plain_text || "Untitled Database",
-      url: db.url,
-    }));
+    const databases = response.results;
+    return databases.map((db) => {
+      let name = "Untitled Database";
+      if ("title" in db && Array.isArray(db.title)) {
+        name = db.title[0]?.plain_text || "Untitled Database";
+      }
+
+      return {
+        id: db.id,
+        name,
+        url: "url" in db && typeof db.url === "string" ? db.url : "",
+      };
+    });
   }
 
   public async setDefaultDatabase(workspaceId: string, databaseId: string): Promise<void> {
@@ -255,7 +262,7 @@ class NotionIntegrationService {
               },
             ],
           },
-          // Not all databases have 'Status' or 'Description' properties, 
+          // Not all databases have 'Status' or 'Description' properties,
           // so it's safer to just set the title property and put the description in the page body.
         },
         children: [

@@ -20,13 +20,14 @@ import {
   Typography,
   IconButton,
   TextField,
+  useTheme,
 } from "@mui/material";
 import SyncIcon from "@mui/icons-material/Sync";
 import AddIcon from "@mui/icons-material/Add";
 import BusinessIcon from "@mui/icons-material/Business";
 import PersonIcon from "@mui/icons-material/Person";
 import WarningAmberIcon from "@mui/icons-material/WarningAmber";
-import GitHubIcon from "@mui/icons-material/GitHub";
+import githubSvg from "../icons/github.svg";
 import notionSvg from "../icons/notion.svg";
 import jiraSvg from "../icons/jira.svg";
 import linearSvg from "../icons/linear.svg";
@@ -190,6 +191,7 @@ const Integrations: React.FC = () => {
   const activeWorkspaceId = useSelector(selectActiveWorkspaceId);
   const dispatch = useDispatch();
   const { t } = useTranslation();
+  const theme = useTheme();
 
   const { data: workspaces } = useGetMyWorkspacesQuery();
   const activeWorkspace = workspaces?.find((w) => w.id === activeWorkspaceId);
@@ -575,12 +577,17 @@ const Integrations: React.FC = () => {
               integration={integration}
               onAddMore={config.tabValue === "github" ? handleConnectGithub : undefined}
               onReconnect={
-                config.tabValue === "notion" ? handleConnectNotion :
-                config.tabValue === "jira" ? handleConnectJira :
-                config.tabValue === "linear" ? handleConnectLinear :
-                config.tabValue === "google" ? handleConnectGoogle :
-                config.tabValue === "microsoft" ? handleConnectMicrosoft :
-                undefined
+                config.tabValue === "notion"
+                  ? handleConnectNotion
+                  : config.tabValue === "jira"
+                    ? handleConnectJira
+                    : config.tabValue === "linear"
+                      ? handleConnectLinear
+                      : config.tabValue === "google"
+                        ? handleConnectGoogle
+                        : config.tabValue === "microsoft"
+                          ? handleConnectMicrosoft
+                          : undefined
               }
               canEdit={canEdit}
             />
@@ -961,7 +968,7 @@ const Integrations: React.FC = () => {
                 let iconEl = null;
                 switch (config.tabValue) {
                   case "github":
-                    iconEl = <GitHubIcon sx={{ fontSize: 16 }} />;
+                    iconEl = <img src={githubSvg} alt="GitHub" width={16} height={16} />;
                     break;
                   case "jira":
                     iconEl = <img src={jiraSvg} alt="Jira" width={16} height={16} />;
@@ -982,6 +989,25 @@ const Integrations: React.FC = () => {
                     iconEl = <img src={oneDriveSvg} alt="Microsoft" width={16} height={16} />;
                     break;
                 }
+
+                if (iconEl && theme.palette.mode === "dark") {
+                  iconEl = (
+                    <Box
+                      sx={{
+                        width: 24,
+                        height: 24,
+                        bgcolor: "white",
+                        borderRadius: "50%",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    >
+                      {iconEl}
+                    </Box>
+                  );
+                }
+
 
                 return (
                   <Tab
@@ -1882,7 +1908,9 @@ const ConnectedIntegrationDetails: React.FC<{
 
             {notionDatabasesData?.data?.length === 0 && !isNotionDatabasesLoading && (
               <Alert severity="warning" sx={{ mt: 1, maxWidth: 600 }}>
-                No databases found. If you selected pages during the Notion connection flow but no databases appear here, please re-connect and ensure you specifically select the databases where you want Plan AI to create tasks.
+                No databases found. If you selected pages during the Notion connection flow but no
+                databases appear here, please re-connect and ensure you specifically select the
+                databases where you want Plan AI to create tasks.
               </Alert>
             )}
           </Stack>
