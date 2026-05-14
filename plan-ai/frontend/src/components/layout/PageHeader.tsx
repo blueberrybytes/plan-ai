@@ -58,7 +58,7 @@ const PageHeader: React.FC<PageHeaderProps> = ({ title, subtitle, icon, actions,
             sx={{
               fontWeight: 700,
               lineHeight: 1.2,
-              background: "linear-gradient(135deg, #ffffff 0%, #94a3b8 100%)",
+              background: (theme) => `${theme.palette.primary.main} `,
               WebkitBackgroundClip: "text",
               WebkitTextFillColor: "transparent",
               backgroundClip: "text",

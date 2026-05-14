@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import React, { useEffect } from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import { HelmetProvider } from "react-helmet-async";
+import { HelmetProvider, Helmet } from "react-helmet-async";
 import { Provider, useDispatch, useSelector } from "react-redux";
 import { PersistGate } from "redux-persist/integration/react";
 import { selectUser } from "./store/slices/auth/authSelector";
@@ -12,7 +12,6 @@ import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import ChatHome from "./pages/ChatHome";
 import LandingPage from "./pages/LandingPage";
-import Analytics from "./pages/Analytics";
 import DeleteData from "./pages/DeleteData";
 import SignUp from "./pages/SignUp";
 import ForgotPassword from "./pages/ForgotPassword";
@@ -57,6 +56,7 @@ import Onboarding from "./pages/Onboarding";
 import PendingReview from "./pages/PendingReview";
 import AdminPptxPreview from "./pages/AdminPptxPreview";
 import AdminEmails from "./pages/AdminEmails";
+import AdminDashboard from "./pages/admin/AdminDashboard";
 import "./App.css";
 import "./i18n";
 import { useGetCurrentUserQuery } from "./store/apis/authApi";
@@ -111,7 +111,6 @@ const AppContent: React.FC = () => {
         <Route element={<AuthenticatedRoute />}>
           <Route path="/home" element={<ChatHome />} />
           <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/analytics" element={<Analytics />} />
           <Route path="/projects" element={<Projects />} />
           <Route path="/projects/:projectId" element={<ProjectDetails />} />
           <Route path="/projects/:projectId/info" element={<ProjectInfo />} />
@@ -150,6 +149,7 @@ const AppContent: React.FC = () => {
           <Route path="/diagrams/:diagramId" element={<DiagramView />} />
           <Route path="/usage" element={<AiUsage />} />
           <Route path="/sentry-error" element={<SentryTest />} />
+          <Route path="/admin" element={<AdminDashboard />} />
           <Route path="/admin/users" element={<Users />} />
           <Route path="/admin/users/:targetUserId/usage" element={<AiUsage />} />
           <Route path="/admin/pricing" element={<AiPricing />} />
@@ -174,6 +174,9 @@ const AppContent: React.FC = () => {
 const AppRoutes: React.FC = () => {
   return (
     <HelmetProvider>
+      <Helmet>
+        <title>Plan AI</title>
+      </Helmet>
       <Router>
         <NavigationProvider />
         <FirebaseAuthProvider>

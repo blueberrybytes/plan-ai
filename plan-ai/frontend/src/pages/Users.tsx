@@ -23,12 +23,14 @@ import {
   Tab,
   Tabs,
   Button,
+  Breadcrumbs,
+  Link as MuiLink,
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import InsightsIcon from "@mui/icons-material/Insights";
 import SyncIcon from "@mui/icons-material/Sync";
 import DeleteIcon from "@mui/icons-material/Delete";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, NavLink } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import SidebarLayout from "../components/layout/SidebarLayout";
 import {
@@ -125,6 +127,15 @@ const Users: React.FC = () => {
     <SidebarLayout>
       <Box sx={{ p: { xs: 2, md: 4 } }}>
         <Box sx={{ mb: 4 }}>
+          <Breadcrumbs aria-label="breadcrumb" sx={{ mb: 2 }}>
+            <MuiLink component={NavLink} underline="hover" color="inherit" to="/home">
+              Home
+            </MuiLink>
+            <MuiLink component={NavLink} underline="hover" color="inherit" to="/admin">
+              Admin
+            </MuiLink>
+            <Typography color="text.primary">{t("users.title")}</Typography>
+          </Breadcrumbs>
           <Typography variant="h4" sx={{ fontWeight: 700, mb: 1 }}>
             {t("users.title")}
           </Typography>

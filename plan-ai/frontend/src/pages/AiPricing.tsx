@@ -13,7 +13,10 @@ import {
   Alert,
   TextField,
   TableSortLabel,
+  Breadcrumbs,
+  Link as MuiLink,
 } from "@mui/material";
+import { NavLink } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import SidebarLayout from "../components/layout/SidebarLayout";
 import { useGetAiPricingQuery } from "../store/apis/aiUsageApi";
@@ -56,6 +59,15 @@ const AiPricing: React.FC = () => {
   return (
     <SidebarLayout>
       <Box sx={{ p: 4, maxWidth: 1200, margin: "0 auto", width: "100%" }}>
+        <Breadcrumbs aria-label="breadcrumb" sx={{ mb: 2 }}>
+          <MuiLink component={NavLink} underline="hover" color="inherit" to="/home">
+            Home
+          </MuiLink>
+          <MuiLink component={NavLink} underline="hover" color="inherit" to="/admin">
+            Admin
+          </MuiLink>
+          <Typography color="text.primary">{t("aiPricing.heading", "AI Model Pricing")}</Typography>
+        </Breadcrumbs>
         <Typography variant="h4" sx={{ mb: 1 }}>
           {t("aiPricing.heading", "AI Model Pricing")}
         </Typography>

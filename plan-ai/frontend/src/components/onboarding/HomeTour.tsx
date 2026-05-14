@@ -76,7 +76,7 @@ const HomeTour: React.FC = () => {
     } else if (userDb?.hasCompletedHomeTour === true) {
       setOpen(false);
     }
-  }, [userDb]);
+  }, [isFetching, userDb]);
 
   const handleFinish = async () => {
     setOpen(false);

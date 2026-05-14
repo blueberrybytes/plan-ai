@@ -6,7 +6,6 @@ import {
   Button,
   Chip,
   CircularProgress,
-  Divider,
   FormControl,
   Grid,
   InputLabel,
@@ -350,294 +349,295 @@ const Profile: React.FC = () => {
 
   return (
     <SidebarLayout>
-      <Grid container spacing={3} sx={{ p: { xs: 3, md: 6 } }}>
-        <Grid item xs={12} lg={8}>
-          <Paper elevation={3} sx={{ p: 3 }}>
-            <Box
-              sx={{
-                display: "flex",
-                flexDirection: { xs: "column", md: "row" },
-                alignItems: { xs: "flex-start", md: "center" },
-                justifyContent: "space-between",
-                gap: 3,
-                mb: 3,
-              }}
-            >
-              <Box sx={{ display: "flex", alignItems: "center", gap: 3 }}>
-                <Avatar src={avatar || undefined} sx={{ width: 72, height: 72 }}>
-                  {initials || <PersonIcon />}
-                </Avatar>
-                <Box>
-                  <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 1 }}>
-                    <Typography variant="h4" sx={{ mb: 0 }}>
-                      {t("profile.heading")}
-                    </Typography>
-                    {roleDisplay}
-                  </Box>
-                  <Typography variant="body1" color="text.secondary">
-                    {t("profile.description")}
+      <Box sx={{ width: "100%", p: { xs: 2, md: 4 } }}>
+        <Paper elevation={3} sx={{ p: 4, mb: 4, borderRadius: 2 }}>
+          <Box
+            sx={{
+              display: "flex",
+              flexDirection: { xs: "column", sm: "row" },
+              alignItems: { xs: "flex-start", sm: "center" },
+              justifyContent: "space-between",
+              gap: 3,
+            }}
+          >
+            <Box sx={{ display: "flex", alignItems: "center", gap: 3 }}>
+              <Avatar src={avatar || undefined} sx={{ width: 80, height: 80 }}>
+                {initials || <PersonIcon fontSize="large" />}
+              </Avatar>
+              <Box>
+                <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 1 }}>
+                  <Typography variant="h4" sx={{ fontWeight: 700, mb: 0 }}>
+                    {t("profile.heading")}
                   </Typography>
+                  {roleDisplay}
                 </Box>
+                <Typography variant="body1" color="text.secondary">
+                  {email || t("profile.role.notAvailable")}
+                </Typography>
               </Box>
-
-              <FormControl size="small" sx={{ minWidth: 180 }}>
-                <InputLabel id="profile-language-label">{t("profile.language.label")}</InputLabel>
-                <Select
-                  labelId="profile-language-label"
-                  label={t("profile.language.label")}
-                  value={selectedLanguage}
-                  onChange={handleLanguageChange}
-                >
-                  {languageOptions.map((option) => (
-                    <MenuItem key={option.code} value={option.code}>
-                      {option.label}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
             </Box>
 
-            <Divider sx={{ my: 3 }} />
-
-            {isUserDataLoading && !currentUserData ? (
-              <Alert severity="info" sx={{ mb: 2 }}>
-                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                  <CircularProgress size={16} />
-                  {t("profile.alerts.loading")}
-                </Box>
-              </Alert>
-            ) : null}
-
-            {userDataError ? (
-              <Alert
-                severity="error"
-                sx={{ mb: 2 }}
-                action={
-                  <Button color="inherit" size="small" onClick={() => refetchUserData()}>
-                    {t("profile.role.retry")}
-                  </Button>
-                }
+            <FormControl size="small" sx={{ minWidth: 180 }}>
+              <InputLabel id="profile-language-label">{t("profile.language.label")}</InputLabel>
+              <Select
+                labelId="profile-language-label"
+                label={t("profile.language.label")}
+                value={selectedLanguage}
+                onChange={handleLanguageChange}
+                sx={{ borderRadius: 2 }}
               >
-                {t("profile.alerts.refreshError")}
-              </Alert>
-            ) : null}
+                {languageOptions.map((option) => (
+                  <MenuItem key={option.code} value={option.code}>
+                    {option.label}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Box>
+        </Paper>
 
-            <Typography variant="h6" gutterBottom>
-              {t("profile.sections.info")}
-            </Typography>
+        <Grid container spacing={4}>
+          <Grid item xs={12} md={6}>
+            <Paper elevation={1} sx={{ p: 3, height: "100%", borderRadius: 2 }}>
+              <Typography variant="h6" gutterBottom sx={{ fontWeight: 600 }}>
+                {t("profile.sections.info")}
+              </Typography>
 
-            <List disablePadding>
-              <ListItem>
-                <ListItemText
-                  primary={t("profile.info.email")}
-                  secondary={email || t("profile.role.notAvailable")}
-                />
-              </ListItem>
-              <ListItem>
-                <ListItemText
-                  primary={t("profile.info.userId")}
-                  secondary={user?.uid || t("profile.role.notAvailable")}
-                />
-              </ListItem>
-              <ListItem>
-                <ListItemText
-                  primary={t("profile.info.accountCreated")}
-                  secondary={
-                    user?.creationTime || userDb?.createdAt || t("profile.role.notAvailable")
+              {isUserDataLoading && !currentUserData ? (
+                <Alert severity="info" sx={{ mb: 2, mt: 2 }}>
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                    <CircularProgress size={16} />
+                    {t("profile.alerts.loading")}
+                  </Box>
+                </Alert>
+              ) : null}
+
+              {userDataError ? (
+                <Alert
+                  severity="error"
+                  sx={{ mb: 2, mt: 2 }}
+                  action={
+                    <Button color="inherit" size="small" onClick={() => refetchUserData()}>
+                      {t("profile.role.retry")}
+                    </Button>
                   }
-                />
-              </ListItem>
-              <ListItem>
-                <ListItemText
-                  primary={t("profile.info.lastSignIn")}
-                  secondary={
-                    user?.lastSignInTime || userDb?.updatedAt || t("profile.role.notAvailable")
-                  }
-                />
-              </ListItem>
-              <ListItem>
-                <ListItemText primary={t("profile.info.role")} secondary={roleDisplay} />
-              </ListItem>
-              <ListItem>
-                <ListItemText
-                  primary="User Personas (Active Workspace)"
-                  secondary={
-                    currentMemberInfo?.personas?.length ? (
-                      <Box sx={{ display: "flex", gap: 1, mt: 0.5, flexWrap: "wrap" }}>
-                        {currentMemberInfo.personas.map((p) => (
+                >
+                  {t("profile.alerts.refreshError")}
+                </Alert>
+              ) : null}
+
+              <List disablePadding>
+                <ListItem divider>
+                  <ListItemText
+                    primary={t("profile.info.userId")}
+                    secondary={user?.uid || t("profile.role.notAvailable")}
+                    primaryTypographyProps={{ variant: "body2", color: "text.secondary" }}
+                    secondaryTypographyProps={{ variant: "body1", color: "text.primary" }}
+                  />
+                </ListItem>
+                <ListItem divider>
+                  <ListItemText
+                    primary={t("profile.info.accountCreated")}
+                    secondary={
+                      user?.creationTime || userDb?.createdAt || t("profile.role.notAvailable")
+                    }
+                    primaryTypographyProps={{ variant: "body2", color: "text.secondary" }}
+                    secondaryTypographyProps={{ variant: "body1", color: "text.primary" }}
+                  />
+                </ListItem>
+                <ListItem divider>
+                  <ListItemText
+                    primary={t("profile.info.lastSignIn")}
+                    secondary={
+                      user?.lastSignInTime || userDb?.updatedAt || t("profile.role.notAvailable")
+                    }
+                    primaryTypographyProps={{ variant: "body2", color: "text.secondary" }}
+                    secondaryTypographyProps={{ variant: "body1", color: "text.primary" }}
+                  />
+                </ListItem>
+                <ListItem divider>
+                  <ListItemText
+                    primary="User Personas (Active Workspace)"
+                    primaryTypographyProps={{ variant: "body2", color: "text.secondary" }}
+                    secondary={
+                      currentMemberInfo?.personas?.length ? (
+                        <Box sx={{ display: "flex", gap: 1, mt: 1, flexWrap: "wrap" }}>
+                          {currentMemberInfo.personas.map((p) => (
+                            <Chip
+                              key={p}
+                              label={p.replace(/_/g, " ")}
+                              size="small"
+                              color="primary"
+                              variant="outlined"
+                              sx={{ textTransform: "capitalize", fontWeight: 500 }}
+                            />
+                          ))}
+                        </Box>
+                      ) : (
+                        "None assigned"
+                      )
+                    }
+                    secondaryTypographyProps={{ component: "div" }}
+                  />
+                </ListItem>
+                {currentMemberInfo?.personaNotes && (
+                  <ListItem divider>
+                    <ListItemText
+                      primary="Custom AI Instructions"
+                      primaryTypographyProps={{ variant: "body2", color: "text.secondary" }}
+                      secondary={currentMemberInfo.personaNotes}
+                      secondaryTypographyProps={{
+                        sx: { whiteSpace: "pre-wrap", mt: 0.5, color: "text.primary" },
+                      }}
+                    />
+                  </ListItem>
+                )}
+                <ListItem>
+                  <ListItemText
+                    primary="Sign-In Method"
+                    primaryTypographyProps={{ variant: "body2", color: "text.secondary" }}
+                    secondary={
+                      <Box sx={{ display: "flex", gap: 1, mt: 1 }}>
+                        {signInMethods.map((method, idx) => (
                           <Chip
-                            key={p}
-                            label={p.replace("_", " ")}
+                            key={idx}
+                            icon={method.icon}
+                            label={method.label}
                             size="small"
-                            color="primary"
+                            color={method.color}
                             variant="outlined"
+                            sx={{ fontWeight: 500 }}
                           />
                         ))}
                       </Box>
-                    ) : (
-                      "None assigned"
-                    )
-                  }
-                />
-              </ListItem>
-              {currentMemberInfo?.personaNotes && (
-                <ListItem>
-                  <ListItemText
-                    primary="Custom AI Instructions"
-                    secondary={currentMemberInfo.personaNotes}
-                    secondaryTypographyProps={{ sx: { whiteSpace: "pre-wrap", mt: 0.5 } }}
+                    }
+                    secondaryTypographyProps={{ component: "div" }}
                   />
                 </ListItem>
-              )}
-              <ListItem>
-                <ListItemText
-                  primary="Sign-In Method"
-                  secondary={
-                    <Box sx={{ display: "flex", gap: 1, mt: 0.5 }}>
-                      {signInMethods.map((method, idx) => (
-                        <Chip
-                          key={idx}
-                          icon={method.icon}
-                          label={method.label}
-                          size="small"
-                          color={method.color}
-                          variant="outlined"
-                        />
+              </List>
+            </Paper>
+          </Grid>
+
+          <Grid item xs={12} md={6}>
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 4, height: "100%" }}>
+              <Paper elevation={1} sx={{ p: 3, borderRadius: 2 }}>
+                <Typography variant="h6" gutterBottom sx={{ fontWeight: 600 }}>
+                  {t("profile.sections.theme", "App Theme Appearance")}
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                  {t(
+                    "profile.sections.themeDescription",
+                    `Personalize how ${productName} looks for you.`,
+                  )}
+                </Typography>
+                <AppThemeSelector />
+              </Paper>
+
+              <Paper elevation={1} sx={{ p: 3, borderRadius: 2, flexGrow: 1 }}>
+                <Typography variant="h6" gutterBottom sx={{ fontWeight: 600 }}>
+                  {t("profile.sections.integrations")}
+                </Typography>
+
+                {isIntegrationsLoading ? (
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 1, mt: 2 }}>
+                    <CircularProgress size={16} />
+                    <Typography variant="body2" color="text.secondary">
+                      {t("profile.integrations.loading")}
+                    </Typography>
+                  </Box>
+                ) : null}
+
+                {integrationsError ? (
+                  <Alert
+                    severity="error"
+                    sx={{ mt: 2 }}
+                    action={
+                      <Button color="inherit" size="small" onClick={() => refetchIntegrations()}>
+                        {t("profile.integrations.retry")}
+                      </Button>
+                    }
+                  >
+                    {t("profile.integrations.error")}
+                  </Alert>
+                ) : null}
+
+                {!isIntegrationsLoading && !integrationsError ? (
+                  integrations.length > 0 ? (
+                    <List disablePadding sx={{ mt: 2 }}>
+                      {integrations.map((integration) => (
+                        <ListItem
+                          key={integration?.id ?? integration?.provider}
+                          divider
+                          sx={{ alignItems: "flex-start", px: 0 }}
+                        >
+                          <ListItemText
+                            primary={formatProvider(integration?.provider ?? "Unknown")}
+                            primaryTypographyProps={{ fontWeight: 500 }}
+                            secondary={
+                              integration?.accountName ??
+                              integration?.accountId ??
+                              t("profile.integrations.notLinked")
+                            }
+                          />
+                          {integration?.status ? (
+                            <Chip
+                              label={integration.status}
+                              color={
+                                resolveStatusChipColor[
+                                  integration.status as keyof typeof resolveStatusChipColor
+                                ] ?? "default"
+                              }
+                              size="small"
+                              sx={{ ml: 2, textTransform: "capitalize", fontWeight: 600 }}
+                            />
+                          ) : null}
+                        </ListItem>
                       ))}
-                    </Box>
-                  }
-                />
-              </ListItem>
-            </List>
-
-            <Divider sx={{ my: 3 }} />
-
-            <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap" }}>
-              <Button
-                variant="contained"
-                color="primary"
-                startIcon={<LogoutIcon />}
-                onClick={handleLogout}
-              >
-                {t("profile.buttons.logout")}
-              </Button>
-
-              <Button
-                variant="outlined"
-                color="error"
-                startIcon={<DeleteForeverIcon />}
-                onClick={() => setIsDeleteDialogOpen(true)}
-              >
-                {t("profile.buttons.deleteAccount")}
-              </Button>
+                    </List>
+                  ) : (
+                    <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+                      {t("profile.integrations.empty")}
+                    </Typography>
+                  )
+                ) : null}
+              </Paper>
             </Box>
-          </Paper>
+          </Grid>
         </Grid>
 
-        <Grid item xs={12} lg={4}>
-          <Paper elevation={1} sx={{ p: 3 }}>
-            <Typography variant="h6" gutterBottom>
-              {t("profile.sections.workspaceFootprint")}
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              {t("profile.sections.workspaceDescription")}
-            </Typography>
-          </Paper>
+        <Box
+          sx={{
+            mt: 6,
+            pt: 3,
+            borderTop: "1px solid",
+            borderColor: "divider",
+            display: "flex",
+            gap: 2,
+            flexWrap: "wrap",
+            justifyContent: "flex-end",
+          }}
+        >
+          <Button
+            variant="contained"
+            color="primary"
+            startIcon={<LogoutIcon />}
+            onClick={handleLogout}
+            sx={{ px: 3, borderRadius: 2 }}
+          >
+            {t("profile.buttons.logout")}
+          </Button>
 
-          <Paper elevation={1} sx={{ p: 3, mt: 3 }}>
-            <Typography variant="h6" gutterBottom>
-              Workspace Settings
-            </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              Configure your OpenRouter API keys and token limits for the active workspace.
-            </Typography>
-            <Button variant="outlined" onClick={() => (window.location.hash = "#/team")}>
-              Manage Workspace
-            </Button>
-          </Paper>
-
-          <Paper elevation={1} sx={{ p: 3, mt: 3 }}>
-            <Typography variant="h6" gutterBottom>
-              {t("profile.sections.integrations")}
-            </Typography>
-
-            {isIntegrationsLoading ? (
-              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                <CircularProgress size={16} />
-                <Typography variant="body2" color="text.secondary">
-                  {t("profile.integrations.loading")}
-                </Typography>
-              </Box>
-            ) : null}
-
-            {integrationsError ? (
-              <Alert
-                severity="error"
-                sx={{ mt: 2 }}
-                action={
-                  <Button color="inherit" size="small" onClick={() => refetchIntegrations()}>
-                    {t("profile.integrations.retry")}
-                  </Button>
-                }
-              >
-                {t("profile.integrations.error")}
-              </Alert>
-            ) : null}
-
-            {!isIntegrationsLoading && !integrationsError ? (
-              integrations.length > 0 ? (
-                <List disablePadding sx={{ mt: 1 }}>
-                  {integrations.map((integration) => (
-                    <ListItem
-                      key={integration?.id ?? integration?.provider}
-                      divider
-                      sx={{ alignItems: "flex-start" }}
-                    >
-                      <ListItemText
-                        primary={formatProvider(integration?.provider ?? "Unknown")}
-                        secondary={
-                          integration?.accountName ??
-                          integration?.accountId ??
-                          t("profile.integrations.notLinked")
-                        }
-                      />
-                      {integration?.status ? (
-                        <Chip
-                          label={integration.status}
-                          color={
-                            resolveStatusChipColor[
-                              integration.status as keyof typeof resolveStatusChipColor
-                            ] ?? "default"
-                          }
-                          size="small"
-                          sx={{ ml: 2, textTransform: "capitalize" }}
-                        />
-                      ) : null}
-                    </ListItem>
-                  ))}
-                </List>
-              ) : (
-                <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                  {t("profile.integrations.empty")}
-                </Typography>
-              )
-            ) : null}
-          </Paper>
-
-          <Paper elevation={1} sx={{ p: 3, mt: 3 }}>
-            <Typography variant="h6" gutterBottom>
-              {t("profile.sections.theme", "App Theme Appearance")}
-            </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              {t(
-                "profile.sections.themeDescription",
-                `Personalize how ${productName} looks for you.`,
-              )}
-            </Typography>
-            <AppThemeSelector />
-          </Paper>
-        </Grid>
-      </Grid>
+          <Button
+            variant="outlined"
+            color="error"
+            startIcon={<DeleteForeverIcon />}
+            onClick={() => setIsDeleteDialogOpen(true)}
+            sx={{ px: 3, borderRadius: 2 }}
+          >
+            {t("profile.buttons.deleteAccount")}
+          </Button>
+        </Box>
+      </Box>
 
       <DeleteAccountDialog
         open={isDeleteDialogOpen}

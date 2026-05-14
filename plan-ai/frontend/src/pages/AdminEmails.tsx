@@ -10,7 +10,10 @@ import {
   Divider,
   IconButton,
   Tooltip,
+  Breadcrumbs,
+  Link as MuiLink,
 } from "@mui/material";
+import { NavLink } from "react-router-dom";
 import { MailOutline as MailIcon, Refresh as RefreshIcon } from "@mui/icons-material";
 import SidebarLayout from "../components/layout/SidebarLayout";
 import { useGetAdminEmailTemplatesQuery } from "../store/apis/adminApi";
@@ -58,6 +61,15 @@ const AdminEmails: React.FC = () => {
   return (
     <SidebarLayout fullHeight>
       <Box sx={{ display: "flex", flexDirection: "column", height: "100%", p: 4 }}>
+        <Breadcrumbs aria-label="breadcrumb" sx={{ mb: 2 }}>
+          <MuiLink component={NavLink} underline="hover" color="inherit" to="/home">
+            Home
+          </MuiLink>
+          <MuiLink component={NavLink} underline="hover" color="inherit" to="/admin">
+            Admin
+          </MuiLink>
+          <Typography color="text.primary">Email Templates</Typography>
+        </Breadcrumbs>
         <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 4 }}>
           <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
             <MailIcon fontSize="large" color="primary" />

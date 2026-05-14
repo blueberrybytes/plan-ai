@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import {
   Box,
   Typography,
@@ -19,7 +19,7 @@ import {
   IconButton,
   Tooltip,
 } from "@mui/material";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import GroupAddIcon from "@mui/icons-material/GroupAdd";
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
@@ -28,6 +28,7 @@ import InsightsIcon from "@mui/icons-material/Insights";
 import { useTranslation } from "react-i18next";
 import { useSelector, useDispatch } from "react-redux";
 import SidebarLayout from "../components/layout/SidebarLayout";
+import { AiUsageContent } from "./AiUsage";
 import WorkspaceMembersModal from "../components/layout/WorkspaceMembersModal";
 import EditWorkspaceMemberModal from "../components/layout/EditWorkspaceMemberModal";
 import {
@@ -231,6 +232,7 @@ const WorkspaceTeam: React.FC = () => {
   const { t } = useTranslation();
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const location = useLocation();
   const [tabValue, setTabValue] = useState(0);
   const [modalOpen, setModalOpen] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
@@ -299,6 +301,36 @@ const WorkspaceTeam: React.FC = () => {
     }
   };
 
+  const tabs = useMemo(() => {
+    const list = [
+      { id: "active", label: `Active Members (${activeMembers.length})` },
+      { id: "pending", label: `Pending Invitations (${pendingInvitations.length})` },
+    ];
+    if (canViewUsage) list.push({ id: "usage", label: "Workspace usage" });
+    if (canViewUsage) list.push({ id: "analytics", label: "My usage" });
+    if (activeWorkspace?.role === "OWNER") list.push({ id: "settings", label: "Settings" });
+    return list;
+  }, [activeMembers.length, pendingInvitations.length, canViewUsage, activeWorkspace?.role]);
+
+  // Sync tab value with query param ?tab=
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const tabParam = params.get("tab");
+    if (tabParam) {
+      const idx = tabs.findIndex((t) => t.id === tabParam);
+      if (idx !== -1) {
+        setTabValue(idx);
+      }
+    } else if (location.hash) {
+      // Fallback for previous hash logic
+      const hashTab = location.hash.replace("#", "");
+      const idx = tabs.findIndex((t) => t.id === hashTab);
+      if (idx !== -1) {
+        setTabValue(idx);
+      }
+    }
+  }, [location.search, location.hash, tabs]);
+
   return (
     <SidebarLayout>
       <Box sx={{ p: { xs: 2, md: 4 } }}>
@@ -363,10 +395,9 @@ const WorkspaceTeam: React.FC = () => {
 
         <Box sx={{ borderBottom: 1, borderColor: "divider", mb: 3 }}>
           <Tabs value={tabValue} onChange={(e, newValue) => setTabValue(newValue)}>
-            <Tab label={`Active Members (${activeMembers.length})`} />
-            <Tab label={`Pending Invitations (${pendingInvitations.length})`} />
-            {canViewUsage && <Tab label="Usage" />}
-            {activeWorkspace?.role === "OWNER" && <Tab label="Settings" />}
+            {tabs.map((tab) => (
+              <Tab key={tab.id} label={tab.label} />
+            ))}
           </Tabs>
         </Box>
 
@@ -385,143 +416,154 @@ const WorkspaceTeam: React.FC = () => {
           >
             Failed to load team members.
           </Alert>
-        ) : tabValue === 0 || tabValue === 1 ? (
+        ) : tabs[tabValue]?.id === "active" || tabs[tabValue]?.id === "pending" ? (
           <TableContainer component={Paper} sx={{ borderRadius: 2, overflow: "hidden" }}>
             <Table>
               <TableHead sx={{ bgcolor: "background.default" }}>
                 <TableRow>
                   <TableCell>Email</TableCell>
                   <TableCell>Role</TableCell>
-                  {tabValue === 0 && <TableCell>Name</TableCell>}
+                  {tabs[tabValue]?.id === "active" && <TableCell>Name</TableCell>}
                   <TableCell>User Persona</TableCell>
                   <TableCell>Date</TableCell>
                   {canInvite && <TableCell align="center">Actions</TableCell>}
                 </TableRow>
               </TableHead>
               <TableBody>
-                {(tabValue === 0 ? activeMembers : pendingInvitations).map((member) => (
-                  <TableRow key={member.id} hover>
-                    <TableCell>
-                      <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-                        <Avatar sx={{ width: 32, height: 32 }}>
-                          {member.email[0].toUpperCase()}
-                        </Avatar>
-                        <Typography variant="body2" fontWeight={500}>
-                          {member.email}
+                {(tabs[tabValue]?.id === "active" ? activeMembers : pendingInvitations).map(
+                  (member) => (
+                    <TableRow key={member.id} hover>
+                      <TableCell>
+                        <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+                          <Avatar sx={{ width: 32, height: 32 }}>
+                            {member.email[0].toUpperCase()}
+                          </Avatar>
+                          <Typography variant="body2" fontWeight={500}>
+                            {member.email}
+                          </Typography>
+                        </Box>
+                      </TableCell>
+                      <TableCell>
+                        <Typography
+                          variant="body2"
+                          sx={{
+                            px: 1.5,
+                            py: 0.5,
+                            borderRadius: 1,
+                            display: "inline-block",
+                            bgcolor:
+                              member.role === "ADMIN" || member.role === "OWNER"
+                                ? "error.main"
+                                : "primary.main",
+                            color: "#fff",
+                            fontSize: "0.75rem",
+                            fontWeight: 600,
+                            opacity: 0.9,
+                          }}
+                        >
+                          {member.role}
                         </Typography>
-                      </Box>
-                    </TableCell>
-                    <TableCell>
-                      <Typography
-                        variant="body2"
-                        sx={{
-                          px: 1.5,
-                          py: 0.5,
-                          borderRadius: 1,
-                          display: "inline-block",
-                          bgcolor:
-                            member.role === "ADMIN" || member.role === "OWNER"
-                              ? "error.main"
-                              : "primary.main",
-                          color: "#fff",
-                          fontSize: "0.75rem",
-                          fontWeight: 600,
-                          opacity: 0.9,
-                        }}
-                      >
-                        {member.role}
-                      </Typography>
-                    </TableCell>
-                    {tabValue === 0 && (
+                      </TableCell>
+                      {tabs[tabValue]?.id === "active" && (
+                        <TableCell>
+                          <Typography variant="body2" color="text.secondary">
+                            {member.name || "—"}
+                          </Typography>
+                        </TableCell>
+                      )}
+                      <TableCell>
+                        <Chip
+                          label={
+                            member.personas && member.personas.length > 0
+                              ? member.personas.join(", ").replace(/_/g, " ")
+                              : "Not Set"
+                          }
+                          size="small"
+                          onClick={
+                            canInvite && member.role !== "OWNER"
+                              ? () => {
+                                  setMemberToEdit(member);
+                                  setEditModalOpen(true);
+                                }
+                              : undefined
+                          }
+                          clickable={canInvite && member.role !== "OWNER"}
+                          color={
+                            member.personas && member.personas.length > 0 ? "primary" : "default"
+                          }
+                          variant={
+                            member.personas && member.personas.length > 0 ? "outlined" : "filled"
+                          }
+                          sx={{ textTransform: "capitalize" }}
+                        />
+                      </TableCell>
                       <TableCell>
                         <Typography variant="body2" color="text.secondary">
-                          {member.name || "—"}
+                          {format(new Date(member.createdAt), "MMM d, yyyy")}
                         </Typography>
                       </TableCell>
-                    )}
-                    <TableCell>
-                      <Chip
-                        label={
-                          member.personas && member.personas.length > 0
-                            ? member.personas.join(", ").replace(/_/g, " ")
-                            : "Not Set"
-                        }
-                        size="small"
-                        onClick={
-                          canInvite && member.role !== "OWNER"
-                            ? () => {
-                                setMemberToEdit(member);
-                                setEditModalOpen(true);
+                      {canInvite && (
+                        <TableCell align="center" sx={{ whiteSpace: "nowrap" }}>
+                          {tabs[tabValue]?.id === "active" && (
+                            <Tooltip title="Edit member">
+                              <IconButton
+                                size="small"
+                                color="primary"
+                                onClick={() => {
+                                  setMemberToEdit(member);
+                                  setEditModalOpen(true);
+                                }}
+                              >
+                                <EditIcon fontSize="small" />
+                              </IconButton>
+                            </Tooltip>
+                          )}
+                          {member.role !== "OWNER" && (
+                            <Tooltip
+                              title={
+                                tabs[tabValue]?.id === "active"
+                                  ? "Remove member"
+                                  : "Cancel invitation"
                               }
-                            : undefined
-                        }
-                        clickable={canInvite && member.role !== "OWNER"}
-                        color={
-                          member.personas && member.personas.length > 0 ? "primary" : "default"
-                        }
-                        variant={
-                          member.personas && member.personas.length > 0 ? "outlined" : "filled"
-                        }
-                        sx={{ textTransform: "capitalize" }}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Typography variant="body2" color="text.secondary">
-                        {format(new Date(member.createdAt), "MMM d, yyyy")}
-                      </Typography>
-                    </TableCell>
-                    {canInvite && (
-                      <TableCell align="center" sx={{ whiteSpace: "nowrap" }}>
-                        {tabValue === 0 && (
-                          <Tooltip title="Edit member">
-                            <IconButton
-                              size="small"
-                              color="primary"
-                              onClick={() => {
-                                setMemberToEdit(member);
-                                setEditModalOpen(true);
-                              }}
                             >
-                              <EditIcon fontSize="small" />
-                            </IconButton>
-                          </Tooltip>
-                        )}
-                        {member.role !== "OWNER" && (
-                          <Tooltip title={tabValue === 0 ? "Remove member" : "Cancel invitation"}>
-                            <IconButton
-                              size="small"
-                              color="error"
-                              onClick={() => {
-                                if (tabValue === 0) {
-                                  removeMember(member.id);
-                                } else {
-                                  cancelInvitation(member.id);
-                                }
-                              }}
-                            >
-                              <DeleteIcon fontSize="small" />
-                            </IconButton>
-                          </Tooltip>
-                        )}
-                      </TableCell>
-                    )}
-                  </TableRow>
-                ))}
-                {(tabValue === 0 ? activeMembers : pendingInvitations).length === 0 && (
+                              <IconButton
+                                size="small"
+                                color="error"
+                                onClick={() => {
+                                  if (tabs[tabValue]?.id === "active") {
+                                    removeMember(member.id);
+                                  } else {
+                                    cancelInvitation(member.id);
+                                  }
+                                }}
+                              >
+                                <DeleteIcon fontSize="small" />
+                              </IconButton>
+                            </Tooltip>
+                          )}
+                        </TableCell>
+                      )}
+                    </TableRow>
+                  ),
+                )}
+                {(tabs[tabValue]?.id === "active" ? activeMembers : pendingInvitations).length ===
+                  0 && (
                   <TableRow>
                     <TableCell
                       colSpan={canInvite ? 5 : 4}
                       align="center"
                       sx={{ py: 4, color: "text.secondary" }}
                     >
-                      {tabValue === 0 ? "No active members found." : "No pending invitations."}
+                      {tabs[tabValue]?.id === "active"
+                        ? "No active members found."
+                        : "No pending invitations."}
                     </TableCell>
                   </TableRow>
                 )}
               </TableBody>
             </Table>
           </TableContainer>
-        ) : tabValue === 2 && canViewUsage ? (
+        ) : tabs[tabValue]?.id === "usage" && canViewUsage ? (
           <>
             {usageLoading ? (
               <Box sx={{ display: "flex", justifyContent: "center", p: 4 }}>
@@ -615,7 +657,9 @@ const WorkspaceTeam: React.FC = () => {
               </TableContainer>
             )}
           </>
-        ) : tabValue === 3 && activeWorkspace?.role === "OWNER" ? (
+        ) : tabs[tabValue]?.id === "analytics" && canViewUsage ? (
+          <AiUsageContent hideBreadcrumbs />
+        ) : tabs[tabValue]?.id === "settings" && activeWorkspace?.role === "OWNER" ? (
           <WorkspaceSettingsSection activeWorkspace={activeWorkspace} />
         ) : null}
       </Box>

@@ -13,6 +13,7 @@ import {
   Typography,
   alpha,
   Button,
+  Collapse,
 } from "@mui/material";
 import {
   //Dashboard as DashboardIcon,
@@ -29,22 +30,21 @@ import {
   Chat as ChatIcon,
   AccountTree as AccountTreeIcon,
   Palette as PaletteIcon,
-  Insights as InsightsIcon,
   People as PeopleIcon,
-  MonetizationOn as MonetizationOnIcon,
   Group as GroupIcon,
   DesktopWindows as DesktopWindowsIcon,
   Smartphone as SmartphoneIcon,
-  BarChart as BarChartIcon,
+  ExpandLess as ExpandLessIcon,
+  ExpandMore as ExpandMoreIcon,
+  Brush as BrushIcon,
 } from "@mui/icons-material";
-import { NavLink, useLocation } from "react-router-dom";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { selectAvatar, selectUser, selectUserDb } from "../../store/slices/auth/authSelector";
 import { useBrandIdentity } from "../../hooks/useBrandIdentity";
 import { selectSidebarCollapsed } from "../../store/slices/app/appSelector";
 import { toggleSidebar } from "../../store/slices/app/appSlice";
 import { selectActiveWorkspaceId } from "../../store/slices/app/appSelector";
-import { MailOutline as MailIcon } from "@mui/icons-material";
 import WorkspaceSwitcher from "./WorkspaceSwitcher";
 import { CircularProgress, LinearProgress } from "@mui/material";
 import { useTranslation } from "react-i18next";
@@ -63,42 +63,40 @@ type NavItem = {
   icon: React.ReactElement;
 };
 
-const navItems: NavItem[] = [
+const coreNavItems: NavItem[] = [
   { labelKey: "sidebarLayout.nav.home", path: "/home", icon: <AutoAwesomeIcon fontSize="small" /> },
-  /*{
-    labelKey: "sidebarLayout.nav.dashboard",
-    path: "/dashboard",
-    icon: <DashboardIcon fontSize="small" />,
-  },*/
   {
-    labelKey: "sidebarLayout.nav.team",
-    path: "/team",
-    icon: <GroupIcon fontSize="small" />,
-  },
-  {
-    labelKey: "sidebarLayout.nav.analytics",
-    path: "/analytics",
-    icon: <BarChartIcon fontSize="small" />,
+    labelKey: "sidebarLayout.nav.recordings",
+    path: "/recordings",
+    icon: <MicIcon fontSize="small" />,
   },
   {
     labelKey: "sidebarLayout.nav.sessions",
     path: "/projects",
     icon: <ViewKanbanIcon fontSize="small" />,
   },
+  { labelKey: "sidebarLayout.nav.chat", path: "/chat", icon: <ChatIcon fontSize="small" /> },
+];
+
+const libraryNavItems: NavItem[] = [
   {
     labelKey: "sidebarLayout.nav.contexts",
     path: "/contexts",
     icon: <FolderIcon fontSize="small" />,
   },
   {
-    labelKey: "sidebarLayout.nav.chat",
-    path: "/chat",
-    icon: <ChatIcon fontSize="small" />,
+    labelKey: "sidebarLayout.nav.integrations",
+    path: "/integrations",
+    icon: <IntegrationInstructionsIcon fontSize="small" />,
   },
+  { labelKey: "sidebarLayout.nav.team", path: "/team", icon: <GroupIcon fontSize="small" /> },
+];
+
+const studioNavItems: NavItem[] = [
   {
-    labelKey: "sidebarLayout.nav.recordings",
-    path: "/recordings",
-    icon: <MicIcon fontSize="small" />,
+    labelKey: "sidebarLayout.nav.documents",
+    path: "/docs",
+    icon: <ArticleIcon fontSize="small" />,
   },
   {
     labelKey: "sidebarLayout.nav.slides",
@@ -106,34 +104,16 @@ const navItems: NavItem[] = [
     icon: <SlideshowIcon fontSize="small" />,
   },
   {
-    labelKey: "sidebarLayout.nav.documents",
-    path: "/docs",
-    icon: <ArticleIcon fontSize="small" />,
-  },
-  {
-    labelKey: "sidebarLayout.nav.diagrams", // Or add to i18n later
+    labelKey: "sidebarLayout.nav.diagrams",
     path: "/diagrams",
     icon: <AccountTreeIcon fontSize="small" />,
   },
-  {
-    labelKey: "Brand Themes",
-    path: "/brand-themes",
-    icon: <PaletteIcon fontSize="small" />,
-  },
-  {
-    labelKey: "sidebarLayout.nav.integrations",
-    path: "/integrations",
-    icon: <IntegrationInstructionsIcon fontSize="small" />,
-  },
-  {
-    labelKey: "aiUsage.heading",
-    path: "/usage",
-    icon: <InsightsIcon fontSize="small" />,
-  },
+  { labelKey: "Brand Themes", path: "/brand-themes", icon: <PaletteIcon fontSize="small" /> },
 ];
 
 const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children, fullHeight = false }) => {
   const location = useLocation();
+  const navigate = useNavigate();
   const dispatch = useDispatch();
   const user = useSelector(selectUser);
   const userDb = useSelector(selectUserDb);
@@ -143,45 +123,38 @@ const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children, fullHeight = fa
   const activeWorkspaceId = useSelector(selectActiveWorkspaceId);
   const { t } = useTranslation();
 
+  const [studioOpen, setStudioOpen] = React.useState(false);
+
   const { data: usageData } = useGetUsageMetricsQuery(
     { currentMonthOnly: true, limit: 1, workspaceId: activeWorkspaceId || "" },
     { skip: !activeWorkspaceId, refetchOnFocus: true, pollingInterval: 10000 },
   );
 
   const { data: workspaces } = useGetMyWorkspacesQuery(undefined, { skip: !activeWorkspaceId });
-  const activeWorkspace = React.useMemo(() => 
-    workspaces?.find((w) => w.id === activeWorkspaceId), 
-  [workspaces, activeWorkspaceId]);
+  const activeWorkspace = React.useMemo(
+    () => workspaces?.find((w) => w.id === activeWorkspaceId),
+    [workspaces, activeWorkspaceId],
+  );
 
-  const isMissingKeys = activeWorkspace && !activeWorkspace.isCourtesy && activeWorkspace.role === "OWNER" && userDb?.role !== "ADMIN" && (!activeWorkspace.openRouterKey || !activeWorkspace.deepgramKey);
+  const isMissingKeys =
+    activeWorkspace &&
+    !activeWorkspace.isCourtesy &&
+    activeWorkspace.role === "OWNER" &&
+    userDb?.role !== "ADMIN" &&
+    (!activeWorkspace.openRouterKey || !activeWorkspace.deepgramKey);
 
   const MAX_MONTHLY_TOKENS = activeWorkspace?.monthlyTokenLimit || 200000;
   const currentTokens = usageData?.totalBlueberryTokens || 0;
   const tokenPercentage = Math.min((currentTokens / MAX_MONTHLY_TOKENS) * 100, 100);
   const isOverLimit = currentTokens > MAX_MONTHLY_TOKENS;
 
-  const appNavItems = React.useMemo(() => {
-    const items = [...navItems];
+  const adminNavItems = React.useMemo(() => {
+    const items = [];
     if (userDb?.role === "ADMIN") {
       items.push({
-        labelKey: "sidebarLayout.nav.users",
-        path: "/admin/users",
+        labelKey: "Admin",
+        path: "/admin",
         icon: <PeopleIcon fontSize="small" />,
-      });
-      items.push({
-        labelKey: "aiPricing.heading",
-        path: "/admin/pricing",
-        icon: <MonetizationOnIcon fontSize="small" />,
-      });
-      items.push({
-        labelKey: "Email Templates",
-        path: "/admin/emails",
-        icon: <MailIcon fontSize="small" />,
-      });
-      items.push({
-        labelKey: "Chat Stream Test",
-        path: "/chat-stream-test",
-        icon: <ChatIcon fontSize="small" />,
       });
     }
     return items;
@@ -299,7 +272,22 @@ const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children, fullHeight = fa
           <WorkspaceSwitcher />
 
           {!isCollapsed && activeWorkspaceId && (
-            <Box sx={{ px: 2, mt: 1.5, mb: 0.5 }}>
+            <Box
+              onClick={() => navigate("/team?tab=analytics")}
+              sx={{
+                px: 2,
+                mt: 1.5,
+                mb: 0.5,
+                cursor: "pointer",
+                borderRadius: "12px",
+                mx: 1,
+                py: 0.5,
+                transition: "background-color 0.2s",
+                "&:hover": {
+                  bgcolor: "rgba(255, 255, 255, 0.04)",
+                },
+              }}
+            >
               <Box sx={{ display: "flex", justifyContent: "space-between", mb: 0.5 }}>
                 <Typography variant="caption" sx={{ color: "text.secondary", fontWeight: 600 }}>
                   Usage (This Month)
@@ -348,66 +336,318 @@ const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children, fullHeight = fa
               },
             }}
           >
-            {appNavItems.map((item) => (
-              <ListItemButton
-                key={item.path}
-                component={NavLink}
-                to={item.path}
-                selected={isNavActive(item.path)}
-                sx={{
-                  borderRadius: "12px",
-                  mb: 0.8,
-                  mx: isCollapsed ? 0.5 : 0,
-                  justifyContent: isCollapsed ? "center" : "flex-start",
-                  padding: isCollapsed ? "10px" : "10px 16px",
-                  "&.Mui-selected": {
-                    bgcolor: alpha("#4361EE", 0.12),
-                    color: "primary.light",
-                    border: "1px solid rgba(67, 97, 238, 0.2)",
-                    "& .MuiListItemIcon-root": {
-                      color: "primary.light",
-                    },
-                    "&::after": {
-                      content: '""',
-                      position: "absolute",
-                      left: 0,
-                      top: "20%",
-                      bottom: "20%",
-                      width: "3px",
-                      bgcolor: "primary.main",
-                      borderRadius: "0 4px 4px 0",
-                      boxShadow: "0 0 10px rgba(67, 97, 238, 0.8)",
-                    },
-                  },
-                  "&:hover": {
-                    bgcolor: "rgba(255, 255, 255, 0.04)",
-                  },
-                }}
-              >
-                <ListItemIcon
+            {coreNavItems.map((item) => {
+              return (
+                <ListItemButton
+                  key={item.path}
+                  component={NavLink}
+                  to={item.path}
+                  selected={isNavActive(item.path)}
                   sx={{
-                    color: "text.secondary",
-                    minWidth: isCollapsed ? 0 : 36,
-                    justifyContent: "center",
+                    borderRadius: "12px",
+                    mb: 0.8,
+                    mx: isCollapsed ? 0.5 : 0,
+                    justifyContent: isCollapsed ? "center" : "flex-start",
+                    padding: isCollapsed ? "10px" : "10px 16px",
+                    "&.Mui-selected": {
+                      bgcolor: alpha("#4361EE", 0.12),
+                      color: "primary.light",
+                      border: "1px solid rgba(67, 97, 238, 0.2)",
+                      "& .MuiListItemIcon-root": {
+                        color: "primary.light",
+                      },
+                      "&::after": {
+                        content: '""',
+                        position: "absolute",
+                        left: 0,
+                        top: "20%",
+                        bottom: "20%",
+                        width: "3px",
+                        bgcolor: "primary.main",
+                        borderRadius: "0 4px 4px 0",
+                        boxShadow: "0 0 10px rgba(67, 97, 238, 0.8)",
+                      },
+                    },
+                    "&:hover": {
+                      bgcolor: "rgba(255, 255, 255, 0.04)",
+                    },
                   }}
                 >
-                  {item.icon}
-                </ListItemIcon>
-                {!isCollapsed ? (
-                  <ListItemText
-                    primary={t(item.labelKey)}
-                    primaryTypographyProps={{
-                      fontWeight: 600,
-                      fontSize: "0.9375rem",
+                  <ListItemIcon
+                    sx={{
+                      color: "text.secondary",
+                      minWidth: isCollapsed ? 0 : 36,
+                      justifyContent: "center",
                     }}
-                  />
-                ) : null}
-              </ListItemButton>
-            ))}
+                  >
+                    {item.icon}
+                  </ListItemIcon>
+                  {!isCollapsed ? (
+                    <ListItemText
+                      primary={t(item.labelKey)}
+                      primaryTypographyProps={{
+                        fontWeight: 600,
+                        fontSize: "0.9375rem",
+                      }}
+                    />
+                  ) : null}
+                </ListItemButton>
+              );
+            })}
+
+            <Divider
+              sx={{
+                my: 1.5,
+                borderColor: (theme) => theme.palette.primary.dark,
+                mx: isCollapsed ? 1 : 2,
+              }}
+            />
+
+            {libraryNavItems.map((item) => {
+              return (
+                <ListItemButton
+                  key={item.path}
+                  component={NavLink}
+                  to={item.path}
+                  selected={isNavActive(item.path)}
+                  sx={{
+                    borderRadius: "12px",
+                    mb: 0.8,
+                    mx: isCollapsed ? 0.5 : 0,
+                    justifyContent: isCollapsed ? "center" : "flex-start",
+                    padding: isCollapsed ? "10px" : "10px 16px",
+                    "&.Mui-selected": {
+                      bgcolor: alpha("#4361EE", 0.12),
+                      color: "primary.light",
+                      border: "1px solid rgba(67, 97, 238, 0.2)",
+                      "& .MuiListItemIcon-root": {
+                        color: "primary.light",
+                      },
+                      "&::after": {
+                        content: '""',
+                        position: "absolute",
+                        left: 0,
+                        top: "20%",
+                        bottom: "20%",
+                        width: "3px",
+                        bgcolor: "primary.main",
+                        borderRadius: "0 4px 4px 0",
+                        boxShadow: "0 0 10px rgba(67, 97, 238, 0.8)",
+                      },
+                    },
+                    "&:hover": {
+                      bgcolor: "rgba(255, 255, 255, 0.04)",
+                    },
+                  }}
+                >
+                  <ListItemIcon
+                    sx={{
+                      color: "text.secondary",
+                      minWidth: isCollapsed ? 0 : 36,
+                      justifyContent: "center",
+                    }}
+                  >
+                    {item.icon}
+                  </ListItemIcon>
+                  {!isCollapsed ? (
+                    <ListItemText
+                      primary={t(item.labelKey)}
+                      primaryTypographyProps={{
+                        fontWeight: 600,
+                        fontSize: "0.9375rem",
+                      }}
+                    />
+                  ) : null}
+                </ListItemButton>
+              );
+            })}
+
+            <ListItemButton
+              onClick={() => {
+                if (isCollapsed) {
+                  dispatch(toggleSidebar());
+                  setStudioOpen(true);
+                } else {
+                  setStudioOpen(!studioOpen);
+                }
+              }}
+              sx={{
+                borderRadius: "12px",
+                mb: 0.8,
+                mx: isCollapsed ? 0.5 : 0,
+                justifyContent: isCollapsed ? "center" : "flex-start",
+                padding: isCollapsed ? "10px" : "10px 16px",
+                "&:hover": {
+                  bgcolor: "rgba(255, 255, 255, 0.04)",
+                },
+              }}
+            >
+              <ListItemIcon
+                sx={{
+                  color: "text.secondary",
+                  minWidth: isCollapsed ? 0 : 36,
+                  justifyContent: "center",
+                }}
+              >
+                <BrushIcon fontSize="small" />
+              </ListItemIcon>
+              {!isCollapsed && (
+                <ListItemText
+                  primary="Studio"
+                  primaryTypographyProps={{
+                    fontWeight: 600,
+                    fontSize: "0.9375rem",
+                  }}
+                />
+              )}
+              {!isCollapsed && (
+                <ListItemIcon sx={{ minWidth: 0, color: "text.secondary" }}>
+                  {studioOpen ? (
+                    <ExpandLessIcon fontSize="small" />
+                  ) : (
+                    <ExpandMoreIcon fontSize="small" />
+                  )}
+                </ListItemIcon>
+              )}
+            </ListItemButton>
+
+            <Collapse in={studioOpen && !isCollapsed} timeout="auto" unmountOnExit>
+              <List component="div" disablePadding>
+                {studioNavItems.map((item) => {
+                  return (
+                    <ListItemButton
+                      key={item.path}
+                      component={NavLink}
+                      to={item.path}
+                      selected={isNavActive(item.path)}
+                      sx={{
+                        borderRadius: "12px",
+                        mb: 0.8,
+                        mx: isCollapsed ? 0.5 : 0,
+                        justifyContent: isCollapsed ? "center" : "flex-start",
+                        padding: isCollapsed ? "10px" : "10px 16px",
+                        pl: !isCollapsed ? 4 : undefined,
+                        "&.Mui-selected": {
+                          bgcolor: alpha("#4361EE", 0.12),
+                          color: "primary.light",
+                          border: "1px solid rgba(67, 97, 238, 0.2)",
+                          "& .MuiListItemIcon-root": {
+                            color: "primary.light",
+                          },
+                          "&::after": {
+                            content: '""',
+                            position: "absolute",
+                            left: 0,
+                            top: "20%",
+                            bottom: "20%",
+                            width: "3px",
+                            bgcolor: "primary.main",
+                            borderRadius: "0 4px 4px 0",
+                            boxShadow: "0 0 10px rgba(67, 97, 238, 0.8)",
+                          },
+                        },
+                        "&:hover": {
+                          bgcolor: "rgba(255, 255, 255, 0.04)",
+                        },
+                      }}
+                    >
+                      <ListItemIcon
+                        sx={{
+                          color: "text.secondary",
+                          minWidth: isCollapsed ? 0 : 36,
+                          justifyContent: "center",
+                        }}
+                      >
+                        {item.icon}
+                      </ListItemIcon>
+                      {!isCollapsed ? (
+                        <ListItemText
+                          primary={t(item.labelKey)}
+                          primaryTypographyProps={{
+                            fontWeight: 600,
+                            fontSize: "0.9375rem",
+                          }}
+                        />
+                      ) : null}
+                    </ListItemButton>
+                  );
+                })}
+              </List>
+            </Collapse>
+
+            {adminNavItems.length > 0 && (
+              <>
+                <Divider
+                  sx={{
+                    my: 1.5,
+                    borderColor: (theme) => theme.palette.primary.dark,
+                    mx: isCollapsed ? 1 : 2,
+                  }}
+                />
+                {adminNavItems.map((item) => {
+                  return (
+                    <ListItemButton
+                      key={item.path}
+                      component={NavLink}
+                      to={item.path}
+                      selected={isNavActive(item.path)}
+                      sx={{
+                        borderRadius: "12px",
+                        mb: 0.8,
+                        mx: isCollapsed ? 0.5 : 0,
+                        justifyContent: isCollapsed ? "center" : "flex-start",
+                        padding: isCollapsed ? "10px" : "10px 16px",
+                        "&.Mui-selected": {
+                          bgcolor: alpha("#4361EE", 0.12),
+                          color: "primary.light",
+                          border: "1px solid rgba(67, 97, 238, 0.2)",
+                          "& .MuiListItemIcon-root": {
+                            color: "primary.light",
+                          },
+                          "&::after": {
+                            content: '""',
+                            position: "absolute",
+                            left: 0,
+                            top: "20%",
+                            bottom: "20%",
+                            width: "3px",
+                            bgcolor: "primary.main",
+                            borderRadius: "0 4px 4px 0",
+                            boxShadow: "0 0 10px rgba(67, 97, 238, 0.8)",
+                          },
+                        },
+                        "&:hover": {
+                          bgcolor: "rgba(255, 255, 255, 0.04)",
+                        },
+                      }}
+                    >
+                      <ListItemIcon
+                        sx={{
+                          color: "text.secondary",
+                          minWidth: isCollapsed ? 0 : 36,
+                          justifyContent: "center",
+                        }}
+                      >
+                        {item.icon}
+                      </ListItemIcon>
+                      {!isCollapsed ? (
+                        <ListItemText
+                          primary={t(item.labelKey)}
+                          primaryTypographyProps={{
+                            fontWeight: 600,
+                            fontSize: "0.9375rem",
+                          }}
+                        />
+                      ) : null}
+                    </ListItemButton>
+                  );
+                })}
+              </>
+            )}
           </List>
 
           <Divider sx={{ my: 1, opacity: 0.5 }} />
-          
+
           <ButtonBase
             component={NavLink}
             to="/downloads"
@@ -423,7 +663,8 @@ const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children, fullHeight = fa
               width: isCollapsed ? "auto" : "100%",
               textAlign: "left",
               color: "text.secondary",
-              transition: (theme) => theme.transitions.create(["background-color", "color"], { duration: 200 }),
+              transition: (theme) =>
+                theme.transitions.create(["background-color", "color"], { duration: 200 }),
               "&.active": {
                 color: "primary.light",
                 bgcolor: alpha("#4361EE", 0.08),
@@ -613,7 +854,8 @@ const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children, fullHeight = fa
                     }}
                   >
                     <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                      ⚠️ Your workspace is missing required API keys. AI features (Transcriptions, Insights) will not work.
+                      ⚠️ Your workspace is missing required API keys. AI features (Transcriptions,
+                      Insights) will not work.
                     </Typography>
                     <Button
                       component={NavLink}

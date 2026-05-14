@@ -1,7 +1,8 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState } from "react";
-import { Box, Typography, TextField, Button, Paper, CircularProgress, Alert } from "@mui/material";
+import { Box, Typography, TextField, Button, Paper, CircularProgress, Alert, Breadcrumbs, Link as MuiLink } from "@mui/material";
+import { NavLink } from "react-router-dom";
 import SidebarLayout from "../components/layout/SidebarLayout";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
@@ -153,6 +154,15 @@ const ChatStreamTest: React.FC = () => {
   return (
     <SidebarLayout>
       <Box sx={{ p: 4, height: "100%", display: "flex", flexDirection: "column" }}>
+        <Breadcrumbs aria-label="breadcrumb" sx={{ mb: 2 }}>
+          <MuiLink component={NavLink} underline="hover" color="inherit" to="/home">
+            Home
+          </MuiLink>
+          <MuiLink component={NavLink} underline="hover" color="inherit" to="/admin">
+            Admin
+          </MuiLink>
+          <Typography color="text.primary">Stream Testing Surface</Typography>
+        </Breadcrumbs>
         <Typography variant="h4" fontWeight={800} gutterBottom>
           Stream Testing Surface
         </Typography>
