@@ -166,20 +166,12 @@ export class TaskIntegrationController extends BaseWorkspaceController {
         where: { workspaceId_provider: { workspaceId, provider: IntegrationProvider.NOTION } },
       });
       const meta = wsIntegration?.metadata as Record<string, unknown> | null;
-      const targetId = (body.targetTeamId as string) || (meta?.defaultDatabaseId as string);
-
-      if (!targetId) {
-        this.setStatus(400);
-        throw {
-          status: 400,
-          message: "Target Database ID is required for Notion sync (no default configured)",
-        };
-      }
+      const targetDatabaseId = (body.targetTeamId as string) || (meta?.defaultDatabaseId as string) || undefined;
 
       const notionResult = await notionIntegrationService.createNotionPage(
         workspaceId,
         taskId,
-        targetId,
+        targetDatabaseId, // optional — falls back to standalone page
       );
 
       existingMetadata.notion = {
@@ -275,7 +267,7 @@ export class TaskIntegrationController extends BaseWorkspaceController {
       tasks.map(async (task) => {
         const taskMeta = (task.metadata as Record<string, unknown> | null) ?? {};
 
-        if (!jiraDefaultProjectId && !linearDefaultTeamId && !trelloDefaultListId && !notionDefaultDatabaseId) {
+        if (!jiraDefaultProjectId && !linearDefaultTeamId && !trelloDefaultListId && !(notionIntegration?.status === "CONNECTED")) {
           skipped++;
           return;
         }
@@ -341,12 +333,12 @@ export class TaskIntegrationController extends BaseWorkspaceController {
           }
         }
 
-        if (notionIntegration?.status === "CONNECTED" && notionDefaultDatabaseId) {
+        if (notionIntegration?.status === "CONNECTED") {
           try {
             const result = await notionIntegrationService.createNotionPage(
               workspaceId,
               task.id,
-              notionDefaultDatabaseId,
+              notionDefaultDatabaseId, // optional — falls back to standalone page
             );
             taskMeta.notion = {
               pageId: result.pageId,

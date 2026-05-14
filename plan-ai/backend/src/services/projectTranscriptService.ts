@@ -1151,14 +1151,13 @@ ${content}`;
           }
         } else if (
           integration.provider === IntegrationProvider.NOTION &&
-          metadata.defaultDatabaseId &&
           options?.syncToNotion !== false
         ) {
           for (const task of tasks) {
             const syncResult = await notionIntegrationService.createNotionPage(
               workspaceId,
               task.id,
-              metadata.defaultDatabaseId,
+              metadata.defaultDatabaseId, // optional — falls back to standalone page
             );
             logger.info(`Auto-synced task ${task.id} to Notion page ${syncResult.pageId}`);
             await this.updateTaskTargetMetadata(task.id, "notion", {

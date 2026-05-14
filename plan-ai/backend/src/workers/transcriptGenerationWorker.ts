@@ -62,7 +62,10 @@ export const transcriptGenerationWorker = new Worker<TranscriptGenerationJobPayl
 
         await prisma.transcript.update({
           where: { id: job.data.transcriptId },
-          data: { metadata: meta },
+          data: { 
+            metadata: meta,
+            title: transcript.title === "Generating Transcript..." ? "Failed Transcript" : transcript.title
+          },
         });
       }
       throw error;

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-empty-function */
 import React, { useEffect, useMemo, useState } from "react";
 import {
@@ -960,10 +961,7 @@ const Integrations: React.FC = () => {
                   (i) => i.provider === config.provider && i.status === "CONNECTED",
                 );
 
-                const hasWarning =
-                  config.provider === "NOTION" &&
-                  isConnected &&
-                  notionDatabasesData?.data?.length === 0;
+                const hasWarning = false; // No database requirement for Notion anymore
 
                 let iconEl = null;
                 switch (config.tabValue) {
@@ -1007,7 +1005,6 @@ const Integrations: React.FC = () => {
                     </Box>
                   );
                 }
-
 
                 return (
                   <Tab
@@ -1824,96 +1821,10 @@ const ConnectedIntegrationDetails: React.FC<{
 
       {integration.provider === "NOTION" && integration.status === "CONNECTED" && (
         <Box sx={{ mt: 2 }}>
-          <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }}>
-            <Typography variant="subtitle2" sx={{ flexGrow: 1 }}>
-              Notion Workspace Overview
-            </Typography>
-            <IconButton
-              size="small"
-              onClick={() => refetchNotionSummary()}
-              disabled={isNotionSummaryFetching || isNotionSummaryLoading}
-            >
-              <SyncIcon fontSize="small" sx={{ color: "text.secondary" }} />
-            </IconButton>
-          </Stack>
-
-          {isNotionSummaryLoading || isNotionSummaryFetching ? (
-            <CircularProgress size={20} />
-          ) : notionSummaryResponse?.data ? (
-            <Stack spacing={2} sx={{ mt: 1, mb: 2 }}>
-              <Paper variant="outlined" sx={{ p: 2 }}>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                  <strong>Total Databases:</strong>{" "}
-                  {notionSummaryResponse.data.totalDatabases ?? "N/A"}
-                </Typography>
-                {notionSummaryResponse.data.latestDatabases?.length > 0 && (
-                  <Box>
-                    <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-                      <strong>Latest Databases:</strong>
-                    </Typography>
-                    <Stack direction="row" flexWrap="wrap" gap={1}>
-                      {notionSummaryResponse.data.latestDatabases.map((db: string) => (
-                        <Chip key={db} label={db} size="small" variant="outlined" />
-                      ))}
-                    </Stack>
-                  </Box>
-                )}
-              </Paper>
-            </Stack>
-          ) : null}
-
-          <Typography variant="subtitle2" sx={{ mb: 1, mt: 2 }}>
-            Default Destination Database
-          </Typography>
-          <Stack spacing={2}>
-            {isNotionDatabasesLoading ? (
-              <CircularProgress size={20} />
-            ) : (
-              <FormControl size="small" sx={{ minWidth: 280 }}>
-                <InputLabel>Select Default Database</InputLabel>
-                <Select
-                  label="Select Default Database"
-                  value={selectedNotionDatabaseId}
-                  disabled={isSavingNotionDatabase || !canEdit}
-                  onChange={async (e) => {
-                    const databaseId = e.target.value as string;
-                    setSelectedNotionDatabaseId(databaseId);
-                    try {
-                      await setNotionDefaultDatabase({ databaseId }).unwrap();
-                      dispatch(integrationApi.util.invalidateTags(["Integration"]));
-                      dispatch(
-                        setToastMessage({
-                          severity: "success",
-                          message: "Default Notion Database saved",
-                        }),
-                      );
-                    } catch {
-                      dispatch(
-                        setToastMessage({
-                          severity: "error",
-                          message: "Failed to save default Notion Database",
-                        }),
-                      );
-                    }
-                  }}
-                >
-                  {(notionDatabasesData?.data ?? []).map((db: { id: string; name: string }) => (
-                    <MenuItem key={db.id} value={db.id}>
-                      {db.name}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            )}
-
-            {notionDatabasesData?.data?.length === 0 && !isNotionDatabasesLoading && (
-              <Alert severity="warning" sx={{ mt: 1, maxWidth: 600 }}>
-                No databases found. If you selected pages during the Notion connection flow but no
-                databases appear here, please re-connect and ensure you specifically select the
-                databases where you want Plan AI to create tasks.
-              </Alert>
-            )}
-          </Stack>
+          <Alert severity="success" sx={{ mb: 2 }}>
+            Notion is connected. Tasks from your recordings will automatically be exported as pages
+            in your Notion workspace.
+          </Alert>
         </Box>
       )}
 

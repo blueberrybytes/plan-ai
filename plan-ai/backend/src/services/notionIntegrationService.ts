@@ -7,8 +7,8 @@ import type { PageObjectResponse } from "@notionhq/client/build/src/api-endpoint
 import { logger } from "../utils/logger";
 
 export interface NotionSummaryResponse {
-  totalDatabases: number;
-  latestDatabases: string[];
+  totalPages: number;
+  recentPages: string[];
 }
 
 const NOTION_AUTH_URL = "https://api.notion.com/v1/oauth/authorize";
@@ -152,22 +152,30 @@ class NotionIntegrationService {
 
     try {
       const response = await notion.search({
-        filter: { property: "object", value: "data_source" },
+        filter: { property: "object", value: "page" },
+        sort: { direction: "descending", timestamp: "last_edited_time" },
+        page_size: 5,
       });
 
-      const databases = response.results;
-      const totalDatabases = databases.length;
+      const pages = response.results;
+      const totalPages = pages.length;
 
-      const latestDatabases = databases.slice(0, 5).map((db) => {
-        if ("title" in db && Array.isArray(db.title)) {
-          return db.title[0]?.plain_text || "Untitled Database";
+      const recentPages = pages.map((page) => {
+        if ("properties" in page && page.properties) {
+          // Try to extract a title from the first title property found
+          for (const prop of Object.values(page.properties)) {
+            if (prop.type === "title" && "title" in prop && Array.isArray(prop.title)) {
+              const text = prop.title[0]?.plain_text;
+              if (text) return text;
+            }
+          }
         }
-        return "Untitled Database";
+        return "Untitled Page";
       });
 
       return {
-        totalDatabases,
-        latestDatabases,
+        totalPages,
+        recentPages,
       };
     } catch (error) {
       logger.error("Failed to fetch Notion summary", { error });
@@ -225,10 +233,15 @@ class NotionIntegrationService {
     });
   }
 
+  /**
+   * Creates a standalone Notion page for a task.
+   * No database required — the page is created directly in the user's workspace.
+   * If a databaseId is provided and accessible, it will be used as the parent.
+   */
   public async createNotionPage(
     workspaceId: string,
     taskId: string,
-    databaseId: string,
+    databaseId?: string,
   ): Promise<{ pageId: string; url: string }> {
     const integration = await prisma.workspaceIntegration.findUnique({
       where: { workspaceId_provider: { workspaceId, provider: IntegrationProvider.NOTION } },
@@ -249,46 +262,130 @@ class NotionIntegrationService {
 
     const notion = new NotionClient({ auth: integration.accessToken });
 
-    try {
-      const response = await notion.pages.create({
-        parent: { database_id: databaseId },
-        properties: {
-          Name: {
-            title: [
-              {
-                text: {
-                  content: task.title,
-                },
-              },
-            ],
-          },
-          // Not all databases have 'Status' or 'Description' properties,
-          // so it's safer to just set the title property and put the description in the page body.
+    // Build rich page body with task details
+    const children: Parameters<typeof notion.pages.create>[0]["children"] = [];
+
+    // Description block
+    if (task.description) {
+      children.push({
+        object: "block",
+        type: "paragraph",
+        paragraph: {
+          rich_text: [
+            {
+              type: "text",
+              text: { content: task.description },
+            },
+          ],
         },
-        children: [
+      });
+    }
+
+    // Divider
+    children.push({
+      object: "block",
+      type: "divider",
+      divider: {},
+    });
+
+    // Metadata block
+    const metaLines = [
+      `Priority: ${task.priority || "N/A"}`,
+      `Status: ${task.status || "N/A"}`,
+      `Project: ${task.project.title || "N/A"}`,
+    ];
+    if (task.acceptanceCriteria) {
+      metaLines.push(`\nAcceptance Criteria:\n${task.acceptanceCriteria}`);
+    }
+
+    children.push({
+      object: "block",
+      type: "callout",
+      callout: {
+        icon: { type: "emoji", emoji: "📋" },
+        rich_text: [
           {
-            object: "block",
-            type: "paragraph",
-            paragraph: {
-              rich_text: [
+            type: "text",
+            text: { content: metaLines.join("\n") },
+          },
+        ],
+      },
+    });
+
+    // Try database-backed page first if databaseId is provided
+    if (databaseId) {
+      try {
+        const response = await notion.pages.create({
+          parent: { database_id: databaseId },
+          properties: {
+            Name: {
+              title: [
                 {
-                  type: "text",
                   text: {
-                    content: task.description || "",
+                    content: task.title,
                   },
                 },
               ],
             },
           },
-        ],
+          children,
+        });
+
+        return {
+          pageId: response.id,
+          url: (response as PageObjectResponse).url,
+        };
+      } catch (dbError) {
+        logger.warn("Failed to create Notion page in database, falling back to standalone page", {
+          databaseId,
+          error: dbError instanceof Error ? dbError.message : String(dbError),
+        });
+        // Fall through to standalone page creation
+      }
+    }
+
+    // Create standalone page (no database required)
+    try {
+      // Search for a page the integration has access to, to use as parent
+      const searchResult = await notion.search({
+        filter: { property: "object", value: "page" },
+        page_size: 1,
       });
+
+      let parent: { page_id: string } | { workspace: true };
+
+      if (searchResult.results.length > 0) {
+        parent = { page_id: searchResult.results[0].id };
+      } else {
+        // Last resort: create in workspace root (requires workspace-level access)
+        parent = { workspace: true };
+      }
+
+      const response = await notion.pages.create({
+        parent,
+        properties: {
+          title: {
+            title: [
+              {
+                text: {
+                  content: `[Plan AI] ${task.title}`,
+                },
+              },
+            ],
+          },
+        },
+        children,
+      } as Parameters<typeof notion.pages.create>[0]);
 
       return {
         pageId: response.id,
         url: (response as PageObjectResponse).url,
       };
     } catch (error) {
-      logger.error("Failed to create Notion page", { error, taskId, databaseId });
+      logger.error("Failed to create standalone Notion page", {
+        error,
+        taskId,
+      });
       throw error;
     }
   }
