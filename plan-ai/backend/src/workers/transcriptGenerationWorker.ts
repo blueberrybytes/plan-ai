@@ -41,6 +41,8 @@ export const transcriptGenerationWorker = new Worker<TranscriptGenerationJobPayl
         taskStrategy: job.data.taskStrategy,
         taskCount: job.data.taskCount,
         contextPrompt: job.data.contextPrompt,
+        createDoc: job.data.createDoc,
+        createSlides: job.data.createSlides,
       });
 
       logger.info(`Successfully completed TranscriptGenerationJob ${job.id}`);

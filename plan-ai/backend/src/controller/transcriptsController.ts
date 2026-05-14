@@ -242,6 +242,8 @@ export class TranscriptsController extends BaseWorkspaceController {
     @FormField() taskCount?: string,
     @FormField() agenticInvestigation?: string,
     @FormField() location?: string,
+    @FormField() createDoc?: string,
+    @FormField() createSlides?: string,
     @UploadedFile("micFile") micFile?: Express.Multer.File,
     @UploadedFile("sysFile") sysFile?: Express.Multer.File,
   ): Promise<ApiResponse<StandaloneTranscriptResponse>> {
@@ -331,6 +333,8 @@ export class TranscriptsController extends BaseWorkspaceController {
       taskCount: taskCount ? parseInt(taskCount, 10) : undefined,
       contextPrompt: contextPrompt ?? undefined,
       agenticInvestigation: agenticInvestigation === "true",
+      createDoc: createDoc === "true",
+      createSlides: createSlides === "true",
     };
 
     // Save initial metadata and live content fallback

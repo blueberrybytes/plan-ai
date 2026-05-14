@@ -423,6 +423,8 @@ const models: TsoaRoute.Models = {
             "syncToLinear": {"dataType":"boolean"},
             "syncToTrello": {"dataType":"boolean"},
             "agenticInvestigation": {"dataType":"boolean"},
+            "createDoc": {"dataType":"boolean"},
+            "createSlides": {"dataType":"boolean"},
         },
         "additionalProperties": false,
     },
@@ -2477,6 +2479,8 @@ export function RegisterRoutes(app: Router,opts?:{multer?:ReturnType<typeof mult
                 syncToLinear: {"in":"formData","name":"syncToLinear","dataType":"string"},
                 syncToTrello: {"in":"formData","name":"syncToTrello","dataType":"string"},
                 agenticInvestigation: {"in":"formData","name":"agenticInvestigation","dataType":"string"},
+                createDoc: {"in":"formData","name":"createDoc","dataType":"string"},
+                createSlides: {"in":"formData","name":"createSlides","dataType":"string"},
         };
         app.post('/api/projects/:projectId/transcripts/upload',
             authenticateMiddleware([{"ClientLevel":[]}]),
@@ -3133,6 +3137,8 @@ export function RegisterRoutes(app: Router,opts?:{multer?:ReturnType<typeof mult
                 taskCount: {"in":"formData","name":"taskCount","dataType":"string"},
                 agenticInvestigation: {"in":"formData","name":"agenticInvestigation","dataType":"string"},
                 location: {"in":"formData","name":"location","dataType":"string"},
+                createDoc: {"in":"formData","name":"createDoc","dataType":"string"},
+                createSlides: {"in":"formData","name":"createSlides","dataType":"string"},
                 micFile: {"in":"formData","name":"micFile","dataType":"file"},
                 sysFile: {"in":"formData","name":"sysFile","dataType":"file"},
         };

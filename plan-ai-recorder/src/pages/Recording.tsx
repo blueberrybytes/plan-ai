@@ -206,9 +206,11 @@ const Recording: React.FC = () => {
   const [syncToNotion, setSyncToNotion] = useState<boolean>(false);
   const [exportToGoogleDrive, setExportToGoogleDrive] = useState<boolean>(false);
   const [exportToOneDrive, setExportToOneDrive] = useState<boolean>(false);
-  
   const [taskStrategy, setTaskStrategy] = useState<"AUTO" | "SINGLE_TICKET" | "SPECIFIC_COUNT">("AUTO");
   const [taskCount, setTaskCount] = useState<number>(5);
+
+  const [createDoc, setCreateDoc] = useState<boolean>(false);
+  const [createSlides, setCreateSlides] = useState<boolean>(false);
 
   const [chatMessage, setChatMessage] = useState("");
   const [chatHistory, setChatHistory] = useState<
@@ -410,6 +412,8 @@ const Recording: React.FC = () => {
         exportToOneDrive,
         taskStrategy,
         taskCount,
+        createDoc,
+        createSlides,
         skipAi,
         micFile: blobs.micBlob,
         sysFile: blobs.sysBlob,
@@ -440,6 +444,11 @@ const Recording: React.FC = () => {
     exportToOneDrive,
     taskStrategy,
     taskCount,
+    createDoc,
+    createSlides,
+    chatHistory,
+    modelKey,
+    complexityLevel,
   ]);
 
   const handleStop = useCallback(() => {
@@ -818,6 +827,35 @@ const Recording: React.FC = () => {
               label="Export document to OneDrive"
             />
           )}
+        </FormGroup>
+
+        <FormGroup sx={{ mt: 1 }}>
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={createDoc}
+                onChange={(e) => setCreateDoc(e.target.checked)}
+              />
+            }
+            label={
+              <Typography variant="body2">
+                Generate a document
+              </Typography>
+            }
+          />
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={createSlides}
+                onChange={(e) => setCreateSlides(e.target.checked)}
+              />
+            }
+            label={
+              <Typography variant="body2">
+                Generate slides
+              </Typography>
+            }
+          />
         </FormGroup>
 
         <Stack direction="column" spacing={1.5} sx={{ mt: 2, alignItems: 'center' }}>

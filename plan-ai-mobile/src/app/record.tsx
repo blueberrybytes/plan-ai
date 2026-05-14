@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import {
   View,
   StyleSheet,
@@ -29,7 +30,7 @@ import {
 import Markdown from "react-native-markdown-display";
 import LiveAudioStream from "react-native-live-audio-stream";
 import { useRouter } from "expo-router";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import {
   requestRecordingPermissionsAsync,
@@ -152,7 +153,7 @@ const WaveformBox = ({
     });
 
     Animated.parallel(animations).start();
-  }, [audioLevel, isRecording]);
+  }, [audioLevel, isRecording, anims]);
 
   return (
     <View
@@ -299,6 +300,8 @@ export default function RecordScreen() {
   const [syncToNotion, setSyncToNotion] = useState(false);
   const [exportToGoogleDrive, setExportToGoogleDrive] = useState(false);
   const [exportToOneDrive, setExportToOneDrive] = useState(false);
+  const [createDoc, setCreateDoc] = useState(false);
+  const [createSlides, setCreateSlides] = useState(false);
   const [hasJira, setHasJira] = useState(false);
   const [hasLinear, setHasLinear] = useState(false);
   const [hasTrello, setHasTrello] = useState(false);
@@ -450,7 +453,7 @@ export default function RecordScreen() {
           setIsGeneratingTitle(false);
         });
     }
-  }, [phase, transcript]);
+  }, [phase, transcript, api, title]);
 
   useEffect(() => {
     let chunkCount = 0;
@@ -516,7 +519,8 @@ export default function RecordScreen() {
         stopAudioStream();
       }
     };
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isRecording]);
 
   useEffect(() => {
     if (phase === "context_selection") {
@@ -599,7 +603,11 @@ export default function RecordScreen() {
             setIsSpeaking(false);
           } else if (msg.type === "error") {
             console.error("[WS Error from Backend]", msg.message);
-            Alert.alert("Connection Warning", msg.message || "Lost connection to the transcription server. You can still save what you have.");
+            Alert.alert(
+              "Connection Warning",
+              msg.message ||
+                "Lost connection to the transcription server. You can still save what you have.",
+            );
           }
         } catch (e) {
           console.error("[WS Data Handling Error]", e);
@@ -858,6 +866,8 @@ export default function RecordScreen() {
           syncToNotion,
           exportToGoogleDrive,
           exportToOneDrive,
+          createDoc,
+          createSlides,
           taskStrategy,
           taskCount,
           skipAi,
@@ -1065,11 +1075,13 @@ export default function RecordScreen() {
 
               {hasGoogleDrive && (
                 <View style={styles.optionRow}>
-                  <Text style={styles.optionText}>Export document to Google Drive</Text>
+                  <Text style={styles.optionText}>
+                    Export document to Google Drive
+                  </Text>
                   <Switch
                     value={exportToGoogleDrive}
                     onValueChange={setExportToGoogleDrive}
-                    trackColor={{ false: '#333', true: '#4ade80' }}
+                    trackColor={{ false: "#333", true: "#4ade80" }}
                     thumbColor="#fff"
                   />
                 </View>
@@ -1077,15 +1089,48 @@ export default function RecordScreen() {
 
               {hasOneDrive && (
                 <View style={styles.optionRow}>
-                  <Text style={styles.optionText}>Export document to OneDrive</Text>
+                  <Text style={styles.optionText}>
+                    Export document to OneDrive
+                  </Text>
                   <Switch
                     value={exportToOneDrive}
                     onValueChange={setExportToOneDrive}
-                    trackColor={{ false: '#333', true: '#4ade80' }}
+                    trackColor={{ false: "#333", true: "#4ade80" }}
                     thumbColor="#fff"
                   />
                 </View>
               )}
+            </View>
+
+            <Divider />
+
+            <View>
+              <Text
+                variant="titleMedium"
+                style={{ fontWeight: "bold", marginBottom: 16 }}
+              >
+                Document Generation
+              </Text>
+
+              <View style={styles.optionRow}>
+                <Text style={styles.optionText}>Generate a document</Text>
+                <Switch
+                  value={createDoc}
+                  onValueChange={setCreateDoc}
+                  trackColor={{ false: "#333", true: "#4ade80" }}
+                  thumbColor="#fff"
+                />
+              </View>
+
+              <View style={styles.optionRow}>
+                <Text style={styles.optionText}>Generate slides</Text>
+                <Switch
+                  value={createSlides}
+                  onValueChange={setCreateSlides}
+                  trackColor={{ false: "#333", true: "#4ade80" }}
+                  thumbColor="#fff"
+                />
+              </View>
             </View>
 
             <Divider />

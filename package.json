@@ -77,6 +77,12 @@
     ],
     "frontend/src/**/*.{ts,tsx,js,jsx}": [
       "yarn --cwd frontend lint:fix"
+    ],
+    "plan-ai-recorder/src/**/*.{ts,tsx,js,jsx}": [
+      "yarn --cwd plan-ai-recorder eslint --fix"
+    ],
+    "plan-ai-mobile/src/**/*.{ts,tsx,js,jsx}": [
+      "yarn --cwd plan-ai-mobile expo lint"
     ]
   }
 }

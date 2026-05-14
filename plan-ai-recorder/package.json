@@ -62,10 +62,15 @@
     "@types/node": "^20.14.2",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
+    "@typescript-eslint/eslint-plugin": "^8.59.3",
+    "@typescript-eslint/parser": "^8.59.3",
     "@vitejs/plugin-react": "^4.3.1",
     "electron": "^31.0.0",
     "electron-builder": "^24.13.3",
     "electron-vite": "^2.3.0",
+    "eslint": "^10.3.0",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^7.1.1",
     "husky": "^9.1.5",
     "lint-staged": "^15.2.2",
     "typescript": "^5.4.5",
@@ -73,6 +78,7 @@
   },
   "lint-staged": {
     "*.{ts,tsx}": [
+      "eslint --fix",
       "bash -c 'yarn typecheck'"
     ]
   }

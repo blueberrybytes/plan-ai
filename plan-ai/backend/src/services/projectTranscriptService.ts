@@ -167,6 +167,8 @@ export interface CreateTranscriptInput {
   taskStrategy?: "AUTO" | "SINGLE_TICKET" | "SPECIFIC_COUNT";
   taskCount?: number;
   agenticInvestigation?: boolean;
+  createDoc?: boolean;
+  createSlides?: boolean;
 }
 
 export interface CreateTranscriptResult {
@@ -1083,7 +1085,12 @@ ${content}`;
     workspaceId: string,
     transcript: Transcript,
     tasks: Task[],
-    options?: { syncToJira?: boolean; syncToLinear?: boolean; syncToTrello?: boolean; syncToNotion?: boolean },
+    options?: {
+      syncToJira?: boolean;
+      syncToLinear?: boolean;
+      syncToTrello?: boolean;
+      syncToNotion?: boolean;
+    },
   ): Promise<void> {
     const integrations = await prisma.workspaceIntegration.findMany({
       where: {
@@ -1096,10 +1103,7 @@ ${content}`;
 
     for (const integration of integrations) {
       try {
-        if (
-          integration.provider === IntegrationProvider.JIRA &&
-          options?.syncToJira !== false
-        ) {
+        if (integration.provider === IntegrationProvider.JIRA && options?.syncToJira !== false) {
           const meta = integration.metadata as unknown as JiraIntegrationMetadata | null;
           if (!meta?.defaultProjectId) continue;
           for (const task of tasks) {
@@ -1160,11 +1164,13 @@ ${content}`;
           const syncResult = await notionIntegrationService.exportTranscriptToNotion(
             workspaceId,
             transcript,
-            tasks
+            tasks,
           );
-          
-          logger.info(`Auto-synced transcript ${transcript.id} to Notion page ${syncResult.pageId}`);
-          
+
+          logger.info(
+            `Auto-synced transcript ${transcript.id} to Notion page ${syncResult.pageId}`,
+          );
+
           // Still tag each task with the notion target so the UI knows it was synced
           for (const task of tasks) {
             await this.updateTaskTargetMetadata(task.id, "notion", {
@@ -1221,7 +1227,7 @@ ${content}`;
     let markdownContent = `# ${title}\n\n`;
     markdownContent += `## Summary\n${analysisRaw.summary}\n\n`;
     markdownContent += `## Action Items & Tasks\n`;
-    
+
     if (analysisRaw.tasks.length === 0) {
       markdownContent += "No tasks extracted.\n";
     } else {
@@ -1245,7 +1251,7 @@ ${content}`;
           workspaceId,
           filename,
           buffer,
-          "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+          "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         );
         logger.info(`Successfully exported document to Google Drive: ${link}`);
       } catch (err) {
@@ -1258,7 +1264,7 @@ ${content}`;
         const link = await microsoftIntegrationService.uploadFileToOneDrive(
           workspaceId,
           filename,
-          buffer
+          buffer,
         );
         logger.info(`Successfully exported document to OneDrive: ${link}`);
       } catch (err) {

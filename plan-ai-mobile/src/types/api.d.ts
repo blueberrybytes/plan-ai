@@ -2289,6 +2289,8 @@ export interface components {
             syncToLinear?: boolean;
             syncToTrello?: boolean;
             agenticInvestigation?: boolean;
+            createDoc?: boolean;
+            createSlides?: boolean;
         };
         ApiResponse_TranscriptResponse_: {
             message?: string;
@@ -4283,6 +4285,8 @@ export interface operations {
                     syncToLinear?: string;
                     syncToTrello?: string;
                     agenticInvestigation?: string;
+                    createDoc?: string;
+                    createSlides?: string;
                 };
             };
         };
@@ -4776,6 +4780,8 @@ export interface operations {
                     taskCount?: string;
                     agenticInvestigation?: string;
                     location?: string;
+                    createDoc?: string;
+                    createSlides?: string;
                     /** Format: binary */
                     micFile?: string;
                     /** Format: binary */

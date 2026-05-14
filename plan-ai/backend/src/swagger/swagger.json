@@ -997,6 +997,12 @@
 					},
 					"agenticInvestigation": {
 						"type": "boolean"
+					},
+					"createDoc": {
+						"type": "boolean"
+					},
+					"createSlides": {
+						"type": "boolean"
 					}
 				},
 				"required": [
@@ -7018,6 +7024,12 @@
 									},
 									"agenticInvestigation": {
 										"type": "string"
+									},
+									"createDoc": {
+										"type": "string"
+									},
+									"createSlides": {
+										"type": "string"
 									}
 								},
 								"required": [
@@ -7951,6 +7963,12 @@
 										"type": "string"
 									},
 									"location": {
+										"type": "string"
+									},
+									"createDoc": {
+										"type": "string"
+									},
+									"createSlides": {
 										"type": "string"
 									},
 									"micFile": {

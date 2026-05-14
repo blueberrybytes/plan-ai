@@ -35,6 +35,8 @@ export interface TranscriptGenerationJobPayload {
   exportToOneDrive?: boolean;
   contextPrompt?: string;
   agenticInvestigation?: boolean;
+  createDoc?: boolean;
+  createSlides?: boolean;
 }
 
 export const transcriptGenerationQueue = new Queue<TranscriptGenerationJobPayload>(

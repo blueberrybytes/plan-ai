@@ -173,6 +173,8 @@ interface ImportTranscriptRequest {
   syncToLinear?: boolean;
   syncToTrello?: boolean;
   agenticInvestigation?: boolean;
+  createDoc?: boolean;
+  createSlides?: boolean;
 }
 
 interface TaskListResponse {
@@ -385,6 +387,8 @@ export class ProjectsModelController extends BaseWorkspaceController {
     @FormField() syncToLinear?: boolean,
     @FormField() syncToTrello?: boolean,
     @FormField() agenticInvestigation?: boolean,
+    @FormField() createDoc?: boolean,
+    @FormField() createSlides?: boolean,
   ): Promise<ApiResponse<CreateTranscriptResponse>> {
     const { user, workspaceId } = await this.getAuthorizedWorkspaceAccess(request);
     await this.getProjectForWorkspace(request, projectId, workspaceId);
@@ -495,6 +499,8 @@ export class ProjectsModelController extends BaseWorkspaceController {
       syncToLinear,
       syncToTrello,
       agenticInvestigation,
+      createDoc,
+      createSlides,
       contextPrompt: contextPrompt ?? undefined,
     });
 
@@ -607,6 +613,8 @@ export class ProjectsModelController extends BaseWorkspaceController {
       syncToLinear: body.syncToLinear,
       syncToTrello: body.syncToTrello,
       agenticInvestigation: body.agenticInvestigation,
+      createDoc: body.createDoc,
+      createSlides: body.createSlides,
       contextPrompt: contextPrompt ?? undefined,
     });
 

@@ -272,6 +272,8 @@ export const createPlanAiApi = (
       skipAi?: boolean;
       exportToGoogleDrive?: boolean;
       exportToOneDrive?: boolean;
+      createDoc?: boolean;
+      createSlides?: boolean;
     }): Promise<Transcript> {
       const req = async (force: boolean) => {
         const formData = new FormData();
@@ -291,6 +293,8 @@ export const createPlanAiApi = (
         if (payload.syncToNotion) formData.append("syncToNotion", "true");
         if (payload.exportToGoogleDrive) formData.append("exportToGoogleDrive", "true");
         if (payload.exportToOneDrive) formData.append("exportToOneDrive", "true");
+        if (payload.createDoc) formData.append("createDoc", "true");
+        if (payload.createSlides) formData.append("createSlides", "true");
         if (payload.taskStrategy) formData.append("taskStrategy", payload.taskStrategy);
         if (payload.taskCount) formData.append("taskCount", payload.taskCount.toString());
         if (payload.skipAi) formData.append("skipAi", "true");
