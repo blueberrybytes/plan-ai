@@ -51,7 +51,11 @@ export class MicrosoftIntegrationService {
       try {
         const stateObj = JSON.parse(state);
         if (stateObj.redirectPath) {
-          return `${frontendUrl}${stateObj.redirectPath}`;
+          const redirectUrl = new URL(`${frontendUrl}${stateObj.redirectPath}`);
+          redirectUrl.searchParams.append("provider", "microsoft");
+          redirectUrl.searchParams.append("status", status);
+          if (errorReason) redirectUrl.searchParams.append("error_reason", errorReason);
+          return redirectUrl.toString();
         }
       } catch (e) {
         // Fall through

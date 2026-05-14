@@ -57,3 +57,79 @@ Only ADMIN or OWNER of the workspace can create integrations. And an integration
 - **Impact:** Negligible performance cost in React, but massive commercial impact. It visually proves the AI's "train of thought" and architectural understanding.
 
 ## 8. Missing translations in a lot of pages that are hardcoded
+
+---
+
+## 9. Calendar Integration (Google Calendar / Outlook)
+**Priority:** 🔥 High — Biggest friction killer  
+**Problem:** Users must manually start recordings, name meetings, and assign projects. This creates adoption friction and means meetings that aren't manually triggered are lost forever.  
+**Solution:**
+- Integrate with Google Calendar API and Microsoft Graph Calendar API using existing OAuth credentials.
+- Auto-detect upcoming meetings and pre-populate the title, participants, and project association.
+- Optionally auto-start the desktop recorder when a calendar event begins (with user opt-in).
+- Pre-fill the recording screen with event metadata (attendees, agenda, linked project).
+- **Unlocks:** Email-to-participants, follow-up tracking, and speaker identification from attendee lists.
+
+## 10. Email Meeting Notes to Participants
+**Priority:** 🔥 High — Viral growth driver  
+**Problem:** After a meeting is processed, only the person who recorded it sees the summary and tasks. Other attendees have no visibility unless they log into Plan AI.  
+**Solution:**
+- After transcript processing completes, auto-send a polished email with the summary + action items to all meeting attendees (pulled from the calendar invite).
+- Use the existing Resend integration for delivery.
+- Include a "View Full Transcript" deep-link back to the Plan AI web dashboard.
+- Allow users to customize the email template and opt-out specific meetings.
+- **Impact:** This is how the tool goes viral within a team — coworkers who never installed Plan AI start receiving valuable meeting notes and want to adopt it themselves.
+
+## 11. Follow-up Reminders & Cross-Meeting Tracking
+**Priority:** 🔥 High — Retention hook  
+**Problem:** Action items from meetings are extracted but there's no mechanism to track whether they were completed before the next meeting. Tasks get lost between sessions.  
+**Solution:**
+- Track task completion status across recurring meetings (linked via calendar events).
+- At the start of a recurring meeting, surface a "Pending from last time" panel showing unresolved tasks.
+- Send automated reminder notifications (email / push) to task assignees before the next occurrence.
+- Build a "Meeting Health" score: % of action items completed between sessions.
+- **Impact:** This transforms Plan AI from a "recording tool" into a true accountability system.
+
+## 12. Semantic Search Across All Transcripts
+**Priority:** 💪 Medium — Differentiator  
+**Problem:** Users accumulate hundreds of meetings but can only search by title or date. Finding "what did we decide about the pricing model 3 weeks ago?" is impossible.  
+**Solution:**
+- Leverage the existing Qdrant vector database to index all transcript content.
+- Build a semantic search endpoint that returns relevant transcript snippets ranked by meaning, not just keyword match.
+- Surface results with timestamps and speaker attribution so users can jump to the exact moment.
+- Add a global search bar across Web, Recorder, and Mobile apps.
+- **Impact:** Nobody else does cross-meeting semantic search well. This is a genuine competitive moat.
+
+## 13. Meeting Templates / Personas per Meeting Type
+**Priority:** 💪 Medium — Power user feature  
+**Problem:** A daily standup, a client discovery call, and a retrospective all produce very different types of tasks. The current one-size-fits-all AI extraction doesn't optimize for each format.  
+**Solution:**
+- Create meeting type templates: Standup (extract blockers + updates), Retro (extract action items + wins), Client Call (extract requirements + follow-ups), 1:1 (extract feedback + goals).
+- Allow users to associate a template with a recurring calendar event so it auto-applies.
+- Customize the AI extraction prompt per template to produce domain-specific task structures.
+
+## 14. Slack / Microsoft Teams Bot
+**Priority:** 💪 Medium — Team awareness  
+**Problem:** Only the recorder user sees the output. The rest of the team has no awareness unless they check the web dashboard.  
+**Solution:**
+- Build a Slack bot and Teams bot that posts the meeting summary + task list to a configured channel after processing.
+- Allow per-project channel mapping (e.g., "Engineering Standup" → #engineering).
+- Include interactive buttons: "View Transcript", "Assign to me", "Mark Done".
+- **Impact:** Gets the *entire team* engaged with Plan AI output, not just the person who recorded.
+
+## 15. Speaker Labels / Voice Fingerprinting
+**Priority:** 🧹 Polish  
+**Problem:** Transcripts show "Speaker 1", "Speaker 2" which makes reading difficult. Users can't tell who said what without cross-referencing.  
+**Solution:**
+- Map speakers to real names using calendar attendee lists (from Calendar Integration).
+- Optionally build voice fingerprinting: after a few meetings, auto-recognize returning speakers by their voice profile.
+- Allow manual speaker labeling in the transcript viewer that persists for future meetings.
+
+## 16. Dashboard Analytics
+**Priority:** 🧹 Polish — Enterprise selling point  
+**Problem:** Managers and team leads can't quantify meeting culture or justify the tool's ROI to their organization.  
+**Solution:**
+- Track metrics: meetings per week, average duration, tasks generated per meeting, task completion rate, talk-time ratio per speaker.
+- Build a "Meeting Health" dashboard in the web app with trend charts.
+- Export weekly/monthly reports as PDF or email digest.
+- **Impact:** This is the feature that sells Plan AI to enterprise — managers love data about their team's meeting culture.

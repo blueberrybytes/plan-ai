@@ -60,7 +60,11 @@ class GoogleIntegrationService {
       try {
         const stateObj = JSON.parse(state);
         if (stateObj.redirectPath) {
-          return `${frontendUrl}${stateObj.redirectPath}`;
+          const redirectUrl = new URL(`${frontendUrl}${stateObj.redirectPath}`);
+          redirectUrl.searchParams.append("provider", "google");
+          redirectUrl.searchParams.append("status", status);
+          if (errorReason) redirectUrl.searchParams.append("error_reason", errorReason);
+          return redirectUrl.toString();
         }
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       } catch (e) {
