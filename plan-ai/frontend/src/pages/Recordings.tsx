@@ -51,17 +51,21 @@ const Recordings: React.FC = () => {
 
   if (isLoading) {
     return (
-      <Box sx={{ display: "flex", justifyContent: "center", p: 4 }}>
-        <CircularProgress />
-      </Box>
+      <SidebarLayout>
+        <Box sx={{ display: "flex", justifyContent: "center", p: 4 }}>
+          <CircularProgress />
+        </Box>
+      </SidebarLayout>
     );
   }
 
   if (error) {
     return (
-      <Box sx={{ p: 4 }}>
-        <Typography color="error">Failed to load recordings.</Typography>
-      </Box>
+      <SidebarLayout>
+        <Box sx={{ p: 4 }}>
+          <Typography color="error">Failed to load recordings.</Typography>
+        </Box>
+      </SidebarLayout>
     );
   }
 

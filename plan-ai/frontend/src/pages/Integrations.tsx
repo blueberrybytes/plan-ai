@@ -25,6 +25,14 @@ import SyncIcon from "@mui/icons-material/Sync";
 import AddIcon from "@mui/icons-material/Add";
 import BusinessIcon from "@mui/icons-material/Business";
 import PersonIcon from "@mui/icons-material/Person";
+import WarningAmberIcon from "@mui/icons-material/WarningAmber";
+import GitHubIcon from "@mui/icons-material/GitHub";
+import notionSvg from "../icons/notion.svg";
+import jiraSvg from "../icons/jira.svg";
+import linearSvg from "../icons/linear.svg";
+import trelloSvg from "../icons/trello.svg";
+import googleDriveSvg from "../icons/google-drive.svg";
+import oneDriveSvg from "../icons/one-drive.svg";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import SidebarLayout from "../components/layout/SidebarLayout";
@@ -248,6 +256,10 @@ const Integrations: React.FC = () => {
   });
 
   const integrations = useMemo(() => integrationsData?.data ?? [], [integrationsData?.data]);
+
+  const { data: notionDatabasesData } = useGetNotionDatabasesQuery(undefined, {
+    skip: !integrations.some((i) => i.provider === "NOTION" && i.status === "CONNECTED"),
+  });
 
   const status = searchParams.get(STATUS_PARAM);
   const messageFromQuery = searchParams.get(MESSAGE_PARAM) ?? undefined;
@@ -562,6 +574,14 @@ const Integrations: React.FC = () => {
             <ConnectedIntegrationDetails
               integration={integration}
               onAddMore={config.tabValue === "github" ? handleConnectGithub : undefined}
+              onReconnect={
+                config.tabValue === "notion" ? handleConnectNotion :
+                config.tabValue === "jira" ? handleConnectJira :
+                config.tabValue === "linear" ? handleConnectLinear :
+                config.tabValue === "google" ? handleConnectGoogle :
+                config.tabValue === "microsoft" ? handleConnectMicrosoft :
+                undefined
+              }
               canEdit={canEdit}
             />
           ) : null}
@@ -933,15 +953,46 @@ const Integrations: React.FC = () => {
                   (i) => i.provider === config.provider && i.status === "CONNECTED",
                 );
 
+                const hasWarning =
+                  config.provider === "NOTION" &&
+                  isConnected &&
+                  notionDatabasesData?.data?.length === 0;
+
+                let iconEl = null;
+                switch (config.tabValue) {
+                  case "github":
+                    iconEl = <GitHubIcon sx={{ fontSize: 16 }} />;
+                    break;
+                  case "jira":
+                    iconEl = <img src={jiraSvg} alt="Jira" width={16} height={16} />;
+                    break;
+                  case "linear":
+                    iconEl = <img src={linearSvg} alt="Linear" width={16} height={16} />;
+                    break;
+                  case "notion":
+                    iconEl = <img src={notionSvg} alt="Notion" width={16} height={16} />;
+                    break;
+                  case "trello":
+                    iconEl = <img src={trelloSvg} alt="Trello" width={16} height={16} />;
+                    break;
+                  case "google":
+                    iconEl = <img src={googleDriveSvg} alt="Google Drive" width={16} height={16} />;
+                    break;
+                  case "microsoft":
+                    iconEl = <img src={oneDriveSvg} alt="Microsoft" width={16} height={16} />;
+                    break;
+                }
+
                 return (
                   <Tab
                     key={config.tabValue}
                     label={
                       <Stack direction="row" alignItems="center" spacing={1}>
+                        {iconEl}
                         <Typography variant="body2" sx={{ fontWeight: "inherit" }}>
                           {t(config.labelKey)}
                         </Typography>
-                        {isConnected && (
+                        {isConnected && !hasWarning && (
                           <Box
                             sx={{
                               width: 8,
@@ -950,6 +1001,11 @@ const Integrations: React.FC = () => {
                               bgcolor: "success.main",
                             }}
                           />
+                        )}
+                        {hasWarning && (
+                          <Tooltip title="Action required: No databases found">
+                            <WarningAmberIcon sx={{ fontSize: 16, color: "warning.main" }} />
+                          </Tooltip>
                         )}
                         {config.isBeta && (
                           <Chip
@@ -1013,11 +1069,13 @@ const Integrations: React.FC = () => {
   );
 };
 
+// Component to display connected integration details
 const ConnectedIntegrationDetails: React.FC<{
   integration: UserIntegrationSummary;
   onAddMore?: () => void;
+  onReconnect?: () => void;
   canEdit?: boolean;
-}> = ({ integration, onAddMore, canEdit = true }) => {
+}> = ({ integration, onAddMore, onReconnect, canEdit = true }) => {
   const { t } = useTranslation();
   const statusColorMap: Record<UserIntegrationSummary["status"], "success" | "default" | "error"> =
     {
@@ -1349,36 +1407,49 @@ const ConnectedIntegrationDetails: React.FC<{
         ) : null}
         <Box sx={{ flexGrow: 1 }} />
         {canEdit ? (
-          <Button
-            size="small"
-            color="error"
-            variant="outlined"
-            onClick={async () => {
-              if (window.confirm("Are you sure you want to disconnect this integration?")) {
-                try {
-                  await disconnectIntegration(integration.provider).unwrap();
-                  dispatch(
-                    setToastMessage({
-                      severity: "success",
-                      message: "Integration disconnected successfully",
-                    }),
-                  );
-                } catch (e) {
-                  dispatch(
-                    setToastMessage({
-                      severity: "error",
-                      message: "Failed to disconnect integration",
-                    }),
-                  );
+          <Stack direction="row" spacing={1}>
+            {onReconnect && (
+              <Button
+                size="small"
+                color="primary"
+                variant="outlined"
+                onClick={onReconnect}
+                disabled={isDisconnecting}
+              >
+                Reconnect
+              </Button>
+            )}
+            <Button
+              size="small"
+              color="error"
+              variant="outlined"
+              onClick={async () => {
+                if (window.confirm("Are you sure you want to disconnect this integration?")) {
+                  try {
+                    await disconnectIntegration(integration.provider).unwrap();
+                    dispatch(
+                      setToastMessage({
+                        severity: "success",
+                        message: "Integration disconnected successfully",
+                      }),
+                    );
+                  } catch (e) {
+                    dispatch(
+                      setToastMessage({
+                        severity: "error",
+                        message: "Failed to disconnect integration",
+                      }),
+                    );
+                  }
                 }
-              }
-            }}
-            disabled={isDisconnecting}
-          >
-            {isDisconnecting ? "Disconnecting..." : "Disconnect"}
-          </Button>
+              }}
+              disabled={isDisconnecting}
+            >
+              {isDisconnecting ? "Disconnecting..." : "Disconnect"}
+            </Button>
+          </Stack>
         ) : (
-          <Tooltip title="Only workspace Admins or Owners can disconnect this integration">
+          <Tooltip title="Only workspace Admins or Owners can manage this integration">
             <span>
               <Chip label="Read-only" size="small" variant="outlined" color="default" />
             </span>
@@ -1807,6 +1878,12 @@ const ConnectedIntegrationDetails: React.FC<{
                   ))}
                 </Select>
               </FormControl>
+            )}
+
+            {notionDatabasesData?.data?.length === 0 && !isNotionDatabasesLoading && (
+              <Alert severity="warning" sx={{ mt: 1, maxWidth: 600 }}>
+                No databases found. If you selected pages during the Notion connection flow but no databases appear here, please re-connect and ensure you specifically select the databases where you want Plan AI to create tasks.
+              </Alert>
             )}
           </Stack>
         </Box>

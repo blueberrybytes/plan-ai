@@ -148,6 +148,14 @@ app.use((err: unknown, req: express.Request, res: express.Response, next: expres
     return;
   }
 
+  // Handle plain object errors thrown by BaseWorkspaceController (e.g. { status: 400, message: "..." })
+  if (typeof err === "object" && err !== null && !Array.isArray(err) && "status" in err && "message" in err) {
+    const errObj = err as { status: number, message: string };
+    console.warn(`[Controller Error] ${errObj.status}: ${errObj.message}`);
+    res.status(errObj.status).json({ message: errObj.message });
+    return;
+  }
+
   next(err); // Pass everything else down (e.g., to Sentry and Express default handler)
 });
 

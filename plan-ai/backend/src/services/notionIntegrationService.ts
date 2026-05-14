@@ -155,10 +155,10 @@ class NotionIntegrationService {
 
     try {
       const response = await notion.search({
-        filter: { property: "object", value: "data_source" },
+        filter: { property: "object", value: "database" as any },
       });
 
-      const databases = response.results as DataSourceObjectResponse[];
+      const databases = response.results as any[];
       const totalDatabases = databases.length;
 
       const latestDatabases = databases
@@ -186,10 +186,10 @@ class NotionIntegrationService {
 
     const notion = new NotionClient({ auth: integration.accessToken });
     const response = await notion.search({
-      filter: { property: "object", value: "data_source" },
+      filter: { property: "object", value: "database" as any },
     });
 
-    const databases = response.results as DataSourceObjectResponse[];
+    const databases = response.results as any[];
     return databases.map((db) => ({
       id: db.id,
       name: db.title?.[0]?.plain_text || "Untitled Database",

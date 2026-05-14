@@ -4,3 +4,8 @@ declare namespace NodeJS {
     REACT_APP_ENV: string;
   }
 }
+
+declare module "*.svg" {
+  const content: string;
+  export default content;
+}

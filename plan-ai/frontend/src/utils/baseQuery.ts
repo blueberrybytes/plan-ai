@@ -100,6 +100,69 @@ const createBaseQueryWithReauth =
 
     const httpStatus = getHttpStatus(result.error);
 
+    // Handle unauthorized responses (token expired)
+    if (result.error && httpStatus === 401) {
+      console.warn(`401 Unauthorized received for ${requestUrl}, attempting token refresh...`);
+
+      if (!TokenService.isRefreshing) {
+        // We are the first to encounter the 401, initiate refresh
+        const newToken = await TokenService.handleTokenRefresh(api.dispatch);
+
+        if (newToken) {
+          console.log(`Token refresh successful, retrying request to ${requestUrl}`);
+          // Wait longer for the auth state to fully propagate and stabilize
+          await new Promise((resolve) => setTimeout(resolve, 2000));
+
+          // Verify we still have a user and token before retrying
+          const updatedUser = selectUser(api.getState() as RootState);
+
+          if (updatedUser?.token) {
+            // Retry the initial query with new token
+            result = await customBaseQuery(args, api, extraOptions);
+          } else {
+            console.error("Token refreshed but user state is missing, skipping retry.");
+            api.dispatch(logout());
+          }
+        } else {
+          // Token refresh failed or returned null (e.g. user deleted or no firebase user)
+          console.error("Token refresh failed. Logging out.");
+          // Show session expired message and logout
+          api.dispatch(
+            setToastMessage({
+              message: i18n.t("login.errors.sessionExpired"),
+              severity: "error",
+              autoHideDuration: 6000,
+            }),
+          );
+          api.dispatch(logout());
+        }
+      } else {
+        // Another request is already refreshing the token, wait for it
+        console.log(`Waiting for existing token refresh to complete before retrying ${requestUrl}`);
+        try {
+          await TokenService.refreshPromise;
+        } catch (e) {
+          console.error("Awaited refreshPromise rejected:", e);
+        }
+
+        // Wait longer for the auth state to fully propagate and stabilize across reducers
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+
+        // CRITICAL FIX: Only retry if the store actually has a valid user token and workspace
+        // If the refresh failed, the primary request dispatched logout(), wiping the store.
+        // Retrying now would send a request without headers, resulting in 400 Bad Request spam.
+        const currentState = api.getState() as RootState;
+        const updatedUser = selectUser(currentState);
+        
+        if (updatedUser?.token) {
+          console.log(`Token refresh finished, retrying request to ${requestUrl}`);
+          result = await customBaseQuery(args, api, extraOptions);
+        } else {
+          console.warn(`Skipping retry for ${requestUrl} because user session was lost after refresh wait.`);
+        }
+      }
+    }
+
     // Handle rate limit responses (429 Too Many Requests)
     if (result.error && httpStatus === 429) {
       console.warn(
