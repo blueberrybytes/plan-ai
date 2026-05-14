@@ -3,38 +3,46 @@
 Plan AI is an open-source, AI-assisted meeting planning and execution platform. It records your meetings, generates accurate transcripts using Deepgram, and extracts structured insights, Jira/Linear/Trello tasks, and action items using advanced LLMs via OpenRouter.
 
 ## Video Demo (click on the image to watch it)
+
 [![Plan AI Demo](https://img.youtube.com/vi/NqpvMhQBYqU/hqdefault.jpg)](https://www.youtube.com/watch?v=NqpvMhQBYqU)
 
 ## 🌐 Try It Live
+
 - **Application:** [plan-ai.blueberrybytes.com](https://plan-ai.blueberrybytes.com)
 
 ## Docs
+
 - **Documentation:** [docs.plan-ai.blueberrybytes.com](https://docs.plan-ai.blueberrybytes.com)
 
 ## The Company
+
 This software has been developed by [BlueberryBytes](https://blueberrybytes.com).
 
 The engineer and CEO of the Company:
+
 - Linkedin: [Xavier Mas Leszkiewicz](https://www.linkedin.com/in/xavier-mas-leszkiewicz)
 - Github: [masosky](https://github.com/masosky)
 
 ## 📥 Downloads
 
 ### 💻 Desktop Recorder
-| Platform                    | Where to get it                                                                                                                                                                              |
-| :-------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 🍏 **macOS**                 | [Mac App Store](https://apps.apple.com/es/app/plan-ai-recorder/id6759553699?l=en-GB&mt=12) or [GitHub Releases (.dmg)](https://github.com/blueberrybytes/plan-ai-recorder-releases/releases) |
+
+| Platform                      | Where to get it                                                                                                                                                                              |
+| :---------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 🍏 **macOS**                  | [Mac App Store](https://apps.apple.com/es/app/plan-ai-recorder/id6759553699?l=en-GB&mt=12) or [GitHub Releases (.dmg)](https://github.com/blueberrybytes/plan-ai-recorder-releases/releases) |
 | 🪟 **Windows** & 🐧 **Linux** | [GitHub Releases (.exe, .AppImage)](https://github.com/blueberrybytes/plan-ai-recorder-releases/releases)                                                                                    |
 
 ### 📱 Mobile Companion App
-| Platform      | Where to get it                                                                                    |
-| :------------ | :------------------------------------------------------------------------------------------------- |
+
+| Platform       | Where to get it                                                                                    |
+| :------------- | :------------------------------------------------------------------------------------------------- |
 | 🤖 **Android** | [Google Play — Plan AI](https://play.google.com/store/apps/details?id=com.blueberrybytes.planai)   |
 | 🍏 **iOS**     | [App Store — Plan AI Recorder](https://apps.apple.com/us/app/plan-ai-mobile-recorder/id6762671958) |
 
 ## 📸 Sneak Peek
 
 ### 1. Native Recorder
+
 Securely capture your meetings without invasive bots. Start recording instantly from your desktop or mobile app.
 
 <img src="./images/recorder.png" alt="Native Recorder" />
@@ -42,6 +50,7 @@ Securely capture your meetings without invasive bots. Start recording instantly 
 <br>
 
 ### 2. Live Meeting Assistant
+
 While recording, you can swap the AI's context on the fly, read real-time summaries, and ask the live chat questions.
 
 <img src="./images/recording.png" alt="Live Meeting Assistant" />
@@ -49,38 +58,40 @@ While recording, you can swap the AI's context on the fly, read real-time summar
 <br>
 
 ### 3. Automated Tasks
+
 Once the meeting ends, Plan AI instantly generates perfectly scoped engineering tickets and actionable items based on the discussion.
 
 <img src="./images/tasks.png" alt="Automated Task Generation" />
 
-
 ### 4. Meeting Documents & Summaries
-Export comprehensive, well-formatted markdown documents summarizing key decisions, technical discussions, and action items.
+
+Export comprehensive, well-formatted markdown documents summarizing key decisions, technical discussions, and action items. You can generate these manually via the chat, or **automatically** by toggling the option in the post-recording screen.
 
 <img src="./images/doc.png" alt="Document Generation" />
 
-
 ### 5. AI Generated Diagrams
+
 Plan AI understands technical discussions and can automatically generate Mermaid.js architecture diagrams directly from your meeting context.
 
 <img src="./images/diagram.png" alt="Mermaid Diagram Generation" />
 
-
 ### 6. Presentation Slides
-Instantly convert meeting insights, proposals, or architecture plans into professional PowerPoint (.pptx) slides ready for presentation.
+
+Instantly convert meeting insights, proposals, or architecture plans into professional PowerPoint (.pptx) slides ready for presentation. This can be done on-demand or **automatically toggled** right after you finish your recording.
 
 <img src="./images/slide.png" alt="Slide Generation" />
 
 ## 🧠 Bridging Tech & Non-Tech (AI Context & RAG)
 
-Plan AI is designed to completely eliminate the friction between non-technical stakeholders (Product Managers, Designers) and technical execution (Developers and AI Agents). 
+Plan AI is designed to completely eliminate the friction between non-technical stakeholders (Product Managers, Designers) and technical execution (Developers and AI Agents).
 
 We achieve this through advanced Retrieval-Augmented Generation (RAG) and intelligent repository indexing:
-*   **Repomix Integration:** With a simple `yarn repomix` command, the entire monorepo is efficiently packed into a single, AI-optimized markdown file.
-*   **Semantic Memory (Qdrant):** Meeting transcripts are instantly chunked, vectorized, and embedded in Qdrant, creating a long-term semantic memory of every architectural decision.
-*   **GitNexus (MCP):** We ship with a native Model Context Protocol (MCP) server that maps out the codebase graph. 
 
-**The Magic Workflow:** A non-technical Product Manager records a sprint planning meeting. Plan AI extracts a perfectly scoped GitHub Issue using historical context from Qdrant. The Developer assigns that issue to an AI Agent (like Cursor or Cline). The Agent reads the issue, consumes the `repomix.md` repository context, safely checks the blast radius using `gitnexus_impact()`, and autonomously writes the Pull Request. 
+- **Repomix Integration:** With a simple `yarn repomix` command, the entire monorepo is efficiently packed into a single, AI-optimized markdown file.
+- **Semantic Memory (Qdrant):** Meeting transcripts are instantly chunked, vectorized, and embedded in Qdrant, creating a long-term semantic memory of every architectural decision.
+- **GitNexus (MCP):** We ship with a native Model Context Protocol (MCP) server that maps out the codebase graph.
+
+**The Magic Workflow:** A non-technical Product Manager records a sprint planning meeting. Plan AI extracts a perfectly scoped GitHub Issue using historical context from Qdrant. The Developer assigns that issue to an AI Agent (like Cursor or Cline). The Agent reads the issue, consumes the `repomix.md` repository context, safely checks the blast radius using `gitnexus_impact()`, and autonomously writes the Pull Request.
 
 ## 📦 Project Structure & Architecture
 
@@ -120,10 +131,11 @@ graph TD
 ```
 
 This repository links three core components:
-* **`plan-ai/`** - Contains the core platform (`backend` server and `frontend` web client).
-* **`plan-ai-mobile/`** - The Expo/React Native mobile app for recording meetings on the go.
-* **`plan-ai-recorder/`** - The desktop app for capturing system audio during calls.
-* **`docs/`** - The VitePress documentation website.
+
+- **`plan-ai/`** - Contains the core platform (`backend` server and `frontend` web client).
+- **`plan-ai-mobile/`** - The Expo/React Native mobile app for recording meetings on the go.
+- **`plan-ai-recorder/`** - The desktop app for capturing system audio during calls.
+- **`docs/`** - The VitePress documentation website.
 
 ### Internal Architecture
 
@@ -173,15 +185,15 @@ graph TD
     Mobile -.-> Auth
     Web -.-> Auth
     Recorder -.-> Auth
-    
+
     API -->|Queues Tasks| Workers
-    
+
     API <--> Integrations
     Workers <--> Integrations
-    
+
     Workers <--> DB
     Workers <--> VectorDB
-    
+
     Workers <--> Speech
     Workers <--> VoiceAI
     Workers <--> LLMs
@@ -196,13 +208,14 @@ graph TD
 
 ## 🚀 Quick Start
 
-We've made it incredibly easy to spin up the entire web platform locally. 
+We've made it incredibly easy to spin up the entire web platform locally.
 
 ### Prerequisites
 
 You will need a few external services configured for the platform to work:
+
 1. **Firebase Project**: Used for user authentication. You'll need your Firebase client config for the frontend/apps, and a base64 encoded Firebase Admin SDK service account key placed in the `FIREBASE_SERVICE_KEY` environment variable for the backend.
-    * For the **Mobile App**, you must download your `google-services.json` (Android) and `GoogleService-Info.plist` (iOS) from the Firebase Console and place them inside the `plan-ai-mobile/` directory. (Note: Do not commit these files to version control!)
+   - For the **Mobile App**, you must download your `google-services.json` (Android) and `GoogleService-Info.plist` (iOS) from the Firebase Console and place them inside the `plan-ai-mobile/` directory. (Note: Do not commit these files to version control!)
 2. **OpenRouter API Key**: Used for LLM task extraction and intelligence.
 3. **Deepgram API Key**: Used for fast, accurate audio transcription.
 4. **Python Microservice (Voice AI)**: For advanced speaker verification and biometrics. This is handled locally via a Python microservice using `SpeechBrain` and `uvicorn`. It runs as a Docker container.
@@ -212,11 +225,13 @@ You will need a few external services configured for the platform to work:
 ### 1. Install Dependencies
 
 First, ensure you have GitNexus installed globally:
+
 ```bash
 npm install -g gitnexus
 ```
 
 Then, you can install the dependencies across the entire monorepo with our convenient master script:
+
 ```bash
 yarn install:all
 ```
@@ -224,27 +239,33 @@ yarn install:all
 ### 2. Environment Setup
 
 Generate the necessary environment files for all applications across the monorepo by running the setup script from the root:
+
 ```bash
 yarn setup:env
 ```
+
 Once the `.env` files are created, open them and insert your `OPENROUTER_API_KEY`, `DEEPGRAM_API_KEY`, and your **Firebase configuration variables** (such as project IDs and service account paths).
 
 ### 3. Start Local Services
 
 Before starting the applications, you must start the local Postgres, Redis, and Qdrant databases via Docker:
+
 ```bash
 yarn docker
 ```
 
 Once the database containers are running, push the latest Prisma schema migrations to set up your tables:
+
 ```bash
 yarn db:migrate
 ```
 
 (Optional) Seed your local database with a default Admin user:
+
 ```bash
 yarn db:seed
 ```
+
 This automatically provisions `admin@plan-ai.local` (Password: `password123`) in both Firebase Auth and PostgreSQL, granting you immediate access to the Admin Dashboard without needing to manually register via the web UI!
 
 ### 4. Start the Platform
@@ -252,22 +273,27 @@ This automatically provisions `admin@plan-ai.local` (Password: `password123`) in
 From the root of the project, use the following scripts to launch various components:
 
 **Start the Web Platform (Frontend, Backend & Voice AI):**
+
 ```bash
 yarn dev
 ```
-*(This concurrently starts the Node server, React client, GitNexus MCP, and the Python Voice Biometrics service)*
+
+_(This concurrently starts the Node server, React client, GitNexus MCP, and the Python Voice Biometrics service)_
 
 **Start the Desktop Recorder:**
+
 ```bash
 yarn dev:recorder
 ```
 
 **Start the Mobile App:**
+
 ```bash
 yarn dev:mobile
 ```
 
 **Start the Docs Site:**
+
 ```bash
 yarn dev:docs
 ```
@@ -315,15 +341,16 @@ Running **`yarn update`** from the root triggers the entire chain automatically.
 In `planAiApi.ts` for each frontend:
 
 ```ts
-import type { components } from '../types/api';
+import type { components } from "../types/api";
 
-export type Workspace  = components['schemas']['WorkspaceResponse'];
-export type Transcript = components['schemas']['StandaloneTranscriptResponse'];
-export type Task       = components['schemas']['TaskResponse'];
+export type Workspace = components["schemas"]["WorkspaceResponse"];
+export type Transcript = components["schemas"]["StandaloneTranscriptResponse"];
+export type Task = components["schemas"]["TaskResponse"];
 // ... all other types follow the same pattern
 ```
 
 If a generated type field is typed broadly (e.g. `metadata: TsoaJsonObject`), use a **local cast** at the call site rather than reverting to a manual interface:
+
 ```ts
 // ✅ correct
 const status = (item.metadata as Record<string, unknown>)?.processingStatus;
@@ -343,10 +370,12 @@ const status = (item.metadata as Record<string, unknown>)?.processingStatus;
 ## 🔒 Security, Roles & Self-Hosting
 
 Plan AI is built with privacy in mind. When you self-host, your data remains completely under your control.
-* **BYOK (Bring Your Own Key):** API keys for Deepgram and OpenRouter are stored per `Workspace`, not globally. Courtesy workspaces (flagged `isCourtesy`) bypass the key requirement for managed/demo accounts.
-* **Key masking:** API keys are masked as `••••••••••••••••` in all API responses. The backend ignores this placeholder on `PUT` requests to avoid overwriting real keys.
-* **Auto-Admin:** To make self-hosting easy, any new user who registers on your local instance is automatically granted the **`ADMIN`** role, bypassing the standard SaaS "Pending Approval" state.
-* **Secrets:** All `.env` files and Google service accounts are strictly excluded from version control to prevent accidental leaks.
+
+- **BYOK (Bring Your Own Key):** API keys for Deepgram and OpenRouter are stored per `Workspace`, not globally. Courtesy workspaces (flagged `isCourtesy`) bypass the key requirement for managed/demo accounts.
+- **Key masking:** API keys are masked as `••••••••••••••••` in all API responses. The backend ignores this placeholder on `PUT` requests to avoid overwriting real keys.
+- **Auto-Admin:** To make self-hosting easy, any new user who registers on your local instance is automatically granted the **`ADMIN`** role, bypassing the standard SaaS "Pending Approval" state.
+- **Secrets:** All `.env` files and Google service accounts are strictly excluded from version control to prevent accidental leaks.
 
 ## 📄 License
+
 This project is licensed under the **PolyForm Noncommercial License 1.0.0**. This allows you to use, modify, and run the software for personal, academic, or non-profit purposes, but strictly prohibits commercial use or monetization. Commercial support, custom enterprise builds, and commercial licensing are available via Blueberrybytes. See the `LICENSE` file for details.
