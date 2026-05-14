@@ -466,10 +466,10 @@ export class ContextController extends BaseWorkspaceController {
       throw { status: 400, message: "No file IDs provided" };
     }
 
-    const integration = await prisma.userIntegration.findUnique({
+    const integration = await prisma.workspaceIntegration.findUnique({
       where: {
-        userId_provider: {
-          userId: user.id,
+        workspaceId_provider: {
+          workspaceId,
           provider: "GOOGLE_DRIVE",
         },
       },

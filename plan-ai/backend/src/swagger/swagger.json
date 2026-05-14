@@ -3173,6 +3173,45 @@
 				"type": "object",
 				"additionalProperties": false
 			},
+			"MicrosoftSummaryResponse": {
+				"properties": {
+					"isConnected": {
+						"type": "boolean"
+					},
+					"userEmail": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"isConnected"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"ApiResponse_MicrosoftSummaryResponse_": {
+				"properties": {
+					"message": {
+						"type": "string"
+					},
+					"data": {
+						"allOf": [
+							{
+								"$ref": "#/components/schemas/MicrosoftSummaryResponse"
+							}
+						],
+						"nullable": true
+					},
+					"status": {
+						"type": "number",
+						"format": "double"
+					}
+				},
+				"required": [
+					"data",
+					"status"
+				],
+				"type": "object"
+			},
 			"LinearManualConnectRequest": {
 				"properties": {
 					"apiKey": {
@@ -3456,7 +3495,8 @@
 					"GITHUB",
 					"GOOGLE_DRIVE",
 					"TRELLO",
-					"NOTION"
+					"NOTION",
+					"ONEDRIVE"
 				]
 			},
 			"IntegrationProvider": {
@@ -3599,6 +3639,45 @@
 					},
 					"data": {
 						"type": "string",
+						"nullable": true
+					},
+					"status": {
+						"type": "number",
+						"format": "double"
+					}
+				},
+				"required": [
+					"data",
+					"status"
+				],
+				"type": "object"
+			},
+			"GoogleSummaryResponse": {
+				"properties": {
+					"isConnected": {
+						"type": "boolean"
+					},
+					"userEmail": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"isConnected"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"ApiResponse_GoogleSummaryResponse_": {
+				"properties": {
+					"message": {
+						"type": "string"
+					},
+					"data": {
+						"allOf": [
+							{
+								"$ref": "#/components/schemas/GoogleSummaryResponse"
+							}
+						],
 						"nullable": true
 					},
 					"status": {
@@ -5656,7 +5735,7 @@
 		"title": "backend",
 		"version": "2.0.4",
 		"license": {
-			"name": "BUSL-1.1"
+			"name": "PolyForm-Noncommercial-1.0.0"
 		},
 		"contact": {}
 	},
@@ -8869,6 +8948,115 @@
 				}
 			}
 		},
+		"/api/microsoft/auth-url": {
+			"get": {
+				"operationId": "GetAuthUrl",
+				"responses": {
+					"200": {
+						"description": "URL fetched successfully",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiResponse__authorizationUrl-string__"
+								}
+							}
+						}
+					}
+				},
+				"tags": [
+					"Integrations"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": [
+					{
+						"in": "query",
+						"name": "redirectPath",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					}
+				]
+			}
+		},
+		"/api/microsoft/callback": {
+			"get": {
+				"operationId": "HandleMicrosoftCallback",
+				"responses": {
+					"302": {
+						"description": "Redirect"
+					}
+				},
+				"tags": [
+					"Integrations"
+				],
+				"security": [],
+				"parameters": [
+					{
+						"in": "query",
+						"name": "code",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"in": "query",
+						"name": "state",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"in": "query",
+						"name": "error",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"in": "query",
+						"name": "error_description",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					}
+				]
+			}
+		},
+		"/api/microsoft/summary": {
+			"get": {
+				"operationId": "GetSummary",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiResponse_MicrosoftSummaryResponse_"
+								}
+							}
+						}
+					}
+				},
+				"tags": [
+					"Integrations"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": []
+			}
+		},
 		"/api/linear/manual-connect": {
 			"post": {
 				"operationId": "ManualConnect",
@@ -9404,7 +9592,7 @@
 				"parameters": []
 			}
 		},
-		"/api/integrations/google/auth-url": {
+		"/api/google/auth-url": {
 			"get": {
 				"operationId": "GetAuthUrl",
 				"responses": {
@@ -9419,7 +9607,6 @@
 						}
 					}
 				},
-				"description": "Returns the OAuth authorization URL for Google Drive",
 				"tags": [
 					"Integrations"
 				],
@@ -9440,7 +9627,7 @@
 				]
 			}
 		},
-		"/api/integrations/google/callback": {
+		"/api/google/callback": {
 			"get": {
 				"operationId": "HandleGoogleCallback",
 				"responses": {
@@ -9448,7 +9635,6 @@
 						"description": "Redirect"
 					}
 				},
-				"description": "OAuth Callback handler. Exchanges code for tokens, binds to user, and redirects to frontend.",
 				"tags": [
 					"Integrations"
 				],
@@ -9457,7 +9643,7 @@
 					{
 						"in": "query",
 						"name": "code",
-						"required": true,
+						"required": false,
 						"schema": {
 							"type": "string"
 						}
@@ -9469,8 +9655,42 @@
 						"schema": {
 							"type": "string"
 						}
+					},
+					{
+						"in": "query",
+						"name": "error",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
 					}
 				]
+			}
+		},
+		"/api/google/summary": {
+			"get": {
+				"operationId": "GetSummary",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiResponse_GoogleSummaryResponse_"
+								}
+							}
+						}
+					}
+				},
+				"tags": [
+					"Integrations"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": []
 			}
 		},
 		"/api/integrations/github/webhook": {

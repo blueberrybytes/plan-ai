@@ -25,7 +25,8 @@ Try the live app at [plan-ai.blueberrybytes.com](https://plan-ai.blueberrybytes.
 | **Contextual RAG chat**       | A dedicated `/home` chat dashboard to query up to 500 relevant chunks across sessions, transcripts, and a global backend knowledge base.                           |
 | **Floating assistant**        | An omnipresent floating chat window for quick actions, navigation help, and on-demand contextual queries without losing your place.                                |
 | **Context library**           | Upload PDFs, Word docs, or text files as reusable context for slide generation and chat.                                                                           |
-| **Jira & Linear integration** | Push tasks directly from the board to your issue. tracker.                                                                                                         |
+| **Jira, Linear, Trello & Notion** | Push tasks directly from the board to your issue tracker. Sync with Notion databases.                                                                              |
+| **Cloud storage**             | Import documents from Google Drive or export generated artifacts to Microsoft OneDrive.                                                                            |
 
 ---
 
@@ -41,7 +42,8 @@ graph TD
   BE --> Qdrant[(Qdrant v1.15 Vector DB)]
   BE --> OpenRouter[(OpenRouter · Gemini 2.0 Flash)]
   BE --> OpenAI[(OpenAI · text-embedding-3-small)]
-  BE --> Jira[(Jira Cloud OAuth)]
+  BE --> Integrations[(Jira · Linear · Trello · Notion)]
+  BE --> CloudStorage[(Google Drive · OneDrive)]
   Qdrant -->|RAG context chunks| BE
   FirebaseStorage -->|File URLs| FE
 ```
@@ -55,7 +57,7 @@ graph TD
 | Data & storage | PostgreSQL 16, Qdrant v1.15, Firebase Storage                                                             |
 | AI             | OpenRouter (Gemini 2.0 Flash `google/gemini-2.0-flash-001`), OpenAI embeddings (`text-embedding-3-small`) |
 | Auth           | Firebase Authentication (email/password, Google OAuth, Microsoft OAuth)                                   |
-| Integrations   | Jira Cloud (OAuth 2.0), Linear (schema-ready), Google Drive picker                                        |
+| Integrations   | Jira Cloud, Linear, Trello, Notion (OAuth 2.0), Google Drive, Microsoft OneDrive                          |
 | Observability  | OpenObserve (pino transport), Google Cloud Logging, Microsoft Clarity                                     |
 
 ---
@@ -112,6 +114,16 @@ Fill in your credentials. Both templates include inline comments for every key.
 | `FIREBASE_STORAGE_BUCKET`   | Firebase Storage bucket name                          |
 | `JIRA_CLIENT_ID`            | Jira OAuth 2.0 client ID                              |
 | `JIRA_CLIENT_SECRET`        | Jira OAuth 2.0 client secret                          |
+| `LINEAR_CLIENT_ID`          | Linear OAuth 2.0 client ID                             |
+| `LINEAR_CLIENT_SECRET`      | Linear OAuth 2.0 client secret                         |
+| `GOOGLE_CLIENT_ID`          | Google OAuth ID (Drive integration)                    |
+| `GOOGLE_CLIENT_SECRET`      | Google OAuth secret                                    |
+| `GOOGLE_REDIRECT_URI`       | Google OAuth callback URL                              |
+| `MICROSOFT_CLIENT_ID`       | Microsoft OAuth client ID (OneDrive)                   |
+| `MICROSOFT_CLIENT_SECRET`   | Microsoft OAuth client secret                          |
+| `MICROSOFT_TENANT_ID`       | Microsoft Azure tenant ID                              |
+| `NOTION_OAUTH_CLIENT_ID`    | Notion OAuth client ID                                 |
+| `NOTION_OAUTH_CLIENT_SECRET`| Notion OAuth client secret                             |
 | `API_ADMIN_KEY`             | Admin API key for service-to-service calls            |
 
 **Frontend keys** (`frontend/.env`):
@@ -209,6 +221,10 @@ All routes are documented via **Swagger UI** at `/api-docs` when the backend is 
 | `GET/POST/PUT/DELETE /api/slide-templates`      | SlideTemplateController      | ClientLevel          |
 | `GET /api/integrations`                         | IntegrationController        | ClientLevel          |
 | `GET /api/jira/auth` · `GET /api/jira/callback` | JiraController               | ClientLevel / Public |
+| `GET /api/linear/auth-url` · `GET /api/linear/callback` | LinearController       | ClientLevel / Public |
+| `GET /api/notion/auth-url` · `GET /api/notion/callback` | NotionController       | ClientLevel / Public |
+| `GET /api/google/auth-url` · `GET /api/google/callback` | GoogleController       | ClientLevel / Public |
+| `GET /api/microsoft/auth-url` · `GET /api/microsoft/callback` | MicrosoftController | ClientLevel / Public |
 | `GET /api/healthcheck/status`                   | HealthcheckController        | Public               |
 
 **Auth security levels:**
@@ -235,7 +251,9 @@ User ──< ChatThread ──< ChatMessage
 User ──< SlideTemplate ──< SlideTypeConfig
 User ──< Presentation
 
-User ──< UserIntegration   (JIRA | LINEAR)
+User ──< UserIntegration   (GITHUB)
+
+Workspace ──< WorkspaceIntegration  (JIRA | LINEAR | TRELLO | NOTION | GOOGLE_DRIVE | ONEDRIVE)
 User ── CustomTheme
 ```
 
@@ -327,7 +345,7 @@ The UI ships in **English** and **Spanish** (`frontend/src/i18n/locales/`). Ever
 
 - ✅ Developer-focused alpha
 - 🚧 Public beta — community feedback & stability hardening
-- 🗺️ Planned: multi-tenant deployment guides, Jira bi-directional sync, Linear integration, enterprise auth adapters
+- 🗺️ Planned: multi-tenant deployment guides, Jira bi-directional sync, OneDrive document export, enterprise auth adapters
 
 Create or upvote issues to influence priorities.
 

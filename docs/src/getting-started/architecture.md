@@ -19,7 +19,8 @@ graph TD
     AI_Deepgram[🎙️ Deepgram API<br>Audio Transcription]
     AI_OpenRouter[🧠 OpenRouter API<br>LLM Processing]
     Auth[🔐 Firebase<br>Authentication]
-    Ext_Integrations[🔌 Integrations<br>Linear, GitHub, Jira, Trello]
+    Ext_Integrations[🔌 Integrations<br>Jira, Linear, Trello, Notion]
+    Ext_Cloud[☁️ Cloud Storage<br>Google Drive, OneDrive]
 
     %% Flow
     Mobile -->|Uploads Audio| Backend
@@ -29,6 +30,7 @@ graph TD
     Backend <--> AI_Deepgram
     Backend <--> AI_OpenRouter
     Backend <--> Ext_Integrations
+    Backend <--> Ext_Cloud
     Mobile --> Auth
     Web --> Auth
     Desktop --> Auth

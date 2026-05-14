@@ -53,10 +53,14 @@ This is the most critical environment file. It handles database connections, API
 | `LINEAR_WEBHOOK_SECRET` | Secret for Linear webhooks (optional). | `xxxx` |
 | `GOOGLE_CLIENT_ID` | Google OAuth ID (Drive integration). | `xxxx` |
 | `GOOGLE_CLIENT_SECRET` | Google OAuth Secret. | `xxxx` |
-| `GOOGLE_REDIRECT_URI` | Google OAuth callback URL. | `http://localhost:8080/api/integrations/google/callback` |
-| `MICROSOFT_CLIENT_ID` | MS Teams / Office365 Client ID. | `xxxx` |
-| `MICROSOFT_CLIENT_SECRET` | MS Teams / Office365 Client Secret. | `xxxx` |
-| `MICROSOFT_TENANT_ID` | MS Teams Tenant ID. | `xxxx` |
+| `GOOGLE_REDIRECT_URI` | Google OAuth callback URL. | `http://localhost:8080/api/google/callback` |
+| `MICROSOFT_CLIENT_ID` | Microsoft OAuth client ID (OneDrive integration). | `xxxx` |
+| `MICROSOFT_CLIENT_SECRET` | Microsoft OAuth client secret. | `xxxx` |
+| `MICROSOFT_TENANT_ID` | Microsoft Azure tenant ID. | `xxxx` |
+| `MICROSOFT_REDIRECT_URI` | Microsoft OAuth callback URL. | `http://localhost:8080/api/microsoft/callback` |
+| `NOTION_OAUTH_CLIENT_ID` | Notion OAuth client ID. | `xxxx` |
+| `NOTION_OAUTH_CLIENT_SECRET` | Notion OAuth client secret. | `xxxx` |
+| `NOTION_REDIRECT_URI` | Notion OAuth callback URL. | `http://localhost:8080/api/notion/callback` |
 | **Auth & Email** | | |
 | `FIREBASE_SERVICE_KEY` | Base64 encoded Firebase Service Account JSON. | `=` |
 | `FIREBASE_STORAGE_BUCKET` | Firebase Storage bucket name. | `plan-ai.appspot.com` |

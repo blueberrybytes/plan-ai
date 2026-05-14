@@ -38,6 +38,7 @@ import {
   useBindGithubInstallationMutation,
   useGetGithubRepositoriesQuery,
   useLazyGetGoogleAuthUrlQuery,
+  useLazyGetMicrosoftAuthUrlQuery,
   GithubRepository,
   integrationApi,
   useDisconnectIntegrationMutation,
@@ -81,7 +82,7 @@ const PROVIDER_TAB_PARAM = "provider";
 const STATUS_PARAM = "status";
 const MESSAGE_PARAM = "message";
 
-type ProviderTabValue = "jira" | "linear" | "trello" | "github" | "google" | "notion";
+type ProviderTabValue = "jira" | "linear" | "trello" | "github" | "google" | "notion" | "microsoft";
 
 type ProviderConfig = {
   tabValue: ProviderTabValue;
@@ -137,8 +138,8 @@ const PROVIDER_CONFIGS: ProviderConfig[] = [
     connectCtaKey: "integrationsPage.providers.notion.connectCta",
     comingSoon: false,
     notConnectedKey: "integrationsPage.providers.notion.notConnected",
-    isWorkspaceLevel: true,
     isBeta: true,
+    isWorkspaceLevel: true,
   },
   {
     tabValue: "github",
@@ -159,7 +160,18 @@ const PROVIDER_CONFIGS: ProviderConfig[] = [
     comingSoon: false,
     notConnectedKey: "integrationsPage.providers.google.notConnected",
     isBeta: true,
-    isWorkspaceLevel: false,
+    isWorkspaceLevel: true,
+  },
+  {
+    tabValue: "microsoft",
+    provider: "ONEDRIVE",
+    labelKey: "integrationsPage.providers.microsoft.label",
+    descriptionKey: "integrationsPage.providers.microsoft.description",
+    connectCtaKey: "integrationsPage.providers.microsoft.connectCta",
+    comingSoon: false,
+    notConnectedKey: "integrationsPage.providers.microsoft.notConnected",
+    isBeta: true,
+    isWorkspaceLevel: true,
   },
 ];
 
@@ -308,6 +320,8 @@ const Integrations: React.FC = () => {
   const [bindGithub, { isLoading: isBindingGithub }] = useBindGithubInstallationMutation();
   const [triggerGoogleAuthorization, { isFetching: isGoogleAuthLoading }] =
     useLazyGetGoogleAuthUrlQuery();
+  const [triggerMicrosoftAuthorization, { isFetching: isMicrosoftAuthLoading }] =
+    useLazyGetMicrosoftAuthUrlQuery();
 
   useEffect(() => {
     const installationId = searchParams.get("installation_id");
@@ -467,6 +481,19 @@ const Integrations: React.FC = () => {
     } catch (error) {
       console.error("Failed to fetch Google authorization URL", error);
       dispatch(setToastMessage({ severity: "error", message: "Failed to start Google Auth" }));
+    }
+  };
+
+  const handleConnectMicrosoft = async () => {
+    try {
+      const response = await triggerMicrosoftAuthorization("/integrations/microsoft").unwrap();
+      const authorizationUrl = response.data?.authorizationUrl;
+      if (authorizationUrl) {
+        window.location.href = authorizationUrl;
+      }
+    } catch (error) {
+      console.error("Failed to fetch Microsoft authorization URL", error);
+      dispatch(setToastMessage({ severity: "error", message: "Failed to start Microsoft Auth" }));
     }
   };
 
@@ -801,6 +828,20 @@ const Integrations: React.FC = () => {
                       : undefined}
                 </Button>
               )}
+              {config.tabValue === "microsoft" && (
+                <Button
+                  variant="contained"
+                  color="primary"
+                  onClick={handleConnectMicrosoft}
+                  disabled={isMicrosoftAuthLoading}
+                >
+                  {isMicrosoftAuthLoading
+                    ? t("integrationsPage.connect.redirecting")
+                    : config.connectCtaKey
+                      ? t(config.connectCtaKey)
+                      : undefined}
+                </Button>
+              )}
               {config.tabValue === "notion" && (
                 <Box
                   sx={{ mt: 2, display: "flex", flexDirection: "column", gap: 3, maxWidth: 400 }}
@@ -838,7 +879,8 @@ const Integrations: React.FC = () => {
                 config.tabValue !== "trello" &&
                 config.tabValue !== "github" &&
                 config.tabValue !== "google" &&
-                config.tabValue !== "notion" && (
+                config.tabValue !== "notion" &&
+                config.tabValue !== "microsoft" && (
                   <Button variant="contained" color="primary" disabled>
                     {config.connectCtaKey ? t(config.connectCtaKey) : undefined}
                   </Button>

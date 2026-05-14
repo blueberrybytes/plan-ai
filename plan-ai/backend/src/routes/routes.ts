@@ -34,6 +34,8 @@ import { OnboardingController } from './../controller/onboardingController';
 // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
 import { NotionController } from './../controller/notionController';
 // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+import { MicrosoftController } from './../controller/microsoftController';
+// WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
 import { LinearController } from './../controller/linearController';
 // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
 import { JiraController } from './../controller/jiraController';
@@ -42,7 +44,7 @@ import { IntegrationController } from './../controller/integrationController';
 // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
 import { HealthckeckController } from './../controller/healthcheckController';
 // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
-import { GoogleIntegrationController } from './../controller/googleIntegrationController';
+import { GoogleController } from './../controller/googleController';
 // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
 import { GithubIntegrationController } from './../controller/githubIntegrationController';
 // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
@@ -1098,6 +1100,20 @@ const models: TsoaRoute.Models = {
         "additionalProperties": false,
     },
     // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "MicrosoftSummaryResponse": {
+        "dataType": "refObject",
+        "properties": {
+            "isConnected": {"dataType":"boolean","required":true},
+            "userEmail": {"dataType":"string"},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "ApiResponse_MicrosoftSummaryResponse_": {
+        "dataType": "refAlias",
+        "type": {"dataType":"nestedObjectLiteral","nestedProperties":{"message":{"dataType":"string"},"data":{"dataType":"union","subSchemas":[{"ref":"MicrosoftSummaryResponse"},{"dataType":"enum","enums":[null]}],"required":true},"status":{"dataType":"double","required":true}},"validators":{}},
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
     "LinearManualConnectRequest": {
         "dataType": "refObject",
         "properties": {
@@ -1206,7 +1222,7 @@ const models: TsoaRoute.Models = {
     // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
     "_36_Enums.IntegrationProvider": {
         "dataType": "refAlias",
-        "type": {"dataType":"union","subSchemas":[{"dataType":"enum","enums":["JIRA"]},{"dataType":"enum","enums":["LINEAR"]},{"dataType":"enum","enums":["GITHUB"]},{"dataType":"enum","enums":["GOOGLE_DRIVE"]},{"dataType":"enum","enums":["TRELLO"]},{"dataType":"enum","enums":["NOTION"]}],"validators":{}},
+        "type": {"dataType":"union","subSchemas":[{"dataType":"enum","enums":["JIRA"]},{"dataType":"enum","enums":["LINEAR"]},{"dataType":"enum","enums":["GITHUB"]},{"dataType":"enum","enums":["GOOGLE_DRIVE"]},{"dataType":"enum","enums":["TRELLO"]},{"dataType":"enum","enums":["NOTION"]},{"dataType":"enum","enums":["ONEDRIVE"]}],"validators":{}},
     },
     // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
     "IntegrationProvider": {
@@ -1257,6 +1273,20 @@ const models: TsoaRoute.Models = {
     "ApiResponse_string_": {
         "dataType": "refAlias",
         "type": {"dataType":"nestedObjectLiteral","nestedProperties":{"message":{"dataType":"string"},"data":{"dataType":"union","subSchemas":[{"dataType":"string"},{"dataType":"enum","enums":[null]}],"required":true},"status":{"dataType":"double","required":true}},"validators":{}},
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "GoogleSummaryResponse": {
+        "dataType": "refObject",
+        "properties": {
+            "isConnected": {"dataType":"boolean","required":true},
+            "userEmail": {"dataType":"string"},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "ApiResponse_GoogleSummaryResponse_": {
+        "dataType": "refAlias",
+        "type": {"dataType":"nestedObjectLiteral","nestedProperties":{"message":{"dataType":"string"},"data":{"dataType":"union","subSchemas":[{"ref":"GoogleSummaryResponse"},{"dataType":"enum","enums":[null]}],"required":true},"status":{"dataType":"double","required":true}},"validators":{}},
     },
     // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
     "GithubRepository": {
@@ -4294,6 +4324,103 @@ export function RegisterRoutes(app: Router,opts?:{multer?:ReturnType<typeof mult
             }
         });
         // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+        const argsMicrosoftController_getAuthUrl: Record<string, TsoaRoute.ParameterSchema> = {
+                request: {"in":"request","name":"request","required":true,"dataType":"object"},
+                redirectPath: {"in":"query","name":"redirectPath","dataType":"string"},
+        };
+        app.get('/api/microsoft/auth-url',
+            authenticateMiddleware([{"ClientLevel":[]}]),
+            ...(fetchMiddlewares<RequestHandler>(MicrosoftController)),
+            ...(fetchMiddlewares<RequestHandler>(MicrosoftController.prototype.getAuthUrl)),
+
+            async function MicrosoftController_getAuthUrl(request: ExRequest, response: ExResponse, next: any) {
+
+            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+
+            let validatedArgs: any[] = [];
+            try {
+                validatedArgs = templateService.getValidatedArgs({ args: argsMicrosoftController_getAuthUrl, request, response });
+
+                const controller = new MicrosoftController();
+
+              await templateService.apiHandler({
+                methodName: 'getAuthUrl',
+                controller,
+                response,
+                next,
+                validatedArgs,
+                successStatus: 200,
+              });
+            } catch (err) {
+                return next(err);
+            }
+        });
+        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+        const argsMicrosoftController_handleMicrosoftCallback: Record<string, TsoaRoute.ParameterSchema> = {
+                request: {"in":"request","name":"request","required":true,"dataType":"object"},
+                code: {"in":"query","name":"code","dataType":"string"},
+                state: {"in":"query","name":"state","dataType":"string"},
+                error: {"in":"query","name":"error","dataType":"string"},
+                error_description: {"in":"query","name":"error_description","dataType":"string"},
+        };
+        app.get('/api/microsoft/callback',
+            ...(fetchMiddlewares<RequestHandler>(MicrosoftController)),
+            ...(fetchMiddlewares<RequestHandler>(MicrosoftController.prototype.handleMicrosoftCallback)),
+
+            async function MicrosoftController_handleMicrosoftCallback(request: ExRequest, response: ExResponse, next: any) {
+
+            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+
+            let validatedArgs: any[] = [];
+            try {
+                validatedArgs = templateService.getValidatedArgs({ args: argsMicrosoftController_handleMicrosoftCallback, request, response });
+
+                const controller = new MicrosoftController();
+
+              await templateService.apiHandler({
+                methodName: 'handleMicrosoftCallback',
+                controller,
+                response,
+                next,
+                validatedArgs,
+                successStatus: 302,
+              });
+            } catch (err) {
+                return next(err);
+            }
+        });
+        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+        const argsMicrosoftController_getSummary: Record<string, TsoaRoute.ParameterSchema> = {
+                request: {"in":"request","name":"request","required":true,"dataType":"object"},
+        };
+        app.get('/api/microsoft/summary',
+            authenticateMiddleware([{"ClientLevel":[]}]),
+            ...(fetchMiddlewares<RequestHandler>(MicrosoftController)),
+            ...(fetchMiddlewares<RequestHandler>(MicrosoftController.prototype.getSummary)),
+
+            async function MicrosoftController_getSummary(request: ExRequest, response: ExResponse, next: any) {
+
+            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+
+            let validatedArgs: any[] = [];
+            try {
+                validatedArgs = templateService.getValidatedArgs({ args: argsMicrosoftController_getSummary, request, response });
+
+                const controller = new MicrosoftController();
+
+              await templateService.apiHandler({
+                methodName: 'getSummary',
+                controller,
+                response,
+                next,
+                validatedArgs,
+                successStatus: undefined,
+              });
+            } catch (err) {
+                return next(err);
+            }
+        });
+        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
         const argsLinearController_manualConnect: Record<string, TsoaRoute.ParameterSchema> = {
                 request: {"in":"request","name":"request","required":true,"dataType":"object"},
                 body: {"in":"body","name":"body","required":true,"ref":"LinearManualConnectRequest"},
@@ -4800,24 +4927,24 @@ export function RegisterRoutes(app: Router,opts?:{multer?:ReturnType<typeof mult
             }
         });
         // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
-        const argsGoogleIntegrationController_getAuthUrl: Record<string, TsoaRoute.ParameterSchema> = {
+        const argsGoogleController_getAuthUrl: Record<string, TsoaRoute.ParameterSchema> = {
                 request: {"in":"request","name":"request","required":true,"dataType":"object"},
                 redirectPath: {"in":"query","name":"redirectPath","dataType":"string"},
         };
-        app.get('/api/integrations/google/auth-url',
+        app.get('/api/google/auth-url',
             authenticateMiddleware([{"ClientLevel":[]}]),
-            ...(fetchMiddlewares<RequestHandler>(GoogleIntegrationController)),
-            ...(fetchMiddlewares<RequestHandler>(GoogleIntegrationController.prototype.getAuthUrl)),
+            ...(fetchMiddlewares<RequestHandler>(GoogleController)),
+            ...(fetchMiddlewares<RequestHandler>(GoogleController.prototype.getAuthUrl)),
 
-            async function GoogleIntegrationController_getAuthUrl(request: ExRequest, response: ExResponse, next: any) {
+            async function GoogleController_getAuthUrl(request: ExRequest, response: ExResponse, next: any) {
 
             // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
 
             let validatedArgs: any[] = [];
             try {
-                validatedArgs = templateService.getValidatedArgs({ args: argsGoogleIntegrationController_getAuthUrl, request, response });
+                validatedArgs = templateService.getValidatedArgs({ args: argsGoogleController_getAuthUrl, request, response });
 
-                const controller = new GoogleIntegrationController();
+                const controller = new GoogleController();
 
               await templateService.apiHandler({
                 methodName: 'getAuthUrl',
@@ -4832,24 +4959,25 @@ export function RegisterRoutes(app: Router,opts?:{multer?:ReturnType<typeof mult
             }
         });
         // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
-        const argsGoogleIntegrationController_handleGoogleCallback: Record<string, TsoaRoute.ParameterSchema> = {
+        const argsGoogleController_handleGoogleCallback: Record<string, TsoaRoute.ParameterSchema> = {
                 request: {"in":"request","name":"request","required":true,"dataType":"object"},
-                code: {"in":"query","name":"code","required":true,"dataType":"string"},
+                code: {"in":"query","name":"code","dataType":"string"},
                 state: {"in":"query","name":"state","dataType":"string"},
+                error: {"in":"query","name":"error","dataType":"string"},
         };
-        app.get('/api/integrations/google/callback',
-            ...(fetchMiddlewares<RequestHandler>(GoogleIntegrationController)),
-            ...(fetchMiddlewares<RequestHandler>(GoogleIntegrationController.prototype.handleGoogleCallback)),
+        app.get('/api/google/callback',
+            ...(fetchMiddlewares<RequestHandler>(GoogleController)),
+            ...(fetchMiddlewares<RequestHandler>(GoogleController.prototype.handleGoogleCallback)),
 
-            async function GoogleIntegrationController_handleGoogleCallback(request: ExRequest, response: ExResponse, next: any) {
+            async function GoogleController_handleGoogleCallback(request: ExRequest, response: ExResponse, next: any) {
 
             // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
 
             let validatedArgs: any[] = [];
             try {
-                validatedArgs = templateService.getValidatedArgs({ args: argsGoogleIntegrationController_handleGoogleCallback, request, response });
+                validatedArgs = templateService.getValidatedArgs({ args: argsGoogleController_handleGoogleCallback, request, response });
 
-                const controller = new GoogleIntegrationController();
+                const controller = new GoogleController();
 
               await templateService.apiHandler({
                 methodName: 'handleGoogleCallback',
@@ -4858,6 +4986,37 @@ export function RegisterRoutes(app: Router,opts?:{multer?:ReturnType<typeof mult
                 next,
                 validatedArgs,
                 successStatus: 302,
+              });
+            } catch (err) {
+                return next(err);
+            }
+        });
+        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+        const argsGoogleController_getSummary: Record<string, TsoaRoute.ParameterSchema> = {
+                request: {"in":"request","name":"request","required":true,"dataType":"object"},
+        };
+        app.get('/api/google/summary',
+            authenticateMiddleware([{"ClientLevel":[]}]),
+            ...(fetchMiddlewares<RequestHandler>(GoogleController)),
+            ...(fetchMiddlewares<RequestHandler>(GoogleController.prototype.getSummary)),
+
+            async function GoogleController_getSummary(request: ExRequest, response: ExResponse, next: any) {
+
+            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+
+            let validatedArgs: any[] = [];
+            try {
+                validatedArgs = templateService.getValidatedArgs({ args: argsGoogleController_getSummary, request, response });
+
+                const controller = new GoogleController();
+
+              await templateService.apiHandler({
+                methodName: 'getSummary',
+                controller,
+                response,
+                next,
+                validatedArgs,
+                successStatus: undefined,
               });
             } catch (err) {
                 return next(err);

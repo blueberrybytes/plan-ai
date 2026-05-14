@@ -1,4 +1,4 @@
-# Task Sync (Jira, Linear, Trello)
+# Task Sync (Jira, Linear, Trello, Notion)
 
 The primary "wedge" feature of Plan AI is automating the most tedious part of technical project management: writing and scoping tickets. 
 
@@ -21,10 +21,10 @@ Once the tickets are generated, you can push them directly to your external issu
 
 1.  Review the generated ticket in the Plan AI dashboard.
 2.  Click the **Push** icon next to the ticket.
-3.  Select your destination (e.g., Jira, Linear, or Trello).
+3.  Select your destination (e.g., Jira, Linear, Trello, or Notion).
 4.  The ticket will be created instantly in your backlog with the correct formatting.
 
-*(Note: Jira, Linear, and Trello integrations must be configured by an Admin in the Workspace Settings before you can push tickets).*
+*(Note: Jira, Linear, Trello, and Notion integrations must be configured by an Admin in the Workspace Settings before you can push tickets).*
 
 ## Using Contexts for Perfect Scoping
 

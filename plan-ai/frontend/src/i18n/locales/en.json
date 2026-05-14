@@ -439,6 +439,18 @@
         "description": "Connect your Trello account to automatically push generated tasks directly to boards.",
         "connectCta": "Connect Trello",
         "notConnected": "Trello is not connected yet."
+      },
+      "notion": {
+        "label": "Notion",
+        "description": "Connect your Notion workspace to sync pages and databases with Plan AI for seamless knowledge management.",
+        "connectCta": "Connect via Notion",
+        "notConnected": "Notion is not connected yet."
+      },
+      "microsoft": {
+        "label": "Microsoft OneDrive",
+        "description": "Connect your Microsoft OneDrive to generate and export documents.",
+        "connectCta": "Connect OneDrive",
+        "notConnected": "Microsoft OneDrive is not connected yet."
       }
     },
     "connectedDetails": {

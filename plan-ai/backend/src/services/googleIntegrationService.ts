@@ -1,5 +1,14 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { google, drive_v3, Auth } from "googleapis";
 import EnvUtils from "../utils/EnvUtils";
+import { PrismaClient, IntegrationProvider, IntegrationStatus } from "@prisma/client";
+
+const prisma = new PrismaClient();
+
+export interface GoogleSummaryResponse {
+  isConnected: boolean;
+  userEmail?: string;
+}
 
 export interface GoogleTokens {
   accessToken: string;
@@ -10,22 +19,25 @@ export interface GoogleTokens {
 }
 
 class GoogleIntegrationService {
-  private getOAuthClient(): Auth.OAuth2Client {
-    const clientId = EnvUtils.get("GOOGLE_CLIENT_ID");
-    const clientSecret = EnvUtils.get("GOOGLE_CLIENT_SECRET");
-    const redirectUri = EnvUtils.get(
-      "GOOGLE_REDIRECT_URI",
-      "http://localhost:8080/api/integrations/google/callback",
-    );
-    return new google.auth.OAuth2(clientId, clientSecret, redirectUri);
+  public buildRedirectUri(backendUrl: string): string {
+    return EnvUtils.get("GOOGLE_REDIRECT_URI", `${backendUrl}/api/google/callback`);
   }
 
-  public getAuthUrl(state?: string): string {
-    const oauth2Client = this.getOAuthClient();
+  private getOAuthClient(redirectUri?: string): Auth.OAuth2Client {
+    const clientId = EnvUtils.get("GOOGLE_CLIENT_ID");
+    const clientSecret = EnvUtils.get("GOOGLE_CLIENT_SECRET");
+    const resolvedRedirectUri =
+      redirectUri ||
+      EnvUtils.get("GOOGLE_REDIRECT_URI", "http://localhost:8080/api/google/callback");
+    return new google.auth.OAuth2(clientId, clientSecret, resolvedRedirectUri);
+  }
+
+  public getAuthUrl(state?: string, redirectUri?: string): string {
+    const oauth2Client = this.getOAuthClient(redirectUri);
     return oauth2Client.generateAuthUrl({
       access_type: "offline",
       scope: [
-        "https://www.googleapis.com/auth/drive.readonly",
+        "https://www.googleapis.com/auth/drive.file",
         "https://www.googleapis.com/auth/userinfo.email",
       ],
       state,
@@ -33,8 +45,94 @@ class GoogleIntegrationService {
     });
   }
 
-  public async exchangeCode(code: string): Promise<GoogleTokens> {
-    const oauth2Client = this.getOAuthClient();
+  public buildFrontendRedirectUrl(
+    status: "success" | "error",
+    errorReason?: string,
+    state?: string,
+  ): string {
+    const frontendUrl = EnvUtils.get("APP_URL", "http://localhost:3000");
+    const url = new URL(`${frontendUrl}/integrations`);
+    url.searchParams.append("provider", "google");
+    url.searchParams.append("status", status);
+    if (errorReason) url.searchParams.append("error_reason", errorReason);
+
+    if (state) {
+      try {
+        const stateObj = JSON.parse(state);
+        if (stateObj.redirectPath) {
+          return `${frontendUrl}${stateObj.redirectPath}`;
+        }
+      } catch (e) {
+        // Fall through
+      }
+    }
+    return url.toString();
+  }
+
+  public async handleOAuthCallback(
+    workspaceId: string,
+    code: string,
+    redirectUri: string,
+  ): Promise<void> {
+    const tokens = await this.exchangeCode(code, redirectUri);
+
+    // Support legacy UserIntegration or keep refresh token
+    const existingIntegration = await prisma.workspaceIntegration.findUnique({
+      where: {
+        workspaceId_provider: {
+          workspaceId,
+          provider: IntegrationProvider.GOOGLE_DRIVE,
+        },
+      },
+    });
+
+    const finalRefreshToken = tokens.refreshToken || existingIntegration?.refreshToken;
+
+    await prisma.workspaceIntegration.upsert({
+      where: {
+        workspaceId_provider: {
+          workspaceId,
+          provider: IntegrationProvider.GOOGLE_DRIVE,
+        },
+      },
+      update: {
+        status: IntegrationStatus.CONNECTED,
+        accessToken: tokens.accessToken,
+        ...(finalRefreshToken ? { refreshToken: finalRefreshToken } : {}),
+        expiresAt: tokens.expiresAt,
+        accountId: tokens.accountId,
+        accountName: tokens.accountName,
+      },
+      create: {
+        workspaceId,
+        provider: IntegrationProvider.GOOGLE_DRIVE,
+        status: IntegrationStatus.CONNECTED,
+        accessToken: tokens.accessToken,
+        refreshToken: finalRefreshToken || "",
+        expiresAt: tokens.expiresAt,
+        accountId: tokens.accountId,
+        accountName: tokens.accountName,
+      },
+    });
+  }
+
+  public async getGoogleSummary(workspaceId: string): Promise<GoogleSummaryResponse> {
+    const integration = await prisma.workspaceIntegration.findUnique({
+      where: { workspaceId_provider: { workspaceId, provider: IntegrationProvider.GOOGLE_DRIVE } },
+    });
+
+    if (!integration || integration.status !== IntegrationStatus.CONNECTED) {
+      return { isConnected: false };
+    }
+
+    return {
+      isConnected: true,
+      userEmail: integration.accountName || undefined,
+    };
+  }
+
+  public async exchangeCode(code: string, redirectUri?: string): Promise<GoogleTokens> {
+    const oauth2Client = this.getOAuthClient(redirectUri);
     const { tokens } = await oauth2Client.getToken(code);
 
     oauth2Client.setCredentials(tokens);

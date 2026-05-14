@@ -74,20 +74,15 @@ export const integrationApi = createApi({
     }),
     getGoogleAuthUrl: builder.query<{ data: { authorizationUrl: string } }, string>({
       query: (redirectPath) => ({
-        url: `/api/integrations/google/auth-url${redirectPath ? `?redirectPath=${encodeURIComponent(redirectPath)}` : ""}`,
+        url: `/api/google/auth-url${redirectPath ? `?redirectPath=${encodeURIComponent(redirectPath)}` : ""}`,
         method: "GET",
       }),
     }),
-    bindGoogleAccount: builder.mutation<{ success: boolean; message?: string }, string>({
-      query: (code) => ({
-        url: `/api/integrations/google/bind`,
-        method: "POST",
-        body: { code },
+    getMicrosoftAuthUrl: builder.query<{ data: { authorizationUrl: string } }, string>({
+      query: (redirectPath) => ({
+        url: `/api/microsoft/auth-url${redirectPath ? `?redirectPath=${encodeURIComponent(redirectPath)}` : ""}`,
+        method: "GET",
       }),
-      invalidatesTags: [
-        { type: "Integration" as const, id: "LIST" },
-        { type: "Integration" as const, id: "GOOGLE_DRIVE" },
-      ],
     }),
     disconnectIntegration: builder.mutation<{ success: boolean; message?: string }, string>({
       query: (provider) => ({
@@ -109,6 +104,6 @@ export const {
   useGetGithubRepositoriesQuery,
   useGetGithubRepositoryBranchesQuery,
   useLazyGetGoogleAuthUrlQuery,
-  useBindGoogleAccountMutation,
+  useLazyGetMicrosoftAuthUrlQuery,
   useDisconnectIntegrationMutation,
 } = integrationApi;

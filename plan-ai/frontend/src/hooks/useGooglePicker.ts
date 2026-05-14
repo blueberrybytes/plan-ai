@@ -114,7 +114,7 @@ export const useGooglePicker = () => {
       // 1. Request an access token specific to the frontend
       const tokenClient = window.google.accounts.oauth2.initTokenClient({
         client_id: clientId,
-        scope: "https://www.googleapis.com/auth/drive.readonly",
+        scope: "https://www.googleapis.com/auth/drive.file",
         callback: (tokenResponse: TokenResponse) => {
           if (tokenResponse.error !== undefined) {
             console.error("Token error: ", tokenResponse.error);

@@ -433,6 +433,18 @@
         "description": "Conecta tu cuenta de Trello para sincronizar tareas generadas directamente a tus tableros.",
         "connectCta": "Conectar Trello",
         "notConnected": "Trello aún no está conectado."
+      },
+      "notion": {
+        "label": "Notion",
+        "description": "Conecta tu espacio de trabajo de Notion para sincronizar páginas y bases de datos con Plan AI.",
+        "connectCta": "Conectar vía Notion",
+        "notConnected": "Notion aún no está conectado."
+      },
+      "microsoft": {
+        "label": "Microsoft OneDrive",
+        "description": "Conecta tu Microsoft OneDrive para generar y exportar documentos.",
+        "connectCta": "Conectar OneDrive",
+        "notConnected": "Microsoft OneDrive aún no está conectado."
       }
     },
     "connectedDetails": {

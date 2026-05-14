@@ -940,6 +940,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/microsoft/auth-url": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetAuthUrl"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/microsoft/callback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["HandleMicrosoftCallback"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/microsoft/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetSummary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/linear/manual-connect": {
         parameters: {
             query?: never;
@@ -1181,14 +1229,13 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/integrations/google/auth-url": {
+    "/api/google/auth-url": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** @description Returns the OAuth authorization URL for Google Drive */
         get: operations["GetAuthUrl"];
         put?: never;
         post?: never;
@@ -1198,15 +1245,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/integrations/google/callback": {
+    "/api/google/callback": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** @description OAuth Callback handler. Exchanges code for tokens, binds to user, and redirects to frontend. */
         get: operations["HandleGoogleCallback"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/google/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetSummary"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2789,6 +2851,16 @@ export interface components {
         SetDefaultDatabaseRequest: {
             databaseId: string;
         };
+        MicrosoftSummaryResponse: {
+            isConnected: boolean;
+            userEmail?: string;
+        };
+        ApiResponse_MicrosoftSummaryResponse_: {
+            message?: string;
+            data: components["schemas"]["MicrosoftSummaryResponse"] | null;
+            /** Format: double */
+            status: number;
+        };
         LinearManualConnectRequest: {
             apiKey: string;
         };
@@ -2859,7 +2931,7 @@ export interface components {
             projectId: string;
         };
         /** @enum {string} */
-        "_36_Enums.IntegrationProvider": "JIRA" | "LINEAR" | "GITHUB" | "GOOGLE_DRIVE" | "TRELLO" | "NOTION";
+        "_36_Enums.IntegrationProvider": "JIRA" | "LINEAR" | "GITHUB" | "GOOGLE_DRIVE" | "TRELLO" | "NOTION" | "ONEDRIVE";
         IntegrationProvider: components["schemas"]["_36_Enums.IntegrationProvider"];
         /** @enum {string} */
         "_36_Enums.IntegrationStatus": "CONNECTED" | "DISCONNECTED" | "ERROR";
@@ -2897,6 +2969,16 @@ export interface components {
         ApiResponse_string_: {
             message?: string;
             data: string | null;
+            /** Format: double */
+            status: number;
+        };
+        GoogleSummaryResponse: {
+            isConnected: boolean;
+            userEmail?: string;
+        };
+        ApiResponse_GoogleSummaryResponse_: {
+            message?: string;
+            data: components["schemas"]["GoogleSummaryResponse"] | null;
             /** Format: double */
             status: number;
         };
@@ -5490,6 +5572,71 @@ export interface operations {
             };
         };
     };
+    GetAuthUrl: {
+        parameters: {
+            query?: {
+                redirectPath?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description URL fetched successfully */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse__authorizationUrl-string__"];
+                };
+            };
+        };
+    };
+    HandleMicrosoftCallback: {
+        parameters: {
+            query?: {
+                code?: string;
+                state?: string;
+                error?: string;
+                error_description?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Redirect */
+            302: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    GetSummary: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_MicrosoftSummaryResponse_"];
+                };
+            };
+        };
+    };
     ManualConnect: {
         parameters: {
             query?: never;
@@ -5880,9 +6027,10 @@ export interface operations {
     };
     HandleGoogleCallback: {
         parameters: {
-            query: {
-                code: string;
+            query?: {
+                code?: string;
                 state?: string;
+                error?: string;
             };
             header?: never;
             path?: never;
@@ -5896,6 +6044,26 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    GetSummary: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_GoogleSummaryResponse_"];
+                };
             };
         };
     };

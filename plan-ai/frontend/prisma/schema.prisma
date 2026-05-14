@@ -593,6 +593,7 @@ enum IntegrationProvider {
   GOOGLE_DRIVE
   TRELLO
   NOTION
+  ONEDRIVE
 }
 
 enum IntegrationStatus {
