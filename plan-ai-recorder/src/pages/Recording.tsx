@@ -467,7 +467,7 @@ const Recording: React.FC = () => {
             setSyncToTrello(true);
           }
           const notion = ints.find((i) => i.provider === "NOTION" && i.status === "CONNECTED");
-          if (notion && (notion.metadata as Record<string, unknown>)?.defaultDatabaseId) {
+          if (notion) {
             setSyncToNotion(true);
           }
         }).catch(console.error);

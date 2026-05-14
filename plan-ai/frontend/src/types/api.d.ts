@@ -2830,8 +2830,8 @@ export interface components {
         };
         NotionSummaryResponse: {
             /** Format: double */
-            totalDatabases: number;
-            latestDatabases: string[];
+            totalPages: number;
+            recentPages: string[];
         };
         ApiResponse_NotionSummaryResponse_: {
             message?: string;

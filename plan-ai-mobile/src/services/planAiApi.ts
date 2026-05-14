@@ -204,7 +204,7 @@ export const createPlanAiApi = (
         priority?: string;
         type?: string;
         dueDate?: string;
-        metadata?: any;
+        metadata?: components['schemas']['TaskMetadata'];
       },
     ): Promise<Task> {
       const req = async (force: boolean) =>

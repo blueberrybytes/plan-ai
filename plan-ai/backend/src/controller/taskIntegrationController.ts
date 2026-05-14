@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Post, Path, Request, Route, Security, Tags, Body } from "tsoa";
 import { BaseWorkspaceController } from "./BaseWorkspaceController";
 import type { AuthenticatedRequest } from "../middleware/authMiddleware";
@@ -10,6 +9,12 @@ import { linearIntegrationService } from "../services/linearIntegrationService";
 import { trelloIntegrationService } from "../services/trelloIntegrationService";
 import { notionIntegrationService } from "../services/notionIntegrationService";
 import type { TaskMetadata } from "../services/taskMetadataTypes";
+import type {
+  JiraIntegrationMetadata,
+  LinearIntegrationMetadata,
+  TrelloIntegrationMetadata,
+  NotionIntegrationMetadata,
+} from "../services/integrationMetadataTypes";
 
 interface SyncTaskRequest {
   targetTeamId?: string; // Optional if fallback configured
@@ -74,7 +79,7 @@ export class TaskIntegrationController extends BaseWorkspaceController {
       const wsIntegration = await prisma.workspaceIntegration.findUnique({
         where: { workspaceId_provider: { workspaceId, provider: IntegrationProvider.JIRA } },
       });
-      const meta = wsIntegration?.metadata as any;
+      const meta = wsIntegration?.metadata as JiraIntegrationMetadata | null;
       const targetId = body.targetTeamId || meta?.defaultProjectId;
 
       if (!targetId) {
@@ -85,7 +90,11 @@ export class TaskIntegrationController extends BaseWorkspaceController {
         };
       }
 
-      const jiraResult = await jiraIntegrationService.createJiraIssue(workspaceId, taskId, targetId);
+      const jiraResult = await jiraIntegrationService.createJiraIssue(
+        workspaceId,
+        taskId,
+        targetId,
+      );
       existingMetadata.jira = {
         issueId: jiraResult.issueId,
         issueKey: jiraResult.issueKey,
@@ -101,7 +110,7 @@ export class TaskIntegrationController extends BaseWorkspaceController {
       const wsIntegration = await prisma.workspaceIntegration.findUnique({
         where: { workspaceId_provider: { workspaceId, provider: IntegrationProvider.LINEAR } },
       });
-      const meta = wsIntegration?.metadata as any;
+      const meta = wsIntegration?.metadata as LinearIntegrationMetadata | null;
       const targetId = body.targetTeamId || meta?.defaultTeamId;
 
       if (!targetId) {
@@ -132,7 +141,7 @@ export class TaskIntegrationController extends BaseWorkspaceController {
       const wsIntegration = await prisma.workspaceIntegration.findUnique({
         where: { workspaceId_provider: { workspaceId, provider: IntegrationProvider.TRELLO } },
       });
-      const meta = wsIntegration?.metadata as any;
+      const meta = wsIntegration?.metadata as TrelloIntegrationMetadata | null;
       const targetBoard = body.targetTeamId || meta?.defaultBoardId;
       const targetList = meta?.defaultListId;
 
@@ -165,8 +174,8 @@ export class TaskIntegrationController extends BaseWorkspaceController {
       const wsIntegration = await prisma.workspaceIntegration.findUnique({
         where: { workspaceId_provider: { workspaceId, provider: IntegrationProvider.NOTION } },
       });
-      const meta = wsIntegration?.metadata as Record<string, unknown> | null;
-      const targetDatabaseId = (body.targetTeamId as string) || (meta?.defaultDatabaseId as string) || undefined;
+      const meta = wsIntegration?.metadata as NotionIntegrationMetadata | null;
+      const targetDatabaseId = body.targetTeamId || meta?.defaultDatabaseId || undefined;
 
       const notionResult = await notionIntegrationService.createNotionPage(
         workspaceId,
@@ -248,26 +257,52 @@ export class TaskIntegrationController extends BaseWorkspaceController {
       where: { workspaceId_provider: { workspaceId, provider: IntegrationProvider.NOTION } },
     });
 
-    const jiraMeta = jiraIntegration?.metadata as Record<string, unknown> | null;
-    const linearMeta = linearIntegration?.metadata as Record<string, unknown> | null;
-    const trelloMeta = trelloIntegration?.metadata as Record<string, unknown> | null;
-    const notionMeta = notionIntegration?.metadata as Record<string, unknown> | null;
-    
-    const jiraDefaultProjectId = jiraMeta?.defaultProjectId as string | undefined;
-    const linearDefaultTeamId = linearMeta?.defaultTeamId as string | undefined;
-    const trelloDefaultBoardId = trelloMeta?.defaultBoardId as string | undefined;
-    const trelloDefaultListId = trelloMeta?.defaultListId as string | undefined;
-    const notionDefaultDatabaseId = notionMeta?.defaultDatabaseId as string | undefined;
+    const jiraMeta = jiraIntegration?.metadata as JiraIntegrationMetadata | null;
+    const linearMeta = linearIntegration?.metadata as LinearIntegrationMetadata | null;
+    const trelloMeta = trelloIntegration?.metadata as TrelloIntegrationMetadata | null;
+
+    const jiraDefaultProjectId = jiraMeta?.defaultProjectId;
+    const linearDefaultTeamId = linearMeta?.defaultTeamId;
+    const trelloDefaultBoardId = trelloMeta?.defaultBoardId;
+    const trelloDefaultListId = trelloMeta?.defaultListId;
 
     let pushed = 0;
     let skipped = 0;
     const errors: string[] = [];
 
+    let notionSyncResult: { pageId: string; url: string } | null = null;
+    if (notionIntegration?.status === "CONNECTED") {
+      try {
+        notionSyncResult = await notionIntegrationService.exportTranscriptToNotion(
+          workspaceId,
+          transcript,
+          tasks,
+        );
+      } catch (err) {
+        errors.push(
+          `Notion transcript export: ${err instanceof Error ? err.message : "Unknown error"}`,
+        );
+      }
+    }
+
     await Promise.all(
       tasks.map(async (task) => {
-        const taskMeta = (task.metadata as Record<string, unknown> | null) ?? {};
+        const taskMeta: TaskMetadata = (task.metadata as unknown as TaskMetadata) || {};
 
-        if (!jiraDefaultProjectId && !linearDefaultTeamId && !trelloDefaultListId && !(notionIntegration?.status === "CONNECTED")) {
+        if (notionSyncResult) {
+          taskMeta.notion = {
+            pageId: notionSyncResult.pageId,
+            url: notionSyncResult.url,
+          };
+          pushed++;
+        }
+
+        if (
+          !jiraDefaultProjectId &&
+          !linearDefaultTeamId &&
+          !trelloDefaultListId &&
+          !notionSyncResult
+        ) {
           skipped++;
           return;
         }
@@ -329,25 +364,6 @@ export class TaskIntegrationController extends BaseWorkspaceController {
           } catch (err) {
             errors.push(
               `Trello task ${task.id}: ${err instanceof Error ? err.message : "Unknown error"}`,
-            );
-          }
-        }
-
-        if (notionIntegration?.status === "CONNECTED") {
-          try {
-            const result = await notionIntegrationService.createNotionPage(
-              workspaceId,
-              task.id,
-              notionDefaultDatabaseId, // optional — falls back to standalone page
-            );
-            taskMeta.notion = {
-              pageId: result.pageId,
-              url: result.url,
-            };
-            pushed++;
-          } catch (err) {
-            errors.push(
-              `Notion task ${task.id}: ${err instanceof Error ? err.message : "Unknown error"}`,
             );
           }
         }

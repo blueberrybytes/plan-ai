@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { createHmac, randomUUID, timingSafeEqual } from "node:crypto";
 import { URL } from "node:url";
 import { IntegrationProvider, IntegrationStatus, Prisma } from "@prisma/client";
@@ -13,6 +12,7 @@ import type {
   JiraBoardResponse,
 } from "./jiraTypes";
 import type { JiraIntegrationMetadata } from "./integrationMetadataTypes";
+import type { TaskMetadata } from "./taskMetadataTypes";
 
 type JiraTokenResponse = {
   access_token: string;
@@ -470,11 +470,11 @@ class JiraIntegrationService {
     });
     if (!integration) throw new Error("Jira integration not found");
 
-    const currentMeta = (integration.metadata ?? {}) as Record<string, unknown>;
-    const newMetadata = {
+    const currentMeta = (integration.metadata ?? {}) as unknown as JiraIntegrationMetadata;
+    const newMetadata: JiraIntegrationMetadata = {
       ...currentMeta,
       defaultProjectId: projectId,
-    } as unknown as Prisma.InputJsonObject;
+    };
     console.log(
       `[jiraIntegrationService] Updating metadata for workspace ${workspaceId} to:`,
       JSON.stringify(newMetadata),
@@ -482,7 +482,7 @@ class JiraIntegrationService {
 
     await prisma.workspaceIntegration.update({
       where: { workspaceId_provider: { workspaceId, provider: IntegrationProvider.JIRA } },
-      data: { metadata: newMetadata },
+      data: { metadata: newMetadata as unknown as Prisma.InputJsonObject },
     });
     console.log(`[jiraIntegrationService] update complete for workspace ${workspaceId}`);
   }
@@ -585,8 +585,8 @@ class JiraIntegrationService {
     let jiraParentId: string | undefined = undefined;
     if (task.parentId) {
       const parentTask = await prisma.task.findUnique({ where: { id: task.parentId } });
-      const parentMeta = parentTask?.metadata as Record<string, any>;
-      if (parentMeta && parentMeta.jira && parentMeta.jira.issueId) {
+      const parentMeta = parentTask?.metadata as unknown as TaskMetadata | null;
+      if (parentMeta?.jira?.issueId) {
         jiraParentId = parentMeta.jira.issueId;
       }
     }

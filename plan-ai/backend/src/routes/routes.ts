@@ -1068,8 +1068,8 @@ const models: TsoaRoute.Models = {
     "NotionSummaryResponse": {
         "dataType": "refObject",
         "properties": {
-            "totalDatabases": {"dataType":"double","required":true},
-            "latestDatabases": {"dataType":"array","array":{"dataType":"string"},"required":true},
+            "totalPages": {"dataType":"double","required":true},
+            "recentPages": {"dataType":"array","array":{"dataType":"string"},"required":true},
         },
         "additionalProperties": false,
     },

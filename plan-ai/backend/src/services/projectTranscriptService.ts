@@ -30,6 +30,11 @@ import { microsoftIntegrationService } from "./microsoftIntegrationService";
 import { DocumentGenerator } from "../utils/documentGenerator";
 import { aiUsageService } from "./aiUsageService";
 import type { TaskMetadata } from "./taskMetadataTypes";
+import type {
+  JiraIntegrationMetadata,
+  LinearIntegrationMetadata,
+  TrelloIntegrationMetadata,
+} from "./integrationMetadataTypes";
 import { getPersonaInstructions } from "./personaService";
 import { mcpClientService } from "./mcpClientService";
 
@@ -713,9 +718,8 @@ export class ProjectTranscriptService {
       return { transcript, createdTasks };
     });
 
-    // Auto-Sync extraction to active integrations (if defaults exist)
     if (result.createdTasks.length > 0) {
-      this.autoSyncTasks(input.workspaceId, result.createdTasks, {
+      this.autoSyncTasks(input.workspaceId, result.transcript, result.createdTasks, {
         syncToJira: input.syncToJira,
         syncToLinear: input.syncToLinear,
         syncToTrello: input.syncToTrello,
@@ -1077,6 +1081,7 @@ ${content}`;
 
   private async autoSyncTasks(
     workspaceId: string,
+    transcript: Transcript,
     tasks: Task[],
     options?: { syncToJira?: boolean; syncToLinear?: boolean; syncToTrello?: boolean; syncToNotion?: boolean },
   ): Promise<void> {
@@ -1090,21 +1095,18 @@ ${content}`;
     if (integrations.length === 0) return;
 
     for (const integration of integrations) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const metadata: any = integration.metadata || {};
-      if (!metadata) continue;
-
       try {
         if (
           integration.provider === IntegrationProvider.JIRA &&
-          metadata.defaultProjectId &&
           options?.syncToJira !== false
         ) {
+          const meta = integration.metadata as unknown as JiraIntegrationMetadata | null;
+          if (!meta?.defaultProjectId) continue;
           for (const task of tasks) {
             const syncResult = await jiraIntegrationService.createJiraIssue(
               workspaceId,
               task.id,
-              metadata.defaultProjectId,
+              meta.defaultProjectId,
             );
             await this.updateTaskTargetMetadata(task.id, "jira", {
               issueId: syncResult.issueId,
@@ -1114,14 +1116,15 @@ ${content}`;
           }
         } else if (
           integration.provider === IntegrationProvider.LINEAR &&
-          metadata.defaultTeamId &&
           options?.syncToLinear !== false
         ) {
+          const meta = integration.metadata as unknown as LinearIntegrationMetadata | null;
+          if (!meta?.defaultTeamId) continue;
           for (const task of tasks) {
             const syncResult = await linearIntegrationService.createLinearIssue(
               workspaceId,
               task.id,
-              metadata.defaultTeamId,
+              meta.defaultTeamId,
             );
             await this.updateTaskTargetMetadata(task.id, "linear", {
               issueId: syncResult.issueId,
@@ -1131,16 +1134,16 @@ ${content}`;
           }
         } else if (
           integration.provider === IntegrationProvider.TRELLO &&
-          metadata.defaultBoardId &&
-          metadata.defaultListId &&
           options?.syncToTrello !== false
         ) {
+          const meta = integration.metadata as unknown as TrelloIntegrationMetadata | null;
+          if (!meta?.defaultBoardId || !meta?.defaultListId) continue;
           for (const task of tasks) {
             const syncResult = await trelloIntegrationService.createTrelloCard(
               workspaceId,
               task.id,
-              metadata.defaultBoardId,
-              metadata.defaultListId,
+              meta.defaultBoardId,
+              meta.defaultListId,
             );
             logger.info(`Auto-synced task ${task.id} to Trello card ${syncResult.cardId}`);
             await this.updateTaskTargetMetadata(task.id, "trello", {
@@ -1153,13 +1156,17 @@ ${content}`;
           integration.provider === IntegrationProvider.NOTION &&
           options?.syncToNotion !== false
         ) {
+          // Export the entire transcript instead of individual tasks
+          const syncResult = await notionIntegrationService.exportTranscriptToNotion(
+            workspaceId,
+            transcript,
+            tasks
+          );
+          
+          logger.info(`Auto-synced transcript ${transcript.id} to Notion page ${syncResult.pageId}`);
+          
+          // Still tag each task with the notion target so the UI knows it was synced
           for (const task of tasks) {
-            const syncResult = await notionIntegrationService.createNotionPage(
-              workspaceId,
-              task.id,
-              metadata.defaultDatabaseId, // optional — falls back to standalone page
-            );
-            logger.info(`Auto-synced task ${task.id} to Notion page ${syncResult.pageId}`);
             await this.updateTaskTargetMetadata(task.id, "notion", {
               pageId: syncResult.pageId,
               url: syncResult.url,

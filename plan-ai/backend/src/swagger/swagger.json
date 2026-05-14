@@ -3082,11 +3082,11 @@
 			},
 			"NotionSummaryResponse": {
 				"properties": {
-					"totalDatabases": {
+					"totalPages": {
 						"type": "number",
 						"format": "double"
 					},
-					"latestDatabases": {
+					"recentPages": {
 						"items": {
 							"type": "string"
 						},
@@ -3094,8 +3094,8 @@
 					}
 				},
 				"required": [
-					"totalDatabases",
-					"latestDatabases"
+					"totalPages",
+					"recentPages"
 				],
 				"type": "object",
 				"additionalProperties": false

@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import { IntegrationProvider, IntegrationStatus, Prisma } from "@prisma/client";
 import prisma from "../prisma/prismaClient";
 import { LinearClient } from "@linear/sdk";
@@ -6,10 +6,12 @@ import { logger } from "../utils/logger";
 import EnvUtils from "../utils/EnvUtils";
 import type { LinearSummaryResponse, LinearManualConnectRequest } from "./linearTypes";
 import type { LinearIntegrationMetadata } from "./integrationMetadataTypes";
+import type { TaskMetadata } from "./taskMetadataTypes";
+import type { WorkspaceIntegration } from "@prisma/client";
 
 class LinearIntegrationService {
-  private getLinearClient(integration: any): LinearClient {
-    const metadata = integration.metadata as Record<string, any> | null;
+  private getLinearClient(integration: WorkspaceIntegration): LinearClient {
+    const metadata = integration.metadata as LinearIntegrationMetadata | null;
     if (metadata?.authType === "API_KEY") {
       return new LinearClient({ apiKey: integration.accessToken });
     }
@@ -199,12 +201,12 @@ class LinearIntegrationService {
     const client = this.getLinearClient(integration);
     const team = await client.team(teamId);
 
-    const currentMeta = (integration.metadata ?? {}) as Record<string, unknown>;
-    const newMetadata = {
+    const currentMeta = (integration.metadata ?? {}) as unknown as LinearIntegrationMetadata;
+    const newMetadata: LinearIntegrationMetadata = {
       ...currentMeta,
       defaultTeamId: teamId,
       teamKey: team.key,
-    } as unknown as Prisma.InputJsonObject;
+    };
     console.log(
       `[linearIntegrationService] Updating metadata for workspace ${workspaceId} to:`,
       JSON.stringify(newMetadata),
@@ -212,7 +214,7 @@ class LinearIntegrationService {
 
     await prisma.workspaceIntegration.update({
       where: { workspaceId_provider: { workspaceId, provider: IntegrationProvider.LINEAR } },
-      data: { metadata: newMetadata },
+      data: { metadata: newMetadata as unknown as Prisma.InputJsonObject },
     });
     console.log(`[linearIntegrationService] update complete for workspace ${workspaceId}`);
   }
@@ -257,13 +259,9 @@ class LinearIntegrationService {
     let linearParentId: string | undefined = undefined;
     if (task.parentId) {
       const parentTask = await prisma.task.findUnique({ where: { id: task.parentId } });
-      const parentMeta = parentTask?.metadata as Record<string, any>;
-      if (
-        parentMeta &&
-        parentMeta.linear &&
-        (parentMeta.linear as Record<string, unknown>).issueId
-      ) {
-        linearParentId = (parentMeta.linear as Record<string, unknown>).issueId as string;
+      const parentMeta = parentTask?.metadata as unknown as TaskMetadata | null;
+      if (parentMeta?.linear?.issueId) {
+        linearParentId = parentMeta.linear.issueId;
       }
     }
 

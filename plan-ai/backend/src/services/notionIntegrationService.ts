@@ -3,7 +3,8 @@ import prisma from "../prisma/prismaClient";
 import EnvUtils from "../utils/EnvUtils";
 import { NotionIntegrationMetadata } from "./integrationMetadataTypes";
 import { Client as NotionClient } from "@notionhq/client";
-import type { PageObjectResponse } from "@notionhq/client/build/src/api-endpoints";
+import type { PageObjectResponse, BlockObjectRequest } from "@notionhq/client/build/src/api-endpoints";
+import type { Transcript, Task } from "@prisma/client";
 import { logger } from "../utils/logger";
 
 export interface NotionSummaryResponse {
@@ -221,14 +222,16 @@ class NotionIntegrationService {
       throw new Error("Notion integration not found");
     }
 
-    const meta = integration.metadata as Record<string, unknown> | null;
+    const meta = integration.metadata as NotionIntegrationMetadata | null;
+    const newMetadata: NotionIntegrationMetadata = {
+      ...meta,
+      authType: meta?.authType ?? "OAUTH",
+      defaultDatabaseId: databaseId,
+    };
     await prisma.workspaceIntegration.update({
       where: { workspaceId_provider: { workspaceId, provider: IntegrationProvider.NOTION } },
       data: {
-        metadata: {
-          ...meta,
-          defaultDatabaseId: databaseId,
-        },
+        metadata: newMetadata as unknown as Prisma.InputJsonObject,
       },
     });
   }
@@ -386,6 +389,161 @@ class NotionIntegrationService {
         error,
         taskId,
       });
+      throw error;
+    }
+  }
+
+  /**
+   * Helper to split long text into paragraph blocks obeying Notion's 2000 character limit per text block.
+   */
+  private splitTextIntoBlocks(text: string): BlockObjectRequest[] {
+    if (!text) return [];
+    
+    // Split by newlines first to preserve paragraph structure
+    const paragraphs = text.split("\n").filter((p) => p.trim() !== "");
+    const blocks: BlockObjectRequest[] = [];
+    
+    for (const paragraph of paragraphs) {
+      // If a single paragraph is longer than 2000 chars, chunk it
+      const chunks = paragraph.match(/.{1,2000}/g) || [];
+      for (const chunk of chunks) {
+        blocks.push({
+          object: "block",
+          type: "paragraph",
+          paragraph: {
+            rich_text: [
+              {
+                type: "text",
+                text: { content: chunk },
+              },
+            ],
+          },
+        });
+      }
+    }
+    
+    return blocks;
+  }
+
+  /**
+   * Exports an entire transcript, its summary, and tasks into a single Notion page.
+   */
+  public async exportTranscriptToNotion(
+    workspaceId: string,
+    transcript: Transcript,
+    tasks: Task[],
+  ): Promise<{ pageId: string; url: string }> {
+    const integration = await prisma.workspaceIntegration.findUnique({
+      where: { workspaceId_provider: { workspaceId, provider: IntegrationProvider.NOTION } },
+    });
+
+    if (!integration || integration.status !== IntegrationStatus.CONNECTED) {
+      throw new Error("Notion is not connected");
+    }
+
+    const notion = new NotionClient({ auth: integration.accessToken });
+
+    const children: BlockObjectRequest[] = [];
+
+    // Summary Heading
+    if (transcript.summary) {
+      children.push({
+        object: "block",
+        type: "heading_2",
+        heading_2: {
+          rich_text: [{ type: "text", text: { content: "Summary" } }],
+        },
+      });
+      children.push(...this.splitTextIntoBlocks(transcript.summary));
+    }
+
+    // Tasks Heading
+    if (tasks.length > 0) {
+      children.push({
+        object: "block",
+        type: "heading_2",
+        heading_2: {
+          rich_text: [{ type: "text", text: { content: "Generated Tasks" } }],
+        },
+      });
+
+      for (const task of tasks) {
+        // Create a to-do block for each task
+        const taskText = `[${task.status}] ${task.title}`;
+        children.push({
+          object: "block",
+          type: "to_do",
+          to_do: {
+            rich_text: [{ type: "text", text: { content: taskText } }],
+            checked: task.status === "COMPLETED",
+          },
+        });
+        
+        // Add description as an indented bullet if present
+        if (task.description) {
+          children.push({
+            object: "block",
+            type: "bulleted_list_item",
+            bulleted_list_item: {
+              rich_text: [{ type: "text", text: { content: `Description: ${task.description.substring(0, 1900)}` } }],
+            },
+          });
+        }
+      }
+    }
+
+    // Transcript Heading
+    if (transcript.transcript) {
+      children.push({
+        object: "block",
+        type: "divider",
+        divider: {},
+      });
+      children.push({
+        object: "block",
+        type: "heading_2",
+        heading_2: {
+          rich_text: [{ type: "text", text: { content: "Full Transcript" } }],
+        },
+      });
+      children.push(...this.splitTextIntoBlocks(transcript.transcript));
+    }
+
+    try {
+      const searchResult = await notion.search({
+        filter: { property: "object", value: "page" },
+        page_size: 1,
+      });
+
+      let parent: { page_id: string } | { workspace: true };
+      if (searchResult.results.length > 0) {
+        parent = { page_id: searchResult.results[0].id };
+      } else {
+        parent = { workspace: true };
+      }
+
+      const response = await notion.pages.create({
+        parent,
+        properties: {
+          title: {
+            title: [
+              {
+                text: {
+                  content: `[Plan AI] ${transcript.title || "Meeting"}`,
+                },
+              },
+            ],
+          },
+        },
+        children,
+      } as Parameters<typeof notion.pages.create>[0]);
+
+      return {
+        pageId: response.id,
+        url: (response as PageObjectResponse).url,
+      };
+    } catch (error) {
+      logger.error("Failed to export full transcript to Notion", { error, transcriptId: transcript.id });
       throw error;
     }
   }
