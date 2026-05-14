@@ -2497,6 +2497,8 @@ export interface components {
             syncToLinear?: boolean;
             syncToTrello?: boolean;
             syncToNotion?: boolean;
+            exportToGoogleDrive?: boolean;
+            exportToOneDrive?: boolean;
             /** @enum {string} */
             taskStrategy?: "AUTO" | "SINGLE_TICKET" | "SPECIFIC_COUNT";
             /** Format: double */
@@ -4656,6 +4658,8 @@ export interface operations {
                     syncToLinear?: string;
                     syncToTrello?: string;
                     syncToNotion?: string;
+                    exportToGoogleDrive?: string;
+                    exportToOneDrive?: string;
                     skipAi?: string;
                     taskStrategy?: string;
                     taskCount?: string;

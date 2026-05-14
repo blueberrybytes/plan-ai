@@ -41,10 +41,16 @@ export interface NotionIntegrationMetadata extends BaseIntegrationMetadata {
   defaultDatabaseId?: string;
 }
 
+export interface MicrosoftIntegrationMetadata extends BaseIntegrationMetadata {
+  authType: "OAUTH";
+  userEmail?: string;
+}
+
 export type IntegrationMetadata =
   | JiraIntegrationMetadata
   | LinearIntegrationMetadata
   | GoogleIntegrationMetadata
   | GithubIntegrationMetadata
   | TrelloIntegrationMetadata
-  | NotionIntegrationMetadata;
+  | NotionIntegrationMetadata
+  | MicrosoftIntegrationMetadata;

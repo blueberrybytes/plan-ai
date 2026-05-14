@@ -81,6 +81,8 @@ interface CreateStandaloneTranscriptBody {
   syncToLinear?: boolean;
   syncToTrello?: boolean;
   syncToNotion?: boolean;
+  exportToGoogleDrive?: boolean;
+  exportToOneDrive?: boolean;
   taskStrategy?: "AUTO" | "SINGLE_TICKET" | "SPECIFIC_COUNT";
   taskCount?: number;
   agenticInvestigation?: boolean;
@@ -233,6 +235,8 @@ export class TranscriptsController extends BaseWorkspaceController {
     @FormField() syncToLinear?: string,
     @FormField() syncToTrello?: string,
     @FormField() syncToNotion?: string,
+    @FormField() exportToGoogleDrive?: string,
+    @FormField() exportToOneDrive?: string,
     @FormField() skipAi?: string,
     @FormField() taskStrategy?: "AUTO" | "SINGLE_TICKET" | "SPECIFIC_COUNT",
     @FormField() taskCount?: string,
@@ -350,6 +354,8 @@ export class TranscriptsController extends BaseWorkspaceController {
         syncToLinear: syncToLinear === "true",
         syncToTrello: syncToTrello === "true",
         syncToNotion: syncToNotion === "true",
+        exportToGoogleDrive: exportToGoogleDrive === "true",
+        exportToOneDrive: exportToOneDrive === "true",
         taskStrategy,
         taskCount: taskCount ? parseInt(taskCount, 10) : undefined,
         contextPrompt: contextPrompt ?? undefined,
@@ -443,6 +449,10 @@ export class TranscriptsController extends BaseWorkspaceController {
           modelKey: body.modelKey ?? undefined,
           syncToJira: body.syncToJira,
           syncToLinear: body.syncToLinear,
+          syncToTrello: body.syncToTrello,
+          syncToNotion: body.syncToNotion,
+          exportToGoogleDrive: body.exportToGoogleDrive,
+          exportToOneDrive: body.exportToOneDrive,
           taskStrategy: body.taskStrategy,
           taskCount: body.taskCount,
           agenticInvestigation: body.agenticInvestigation,

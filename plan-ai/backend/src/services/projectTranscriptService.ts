@@ -25,6 +25,9 @@ import { jiraIntegrationService } from "./jiraIntegrationService";
 import { linearIntegrationService } from "./linearIntegrationService";
 import { trelloIntegrationService } from "./trelloIntegrationService";
 import { notionIntegrationService } from "./notionIntegrationService";
+import { googleIntegrationService } from "./googleIntegrationService";
+import { microsoftIntegrationService } from "./microsoftIntegrationService";
+import { DocumentGenerator } from "../utils/documentGenerator";
 import { aiUsageService } from "./aiUsageService";
 import type { TaskMetadata } from "./taskMetadataTypes";
 import { getPersonaInstructions } from "./personaService";
@@ -153,6 +156,8 @@ export interface CreateTranscriptInput {
   syncToLinear?: boolean;
   syncToTrello?: boolean;
   syncToNotion?: boolean;
+  exportToGoogleDrive?: boolean;
+  exportToOneDrive?: boolean;
   workspaceId: string;
   taskStrategy?: "AUTO" | "SINGLE_TICKET" | "SPECIFIC_COUNT";
   taskCount?: number;
@@ -720,6 +725,16 @@ export class ProjectTranscriptService {
       });
     }
 
+    // Auto-Export Document to Cloud Storage
+    if (input.exportToGoogleDrive || input.exportToOneDrive) {
+      this.autoExportDocument(input.workspaceId, result.transcript, analysisRaw, {
+        exportToGoogleDrive: input.exportToGoogleDrive,
+        exportToOneDrive: input.exportToOneDrive,
+      }).catch((err) => {
+        logger.warn("Failed to auto-export document to cloud storage", err);
+      });
+    }
+
     return {
       transcript: result.transcript,
       tasks: result.createdTasks,
@@ -1185,6 +1200,65 @@ ${content}`;
         metadata: existingMetadata as unknown as Prisma.InputJsonValue,
       },
     });
+  }
+  private async autoExportDocument(
+    workspaceId: string,
+    transcript: Transcript,
+    analysisRaw: TranscriptAnalysis,
+    options: { exportToGoogleDrive?: boolean; exportToOneDrive?: boolean },
+  ): Promise<void> {
+    const title = transcript.title || analysisRaw.title || "Meeting Summary";
+    const date = (transcript.recordedAt || new Date()).toISOString().split("T")[0];
+    const filename = `${date} - ${title.replace(/[/\\?%*:|"<>]/g, "-")}.docx`;
+
+    // Convert the summary + tasks into Markdown
+    let markdownContent = `# ${title}\n\n`;
+    markdownContent += `## Summary\n${analysisRaw.summary}\n\n`;
+    markdownContent += `## Action Items & Tasks\n`;
+    
+    if (analysisRaw.tasks.length === 0) {
+      markdownContent += "No tasks extracted.\n";
+    } else {
+      analysisRaw.tasks.forEach((task: TranscriptTask, index: number) => {
+        markdownContent += `### ${index + 1}. ${task.title}\n`;
+        markdownContent += `**Description:** ${task.description || "N/A"}\n\n`;
+        if (task.acceptanceCriteria) {
+          markdownContent += `**Acceptance Criteria:**\n`;
+          markdownContent += `${task.acceptanceCriteria}\n`;
+        }
+        markdownContent += "\n";
+      });
+    }
+
+    // Generate .docx Buffer
+    const buffer = await DocumentGenerator.generateDocx(markdownContent);
+
+    if (options.exportToGoogleDrive) {
+      try {
+        const link = await googleIntegrationService.uploadFileToDrive(
+          workspaceId,
+          filename,
+          buffer,
+          "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        );
+        logger.info(`Successfully exported document to Google Drive: ${link}`);
+      } catch (err) {
+        logger.error("Error exporting to Google Drive:", err);
+      }
+    }
+
+    if (options.exportToOneDrive) {
+      try {
+        const link = await microsoftIntegrationService.uploadFileToOneDrive(
+          workspaceId,
+          filename,
+          buffer
+        );
+        logger.info(`Successfully exported document to OneDrive: ${link}`);
+      } catch (err) {
+        logger.error("Error exporting to OneDrive:", err);
+      }
+    }
   }
 }
 

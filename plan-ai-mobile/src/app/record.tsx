@@ -297,10 +297,14 @@ export default function RecordScreen() {
   const [syncToLinear, setSyncToLinear] = useState(false);
   const [syncToTrello, setSyncToTrello] = useState(false);
   const [syncToNotion, setSyncToNotion] = useState(false);
+  const [exportToGoogleDrive, setExportToGoogleDrive] = useState(false);
+  const [exportToOneDrive, setExportToOneDrive] = useState(false);
   const [hasJira, setHasJira] = useState(false);
   const [hasLinear, setHasLinear] = useState(false);
   const [hasTrello, setHasTrello] = useState(false);
   const [hasNotion, setHasNotion] = useState(false);
+  const [hasGoogleDrive, setHasGoogleDrive] = useState(false);
+  const [hasOneDrive, setHasOneDrive] = useState(false);
 
   const [taskStrategy, setTaskStrategy] = useState<
     "AUTO" | "SINGLE_TICKET" | "SPECIFIC_COUNT"
@@ -538,10 +542,18 @@ export default function RecordScreen() {
           const notion = (ints as any[]).find(
             (i) => i.provider === "NOTION" && i.status === "CONNECTED",
           );
+          const googleDrive = (ints as any[]).find(
+            (i) => i.provider === "GOOGLE_DRIVE" && i.status === "CONNECTED",
+          );
+          const oneDrive = (ints as any[]).find(
+            (i) => i.provider === "ONEDRIVE" && i.status === "CONNECTED",
+          );
           if (jira) setHasJira(true);
           if (linear) setHasLinear(true);
           if (trello) setHasTrello(true);
           if (notion) setHasNotion(true);
+          if (googleDrive) setHasGoogleDrive(true);
+          if (oneDrive) setHasOneDrive(true);
 
           // As per UX requirement, default to OFF on mobile to avoid accidental spam
           setSyncToJira(false);
@@ -799,6 +811,8 @@ export default function RecordScreen() {
         syncToLinear,
         syncToTrello,
         syncToNotion,
+        exportToGoogleDrive,
+        exportToOneDrive,
         taskStrategy,
         taskCount,
         skipAi,
@@ -839,6 +853,8 @@ export default function RecordScreen() {
           syncToLinear,
           syncToTrello,
           syncToNotion,
+          exportToGoogleDrive,
+          exportToOneDrive,
           taskStrategy,
           taskCount,
           skipAi,
@@ -1041,6 +1057,30 @@ export default function RecordScreen() {
                       {c.name}
                     </Chip>
                   ))}
+                </View>
+              )}
+
+              {hasGoogleDrive && (
+                <View style={styles.optionRow}>
+                  <Text style={styles.optionText}>Export document to Google Drive</Text>
+                  <Switch
+                    value={exportToGoogleDrive}
+                    onValueChange={setExportToGoogleDrive}
+                    trackColor={{ false: '#333', true: '#4ade80' }}
+                    thumbColor="#fff"
+                  />
+                </View>
+              )}
+
+              {hasOneDrive && (
+                <View style={styles.optionRow}>
+                  <Text style={styles.optionText}>Export document to OneDrive</Text>
+                  <Switch
+                    value={exportToOneDrive}
+                    onValueChange={setExportToOneDrive}
+                    trackColor={{ false: '#333', true: '#4ade80' }}
+                    thumbColor="#fff"
+                  />
                 </View>
               )}
             </View>
@@ -1851,5 +1891,15 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 16,
+  },
+  optionRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  optionText: {
+    fontSize: 16,
+    color: "#e5e7eb",
   },
 });

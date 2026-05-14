@@ -2,7 +2,6 @@
 import axios from "axios";
 import { PrismaClient, IntegrationStatus, IntegrationProvider } from "@prisma/client";
 import EnvUtils from "../utils/EnvUtils";
-import { IntegrationMetadata } from "./integrationMetadataTypes";
 
 const prisma = new PrismaClient();
 
@@ -143,6 +142,39 @@ export class MicrosoftIntegrationService {
       isConnected: true,
       userEmail: integration.accountName || undefined,
     };
+  }
+
+  public async uploadFileToOneDrive(
+    workspaceId: string,
+    filename: string,
+    buffer: Buffer,
+  ): Promise<string> {
+    const integration = await prisma.workspaceIntegration.findUnique({
+      where: {
+        workspaceId_provider: {
+          workspaceId,
+          provider: IntegrationProvider.ONEDRIVE,
+        },
+      },
+    });
+
+    if (!integration || integration.status !== IntegrationStatus.CONNECTED || !integration.accessToken) {
+      throw new Error("Microsoft OneDrive integration is not connected.");
+    }
+
+    const accessToken = integration.accessToken;
+
+    // Use Microsoft Graph API to upload file to root of OneDrive
+    const url = `https://graph.microsoft.com/v1.0/me/drive/root:/${encodeURIComponent(filename)}:/content`;
+    
+    const response = await axios.put(url, buffer, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      },
+    });
+
+    return response.data.webUrl || "";
   }
 }
 

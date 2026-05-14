@@ -19,6 +19,7 @@ import {
   Checkbox,
   FormControlLabel,
   FormGroup,
+  Switch,
 } from "@mui/material";
 import {
   Stop as StopIcon,
@@ -203,6 +204,8 @@ const Recording: React.FC = () => {
   const [syncToLinear, setSyncToLinear] = useState<boolean>(false);
   const [syncToTrello, setSyncToTrello] = useState<boolean>(false);
   const [syncToNotion, setSyncToNotion] = useState<boolean>(false);
+  const [exportToGoogleDrive, setExportToGoogleDrive] = useState<boolean>(false);
+  const [exportToOneDrive, setExportToOneDrive] = useState<boolean>(false);
   
   const [taskStrategy, setTaskStrategy] = useState<"AUTO" | "SINGLE_TICKET" | "SPECIFIC_COUNT">("AUTO");
   const [taskCount, setTaskCount] = useState<number>(5);
@@ -403,14 +406,14 @@ const Recording: React.FC = () => {
         syncToLinear,
         syncToTrello,
         syncToNotion,
+        exportToGoogleDrive,
+        exportToOneDrive,
         taskStrategy,
         taskCount,
         skipAi,
         micFile: blobs.micBlob,
         sysFile: blobs.sysBlob,
       });
-
-      // NATIVE AUTO-SYNC: The backend now handles syncing directly during transcript creation and fully respects our checkbox selection config!
       
       // Navigate back to the home/dashboard immediately to allow async processing
       navigate(`/`);
@@ -433,6 +436,8 @@ const Recording: React.FC = () => {
     syncToLinear,
     syncToTrello,
     syncToNotion,
+    exportToGoogleDrive,
+    exportToOneDrive,
     taskStrategy,
     taskCount,
   ]);
@@ -786,6 +791,30 @@ const Recording: React.FC = () => {
                   Sync generated tasks to Notion
                 </Typography>
               }
+            />
+          )}
+          {integrations.find((i) => i.provider === "GOOGLE_DRIVE" && i.status === "CONNECTED") && (
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={exportToGoogleDrive}
+                  onChange={(_, checked) => setExportToGoogleDrive(checked)}
+                  color="primary"
+                />
+              }
+              label="Export document to Google Drive"
+            />
+          )}
+          {integrations.find((i) => i.provider === "ONEDRIVE" && i.status === "CONNECTED") && (
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={exportToOneDrive}
+                  onChange={(_, checked) => setExportToOneDrive(checked)}
+                  color="primary"
+                />
+              }
+              label="Export document to OneDrive"
             />
           )}
         </FormGroup>

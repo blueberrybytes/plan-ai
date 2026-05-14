@@ -1,5 +1,5 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 import { google, drive_v3, Auth } from "googleapis";
+import { Readable } from "stream";
 import EnvUtils from "../utils/EnvUtils";
 import { PrismaClient, IntegrationProvider, IntegrationStatus } from "@prisma/client";
 
@@ -62,6 +62,7 @@ class GoogleIntegrationService {
         if (stateObj.redirectPath) {
           return `${frontendUrl}${stateObj.redirectPath}`;
         }
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       } catch (e) {
         // Fall through
       }
@@ -223,6 +224,54 @@ class GoogleIntegrationService {
       chunks.push(Buffer.from(chunk));
     }
     return Buffer.concat(chunks);
+  }
+
+  public async uploadFileToDrive(
+    workspaceId: string,
+    filename: string,
+    buffer: Buffer,
+    mimeType: string,
+  ): Promise<string> {
+    const integration = await prisma.workspaceIntegration.findUnique({
+      where: {
+        workspaceId_provider: {
+          workspaceId,
+          provider: IntegrationProvider.GOOGLE_DRIVE,
+        },
+      },
+    });
+
+    if (!integration || integration.status !== IntegrationStatus.CONNECTED || !integration.accessToken) {
+      throw new Error("Google Drive integration is not connected.");
+    }
+
+    const oauth2Client = this.getOAuthClient();
+    oauth2Client.setCredentials({
+      access_token: integration.accessToken,
+      refresh_token: integration.refreshToken,
+      expiry_date: integration.expiresAt?.getTime(),
+    });
+
+    const drive = google.drive({ version: "v3", auth: oauth2Client });
+
+    // Readable stream from buffer
+    const stream = new Readable();
+    stream.push(buffer);
+    stream.push(null);
+
+    const response = await drive.files.create({
+      requestBody: {
+        name: filename,
+        mimeType,
+      },
+      media: {
+        mimeType,
+        body: stream,
+      },
+      fields: "id, webViewLink",
+    });
+
+    return response.data.webViewLink || "";
   }
 }
 

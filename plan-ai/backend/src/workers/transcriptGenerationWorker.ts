@@ -36,6 +36,8 @@ export const transcriptGenerationWorker = new Worker<TranscriptGenerationJobPayl
         syncToLinear: job.data.syncToLinear,
         syncToTrello: job.data.syncToTrello,
         syncToNotion: job.data.syncToNotion,
+        exportToGoogleDrive: job.data.exportToGoogleDrive,
+        exportToOneDrive: job.data.exportToOneDrive,
         taskStrategy: job.data.taskStrategy,
         taskCount: job.data.taskCount,
         contextPrompt: job.data.contextPrompt,

@@ -1841,6 +1841,12 @@
 					"syncToNotion": {
 						"type": "boolean"
 					},
+					"exportToGoogleDrive": {
+						"type": "boolean"
+					},
+					"exportToOneDrive": {
+						"type": "boolean"
+					},
 					"taskStrategy": {
 						"type": "string",
 						"enum": [
@@ -7589,6 +7595,12 @@
 										"type": "string"
 									},
 									"syncToNotion": {
+										"type": "string"
+									},
+									"exportToGoogleDrive": {
+										"type": "string"
+									},
+									"exportToOneDrive": {
 										"type": "string"
 									},
 									"skipAi": {
