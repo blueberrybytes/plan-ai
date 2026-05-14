@@ -555,8 +555,9 @@ const Recording: React.FC = () => {
       },
       onStop: () => void handleStop(),
       onError: (err) => {
-        setError(err.message);
-        setPhase("error");
+        setError(err.message || "Connection lost. Audio transcription stopped.");
+        // We do NOT setPhase("error") here. The recorder will call onStop() 
+        // automatically when the socket closes, which will move us to the save screen.
       },
     });
 
@@ -1031,6 +1032,12 @@ const Recording: React.FC = () => {
           </Button>
         </Stack>
       </Stack>
+
+      {error && (
+        <Alert severity="warning" onClose={() => setError(null)} sx={{ m: 2 }}>
+          {error}
+        </Alert>
+      )}
 
       {/* Waveform */}
       <Box

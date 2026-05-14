@@ -597,6 +597,9 @@ export default function RecordScreen() {
             setIsSpeaking(true);
           } else if (msg.type === "utterance_end") {
             setIsSpeaking(false);
+          } else if (msg.type === "error") {
+            console.error("[WS Error from Backend]", msg.message);
+            Alert.alert("Connection Warning", msg.message || "Lost connection to the transcription server. You can still save what you have.");
           }
         } catch (e) {
           console.error("[WS Data Handling Error]", e);

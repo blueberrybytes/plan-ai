@@ -296,7 +296,21 @@ export function setupAudioStream(server: Server) {
         dgConn.on(LiveTranscriptionEvents.Error, (err: Error | unknown) => {
           clearInterval(diagInterval);
           clearInterval(keepAliveInterval);
-          console.error(`[Deepgram] Error on ${source}:`, err);
+          if (ws.readyState === ws.OPEN) {
+            let errMsg = "Unknown Deepgram Error";
+            if (err instanceof Error) errMsg = err.message;
+            else if (typeof err === "object" && err !== null && "message" in err)
+              errMsg = String(err.message);
+            else if (typeof err === "string") errMsg = err;
+            else errMsg = String(err);
+
+            // Format for a better user experience
+            if (errMsg.includes("Received network error or non-101 status code")) {
+              errMsg = "Transcription server is currently unavailable (Network Error).";
+            }
+
+            ws.send(JSON.stringify({ type: "error", message: errMsg }));
+          }
         });
 
         dgConn.on(LiveTranscriptionEvents.Close, (event: unknown) => {
