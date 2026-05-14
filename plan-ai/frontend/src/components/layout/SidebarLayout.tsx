@@ -35,6 +35,7 @@ import {
   Group as GroupIcon,
   DesktopWindows as DesktopWindowsIcon,
   Smartphone as SmartphoneIcon,
+  BarChart as BarChartIcon,
 } from "@mui/icons-material";
 import { NavLink, useLocation } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
@@ -73,6 +74,11 @@ const navItems: NavItem[] = [
     labelKey: "sidebarLayout.nav.team",
     path: "/team",
     icon: <GroupIcon fontSize="small" />,
+  },
+  {
+    labelKey: "sidebarLayout.nav.analytics",
+    path: "/analytics",
+    icon: <BarChartIcon fontSize="small" />,
   },
   {
     labelKey: "sidebarLayout.nav.sessions",

@@ -133,3 +133,6 @@ Only ADMIN or OWNER of the workspace can create integrations. And an integration
 - Build a "Meeting Health" dashboard in the web app with trend charts.
 - Export weekly/monthly reports as PDF or email digest.
 - **Impact:** This is the feature that sells Plan AI to enterprise — managers love data about their team's meeting culture.
+
+## 17 On meetings
+we can add also the pain points if exists of the client and things that client consider important

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import React, { useEffect } from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { HelmetProvider } from "react-helmet-async";
@@ -11,6 +12,7 @@ import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import ChatHome from "./pages/ChatHome";
 import LandingPage from "./pages/LandingPage";
+import Analytics from "./pages/Analytics";
 import DeleteData from "./pages/DeleteData";
 import SignUp from "./pages/SignUp";
 import ForgotPassword from "./pages/ForgotPassword";
@@ -109,6 +111,7 @@ const AppContent: React.FC = () => {
         <Route element={<AuthenticatedRoute />}>
           <Route path="/home" element={<ChatHome />} />
           <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/analytics" element={<Analytics />} />
           <Route path="/projects" element={<Projects />} />
           <Route path="/projects/:projectId" element={<ProjectDetails />} />
           <Route path="/projects/:projectId/info" element={<ProjectInfo />} />

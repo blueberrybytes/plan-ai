@@ -34,3 +34,7 @@ The monorepo contains the following distinct applications:
 - **Environment Variables:** All applications require a `.env` file to run. If an app crashes on startup because it cannot find one, silently copy the `.env.template` file to `.env` in the respective directory.
 - **Port Conflicts:** If ports `3000` or `8080` are occupied and preventing startup, run the `yarn kill-ports` script from the root.
 - **Database / API Schema Changes:** If you modify `schema.prisma` in `plan-ai/backend`, you MUST run `yarn update` from the root directory. This script will migrate the database, regenerate TSOA swagger routes, and automatically sync the frontend TypeScript types.
+
+## 4. Type Safety & Metadata
+- **USE TYPED METADATA**: It is extremely important that you always use the typed metadata definitions (e.g., from `integrationMetadataTypes.ts` or `api.d.ts`) whenever you are working with `metadata` objects in the backend, frontend, recorder, or mobile apps.
+- **Do not use `any`**: Never use `any` when reading or writing metadata JSON objects. Always use the generated types or the centralized metadata schemas defined in the project. This applies to `Task` metadata, `Transcript` metadata, and `Workspace` metadata.

@@ -183,7 +183,10 @@ const ProjectTaskGantt: React.FC<ProjectTaskGanttProps> = ({ tasks, onTaskClick 
               stackId="timeline"
               fill={theme.palette.primary.main}
               radius={[4, 4, 4, 4]}
-              onClick={({ task }) => handleBarClick({ task })}
+              onClick={(event: unknown) => {
+                const chartEvent = event as ChartDatum;
+                handleBarClick({ task: chartEvent.task });
+              }}
             />
           </ComposedChart>
         </ResponsiveContainer>

@@ -58,6 +58,8 @@ import { BrandThemeController } from './../controller/brandThemeController';
 // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
 import { AudioController } from './../controller/audioController';
 // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+import { AnalyticsController } from './../controller/analyticsController';
+// WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
 import { AiUsageController } from './../controller/aiUsageController';
 // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
 import { AiController } from './../controller/aiController';
@@ -1655,6 +1657,23 @@ const models: TsoaRoute.Models = {
     "ApiResponse__text-string__": {
         "dataType": "refAlias",
         "type": {"dataType":"nestedObjectLiteral","nestedProperties":{"message":{"dataType":"string"},"data":{"dataType":"union","subSchemas":[{"dataType":"nestedObjectLiteral","nestedProperties":{"text":{"dataType":"string","required":true}}},{"dataType":"enum","enums":[null]}],"required":true},"status":{"dataType":"double","required":true}},"validators":{}},
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "DashboardAnalytics": {
+        "dataType": "refObject",
+        "properties": {
+            "period": {"dataType":"nestedObjectLiteral","nestedProperties":{"end":{"dataType":"string","required":true},"start":{"dataType":"string","required":true}},"required":true},
+            "meetings": {"dataType":"nestedObjectLiteral","nestedProperties":{"bySource":{"dataType":"array","array":{"dataType":"nestedObjectLiteral","nestedProperties":{"count":{"dataType":"double","required":true},"source":{"dataType":"string","required":true}}},"required":true},"byWeek":{"dataType":"array","array":{"dataType":"nestedObjectLiteral","nestedProperties":{"totalMinutes":{"dataType":"double","required":true},"count":{"dataType":"double","required":true},"week":{"dataType":"string","required":true}}},"required":true},"avgParticipants":{"dataType":"double","required":true},"avgDurationMinutes":{"dataType":"double","required":true},"totalHours":{"dataType":"double","required":true},"total":{"dataType":"double","required":true}},"required":true},
+            "tasks": {"dataType":"nestedObjectLiteral","nestedProperties":{"completionTrend":{"dataType":"array","array":{"dataType":"nestedObjectLiteral","nestedProperties":{"created":{"dataType":"double","required":true},"completed":{"dataType":"double","required":true},"week":{"dataType":"string","required":true}}},"required":true},"byPriority":{"dataType":"array","array":{"dataType":"nestedObjectLiteral","nestedProperties":{"count":{"dataType":"double","required":true},"priority":{"dataType":"string","required":true}}},"required":true},"byStatus":{"dataType":"array","array":{"dataType":"nestedObjectLiteral","nestedProperties":{"count":{"dataType":"double","required":true},"status":{"dataType":"string","required":true}}},"required":true},"completionRate":{"dataType":"double","required":true},"tasksPerMeeting":{"dataType":"double","required":true},"totalGenerated":{"dataType":"double","required":true}},"required":true},
+            "sentiment": {"dataType":"nestedObjectLiteral","nestedProperties":{"trend":{"dataType":"array","array":{"dataType":"nestedObjectLiteral","nestedProperties":{"negative":{"dataType":"double","required":true},"neutral":{"dataType":"double","required":true},"positive":{"dataType":"double","required":true},"week":{"dataType":"string","required":true}}},"required":true},"distribution":{"dataType":"array","array":{"dataType":"nestedObjectLiteral","nestedProperties":{"count":{"dataType":"double","required":true},"sentiment":{"dataType":"string","required":true}}},"required":true}},"required":true},
+            "aiUsage": {"dataType":"nestedObjectLiteral","nestedProperties":{"trend":{"dataType":"array","array":{"dataType":"nestedObjectLiteral","nestedProperties":{"cost":{"dataType":"double","required":true},"tokens":{"dataType":"double","required":true},"week":{"dataType":"string","required":true}}},"required":true},"byFeature":{"dataType":"array","array":{"dataType":"nestedObjectLiteral","nestedProperties":{"cost":{"dataType":"double","required":true},"tokens":{"dataType":"double","required":true},"feature":{"dataType":"string","required":true}}},"required":true},"totalCost":{"dataType":"double","required":true},"totalTokens":{"dataType":"double","required":true}},"required":true},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "ApiResponse_DashboardAnalytics_": {
+        "dataType": "refAlias",
+        "type": {"dataType":"nestedObjectLiteral","nestedProperties":{"message":{"dataType":"string"},"data":{"dataType":"union","subSchemas":[{"ref":"DashboardAnalytics"},{"dataType":"enum","enums":[null]}],"required":true},"status":{"dataType":"double","required":true}},"validators":{}},
     },
     // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
     "AiUsageMetricsResponse": {
@@ -6264,6 +6283,38 @@ export function RegisterRoutes(app: Router,opts?:{multer?:ReturnType<typeof mult
 
               await templateService.apiHandler({
                 methodName: 'transcribeChunk',
+                controller,
+                response,
+                next,
+                validatedArgs,
+                successStatus: undefined,
+              });
+            } catch (err) {
+                return next(err);
+            }
+        });
+        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+        const argsAnalyticsController_getDashboardAnalytics: Record<string, TsoaRoute.ParameterSchema> = {
+                request: {"in":"request","name":"request","required":true,"dataType":"object"},
+                period: {"default":"30d","in":"query","name":"period","dataType":"union","subSchemas":[{"dataType":"enum","enums":["7d"]},{"dataType":"enum","enums":["30d"]},{"dataType":"enum","enums":["90d"]},{"dataType":"enum","enums":["all"]}]},
+        };
+        app.get('/api/analytics/dashboard',
+            authenticateMiddleware([{"ClientLevel":[]}]),
+            ...(fetchMiddlewares<RequestHandler>(AnalyticsController)),
+            ...(fetchMiddlewares<RequestHandler>(AnalyticsController.prototype.getDashboardAnalytics)),
+
+            async function AnalyticsController_getDashboardAnalytics(request: ExRequest, response: ExResponse, next: any) {
+
+            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+
+            let validatedArgs: any[] = [];
+            try {
+                validatedArgs = templateService.getValidatedArgs({ args: argsAnalyticsController_getDashboardAnalytics, request, response });
+
+                const controller = new AnalyticsController();
+
+              await templateService.apiHandler({
+                methodName: 'getDashboardAnalytics',
                 controller,
                 response,
                 next,

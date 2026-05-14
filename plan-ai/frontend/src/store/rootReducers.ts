@@ -27,6 +27,7 @@ import { userApi } from "./apis/userApi";
 import { adminApi } from "./apis/adminApi";
 import { workspaceApi } from "./apis/workspaceApi";
 import { onboardingApi } from "./apis/onboardingApi";
+import { analyticsApi } from "./apis/analyticsApi";
 
 // Define the combined reducers
 const appReducers = combineReducers({
@@ -56,6 +57,7 @@ const appReducers = combineReducers({
   [adminApi.reducerPath]: adminApi.reducer,
   [workspaceApi.reducerPath]: workspaceApi.reducer,
   [onboardingApi.reducerPath]: onboardingApi.reducer,
+  [analyticsApi.reducerPath]: analyticsApi.reducer,
 });
 
 // Create a root reducer that can handle the reset action
@@ -88,6 +90,7 @@ const rootReducers = (state: any, action: any) => {
       [trelloApi.reducerPath]: undefined,
       [notionApi.reducerPath]: undefined,
       [aiUsageApi.reducerPath]: undefined,
+      [analyticsApi.reducerPath]: undefined,
       // Note: We deliberately exclude authApi, accountApi, userApi, adminApi, onboardingApi
       // because their context is global (User-level) and doesn't rotate.
       // We also exclude workspaceApi so the switcher UI doesn't stutter/reload its dropdown list.

@@ -700,6 +700,7 @@
     "nav": {
       "home": "Home",
       "dashboard": "Dashboard",
+      "analytics": "Analytics",
       "team": "Workspace Team",
       "sessions": "Projects",
       "chat": "Chat",

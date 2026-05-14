@@ -58,6 +58,7 @@ All three frontends (web, mobile, recorder) consume types generated directly fro
 - **NEVER manually define or duplicate** interfaces that already exist as a schema in `api.d.ts`. Always use the generated type alias pattern above.
 - **ALWAYS run `yarn update`** after modifying `schema.prisma` or any TSOA controller — this regenerates the swagger AND re-syncs `api.d.ts` for all three frontends automatically.
 - If a field access on a generated type fails with TS2339 (e.g., on `metadata` or `utterances` typed as `TsoaJsonObject`), use a **local cast** at the call site (`as Record<string, unknown>`) — do NOT revert to a manual interface.
+- **USE TYPED METADATA**: It is extremely important that you always use the typed metadata definitions (e.g., from `integrationMetadataTypes.ts` or `api.d.ts`) whenever you are working with `metadata` objects in the backend, frontend, recorder, or mobile apps. Never use `any` when reading or writing metadata JSON objects.
 
 ### Per-app commands
 | App                | Script                      | Output                             |

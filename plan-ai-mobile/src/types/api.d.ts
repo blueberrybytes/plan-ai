@@ -1704,6 +1704,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/analytics/dashboard": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetDashboardAnalytics"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/ai-usage": {
         parameters: {
             query?: never;
@@ -3252,6 +3268,101 @@ export interface components {
             data: {
                 text: string;
             } | null;
+            /** Format: double */
+            status: number;
+        };
+        DashboardAnalytics: {
+            period: {
+                end: string;
+                start: string;
+            };
+            meetings: {
+                bySource: {
+                    /** Format: double */
+                    count: number;
+                    source: string;
+                }[];
+                byWeek: {
+                    /** Format: double */
+                    totalMinutes: number;
+                    /** Format: double */
+                    count: number;
+                    week: string;
+                }[];
+                /** Format: double */
+                avgParticipants: number;
+                /** Format: double */
+                avgDurationMinutes: number;
+                /** Format: double */
+                totalHours: number;
+                /** Format: double */
+                total: number;
+            };
+            tasks: {
+                completionTrend: {
+                    /** Format: double */
+                    created: number;
+                    /** Format: double */
+                    completed: number;
+                    week: string;
+                }[];
+                byPriority: {
+                    /** Format: double */
+                    count: number;
+                    priority: string;
+                }[];
+                byStatus: {
+                    /** Format: double */
+                    count: number;
+                    status: string;
+                }[];
+                /** Format: double */
+                completionRate: number;
+                /** Format: double */
+                tasksPerMeeting: number;
+                /** Format: double */
+                totalGenerated: number;
+            };
+            sentiment: {
+                trend: {
+                    /** Format: double */
+                    negative: number;
+                    /** Format: double */
+                    neutral: number;
+                    /** Format: double */
+                    positive: number;
+                    week: string;
+                }[];
+                distribution: {
+                    /** Format: double */
+                    count: number;
+                    sentiment: string;
+                }[];
+            };
+            aiUsage: {
+                trend: {
+                    /** Format: double */
+                    cost: number;
+                    /** Format: double */
+                    tokens: number;
+                    week: string;
+                }[];
+                byFeature: {
+                    /** Format: double */
+                    cost: number;
+                    /** Format: double */
+                    tokens: number;
+                    feature: string;
+                }[];
+                /** Format: double */
+                totalCost: number;
+                /** Format: double */
+                totalTokens: number;
+            };
+        };
+        ApiResponse_DashboardAnalytics_: {
+            message?: string;
+            data: components["schemas"]["DashboardAnalytics"] | null;
             /** Format: double */
             status: number;
         };
@@ -6992,6 +7103,28 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ApiResponse__text-string__"];
+                };
+            };
+        };
+    };
+    GetDashboardAnalytics: {
+        parameters: {
+            query?: {
+                period?: "7d" | "30d" | "90d" | "all";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_DashboardAnalytics_"];
                 };
             };
         };

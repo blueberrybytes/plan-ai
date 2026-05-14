@@ -49,6 +49,8 @@ This command:
 
 **Frontend Rule**: ALWAYS use types from `src/types/api.d.ts` for API responses/requests.
 
+**Metadata Rule**: USE TYPED METADATA. It is extremely important that you always use the typed metadata definitions (e.g., from `integrationMetadataTypes.ts` or `api.d.ts`) whenever you are working with `metadata` objects. Never use `any` when reading or writing metadata JSON objects.
+
 ## Coding Standards
 
 ### Frontend

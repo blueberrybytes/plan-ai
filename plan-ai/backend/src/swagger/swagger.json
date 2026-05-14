@@ -4757,6 +4757,341 @@
 				],
 				"type": "object"
 			},
+			"DashboardAnalytics": {
+				"properties": {
+					"period": {
+						"properties": {
+							"end": {
+								"type": "string"
+							},
+							"start": {
+								"type": "string"
+							}
+						},
+						"required": [
+							"end",
+							"start"
+						],
+						"type": "object"
+					},
+					"meetings": {
+						"properties": {
+							"bySource": {
+								"items": {
+									"properties": {
+										"count": {
+											"type": "number",
+											"format": "double"
+										},
+										"source": {
+											"type": "string"
+										}
+									},
+									"required": [
+										"count",
+										"source"
+									],
+									"type": "object"
+								},
+								"type": "array"
+							},
+							"byWeek": {
+								"items": {
+									"properties": {
+										"totalMinutes": {
+											"type": "number",
+											"format": "double"
+										},
+										"count": {
+											"type": "number",
+											"format": "double"
+										},
+										"week": {
+											"type": "string"
+										}
+									},
+									"required": [
+										"totalMinutes",
+										"count",
+										"week"
+									],
+									"type": "object"
+								},
+								"type": "array"
+							},
+							"avgParticipants": {
+								"type": "number",
+								"format": "double"
+							},
+							"avgDurationMinutes": {
+								"type": "number",
+								"format": "double"
+							},
+							"totalHours": {
+								"type": "number",
+								"format": "double"
+							},
+							"total": {
+								"type": "number",
+								"format": "double"
+							}
+						},
+						"required": [
+							"bySource",
+							"byWeek",
+							"avgParticipants",
+							"avgDurationMinutes",
+							"totalHours",
+							"total"
+						],
+						"type": "object"
+					},
+					"tasks": {
+						"properties": {
+							"completionTrend": {
+								"items": {
+									"properties": {
+										"created": {
+											"type": "number",
+											"format": "double"
+										},
+										"completed": {
+											"type": "number",
+											"format": "double"
+										},
+										"week": {
+											"type": "string"
+										}
+									},
+									"required": [
+										"created",
+										"completed",
+										"week"
+									],
+									"type": "object"
+								},
+								"type": "array"
+							},
+							"byPriority": {
+								"items": {
+									"properties": {
+										"count": {
+											"type": "number",
+											"format": "double"
+										},
+										"priority": {
+											"type": "string"
+										}
+									},
+									"required": [
+										"count",
+										"priority"
+									],
+									"type": "object"
+								},
+								"type": "array"
+							},
+							"byStatus": {
+								"items": {
+									"properties": {
+										"count": {
+											"type": "number",
+											"format": "double"
+										},
+										"status": {
+											"type": "string"
+										}
+									},
+									"required": [
+										"count",
+										"status"
+									],
+									"type": "object"
+								},
+								"type": "array"
+							},
+							"completionRate": {
+								"type": "number",
+								"format": "double"
+							},
+							"tasksPerMeeting": {
+								"type": "number",
+								"format": "double"
+							},
+							"totalGenerated": {
+								"type": "number",
+								"format": "double"
+							}
+						},
+						"required": [
+							"completionTrend",
+							"byPriority",
+							"byStatus",
+							"completionRate",
+							"tasksPerMeeting",
+							"totalGenerated"
+						],
+						"type": "object"
+					},
+					"sentiment": {
+						"properties": {
+							"trend": {
+								"items": {
+									"properties": {
+										"negative": {
+											"type": "number",
+											"format": "double"
+										},
+										"neutral": {
+											"type": "number",
+											"format": "double"
+										},
+										"positive": {
+											"type": "number",
+											"format": "double"
+										},
+										"week": {
+											"type": "string"
+										}
+									},
+									"required": [
+										"negative",
+										"neutral",
+										"positive",
+										"week"
+									],
+									"type": "object"
+								},
+								"type": "array"
+							},
+							"distribution": {
+								"items": {
+									"properties": {
+										"count": {
+											"type": "number",
+											"format": "double"
+										},
+										"sentiment": {
+											"type": "string"
+										}
+									},
+									"required": [
+										"count",
+										"sentiment"
+									],
+									"type": "object"
+								},
+								"type": "array"
+							}
+						},
+						"required": [
+							"trend",
+							"distribution"
+						],
+						"type": "object"
+					},
+					"aiUsage": {
+						"properties": {
+							"trend": {
+								"items": {
+									"properties": {
+										"cost": {
+											"type": "number",
+											"format": "double"
+										},
+										"tokens": {
+											"type": "number",
+											"format": "double"
+										},
+										"week": {
+											"type": "string"
+										}
+									},
+									"required": [
+										"cost",
+										"tokens",
+										"week"
+									],
+									"type": "object"
+								},
+								"type": "array"
+							},
+							"byFeature": {
+								"items": {
+									"properties": {
+										"cost": {
+											"type": "number",
+											"format": "double"
+										},
+										"tokens": {
+											"type": "number",
+											"format": "double"
+										},
+										"feature": {
+											"type": "string"
+										}
+									},
+									"required": [
+										"cost",
+										"tokens",
+										"feature"
+									],
+									"type": "object"
+								},
+								"type": "array"
+							},
+							"totalCost": {
+								"type": "number",
+								"format": "double"
+							},
+							"totalTokens": {
+								"type": "number",
+								"format": "double"
+							}
+						},
+						"required": [
+							"trend",
+							"byFeature",
+							"totalCost",
+							"totalTokens"
+						],
+						"type": "object"
+					}
+				},
+				"required": [
+					"period",
+					"meetings",
+					"tasks",
+					"sentiment",
+					"aiUsage"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"ApiResponse_DashboardAnalytics_": {
+				"properties": {
+					"message": {
+						"type": "string"
+					},
+					"data": {
+						"allOf": [
+							{
+								"$ref": "#/components/schemas/DashboardAnalytics"
+							}
+						],
+						"nullable": true
+					},
+					"status": {
+						"type": "number",
+						"format": "double"
+					}
+				},
+				"required": [
+					"data",
+					"status"
+				],
+				"type": "object"
+			},
 			"AiUsageMetricsResponse": {
 				"properties": {
 					"totalInputTokens": {
@@ -11253,6 +11588,48 @@
 						}
 					}
 				}
+			}
+		},
+		"/api/analytics/dashboard": {
+			"get": {
+				"operationId": "GetDashboardAnalytics",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiResponse_DashboardAnalytics_"
+								}
+							}
+						}
+					}
+				},
+				"tags": [
+					"Analytics"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": [
+					{
+						"in": "query",
+						"name": "period",
+						"required": false,
+						"schema": {
+							"default": "30d",
+							"type": "string",
+							"enum": [
+								"7d",
+								"30d",
+								"90d",
+								"all"
+							]
+						}
+					}
+				]
 			}
 		},
 		"/api/ai-usage": {
