@@ -170,7 +170,7 @@ const Projects: React.FC = () => {
 
   return (
     <SidebarLayout>
-      <Box sx={{ maxWidth: 900, mx: "auto", px: { xs: 3, md: 5 }, py: 5 }}>
+      <Box sx={{ width: "100%", px: { xs: 3, md: 5 }, py: 5 }}>
         {/* Header */}
         <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 5 }}>
           <Box>

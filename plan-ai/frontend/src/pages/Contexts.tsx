@@ -676,7 +676,7 @@ const Contexts: React.FC = () => {
               <Alert severity="error">{t("contexts.messages.contextError")}</Alert>
             </Box>
           ) : context ? (
-            <Box sx={{ maxWidth: 860, mx: "auto", px: { xs: 3, md: 5 }, py: 5 }}>
+            <Box sx={{ width: "100%", px: { xs: 3, md: 5 }, py: 5 }}>
               <Stack spacing={4}>
                 {context.metadata &&
                   (context.metadata as Record<string, unknown>).syncStatus === "SYNCING" && (

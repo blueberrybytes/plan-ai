@@ -130,7 +130,7 @@ const Slides: React.FC = () => {
 
   return (
     <SidebarLayout>
-      <Box sx={{ p: { xs: 2, md: 4 }, maxWidth: 1200, mx: "auto" }}>
+      <Box sx={{ p: { xs: 2, md: 4 }, width: "100%" }}>
         {/* Header */}
         <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 4 }}>
           <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>

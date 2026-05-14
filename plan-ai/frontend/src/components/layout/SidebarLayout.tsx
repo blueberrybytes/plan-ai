@@ -160,8 +160,17 @@ const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children, fullHeight = fa
     return items;
   }, [userDb?.role]);
 
-  const isNavActive = (path: string): boolean =>
-    location.pathname === path || location.pathname.startsWith(`${path}/`);
+  const isNavActive = React.useCallback(
+    (path: string): boolean =>
+      location.pathname === path || location.pathname.startsWith(`${path}/`),
+    [location.pathname],
+  );
+
+  React.useEffect(() => {
+    if (!isCollapsed && studioNavItems.some((item) => isNavActive(item.path))) {
+      setStudioOpen(true);
+    }
+  }, [isNavActive, isCollapsed]);
 
   const profileInitials = React.useMemo(() => {
     if (user?.displayName) {
@@ -471,12 +480,34 @@ const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children, fullHeight = fa
                   setStudioOpen(!studioOpen);
                 }
               }}
+              selected={
+                studioNavItems.some((i) => isNavActive(i.path)) && (isCollapsed || !studioOpen)
+              }
               sx={{
                 borderRadius: "12px",
                 mb: 0.8,
                 mx: isCollapsed ? 0.5 : 0,
                 justifyContent: isCollapsed ? "center" : "flex-start",
                 padding: isCollapsed ? "10px" : "10px 16px",
+                "&.Mui-selected": {
+                  bgcolor: alpha("#4361EE", 0.12),
+                  color: "primary.light",
+                  border: "1px solid rgba(67, 97, 238, 0.2)",
+                  "& .MuiListItemIcon-root": {
+                    color: "primary.light",
+                  },
+                  "&::after": {
+                    content: '""',
+                    position: "absolute",
+                    left: 0,
+                    top: "20%",
+                    bottom: "20%",
+                    width: "3px",
+                    bgcolor: "primary.main",
+                    borderRadius: "0 4px 4px 0",
+                    boxShadow: "0 0 10px rgba(67, 97, 238, 0.8)",
+                  },
+                },
                 "&:hover": {
                   bgcolor: "rgba(255, 255, 255, 0.04)",
                 },
