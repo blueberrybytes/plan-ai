@@ -191,34 +191,6 @@ const PROVIDER_CONFIGS: ProviderConfig[] = [
 const defaultTab: ProviderTabValue = "jira";
 
 const Integrations: React.FC = () => {
-  // Intercept OneDrive popup redirect internally to bypass COOP issues
-  useEffect(() => {
-    if (window.opener && window.location.search) {
-      const urlParams = new URLSearchParams(window.location.search);
-      const dataStr = urlParams.get("data");
-      const errorStr = urlParams.get("error");
-      const oauthStr = urlParams.get("oauth");
-      const hasOneDriveParams = dataStr || errorStr || oauthStr || urlParams.has("error");
-
-      if (hasOneDriveParams) {
-        if (dataStr) {
-          try {
-            const parsed = JSON.parse(dataStr);
-            const items = parsed.value || parsed.items || [];
-            window.opener.postMessage({ type: "success", data: { items } }, "*");
-          } catch (e) {
-            console.error("Failed to parse OneDrive data", e);
-          }
-        } else if (errorStr || urlParams.has("error")) {
-          window.opener.postMessage({ type: "cancel" }, "*");
-        }
-        
-        // Wait briefly for postMessage to dispatch, then forcefully close the popup
-        setTimeout(() => window.close(), 100);
-      }
-    }
-  }, []);
-
   const user = useSelector(selectUser);
   const activeWorkspaceId = useSelector(selectActiveWorkspaceId);
   const dispatch = useDispatch();

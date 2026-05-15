@@ -62,6 +62,36 @@
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <!-- Microsoft OneDrive SDK -->
     <script type="text/javascript" src="https://js.live.net/v7.2/OneDrive.js"></script>
+    <script>
+      // Global popup redirect interceptor for OneDrive
+      // This ensures that regardless of which React route the popup redirects to,
+      // the data is instantly passed back to the parent window and the popup is closed.
+      (function() {
+        if (window.opener && window.location.search) {
+          var urlParams = new URLSearchParams(window.location.search);
+          var dataStr = urlParams.get("data");
+          var errorStr = urlParams.get("error");
+          
+          if (dataStr || errorStr || urlParams.has("error")) {
+            // Wait slightly to let the official OneDrive.js SDK process oauth if needed
+            setTimeout(function() {
+              if (dataStr) {
+                try {
+                  var parsed = JSON.parse(dataStr);
+                  var items = parsed.value || parsed.items || [];
+                  window.opener.postMessage({ type: "success", data: { items: items } }, "*");
+                } catch (e) {
+                  console.error("Plan AI OneDrive Intercept Error:", e);
+                }
+              } else {
+                window.opener.postMessage({ type: "cancel" }, "*");
+              }
+              window.close();
+            }, 500);
+          }
+        }
+      })();
+    </script>
   </head>
   <body>
     <noscript>
