@@ -1908,9 +1908,11 @@ const ConnectedIntegrationDetails: React.FC<{
                   pickerType: "folder",
                   multiple: false,
                   onPick: async (fileIds, items) => {
+                    console.log("[Integrations] OneDrive folder pick - fileIds:", fileIds, "items:", items);
                     if (fileIds.length > 0 && items && items[0]) {
                       const folderId = fileIds[0];
                       const folderName = items[0].name;
+                      console.log("[Integrations] Sending to API - folderId:", folderId, "folderName:", folderName);
                       try {
                         await setMicrosoftFolder({ folderId, folderName }).unwrap();
                         dispatch(integrationApi.util.invalidateTags(["Integration"]));

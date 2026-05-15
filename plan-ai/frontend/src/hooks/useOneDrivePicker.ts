@@ -74,7 +74,9 @@ export const useOneDrivePicker = () => {
           endpointHint: "api.onedrive.com",
         },
         success: (response: any) => {
+          console.log("[OneDrive Picker] Raw response:", JSON.stringify(response, null, 2));
           const items = response?.value ?? [];
+          console.log("[OneDrive Picker] Parsed items:", JSON.stringify(items, null, 2));
           const fileIds = items.map((item: any) => item.id);
           if (fileIds.length > 0) {
             onPick(fileIds, items);
