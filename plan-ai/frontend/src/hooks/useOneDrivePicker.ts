@@ -72,7 +72,6 @@ export const useOneDrivePicker = () => {
         advanced: {
           redirectUri,
           endpointHint: "api.onedrive.com",
-          queryParameters: "select=id,name,size,folder",
         },
         success: (response: any) => {
           console.log("[OneDrive Picker] Raw response:", JSON.stringify(response, null, 2));
