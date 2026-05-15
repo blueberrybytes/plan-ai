@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useCallback } from "react";
 import { useDispatch } from "react-redux";
 import { setToastMessage } from "../store/slices/app/appSlice";
@@ -5,7 +6,7 @@ import { setToastMessage } from "../store/slices/app/appSlice";
 /**
  * OneDrive File Picker hook.
  *
- * Dynamically loads the official Microsoft OneDrive v7.2 SDK to ensure 
+ * Dynamically loads the official Microsoft OneDrive v7.2 SDK to ensure
  * correct popup initialization, origin verification, and callbacks.
  *
  * @see https://learn.microsoft.com/en-us/onedrive/developer/controls/file-pickers
@@ -14,7 +15,12 @@ import { setToastMessage } from "../store/slices/app/appSlice";
 interface OneDrivePickerParams {
   onPick: (
     fileIds: string[],
-    items?: Array<{ id: string; name: string; size: number; parentReference?: { driveId: string } }>,
+    items?: Array<{
+      id: string;
+      name: string;
+      size: number;
+      parentReference?: { driveId: string };
+    }>,
   ) => void;
   onCancel?: () => void;
   multiple?: boolean;
@@ -42,8 +48,7 @@ export const useOneDrivePicker = () => {
   const openPicker = useCallback(
     async ({ onPick, onCancel, multiple = false, pickerType = "file" }: OneDrivePickerParams) => {
       const clientId =
-        process.env.REACT_APP_MICROSOFT_CLIENT_ID ||
-        process.env.REACT_APP_VITE_MICROSOFT_CLIENT_ID;
+        process.env.REACT_APP_MICROSOFT_CLIENT_ID || process.env.REACT_APP_VITE_MICROSOFT_CLIENT_ID;
 
       if (!clientId) {
         dispatch(
@@ -71,6 +76,9 @@ export const useOneDrivePicker = () => {
         clientId: clientId,
         action: pickerType === "folder" ? "query" : "download",
         multiSelect: multiple,
+        advanced: {
+          redirectUri: window.location.origin + "/onedrive-picker-callback.html",
+        },
         success: (files: any) => {
           const items = files.value || [];
           const fileIds = items.map((item: any) => item.id);
@@ -99,4 +107,3 @@ export const useOneDrivePicker = () => {
 
   return { openPicker };
 };
-
