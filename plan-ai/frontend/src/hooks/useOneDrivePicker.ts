@@ -13,9 +13,13 @@ import { setToastMessage } from "../store/slices/app/appSlice";
  */
 
 interface OneDrivePickerParams {
-  onPick: (fileIds: string[]) => void;
+  onPick: (
+    fileIds: string[],
+    items?: Array<{ id: string; name: string; size: number; parentReference?: { driveId: string } }>,
+  ) => void;
   onCancel?: () => void;
   multiple?: boolean;
+  pickerType?: "file" | "folder";
 }
 
 interface OneDrivePickerMessage {
@@ -40,7 +44,7 @@ export const useOneDrivePicker = () => {
   const popupRef = useRef<Window | null>(null);
 
   const openPicker = useCallback(
-    ({ onPick, onCancel, multiple = true }: OneDrivePickerParams) => {
+    ({ onPick, onCancel, multiple = true, pickerType = "file" }: OneDrivePickerParams) => {
       const clientId =
         process.env.REACT_APP_MICROSOFT_CLIENT_ID ||
         process.env.REACT_APP_VITE_MICROSOFT_CLIENT_ID;
@@ -58,7 +62,7 @@ export const useOneDrivePicker = () => {
       // Build the picker URL with query params
       const params = new URLSearchParams({
         client_id: clientId,
-        action: "download", // "download" returns file metadata with IDs we can use via Graph API
+        action: pickerType === "folder" ? "query" : "download", // "query" returns metadata without download links, suitable for folders
         multiselect: multiple ? "true" : "false",
         advanced: JSON.stringify({
           redirectUri: window.location.origin + "/onedrive-picker-callback",
@@ -106,7 +110,7 @@ export const useOneDrivePicker = () => {
         if (message.type === "success" && message.data?.items) {
           const fileIds = message.data.items.map((item) => item.id);
           if (fileIds.length > 0) {
-            onPick(fileIds);
+            onPick(fileIds, message.data.items);
           }
           window.removeEventListener("message", handleMessage);
           popupRef.current?.close();

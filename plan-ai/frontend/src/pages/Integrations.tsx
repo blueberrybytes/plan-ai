@@ -52,6 +52,8 @@ import {
   GithubRepository,
   integrationApi,
   useDisconnectIntegrationMutation,
+  useSetGoogleDefaultFolderMutation,
+  useSetMicrosoftDefaultFolderMutation,
 } from "../store/apis/integrationApi";
 import {
   useConnectJiraManuallyMutation,
@@ -84,7 +86,8 @@ import {
 } from "../store/apis/notionApi";
 import type { components } from "../types/api";
 import { useTranslation } from "react-i18next";
-
+import { useGooglePicker } from "../hooks/useGooglePicker";
+import { useOneDrivePicker } from "../hooks/useOneDrivePicker";
 import { HowToConnectDialog, HowToProvider } from "../components/integrations/HowToConnectDialog";
 
 const PROVIDER_TAB_PARAM = "provider";
@@ -1110,6 +1113,16 @@ const ConnectedIntegrationDetails: React.FC<{
   const dispatch = useDispatch();
   const [disconnectIntegration, { isLoading: isDisconnecting }] =
     useDisconnectIntegrationMutation();
+  const [setGoogleFolder, { isLoading: isSavingGoogleFolder }] = useSetGoogleDefaultFolderMutation();
+  const [setMicrosoftFolder, { isLoading: isSavingMicrosoftFolder }] = useSetMicrosoftDefaultFolderMutation();
+  const { openPicker: openGooglePicker, loadPicker: loadGooglePicker } = useGooglePicker();
+  const { openPicker: openOneDrivePicker } = useOneDrivePicker();
+
+  React.useEffect(() => {
+    if (integration.provider === "GOOGLE_DRIVE" && integration.status === "CONNECTED") {
+      loadGooglePicker();
+    }
+  }, [integration.provider, integration.status, loadGooglePicker]);
 
   const { data: jiraProjectsData, isLoading: isJiraProjectsLoading } = useGetJiraProjectsQuery(
     undefined,
@@ -1825,6 +1838,94 @@ const ConnectedIntegrationDetails: React.FC<{
             Notion is connected. Tasks from your recordings will automatically be exported as pages
             in your Notion workspace.
           </Alert>
+        </Box>
+      )}
+
+      {integration.provider === "GOOGLE_DRIVE" && integration.status === "CONNECTED" && (
+        <Box sx={{ mt: 2 }}>
+          <Typography variant="subtitle2" sx={{ mb: 1 }}>
+            Default Export Folder
+          </Typography>
+          <Stack direction="row" spacing={2} alignItems="center">
+            <TextField
+              size="small"
+              disabled
+              value={
+                ((integration.metadata as Record<string, unknown> | null)?.defaultFolderName as string) ?? "Root Directory"
+              }
+              fullWidth
+            />
+            <Button
+              variant="outlined"
+              size="small"
+              disabled={isSavingGoogleFolder || !canEdit}
+              onClick={() => {
+                openGooglePicker({
+                  pickerType: "folder",
+                  multiple: false,
+                  onPick: async (fileIds, _, docs) => {
+                    if (fileIds.length > 0 && docs && docs[0]) {
+                      const folderId = fileIds[0];
+                      const folderName = docs[0].name;
+                      try {
+                        await setGoogleFolder({ folderId, folderName }).unwrap();
+                        dispatch(integrationApi.util.invalidateTags(["Integration"]));
+                        dispatch(setToastMessage({ severity: "success", message: "Default folder updated" }));
+                      } catch {
+                        dispatch(setToastMessage({ severity: "error", message: "Failed to update folder" }));
+                      }
+                    }
+                  },
+                });
+              }}
+            >
+              Select Folder
+            </Button>
+          </Stack>
+        </Box>
+      )}
+
+      {integration.provider === "ONEDRIVE" && integration.status === "CONNECTED" && (
+        <Box sx={{ mt: 2 }}>
+          <Typography variant="subtitle2" sx={{ mb: 1 }}>
+            Default Export Folder
+          </Typography>
+          <Stack direction="row" spacing={2} alignItems="center">
+            <TextField
+              size="small"
+              disabled
+              value={
+                ((integration.metadata as Record<string, unknown> | null)?.defaultFolderName as string) ?? "Root Directory"
+              }
+              fullWidth
+            />
+            <Button
+              variant="outlined"
+              size="small"
+              disabled={isSavingMicrosoftFolder || !canEdit}
+              onClick={() => {
+                openOneDrivePicker({
+                  pickerType: "folder",
+                  multiple: false,
+                  onPick: async (fileIds, items) => {
+                    if (fileIds.length > 0 && items && items[0]) {
+                      const folderId = fileIds[0];
+                      const folderName = items[0].name;
+                      try {
+                        await setMicrosoftFolder({ folderId, folderName }).unwrap();
+                        dispatch(integrationApi.util.invalidateTags(["Integration"]));
+                        dispatch(setToastMessage({ severity: "success", message: "Default folder updated" }));
+                      } catch {
+                        dispatch(setToastMessage({ severity: "error", message: "Failed to update folder" }));
+                      }
+                    }
+                  },
+                });
+              }}
+            >
+              Select Folder
+            </Button>
+          </Stack>
         </Box>
       )}
 

@@ -4,10 +4,11 @@ import { setToastMessage } from "../store/slices/app/appSlice";
 import { TokenResponse, PickerCallbackData, PickerDocument } from "../types/google";
 
 interface GooglePickerParams {
-  onPick: (fileIds: string[], accessToken: string) => void;
+  onPick: (fileIds: string[], accessToken: string, docs?: PickerDocument[]) => void;
   onCancel?: () => void;
   allowedMimeTypes?: string;
   multiple?: boolean;
+  pickerType?: "file" | "folder";
 }
 
 export const useGooglePicker = () => {
@@ -28,6 +29,7 @@ export const useGooglePicker = () => {
       onCancel,
       allowedMimeTypes = "application/vnd.google-apps.document,application/vnd.google-apps.presentation,application/vnd.google-apps.spreadsheet,application/pdf,text/plain,text/markdown",
       multiple = true,
+      pickerType = "file",
     }: GooglePickerParams) => {
       const clientId =
         process.env.REACT_APP_GOOGLE_CLIENT_ID || process.env.REACT_APP_VITE_GOOGLE_CLIENT_ID;
@@ -71,11 +73,18 @@ export const useGooglePicker = () => {
 
         console.log("Building picker with appId:", appId);
         try {
-          const view = new pickerModule.DocsView(pickerModule.ViewId.DOCS);
-          view.setIncludeFolders(true);
-
-          if (allowedMimeTypes) {
-            view.setMimeTypes(allowedMimeTypes);
+          let view;
+          if (pickerType === "folder") {
+            view = new pickerModule.DocsView(pickerModule.ViewId.FOLDERS);
+            view.setIncludeFolders(true);
+            view.setSelectFolderEnabled(true);
+            view.setMimeTypes("application/vnd.google-apps.folder");
+          } else {
+            view = new pickerModule.DocsView(pickerModule.ViewId.DOCS);
+            view.setIncludeFolders(true);
+            if (allowedMimeTypes) {
+              view.setMimeTypes(allowedMimeTypes);
+            }
           }
 
           console.log("Picker builder created successfully");
@@ -90,7 +99,7 @@ export const useGooglePicker = () => {
                   pickerModule.Response.DOCUMENTS as keyof PickerCallbackData
                 ] as unknown as PickerDocument[];
                 const fileIds = docs.map((doc: PickerDocument) => doc.id);
-                onPick(fileIds, tokenResponse.access_token);
+                onPick(fileIds, tokenResponse.access_token, docs);
               } else if (data.action === pickerModule.Action.CANCEL) {
                 if (onCancel) onCancel();
               }

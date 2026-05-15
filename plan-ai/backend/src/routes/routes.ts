@@ -4452,6 +4452,38 @@ export function RegisterRoutes(app: Router,opts?:{multer?:ReturnType<typeof mult
             }
         });
         // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+        const argsMicrosoftController_setDefaultFolder: Record<string, TsoaRoute.ParameterSchema> = {
+                request: {"in":"request","name":"request","required":true,"dataType":"object"},
+                body: {"in":"body","name":"body","required":true,"dataType":"nestedObjectLiteral","nestedProperties":{"folderName":{"dataType":"string","required":true},"folderId":{"dataType":"string","required":true}}},
+        };
+        app.post('/api/microsoft/default-folder',
+            authenticateMiddleware([{"ClientLevel":[]}]),
+            ...(fetchMiddlewares<RequestHandler>(MicrosoftController)),
+            ...(fetchMiddlewares<RequestHandler>(MicrosoftController.prototype.setDefaultFolder)),
+
+            async function MicrosoftController_setDefaultFolder(request: ExRequest, response: ExResponse, next: any) {
+
+            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+
+            let validatedArgs: any[] = [];
+            try {
+                validatedArgs = templateService.getValidatedArgs({ args: argsMicrosoftController_setDefaultFolder, request, response });
+
+                const controller = new MicrosoftController();
+
+              await templateService.apiHandler({
+                methodName: 'setDefaultFolder',
+                controller,
+                response,
+                next,
+                validatedArgs,
+                successStatus: undefined,
+              });
+            } catch (err) {
+                return next(err);
+            }
+        });
+        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
         const argsLinearController_manualConnect: Record<string, TsoaRoute.ParameterSchema> = {
                 request: {"in":"request","name":"request","required":true,"dataType":"object"},
                 body: {"in":"body","name":"body","required":true,"ref":"LinearManualConnectRequest"},
@@ -5043,6 +5075,38 @@ export function RegisterRoutes(app: Router,opts?:{multer?:ReturnType<typeof mult
 
               await templateService.apiHandler({
                 methodName: 'getSummary',
+                controller,
+                response,
+                next,
+                validatedArgs,
+                successStatus: undefined,
+              });
+            } catch (err) {
+                return next(err);
+            }
+        });
+        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+        const argsGoogleController_setDefaultFolder: Record<string, TsoaRoute.ParameterSchema> = {
+                request: {"in":"request","name":"request","required":true,"dataType":"object"},
+                body: {"in":"body","name":"body","required":true,"dataType":"nestedObjectLiteral","nestedProperties":{"folderName":{"dataType":"string","required":true},"folderId":{"dataType":"string","required":true}}},
+        };
+        app.post('/api/google/default-folder',
+            authenticateMiddleware([{"ClientLevel":[]}]),
+            ...(fetchMiddlewares<RequestHandler>(GoogleController)),
+            ...(fetchMiddlewares<RequestHandler>(GoogleController.prototype.setDefaultFolder)),
+
+            async function GoogleController_setDefaultFolder(request: ExRequest, response: ExResponse, next: any) {
+
+            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+
+            let validatedArgs: any[] = [];
+            try {
+                validatedArgs = templateService.getValidatedArgs({ args: argsGoogleController_setDefaultFolder, request, response });
+
+                const controller = new GoogleController();
+
+              await templateService.apiHandler({
+                methodName: 'setDefaultFolder',
                 controller,
                 response,
                 next,

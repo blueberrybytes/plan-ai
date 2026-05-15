@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import axios from "axios";
-import { PrismaClient, IntegrationStatus, IntegrationProvider } from "@prisma/client";
+import { PrismaClient, IntegrationStatus, IntegrationProvider, Prisma } from "@prisma/client";
 import EnvUtils from "../utils/EnvUtils";
 
 const prisma = new PrismaClient();
@@ -197,8 +197,14 @@ export class MicrosoftIntegrationService {
 
     const accessToken = integration.accessToken;
 
-    // Use Microsoft Graph API to upload file to root of OneDrive
-    const url = `https://graph.microsoft.com/v1.0/me/drive/root:/${encodeURIComponent(filename)}:/content`;
+    // Read target folder from integration metadata
+    const meta = (integration.metadata ?? {}) as Record<string, unknown>;
+    const parentFolderId = meta.defaultFolderId as string | undefined;
+
+    // Build upload URL: to specific folder or root
+    const url = parentFolderId
+      ? `https://graph.microsoft.com/v1.0/me/drive/items/${parentFolderId}:/${encodeURIComponent(filename)}:/content`
+      : `https://graph.microsoft.com/v1.0/me/drive/root:/${encodeURIComponent(filename)}:/content`;
     
     const response = await axios.put(url, buffer, {
       headers: {
@@ -208,6 +214,39 @@ export class MicrosoftIntegrationService {
     });
 
     return response.data.webUrl || "";
+  }
+
+  public async setDefaultFolder(
+    workspaceId: string,
+    folderId: string,
+    folderName: string,
+  ): Promise<void> {
+    const integration = await prisma.workspaceIntegration.findUnique({
+      where: {
+        workspaceId_provider: {
+          workspaceId,
+          provider: IntegrationProvider.ONEDRIVE,
+        },
+      },
+    });
+    if (!integration) throw new Error("OneDrive integration not found");
+
+    const currentMeta = (integration.metadata ?? {}) as Record<string, unknown>;
+    const newMetadata = {
+      ...currentMeta,
+      defaultFolderId: folderId,
+      defaultFolderName: folderName,
+    };
+
+    await prisma.workspaceIntegration.update({
+      where: {
+        workspaceId_provider: {
+          workspaceId,
+          provider: IntegrationProvider.ONEDRIVE,
+        },
+      },
+      data: { metadata: newMetadata as Prisma.InputJsonObject },
+    });
   }
 }
 

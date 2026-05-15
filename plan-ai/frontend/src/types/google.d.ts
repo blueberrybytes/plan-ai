@@ -19,6 +19,7 @@ declare global {
         };
         ViewId: {
           DOCS: string;
+          FOLDERS: string;
         };
         DocsView: new (viewId?: string) => DocsView;
         PickerBuilder: new () => PickerBuilder;
@@ -65,6 +66,7 @@ export interface PickerDocument {
 
 export interface DocsView {
   setIncludeFolders: (include: boolean) => DocsView;
+  setSelectFolderEnabled: (enabled: boolean) => DocsView;
   setMimeTypes: (mimeTypes: string) => DocsView;
 }
 

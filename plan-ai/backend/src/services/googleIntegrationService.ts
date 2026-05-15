@@ -1,7 +1,7 @@
 import { google, drive_v3, Auth } from "googleapis";
 import { Readable } from "stream";
 import EnvUtils from "../utils/EnvUtils";
-import { PrismaClient, IntegrationProvider, IntegrationStatus } from "@prisma/client";
+import { PrismaClient, IntegrationProvider, IntegrationStatus, Prisma } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
@@ -258,16 +258,26 @@ class GoogleIntegrationService {
 
     const drive = google.drive({ version: "v3", auth: oauth2Client });
 
+    // Read target folder from integration metadata
+    const meta = (integration.metadata ?? {}) as Record<string, unknown>;
+    const parentFolderId = meta.defaultFolderId as string | undefined;
+
     // Readable stream from buffer
     const stream = new Readable();
     stream.push(buffer);
     stream.push(null);
 
+    const requestBody: Record<string, unknown> = {
+      name: filename,
+      mimeType,
+    };
+
+    if (parentFolderId) {
+      requestBody.parents = [parentFolderId];
+    }
+
     const response = await drive.files.create({
-      requestBody: {
-        name: filename,
-        mimeType,
-      },
+      requestBody,
       media: {
         mimeType,
         body: stream,
@@ -276,6 +286,39 @@ class GoogleIntegrationService {
     });
 
     return response.data.webViewLink || "";
+  }
+
+  public async setDefaultFolder(
+    workspaceId: string,
+    folderId: string,
+    folderName: string,
+  ): Promise<void> {
+    const integration = await prisma.workspaceIntegration.findUnique({
+      where: {
+        workspaceId_provider: {
+          workspaceId,
+          provider: IntegrationProvider.GOOGLE_DRIVE,
+        },
+      },
+    });
+    if (!integration) throw new Error("Google Drive integration not found");
+
+    const currentMeta = (integration.metadata ?? {}) as Record<string, unknown>;
+    const newMetadata = {
+      ...currentMeta,
+      defaultFolderId: folderId,
+      defaultFolderName: folderName,
+    };
+
+    await prisma.workspaceIntegration.update({
+      where: {
+        workspaceId_provider: {
+          workspaceId,
+          provider: IntegrationProvider.GOOGLE_DRIVE,
+        },
+      },
+      data: { metadata: newMetadata as Prisma.InputJsonObject },
+    });
   }
 }
 

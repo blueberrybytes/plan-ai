@@ -1,5 +1,7 @@
 import {
   Get,
+  Post,
+  Body,
   Request,
   Route,
   Security,
@@ -132,6 +134,26 @@ export class MicrosoftController extends BaseWorkspaceController {
         status: 400,
         data: null,
         message: error instanceof Error ? error.message : "Failed to get Microsoft summary",
+      };
+    }
+  }
+
+  @Post("default-folder")
+  @Security("ClientLevel")
+  public async setDefaultFolder(
+    @Request() request: AuthenticatedRequest,
+    @Body() body: { folderId: string; folderName: string },
+  ): Promise<ApiResponse<null>> {
+    const { workspaceId } = await this.requireAdminOrOwner(request);
+    try {
+      await microsoftIntegrationService.setDefaultFolder(workspaceId, body.folderId, body.folderName);
+      return { status: 200, data: null };
+    } catch (error) {
+      this.setStatus(400);
+      return {
+        status: 400,
+        data: null,
+        message: error instanceof Error ? error.message : "Failed to set default folder",
       };
     }
   }

@@ -94,6 +94,34 @@ export const integrationApi = createApi({
         { type: "Integration" as const, id: provider },
       ],
     }),
+    setGoogleDefaultFolder: builder.mutation<
+      { status: number; data: null },
+      { folderId: string; folderName: string }
+    >({
+      query: (body) => ({
+        url: "/api/google/default-folder",
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: [
+        { type: "Integration" as const, id: "LIST" },
+        { type: "Integration" as const, id: "GOOGLE_DRIVE" },
+      ],
+    }),
+    setMicrosoftDefaultFolder: builder.mutation<
+      { status: number; data: null },
+      { folderId: string; folderName: string }
+    >({
+      query: (body) => ({
+        url: "/api/microsoft/default-folder",
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: [
+        { type: "Integration" as const, id: "LIST" },
+        { type: "Integration" as const, id: "ONEDRIVE" },
+      ],
+    }),
   }),
 });
 
@@ -106,4 +134,6 @@ export const {
   useLazyGetGoogleAuthUrlQuery,
   useLazyGetMicrosoftAuthUrlQuery,
   useDisconnectIntegrationMutation,
+  useSetGoogleDefaultFolderMutation,
+  useSetMicrosoftDefaultFolderMutation,
 } = integrationApi;

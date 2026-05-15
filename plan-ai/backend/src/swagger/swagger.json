@@ -9428,6 +9428,54 @@
 				"parameters": []
 			}
 		},
+		"/api/microsoft/default-folder": {
+			"post": {
+				"operationId": "SetDefaultFolder",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiResponse_null_"
+								}
+							}
+						}
+					}
+				},
+				"tags": [
+					"Integrations"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": [],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"properties": {
+									"folderName": {
+										"type": "string"
+									},
+									"folderId": {
+										"type": "string"
+									}
+								},
+								"required": [
+									"folderName",
+									"folderId"
+								],
+								"type": "object"
+							}
+						}
+					}
+				}
+			}
+		},
 		"/api/linear/manual-connect": {
 			"post": {
 				"operationId": "ManualConnect",
@@ -10062,6 +10110,54 @@
 					}
 				],
 				"parameters": []
+			}
+		},
+		"/api/google/default-folder": {
+			"post": {
+				"operationId": "SetDefaultFolder",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiResponse_null_"
+								}
+							}
+						}
+					}
+				},
+				"tags": [
+					"Integrations"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": [],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"properties": {
+									"folderName": {
+										"type": "string"
+									},
+									"folderId": {
+										"type": "string"
+									}
+								},
+								"required": [
+									"folderName",
+									"folderId"
+								],
+								"type": "object"
+							}
+						}
+					}
+				}
 			}
 		},
 		"/api/integrations/github/webhook": {
