@@ -2,42 +2,8 @@
 <html>
 <head>
   <title>OneDrive Picker Callback</title>
+  <script type="text/javascript" src="https://js.live.net/v7.2/OneDrive.js"></script>
 </head>
 <body>
-  <script>
-    (function() {
-      // Parse the query parameters from the picker's redirect
-      const urlParams = new URLSearchParams(window.location.search);
-      const dataStr = urlParams.get('data');
-      const errorStr = urlParams.get('error');
-
-      if (dataStr && window.opener) {
-        try {
-          const parsed = JSON.parse(dataStr);
-          
-          // The picker might return the files in `value` or `items` depending on version
-          const items = parsed.value || parsed.items || [];
-          
-          window.opener.postMessage(
-            { 
-              type: "success", 
-              data: { items: items } 
-            },
-            window.location.origin
-          );
-        } catch (e) {
-          console.error("Failed to parse OneDrive data", e);
-        }
-      } else if (errorStr && window.opener) {
-        window.opener.postMessage(
-          { type: "cancel" },
-          window.location.origin
-        );
-      }
-      
-      // Close the popup window automatically
-      setTimeout(() => window.close(), 100);
-    })();
-  </script>
 </body>
 </html>
