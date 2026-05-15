@@ -309,11 +309,26 @@ export class MicrosoftIntegrationService {
     });
     if (!integration) throw new Error("OneDrive integration not found");
 
+    // If the picker didn't return a real name, resolve it from Graph API
+    let resolvedName = folderName;
+    if (!folderName || folderName === "OneDrive Folder") {
+      try {
+        const { accessToken } = await this.refreshTokenIfExpired(workspaceId);
+        const res = await axios.get(
+          `https://graph.microsoft.com/v1.0/me/drive/items/${folderId}?select=name`,
+          { headers: { Authorization: `Bearer ${accessToken}` } },
+        );
+        resolvedName = res.data.name || folderName;
+      } catch (e) {
+        console.warn("[MicrosoftIntegrationService] Could not resolve folder name:", e);
+      }
+    }
+
     const currentMeta = (integration.metadata ?? {}) as Record<string, unknown>;
     const newMetadata = {
       ...currentMeta,
       defaultFolderId: folderId,
-      defaultFolderName: folderName,
+      defaultFolderName: resolvedName,
     };
 
     await prisma.workspaceIntegration.update({

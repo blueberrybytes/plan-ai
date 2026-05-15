@@ -1909,9 +1909,10 @@ const ConnectedIntegrationDetails: React.FC<{
                   multiple: false,
                   onPick: async (fileIds, items) => {
                     console.log("[Integrations] OneDrive folder pick - fileIds:", fileIds, "items:", items);
-                    if (fileIds.length > 0 && items && items[0]) {
+                    if (fileIds.length > 0) {
                       const folderId = fileIds[0];
-                      const folderName = items[0].name;
+                      // OneDrive picker doesn't return name for folders — use fallback
+                      const folderName = items?.[0]?.name || "OneDrive Folder";
                       console.log("[Integrations] Sending to API - folderId:", folderId, "folderName:", folderName);
                       try {
                         await setMicrosoftFolder({ folderId, folderName }).unwrap();
