@@ -148,6 +148,35 @@ export class MicrosoftIntegrationService {
     };
   }
 
+  public async getOneDriveFileMetadata(
+    accessToken: string,
+    fileId: string,
+  ): Promise<{ name: string; mimeType: string; size: number }> {
+    const response = await axios.get(
+      `https://graph.microsoft.com/v1.0/me/drive/items/${fileId}`,
+      { headers: { Authorization: `Bearer ${accessToken}` } },
+    );
+    return {
+      name: response.data.name,
+      mimeType: response.data.file?.mimeType || "application/octet-stream",
+      size: response.data.size || 0,
+    };
+  }
+
+  public async downloadOneDriveFile(
+    accessToken: string,
+    fileId: string,
+  ): Promise<Buffer> {
+    const response = await axios.get(
+      `https://graph.microsoft.com/v1.0/me/drive/items/${fileId}/content`,
+      {
+        headers: { Authorization: `Bearer ${accessToken}` },
+        responseType: "arraybuffer",
+      },
+    );
+    return Buffer.from(response.data);
+  }
+
   public async uploadFileToOneDrive(
     workspaceId: string,
     filename: string,

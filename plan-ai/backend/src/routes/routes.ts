@@ -5778,6 +5778,39 @@ export function RegisterRoutes(app: Router,opts?:{multer?:ReturnType<typeof mult
             }
         });
         // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+        const argsContextController_importFromOneDrive: Record<string, TsoaRoute.ParameterSchema> = {
+                request: {"in":"request","name":"request","required":true,"dataType":"object"},
+                contextId: {"in":"path","name":"contextId","required":true,"dataType":"string"},
+                body: {"in":"body","name":"body","required":true,"dataType":"nestedObjectLiteral","nestedProperties":{"fileIds":{"dataType":"array","array":{"dataType":"string"},"required":true}}},
+        };
+        app.post('/api/contexts/:contextId/onedrive-import',
+            authenticateMiddleware([{"ClientLevel":[]}]),
+            ...(fetchMiddlewares<RequestHandler>(ContextController)),
+            ...(fetchMiddlewares<RequestHandler>(ContextController.prototype.importFromOneDrive)),
+
+            async function ContextController_importFromOneDrive(request: ExRequest, response: ExResponse, next: any) {
+
+            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+
+            let validatedArgs: any[] = [];
+            try {
+                validatedArgs = templateService.getValidatedArgs({ args: argsContextController_importFromOneDrive, request, response });
+
+                const controller = new ContextController();
+
+              await templateService.apiHandler({
+                methodName: 'importFromOneDrive',
+                controller,
+                response,
+                next,
+                validatedArgs,
+                successStatus: undefined,
+              });
+            } catch (err) {
+                return next(err);
+            }
+        });
+        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
         const argsContextController_importFromWebsite: Record<string, TsoaRoute.ParameterSchema> = {
                 request: {"in":"request","name":"request","required":true,"dataType":"object"},
                 contextId: {"in":"path","name":"contextId","required":true,"dataType":"string"},

@@ -38,6 +38,7 @@ import {
 } from "../utils/documentTextExtractor";
 import { githubContextQueue } from "../queue/githubContextQueue";
 import { googleIntegrationService } from "../services/googleIntegrationService";
+import { microsoftIntegrationService } from "../services/microsoftIntegrationService";
 import { webScraperService } from "../services/webScraperService";
 
 interface ImportWebsiteRequest {
@@ -564,6 +565,106 @@ export class ContextController extends BaseWorkspaceController {
       status: 200,
       message: "Google Drive files imported",
       data: this.mapContextResponse(context),
+    };
+  }
+
+  @Post("{contextId}/onedrive-import")
+  @Security("ClientLevel")
+  public async importFromOneDrive(
+    @Request() request: AuthenticatedRequest,
+    @Path() contextId: string,
+    @Body() body: { fileIds: string[] },
+  ): Promise<ApiResponse<ContextResponse>> {
+    const { user, workspaceId } = await this.getAuthorizedWorkspaceAccess(request);
+
+    if (!body.fileIds || body.fileIds.length === 0) {
+      this.setStatus(400);
+      throw { status: 400, message: "No file IDs provided" };
+    }
+
+    const integration = await prisma.workspaceIntegration.findUnique({
+      where: {
+        workspaceId_provider: {
+          workspaceId,
+          provider: "ONEDRIVE",
+        },
+      },
+    });
+
+    if (!integration || integration.status !== "CONNECTED" || !integration.accessToken) {
+      this.setStatus(400);
+      throw { status: 400, message: "OneDrive integration not connected" };
+    }
+
+    for (const fileId of body.fileIds) {
+      try {
+        const metadata = await microsoftIntegrationService.getOneDriveFileMetadata(
+          integration.accessToken,
+          fileId,
+        );
+
+        if (!metadata.name || !metadata.mimeType) {
+          console.warn(`Could not fetch metadata for OneDrive file ${fileId}`);
+          continue;
+        }
+
+        const buffer = await microsoftIntegrationService.downloadOneDriveFile(
+          integration.accessToken,
+          fileId,
+        );
+
+        if (!isSupportedContextFileMimeType(metadata.mimeType)) {
+          console.warn(`Unsupported file type from OneDrive file ${fileId}: ${metadata.mimeType}`);
+          continue;
+        }
+
+        const { storagePath, publicUrl } = await uploadContextFileToFirebaseStorage(
+          buffer,
+          user.id,
+          contextId,
+          metadata.name,
+          metadata.mimeType,
+        );
+
+        const oneDriveMetadata = {
+          source: "ONEDRIVE",
+          oneDriveFileId: fileId,
+          publicUrl,
+          processingStatus: "PENDING",
+        };
+
+        const contextFile = await contextService.attachFileToContext(workspaceId, contextId, {
+          bucketPath: storagePath,
+          fileName: metadata.name,
+          mimeType: metadata.mimeType,
+          sizeBytes: buffer.length,
+          metadata: oneDriveMetadata,
+        });
+
+        await contextDocumentQueue.add(
+          "process-pdf-llm",
+          {
+            contextId,
+            fileId: contextFile.id,
+            userId: user.id,
+            workspaceId,
+          },
+          {
+            jobId: `context-doc-${contextFile.id}-${Date.now()}`,
+          },
+        );
+      } catch (error) {
+        console.error(`Failed to import OneDrive file ${fileId}`, error);
+      }
+    }
+
+    const oneDriveContext = await contextService.getContextForWorkspace(workspaceId, contextId);
+
+    this.setStatus(200);
+    return {
+      status: 200,
+      message: "OneDrive files imported",
+      data: this.mapContextResponse(oneDriveContext),
     };
   }
 

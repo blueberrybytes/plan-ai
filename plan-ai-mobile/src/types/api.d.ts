@@ -1540,6 +1540,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/contexts/{contextId}/onedrive-import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ImportFromOneDrive"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/contexts/{contextId}/website": {
         parameters: {
             query?: never;
@@ -6705,6 +6721,34 @@ export interface operations {
         };
     };
     ImportFromGoogleDrive: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                contextId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    fileIds: string[];
+                };
+            };
+        };
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_ContextResponse_"];
+                };
+            };
+        };
+    };
+    ImportFromOneDrive: {
         parameters: {
             query?: never;
             header?: never;

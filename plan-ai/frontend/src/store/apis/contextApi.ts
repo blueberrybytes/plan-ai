@@ -147,6 +147,20 @@ export const contextApi = createApi({
         { type: "Context" as const, id: contextId },
       ],
     }),
+    importFromOneDrive: builder.mutation<
+      ApiResponseContextResponse,
+      { contextId: string; fileIds: string[] }
+    >({
+      query: ({ contextId, fileIds }) => ({
+        url: `/api/contexts/${contextId}/onedrive-import`,
+        method: "POST",
+        body: { fileIds },
+      }),
+      invalidatesTags: (result, error, { contextId }) => [
+        { type: "Context" as const, id: "LIST" },
+        { type: "Context" as const, id: contextId },
+      ],
+    }),
     importFromWebsite: builder.mutation<
       ApiResponseContextResponse,
       { contextId: string; body: ImportWebsiteRequest }
@@ -184,6 +198,7 @@ export const {
   useDeleteContextFileMutation,
   useConnectGithubRepositoryMutation,
   useImportFromGoogleDriveMutation,
+  useImportFromOneDriveMutation,
   useImportFromWebsiteMutation,
   useRetryContextFileMutation,
 } = contextApi;

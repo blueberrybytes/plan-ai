@@ -169,7 +169,7 @@ const PROVIDER_CONFIGS: ProviderConfig[] = [
     connectCtaKey: "integrationsPage.providers.google.connectCta",
     comingSoon: false,
     notConnectedKey: "integrationsPage.providers.google.notConnected",
-    isBeta: true,
+    //isBeta: true,
     isWorkspaceLevel: true,
   },
   {
@@ -180,7 +180,7 @@ const PROVIDER_CONFIGS: ProviderConfig[] = [
     connectCtaKey: "integrationsPage.providers.microsoft.connectCta",
     comingSoon: false,
     notConnectedKey: "integrationsPage.providers.microsoft.notConnected",
-    isBeta: true,
+    //isBeta: true,
     isWorkspaceLevel: true,
   },
 ];

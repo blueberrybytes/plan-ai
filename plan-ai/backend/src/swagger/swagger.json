@@ -11012,6 +11012,62 @@
 				}
 			}
 		},
+		"/api/contexts/{contextId}/onedrive-import": {
+			"post": {
+				"operationId": "ImportFromOneDrive",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiResponse_ContextResponse_"
+								}
+							}
+						}
+					}
+				},
+				"tags": [
+					"Contexts"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": [
+					{
+						"in": "path",
+						"name": "contextId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"properties": {
+									"fileIds": {
+										"items": {
+											"type": "string"
+										},
+										"type": "array"
+									}
+								},
+								"required": [
+									"fileIds"
+								],
+								"type": "object"
+							}
+						}
+					}
+				}
+			}
+		},
 		"/api/contexts/{contextId}/website": {
 			"post": {
 				"operationId": "ImportFromWebsite",

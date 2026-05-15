@@ -27,6 +27,7 @@ import DownloadIcon from "@mui/icons-material/Download";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import GitHubIcon from "@mui/icons-material/GitHub";
 import AddToDriveIcon from "@mui/icons-material/AddToDrive";
+import CloudQueueIcon from "@mui/icons-material/CloudQueue";
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 import PublicIcon from "@mui/icons-material/Public";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
@@ -56,10 +57,12 @@ import {
   useUploadContextFileMutation,
   useListContextsQuery,
   useImportFromGoogleDriveMutation,
+  useImportFromOneDriveMutation,
   useRetryContextFileMutation,
 } from "../store/apis/contextApi";
 import { useListIntegrationsQuery } from "../store/apis/integrationApi";
 import { useGooglePicker } from "../hooks/useGooglePicker";
+import { useOneDrivePicker } from "../hooks/useOneDrivePicker";
 import { useNavigate, useParams } from "react-router-dom";
 import { useDispatch } from "react-redux";
 import { setToastMessage } from "../store/slices/app/appSlice";
@@ -91,13 +94,23 @@ const Contexts: React.FC = () => {
       ),
     [integrationsData],
   );
+  const hasOneDrive = React.useMemo(
+    () =>
+      integrationsData?.data?.some(
+        (i) => i.provider === "ONEDRIVE" && i.status === "CONNECTED",
+      ),
+    [integrationsData],
+  );
   const { loadPicker, openPicker } = useGooglePicker();
+  const { openPicker: openOneDrivePicker } = useOneDrivePicker();
 
   React.useEffect(() => {
     loadPicker();
   }, [loadPicker]);
   const [importFromGoogleDrive, { isLoading: isImportingGoogleDrive }] =
     useImportFromGoogleDriveMutation();
+  const [importFromOneDrive, { isLoading: isImportingOneDrive }] =
+    useImportFromOneDriveMutation();
 
   const [pollingInterval, setPollingInterval] = React.useState(0);
 
@@ -408,6 +421,50 @@ const Contexts: React.FC = () => {
               message: t(
                 "contexts.messages.googleDriveImportError",
                 "Failed to start Google Drive import.",
+              ),
+            }),
+          );
+        }
+      },
+    });
+  };
+
+  const handleOneDriveImport = () => {
+    if (!hasOneDrive) {
+      dispatch(
+        setToastMessage({
+          severity: "info",
+          message: t(
+            "contexts.messages.connectOneDriveFirst",
+            "Please connect OneDrive in Integrations first.",
+          ),
+        }),
+      );
+      navigate("/integrations/microsoft");
+      return;
+    }
+    openOneDrivePicker({
+      onPick: async (fileIds) => {
+        if (!contextId) return;
+        try {
+          await importFromOneDrive({ contextId, fileIds }).unwrap();
+          dispatch(
+            setToastMessage({
+              severity: "success",
+              message: t(
+                "contexts.messages.uploadProcessing",
+                "Imported. Processing in the background...",
+              ),
+            }),
+          );
+          refetch();
+        } catch (error) {
+          dispatch(
+            setToastMessage({
+              severity: "error",
+              message: t(
+                "contexts.messages.oneDriveImportError",
+                "Failed to start OneDrive import.",
               ),
             }),
           );
@@ -780,7 +837,7 @@ const Contexts: React.FC = () => {
                       variant="contained"
                       startIcon={<AddIcon />}
                       onClick={(e) => setAddMenuAnchorEl(e.currentTarget)}
-                      disabled={isUploading || isImportingGoogleDrive}
+                      disabled={isUploading || isImportingGoogleDrive || isImportingOneDrive}
                     >
                       {t("contexts.buttons.addFiles", "Add Files...")}
                     </Button>
@@ -870,6 +927,26 @@ const Contexts: React.FC = () => {
                           {isImportingGoogleDrive
                             ? t("contexts.buttons.importing", "Importing")
                             : t("contexts.buttons.importDrive", "Import Drive")}
+                        </ListItemText>
+                      </MenuItem>
+                      <MenuItem
+                        onClick={() => {
+                          handleOneDriveImport();
+                          setAddMenuAnchorEl(null);
+                        }}
+                        disabled={isImportingOneDrive}
+                      >
+                        <ListItemIcon>
+                          {isImportingOneDrive ? (
+                            <CircularProgress size={20} color="inherit" />
+                          ) : (
+                            <CloudQueueIcon fontSize="small" />
+                          )}
+                        </ListItemIcon>
+                        <ListItemText>
+                          {isImportingOneDrive
+                            ? t("contexts.buttons.importing", "Importing")
+                            : t("contexts.buttons.importOneDrive", "Import OneDrive")}
                         </ListItemText>
                       </MenuItem>
                     </Menu>
