@@ -59,7 +59,12 @@ const Home: React.FC = () => {
 
   const [language, setLanguage] = useState<string>(""); // "" = auto
   const [micInputs, setMicInputs] = useState<MediaDeviceInfo[]>([]);
-  const [micDeviceId, setMicDeviceId] = useState<string>("default");
+  const [micDeviceId, setMicDeviceId] = useState<string>(() => {
+    const saved = localStorage.getItem("planai_mic_device_id");
+    // Treat "default" as no-preference — the macOS "Default" alias device
+    // gets hijacked by Zoom/Teams, so we need the auto-selection to find real hardware
+    return saved && saved !== "default" ? saved : "default";
+  });
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState("");
@@ -131,14 +136,39 @@ const Home: React.FC = () => {
         const devices = await navigator.mediaDevices.enumerateDevices();
         const inputs = devices.filter((d) => d.kind === "audioinput");
         setMicInputs(inputs);
-        // Auto-select the built-in mic if FreeBuds (or headphones-only) is default
-        const builtin = inputs.find(
-          (d) =>
-            d.label.toLowerCase().includes("built-in") ||
-            d.label.toLowerCase().includes("macbook"),
+
+        // Diagnostic: log all available mic devices
+        console.log(`[Home] 🎤 Found ${inputs.length} mic input(s):`, inputs.map((d, i) => `[${i}] "${d.label}" (${d.deviceId.slice(0, 12)}…)`));
+
+        // Respect saved preference if the device is still connected
+        const saved = localStorage.getItem("planai_mic_device_id");
+        if (saved && saved !== "default" && inputs.some((d) => d.deviceId === saved)) {
+          console.log(`[Home] Using saved mic preference: "${inputs.find(d => d.deviceId === saved)?.label}"`);
+          setMicDeviceId(saved);
+          return; // User's previous choice is still valid
+        }
+
+        // Auto-select the ACTUAL hardware mic, not the macOS "Default -" alias.
+        // The "Default -" device is a macOS abstraction that gets hijacked when
+        // Zoom, Teams, or Granola are running, causing silent/broken audio.
+        const realInputs = inputs.filter(
+          (d) => !d.label.startsWith("Default") && !d.label.toLowerCase().includes("virtual"),
         );
-        if (builtin) {
-          setMicDeviceId(builtin.deviceId);
+
+        // Prefer MacBook's own mic (most reliable, always physically present)
+        const macbookMic = realInputs.find((d) =>
+          d.label.toLowerCase().includes("macbook"),
+        );
+        // Fallback: any other non-default built-in mic
+        const builtinMic = realInputs.find((d) =>
+          d.label.toLowerCase().includes("built-in"),
+        );
+
+        const bestMic = macbookMic || builtinMic || realInputs[0];
+        if (bestMic) {
+          console.log(`[Home] Auto-selected mic: "${bestMic.label}" (skipped ${inputs.length - realInputs.length} alias/virtual devices)`);
+          setMicDeviceId(bestMic.deviceId);
+          localStorage.setItem("planai_mic_device_id", bestMic.deviceId);
         }
       } catch (err) {
         console.warn("[Home] Failed to enumerate mic devices:", err);
@@ -740,7 +770,10 @@ const Home: React.FC = () => {
                   labelId="mic-source-label"
                   value={micDeviceId}
                   label="Microphone"
-                  onChange={(e) => setMicDeviceId(e.target.value)}
+                  onChange={(e) => {
+                    setMicDeviceId(e.target.value);
+                    localStorage.setItem("planai_mic_device_id", e.target.value);
+                  }}
                   sx={{ fontSize: "0.8rem" }}
                 >
                   {micInputs.map((d) => (

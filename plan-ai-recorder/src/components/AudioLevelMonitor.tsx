@@ -84,7 +84,16 @@ export const AudioLevelMonitor: React.FC<AudioLevelMonitorProps> = ({
         // Log every ~5 seconds to verify data flow
         frameCount++;
         if (frameCount % 300 === 0) {
-          console.log(`[Monitor] ctx.state=${ctx.state} micAvg=${avg.toFixed(3)} stream=${micStreamRef.current ? 'connected' : 'null'}`);
+          const track = micStreamRef.current?.getAudioTracks()[0];
+          console.log(`[Monitor] 🎤 mic health:`, {
+            ctxState: ctx.state,
+            micAvg: avg.toFixed(3),
+            micLevel: Math.min(100, (avg / 30) * 100).toFixed(1),
+            stream: micStreamRef.current ? 'connected' : 'null',
+            trackState: track?.readyState ?? 'n/a',
+            trackMuted: track?.muted ?? 'n/a',
+            trackLabel: track?.label ?? 'n/a',
+          });
         }
       }
 
@@ -148,7 +157,29 @@ export const AudioLevelMonitor: React.FC<AudioLevelMonitorProps> = ({
           micStreamRef.current = stream;
           const source = ctx.createMediaStreamSource(stream);
           source.connect(micAnalyser);
-          console.log(`[Monitor] Mic stream started: ${JSON.stringify(cons)}, ctx.state=${ctx.state}`);
+
+          // Diagnostic: log device details
+          const track = stream.getAudioTracks()[0];
+          const settings = track?.getSettings();
+          console.log(`[Monitor] ✅ Mic stream acquired:`, {
+            deviceId: micDeviceId,
+            label: track?.label,
+            trackState: track?.readyState,
+            muted: track?.muted,
+            sampleRate: settings?.sampleRate,
+            channelCount: settings?.channelCount,
+            autoGainControl: settings?.autoGainControl,
+            noiseSuppression: settings?.noiseSuppression,
+            echoCancellation: settings?.echoCancellation,
+            contextState: ctx.state,
+            contextSampleRate: ctx.sampleRate,
+          });
+
+          // Monitor track health: warn if it ends unexpectedly
+          track.onended = () => console.warn(`[Monitor] ⚠️ Mic track ENDED unexpectedly (label: ${track.label})`);
+          track.onmute = () => console.warn(`[Monitor] ⚠️ Mic track MUTED (label: ${track.label})`);
+          track.onunmute = () => console.log(`[Monitor] Mic track UN-MUTED (label: ${track.label})`);
+
           void ctx.resume().then(() => console.log(`[Monitor] ctx.resume() done, state=${ctx.state}`));
           return;
         } catch (e) {

@@ -158,6 +158,7 @@ export class AudioRecorder {
       // 3. Microphone stream acquisition
 
       const micDeviceId = config?.micDeviceId;
+      console.log(`[AudioRecorder] 🎤 Requesting mic with deviceId: "${micDeviceId}"`);
       this.micStream = await navigator.mediaDevices.getUserMedia({
         audio: {
           echoCancellation: true,
@@ -169,6 +170,28 @@ export class AudioRecorder {
         },
         video: false,
       });
+
+      // Diagnostic: log what we actually got
+      const micTrack = this.micStream.getAudioTracks()[0];
+      const micSettings = micTrack?.getSettings();
+      console.log(`[AudioRecorder] ✅ Mic stream acquired:`, {
+        label: micTrack?.label,
+        readyState: micTrack?.readyState,
+        muted: micTrack?.muted,
+        enabled: micTrack?.enabled,
+        sampleRate: micSettings?.sampleRate,
+        channelCount: micSettings?.channelCount,
+        deviceId: micSettings?.deviceId,
+        groupId: micSettings?.groupId,
+        autoGainControl: micSettings?.autoGainControl,
+        noiseSuppression: micSettings?.noiseSuppression,
+        echoCancellation: micSettings?.echoCancellation,
+      });
+
+      // Monitor track health
+      micTrack.onended = () => console.error(`[AudioRecorder] ⚠️ Mic track ENDED unexpectedly! (label: ${micTrack.label})`);
+      micTrack.onmute = () => console.warn(`[AudioRecorder] ⚠️ Mic track MUTED (label: ${micTrack.label})`);
+      micTrack.onunmute = () => console.log(`[AudioRecorder] Mic track UN-MUTED (label: ${micTrack.label})`);
 
       //const audioTrack = this.micStream.getAudioTracks()[0];
 
@@ -201,6 +224,11 @@ export class AudioRecorder {
       if (this.audioContext.state === "suspended") {
         await this.audioContext.resume();
       }
+
+      // Diagnostic: sample rate mismatch check
+      const micNativeRate = this.micStream.getAudioTracks()[0]?.getSettings()?.sampleRate ?? 0;
+      console.log(`[AudioRecorder] 🔄 Sample rates: mic=${micNativeRate}Hz, context=${this.audioContext.sampleRate}Hz${micNativeRate !== this.audioContext.sampleRate ? ' ⚠️ MISMATCH (browser will resample)' : ' ✅ match'}`);
+      console.log(`[AudioRecorder] AudioContext state=${this.audioContext.state}, baseLatency=${this.audioContext.baseLatency?.toFixed(4)}s, outputLatency=${(this.audioContext as any).outputLatency?.toFixed(4) ?? 'n/a'}s`);
 
       // For Windows Electron (file://), using a real file path instantly crashes with
       // 'The user aborted a request' due to chromium site isolation.
@@ -235,12 +263,27 @@ export class AudioRecorder {
       // 6. Mic chunks → WebSocket
       let debugMicCounter = 0;
       let micChunksSent = 0;
+      let lastMicDiagTime = Date.now();
       this.micWorkletNode.port.onmessage = (event) => {
         if (event.data?.type === "debug") {
           debugMicCounter++;
           window.dispatchEvent(
             new CustomEvent("plan-ai-audio-level", { detail: event.data }),
           );
+
+          // Periodic diagnostic: every ~10 seconds
+          if (debugMicCounter % 100 === 0) {
+            const elapsed = ((Date.now() - lastMicDiagTime) / 1000).toFixed(1);
+            console.log(`[AudioRecorder] 📊 Mic pipeline stats:`, {
+              debugEvents: debugMicCounter,
+              chunksSent: micChunksSent,
+              rmsMic: event.data.rmsMic?.toFixed(4),
+              elapsed: `${elapsed}s`,
+              wsState: this.ws ? ['CONNECTING','OPEN','CLOSING','CLOSED'][this.ws.readyState] : 'null',
+              micTrackState: this.micStream?.getAudioTracks()[0]?.readyState ?? 'n/a',
+              micTrackMuted: this.micStream?.getAudioTracks()[0]?.muted ?? 'n/a',
+            });
+          }
           return;
         }
         if (!(event.data instanceof ArrayBuffer)) return;
