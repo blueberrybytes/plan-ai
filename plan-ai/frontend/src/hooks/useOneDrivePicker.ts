@@ -65,7 +65,7 @@ export const useOneDrivePicker = () => {
         action: pickerType === "folder" ? "query" : "download", // "query" returns metadata without download links, suitable for folders
         multiselect: multiple ? "true" : "false",
         advanced: JSON.stringify({
-          redirectUri: window.location.origin + "/onedrive-picker-callback",
+          redirectUri: window.location.origin + "/onedrive-picker-callback.html",
         }),
       });
 
