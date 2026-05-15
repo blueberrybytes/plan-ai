@@ -5,12 +5,7 @@ import type { WorkspaceIntegration } from "@prisma/client";
 import EnvUtils from "../utils/EnvUtils";
 import { logger } from "../utils/logger";
 import prisma from "../prisma/prismaClient";
-import type {
-  JiraMyselfResponse,
-  JiraSummaryResponse,
-  JiraSearchResponse,
-  JiraBoardResponse,
-} from "./jiraTypes";
+import type { JiraMyselfResponse, JiraSearchResponse, JiraBoardResponse } from "./jiraTypes";
 import type { JiraIntegrationMetadata } from "./integrationMetadataTypes";
 import type { TaskMetadata } from "./taskMetadataTypes";
 
@@ -139,20 +134,80 @@ class JiraIntegrationService {
     const rawBody = await response.text();
 
     if (!response.ok) {
-      logger.error("Jira token exchange failed", {
+      logger.error("Failed to exchange Jira code", {
         status: response.status,
         body: rawBody,
       });
-      throw new Error("Failed to complete Jira authorization");
+      throw new Error("Failed to exchange Jira code");
     }
 
     const parsed = JSON.parse(rawBody) as unknown;
+
     if (!this.isTokenResponse(parsed)) {
       logger.error("Unexpected Jira token response shape", { rawBody });
       throw new Error("Failed to complete Jira authorization");
     }
 
     return parsed;
+  }
+
+  public async refreshTokenIfExpired(
+    workspaceId: string,
+    integration: WorkspaceIntegration,
+  ): Promise<WorkspaceIntegration> {
+    const meta = integration.metadata as unknown as JiraIntegrationMetadata;
+    const isBasic = meta?.authType === "BASIC";
+    if (isBasic || !integration.refreshToken) {
+      return integration; // Basic auth doesn't expire, and we need a refresh token for OAuth
+    }
+
+    // Check if token is within 5 minutes of expiring
+    const buffer = 5 * 60 * 1000;
+    if (integration.expiresAt && integration.expiresAt.getTime() - buffer > Date.now()) {
+      return integration;
+    }
+
+    try {
+      const response = await fetch(ATLASSIAN_TOKEN_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          grant_type: "refresh_token",
+          client_id: this.clientId,
+          client_secret: this.clientSecret,
+          refresh_token: integration.refreshToken,
+        }),
+      });
+
+      const rawBody = await response.text();
+      if (!response.ok) {
+        logger.error("Failed to refresh Jira token", { status: response.status, body: rawBody });
+        throw new Error("Failed to refresh Jira token");
+      }
+
+      const parsed = JSON.parse(rawBody) as unknown;
+      if (!this.isTokenResponse(parsed)) {
+        throw new Error("Unexpected token response shape");
+      }
+
+      const expiresAt = this.computeExpiry(parsed.expires_in);
+
+      const updated = await prisma.workspaceIntegration.update({
+        where: { id: integration.id },
+        data: {
+          accessToken: parsed.access_token,
+          refreshToken: parsed.refresh_token, // Atlassian may issue a new refresh token
+          expiresAt,
+        },
+      });
+
+      return updated;
+    } catch (error) {
+      logger.error("Error refreshing Jira token", error);
+      throw new Error("Jira token expired and could not be refreshed. Please reconnect Jira.");
+    }
   }
 
   public async listAccessibleResources(accessToken: string): Promise<JiraAccessibleResource[]> {
@@ -319,13 +374,12 @@ class JiraIntegrationService {
     return integration;
   }
 
-  public async getJiraSummary(workspaceId: string): Promise<JiraSummaryResponse> {
-    const integration = await prisma.workspaceIntegration.findUnique({
+  public async getJiraSummary(
+    workspaceId: string,
+  ): Promise<{ totalIssues: string | null; totalProjects: number | null; latestBoards: string[] }> {
+    let integration = await prisma.workspaceIntegration.findUnique({
       where: {
-        workspaceId_provider: {
-          workspaceId,
-          provider: IntegrationProvider.JIRA,
-        },
+        workspaceId_provider: { workspaceId, provider: IntegrationProvider.JIRA },
       },
     });
 
@@ -333,16 +387,17 @@ class JiraIntegrationService {
       throw new Error("Jira is not connected");
     }
 
-    const { accessToken, metadata } = integration;
+    // Attempt to refresh token if expired
+    integration = await this.refreshTokenIfExpired(workspaceId, integration);
 
-    // For manual token (BASIC auth), the accessToken is the base64 string
-    // For OAuth, accessToken is the bearer token
-    const meta = metadata as unknown as JiraIntegrationMetadata;
+    const meta = integration.metadata as unknown as JiraIntegrationMetadata;
     const isBasic = meta?.authType === "BASIC";
 
     const headers: Record<string, string> = {
       Accept: "application/json",
-      Authorization: isBasic ? `Basic ${accessToken}` : `Bearer ${accessToken}`,
+      Authorization: isBasic
+        ? `Basic ${integration.accessToken}`
+        : `Bearer ${integration.accessToken}`,
     };
 
     const siteUrl = isBasic
@@ -435,13 +490,16 @@ class JiraIntegrationService {
   public async listJiraProjects(
     workspaceId: string,
   ): Promise<{ id: string; name: string; key: string }[]> {
-    const integration = await prisma.workspaceIntegration.findUnique({
+    let integration = await prisma.workspaceIntegration.findUnique({
       where: { workspaceId_provider: { workspaceId, provider: IntegrationProvider.JIRA } },
     });
 
     if (!integration || integration.status !== IntegrationStatus.CONNECTED) {
       throw new Error("Jira is not connected");
     }
+
+    // Attempt to refresh token if expired
+    integration = await this.refreshTokenIfExpired(workspaceId, integration);
 
     const meta = integration.metadata as unknown as JiraIntegrationMetadata;
     const isBasic = meta?.authType === "BASIC";
@@ -458,7 +516,17 @@ class JiraIntegrationService {
     if (!siteUrl) throw new Error("Jira site URL is unavailable");
 
     const response = await fetch(`${siteUrl.replace(/\/$/, "")}/rest/api/3/project`, { headers });
-    if (!response.ok) throw new Error("Failed to fetch Jira projects");
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(
+        "[jiraIntegrationService] listJiraProjects failed:",
+        response.status,
+        errorText,
+      );
+      throw new Error(
+        `Failed to fetch Jira projects: ${response.status} ${errorText.substring(0, 100)}`,
+      );
+    }
 
     const data = (await response.json()) as { id: string; name: string; key: string }[];
     return data.map((p) => ({ id: p.id, name: p.name, key: p.key }));
