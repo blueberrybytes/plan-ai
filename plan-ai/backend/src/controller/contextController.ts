@@ -596,10 +596,13 @@ export class ContextController extends BaseWorkspaceController {
       throw { status: 400, message: "OneDrive integration not connected" };
     }
 
+    // Refresh token if expired before making Graph API calls
+    const { accessToken } = await microsoftIntegrationService.refreshTokenIfExpired(workspaceId);
+
     for (const fileId of body.fileIds) {
       try {
         const metadata = await microsoftIntegrationService.getOneDriveFileMetadata(
-          integration.accessToken,
+          accessToken,
           fileId,
         );
 
@@ -609,7 +612,7 @@ export class ContextController extends BaseWorkspaceController {
         }
 
         const buffer = await microsoftIntegrationService.downloadOneDriveFile(
-          integration.accessToken,
+          accessToken,
           fileId,
         );
 

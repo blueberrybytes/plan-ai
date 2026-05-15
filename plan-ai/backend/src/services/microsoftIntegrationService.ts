@@ -2,6 +2,7 @@
 import axios from "axios";
 import { PrismaClient, IntegrationStatus, IntegrationProvider, Prisma } from "@prisma/client";
 import EnvUtils from "../utils/EnvUtils";
+import { logger } from "../utils/logger";
 
 const prisma = new PrismaClient();
 
@@ -79,7 +80,7 @@ export class MicrosoftIntegrationService {
 
     // Exchange code for token
     const tokenUrl = `https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/token`;
-    
+
     const params = new URLSearchParams();
     params.append("client_id", clientId);
     params.append("scope", "Files.ReadWrite.All Sites.ReadWrite.All User.Read offline_access");
@@ -148,14 +149,89 @@ export class MicrosoftIntegrationService {
     };
   }
 
+  /**
+   * Refresh the OneDrive access token if it's expired or about to expire.
+   * Microsoft Graph tokens typically expire after 60-90 minutes.
+   * Returns the (possibly refreshed) integration record.
+   */
+  public async refreshTokenIfExpired(workspaceId: string): Promise<{ accessToken: string }> {
+    const integration = await prisma.workspaceIntegration.findUnique({
+      where: { workspaceId_provider: { workspaceId, provider: IntegrationProvider.ONEDRIVE } },
+    });
+
+    if (
+      !integration ||
+      integration.status !== IntegrationStatus.CONNECTED ||
+      !integration.accessToken
+    ) {
+      throw new Error("OneDrive integration not connected");
+    }
+
+    // If token is still valid (more than 5 minutes remaining), return as-is
+    const buffer = 5 * 60 * 1000;
+    if (integration.expiresAt && integration.expiresAt.getTime() - buffer > Date.now()) {
+      return { accessToken: integration.accessToken };
+    }
+
+    // Token expired or about to expire — refresh it
+    if (!integration.refreshToken) {
+      throw new Error(
+        "OneDrive token expired and no refresh token available. Please reconnect OneDrive.",
+      );
+    }
+
+    const clientId = EnvUtils.get("MICROSOFT_CLIENT_ID");
+    const clientSecret = EnvUtils.get("MICROSOFT_CLIENT_SECRET");
+    const tenantId = EnvUtils.get("MICROSOFT_TENANT_ID") || "common";
+
+    if (!clientId || !clientSecret) {
+      throw new Error("Missing Microsoft client credentials for token refresh");
+    }
+
+    const tokenUrl = `https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/token`;
+
+    const params = new URLSearchParams();
+    params.append("client_id", clientId);
+    params.append("scope", "Files.ReadWrite.All Sites.ReadWrite.All User.Read offline_access");
+    params.append("refresh_token", integration.refreshToken);
+    params.append("grant_type", "refresh_token");
+    params.append("client_secret", clientSecret);
+
+    try {
+      const tokenResponse = await axios.post(tokenUrl, params, {
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      });
+
+      const { access_token, refresh_token, expires_in } = tokenResponse.data;
+      const expiresAt = new Date(Date.now() + expires_in * 1000);
+
+      await prisma.workspaceIntegration.update({
+        where: { id: integration.id },
+        data: {
+          accessToken: access_token,
+          refreshToken: refresh_token ?? integration.refreshToken, // Microsoft may or may not issue a new refresh token
+          expiresAt,
+        },
+      });
+
+      console.log(`[MicrosoftIntegrationService] Token refreshed for workspace ${workspaceId}`);
+      return { accessToken: access_token };
+    } catch (error) {
+      logger.error("[MicrosoftIntegrationService] Token refresh failed:", error);
+      console.error("[MicrosoftIntegrationService] Token refresh failed:", error);
+      throw new Error(
+        "OneDrive token expired and could not be refreshed. Please reconnect OneDrive.",
+      );
+    }
+  }
+
   public async getOneDriveFileMetadata(
     accessToken: string,
     fileId: string,
   ): Promise<{ name: string; mimeType: string; size: number }> {
-    const response = await axios.get(
-      `https://graph.microsoft.com/v1.0/me/drive/items/${fileId}`,
-      { headers: { Authorization: `Bearer ${accessToken}` } },
-    );
+    const response = await axios.get(`https://graph.microsoft.com/v1.0/me/drive/items/${fileId}`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
     return {
       name: response.data.name,
       mimeType: response.data.file?.mimeType || "application/octet-stream",
@@ -163,10 +239,7 @@ export class MicrosoftIntegrationService {
     };
   }
 
-  public async downloadOneDriveFile(
-    accessToken: string,
-    fileId: string,
-  ): Promise<Buffer> {
+  public async downloadOneDriveFile(accessToken: string, fileId: string): Promise<Buffer> {
     const response = await axios.get(
       `https://graph.microsoft.com/v1.0/me/drive/items/${fileId}/content`,
       {
@@ -191,11 +264,16 @@ export class MicrosoftIntegrationService {
       },
     });
 
-    if (!integration || integration.status !== IntegrationStatus.CONNECTED || !integration.accessToken) {
+    if (
+      !integration ||
+      integration.status !== IntegrationStatus.CONNECTED ||
+      !integration.accessToken
+    ) {
       throw new Error("Microsoft OneDrive integration is not connected.");
     }
 
-    const accessToken = integration.accessToken;
+    // Refresh token if expired before uploading
+    const { accessToken } = await this.refreshTokenIfExpired(workspaceId);
 
     // Read target folder from integration metadata
     const meta = (integration.metadata ?? {}) as Record<string, unknown>;
@@ -205,7 +283,7 @@ export class MicrosoftIntegrationService {
     const url = parentFolderId
       ? `https://graph.microsoft.com/v1.0/me/drive/items/${parentFolderId}:/${encodeURIComponent(filename)}:/content`
       : `https://graph.microsoft.com/v1.0/me/drive/root:/${encodeURIComponent(filename)}:/content`;
-    
+
     const response = await axios.put(url, buffer, {
       headers: {
         Authorization: `Bearer ${accessToken}`,
