@@ -30,21 +30,6 @@ interface OneDrivePickerParams {
 export const useOneDrivePicker = () => {
   const dispatch = useDispatch();
 
-  const loadOneDriveScript = (): Promise<void> => {
-    return new Promise((resolve, reject) => {
-      if ((window as any).OneDrive) {
-        resolve();
-        return;
-      }
-      const script = document.createElement("script");
-      script.src = "https://js.live.net/v7.2/OneDrive.js";
-      script.id = "onedrive-sdk";
-      script.onload = () => resolve();
-      script.onerror = () => reject(new Error("Failed to load OneDrive SDK"));
-      document.body.appendChild(script);
-    });
-  };
-
   const openPicker = useCallback(
     async ({ onPick, onCancel, multiple = false, pickerType = "file" }: OneDrivePickerParams) => {
       const clientId =
@@ -60,13 +45,11 @@ export const useOneDrivePicker = () => {
         return;
       }
 
-      try {
-        await loadOneDriveScript();
-      } catch (err) {
+      if (!(window as any).OneDrive) {
         dispatch(
           setToastMessage({
             severity: "error",
-            message: "Failed to load Microsoft OneDrive picker script.",
+            message: "Microsoft OneDrive SDK failed to load.",
           }),
         );
         return;
@@ -77,7 +60,7 @@ export const useOneDrivePicker = () => {
         action: pickerType === "folder" ? "query" : "download",
         multiSelect: multiple,
         advanced: {
-          redirectUri: window.location.origin + "/onedrive-picker-callback.html",
+          redirectUri: window.location.href.split('?')[0].split('#')[0],
         },
         success: (files: any) => {
           const items = files.value || [];
