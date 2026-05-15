@@ -1,39 +1,42 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-import { useCallback } from "react";
+import { useCallback, useRef } from "react";
 import { useDispatch } from "react-redux";
 import { setToastMessage } from "../store/slices/app/appSlice";
-
-/**
- * OneDrive File Picker hook.
- *
- * Dynamically loads the official Microsoft OneDrive v7.2 SDK to ensure
- * correct popup initialization, origin verification, and callbacks.
- *
- * @see https://learn.microsoft.com/en-us/onedrive/developer/controls/file-pickers
- */
 
 interface OneDrivePickerParams {
   onPick: (
     fileIds: string[],
-    items?: Array<{
-      id: string;
-      name: string;
-      size: number;
-      parentReference?: { driveId: string };
-    }>,
+    items?: Array<{ id: string; name: string; size: number; parentReference?: { driveId: string } }>,
   ) => void;
   onCancel?: () => void;
   multiple?: boolean;
   pickerType?: "file" | "folder";
 }
 
+interface OneDrivePickerMessage {
+  type: string;
+  data?: {
+    items?: Array<{
+      id: string;
+      name: string;
+      size: number;
+      parentReference?: {
+        driveId: string;
+      };
+    }>;
+  };
+}
+
+const ONEDRIVE_PICKER_URL = "https://onedrive.live.com/picker";
+
 export const useOneDrivePicker = () => {
   const dispatch = useDispatch();
+  const popupRef = useRef<Window | null>(null);
 
   const openPicker = useCallback(
-    async ({ onPick, onCancel, multiple = false, pickerType = "file" }: OneDrivePickerParams) => {
+    ({ onPick, onCancel, multiple = false, pickerType = "file" }: OneDrivePickerParams) => {
       const clientId =
-        process.env.REACT_APP_MICROSOFT_CLIENT_ID || process.env.REACT_APP_VITE_MICROSOFT_CLIENT_ID;
+        process.env.REACT_APP_MICROSOFT_CLIENT_ID ||
+        process.env.REACT_APP_VITE_MICROSOFT_CLIENT_ID;
 
       if (!clientId) {
         dispatch(
@@ -45,45 +48,81 @@ export const useOneDrivePicker = () => {
         return;
       }
 
-      if (!(window as any).OneDrive) {
+      // Ensure we use a registered redirect URI (the current page)
+      const currentUrl = window.location.href.split('?')[0].split('#')[0];
+
+      const params = new URLSearchParams({
+        client_id: clientId,
+        action: pickerType === "folder" ? "query" : "download",
+        multiselect: multiple ? "true" : "false",
+        advanced: JSON.stringify({
+          redirectUri: currentUrl,
+        }),
+      });
+
+      const pickerUrl = `${ONEDRIVE_PICKER_URL}?${params.toString()}`;
+
+      const width = 800;
+      const height = 600;
+      const left = window.screen.width / 2 - width / 2;
+      const top = window.screen.height / 2 - height / 2;
+
+      popupRef.current = window.open(
+        pickerUrl,
+        "onedrive-picker",
+        `width=${width},height=${height},left=${left},top=${top},toolbar=no,menubar=no`,
+      );
+
+      if (!popupRef.current) {
         dispatch(
           setToastMessage({
             severity: "error",
-            message: "Microsoft OneDrive SDK failed to load.",
+            message: "Popup blocked. Please allow popups for this site.",
           }),
         );
         return;
       }
 
-      const odOptions = {
-        clientId: clientId,
-        action: pickerType === "folder" ? "query" : "download",
-        multiSelect: multiple,
-        advanced: {
-          redirectUri: window.location.href.split('?')[0].split('#')[0],
-        },
-        success: (files: any) => {
-          const items = files.value || [];
-          const fileIds = items.map((item: any) => item.id);
+      const handleMessage = (event: MessageEvent) => {
+        // Allow messages from our own origin or Microsoft
+        if (
+          !event.origin.includes("onedrive.live.com") &&
+          !event.origin.includes("sharepoint.com") &&
+          !event.origin.includes("microsoft.com") &&
+          event.origin !== window.location.origin
+        ) {
+          return;
+        }
+
+        const message = event.data as OneDrivePickerMessage;
+
+        if (message.type === "success" && message.data?.items) {
+          const fileIds = message.data.items.map((item) => item.id);
           if (fileIds.length > 0) {
-            onPick(fileIds, items);
+            onPick(fileIds, message.data.items);
           }
-        },
-        cancel: () => {
+          window.removeEventListener("message", handleMessage);
+          popupRef.current?.close();
+        } else if (message.type === "cancel") {
           onCancel?.();
-        },
-        error: (error: any) => {
-          console.error("OneDrive Picker Error:", error);
-          dispatch(
-            setToastMessage({
-              severity: "error",
-              message: "An error occurred with the OneDrive picker.",
-            }),
-          );
-        },
+          window.removeEventListener("message", handleMessage);
+          popupRef.current?.close();
+        }
       };
 
-      (window as any).OneDrive.open(odOptions);
+      window.addEventListener("message", handleMessage);
+
+      // Fallback: clean up if popup is closed manually, wrapping in try/catch to handle strict COOP blocking window.closed
+      const pollTimer = setInterval(() => {
+        try {
+          if (popupRef.current?.closed) {
+            clearInterval(pollTimer);
+            window.removeEventListener("message", handleMessage);
+          }
+        } catch (e) {
+          // Ignore COOP errors
+        }
+      }, 500);
     },
     [dispatch],
   );
