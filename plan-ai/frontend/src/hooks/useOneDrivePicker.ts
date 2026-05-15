@@ -66,12 +66,12 @@ export const useOneDrivePicker = () => {
         clientId,
         action: "query",
         multiSelect: multiple,
+        // Per MS docs: viewType controls what can be selected.
+        // "folders" = only folders, "files" = only files (default), "all" = both.
+        viewType: pickerType === "folder" ? "folders" : "files",
         advanced: {
           redirectUri,
           endpointHint: "api.onedrive.com",
-          // Per MS docs: use filter to restrict what is selectable.
-          // "folder" shows only folders; omit filter to show all file types.
-          ...(pickerType === "folder" ? { filter: "folder" } : {}),
         },
         success: (response: any) => {
           const items = response?.value ?? [];
