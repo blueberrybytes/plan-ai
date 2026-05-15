@@ -48,15 +48,18 @@ export const useOneDrivePicker = () => {
         return;
       }
 
-      // Ensure we use a registered redirect URI (the current page)
       const currentUrl = window.location.href.split('?')[0].split('#')[0];
+      const currentOrigin = window.location.origin;
 
       const params = new URLSearchParams({
         client_id: clientId,
         action: pickerType === "folder" ? "query" : "download",
         multiselect: multiple ? "true" : "false",
+        origin: currentOrigin,
         advanced: JSON.stringify({
           redirectUri: currentUrl,
+          origin: currentOrigin,
+          endpointHint: "api.onedrive.com",
         }),
       });
 
