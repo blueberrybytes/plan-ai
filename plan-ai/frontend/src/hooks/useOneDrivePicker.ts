@@ -18,6 +18,18 @@ interface OneDrivePickerParams {
   pickerType?: "file" | "folder";
 }
 
+/**
+ * OneDrive Picker v7.2 integration.
+ *
+ * Key decisions (from official MS docs):
+ * - `redirectUri` MUST point to a lightweight page that only loads OneDrive.js.
+ *   Using the current page URL fails because React reloads inside the popup and
+ *   dynamic URLs (e.g. /contexts/:id) cannot all be registered in Azure.
+ *   We use `/onedrive-picker-callback.html` which is a static file in /public.
+ * - For folder-only selection: action "query" + advanced.filter "folder".
+ * - The `redirectUri` must be registered as a SPA redirect URI in Azure Portal
+ *   for the app's client ID.
+ */
 export const useOneDrivePicker = () => {
   const dispatch = useDispatch();
 
@@ -40,24 +52,29 @@ export const useOneDrivePicker = () => {
         dispatch(
           setToastMessage({
             severity: "error",
-            message: "Microsoft OneDrive SDK failed to load.",
+            message: "Microsoft OneDrive SDK failed to load. Please refresh the page.",
           }),
         );
         return;
       }
 
-      const currentUrl = window.location.href.split("?")[0].split("#")[0];
+      // Per MS docs: redirectUri must be a lightweight page that only loads OneDrive.js.
+      // This page must be registered as a SPA redirect URI in Azure Portal.
+      const redirectUri = `${window.location.origin}/onedrive-picker-callback.html`;
 
-      const odOptions = {
-        clientId: clientId,
-        action: pickerType === "folder" ? "query" : "download",
+      const odOptions: Record<string, any> = {
+        clientId,
+        action: "query",
         multiSelect: multiple,
         advanced: {
-          redirectUri: currentUrl,
+          redirectUri,
           endpointHint: "api.onedrive.com",
+          // Per MS docs: use filter to restrict what is selectable.
+          // "folder" shows only folders; omit filter to show all file types.
+          ...(pickerType === "folder" ? { filter: "folder" } : {}),
         },
-        success: (files: any) => {
-          const items = files.value || files.items || [];
+        success: (response: any) => {
+          const items = response?.value ?? [];
           const fileIds = items.map((item: any) => item.id);
           if (fileIds.length > 0) {
             onPick(fileIds, items);
@@ -67,7 +84,7 @@ export const useOneDrivePicker = () => {
           onCancel?.();
         },
         error: (error: any) => {
-          console.error("OneDrive Picker Error:", error);
+          console.error("[OneDrive Picker] Error:", error);
           dispatch(
             setToastMessage({
               severity: "error",

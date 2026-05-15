@@ -560,7 +560,7 @@ class JiraIntegrationService {
     taskId: string,
     projectId: string,
   ): Promise<{ issueId: string; issueKey: string; url: string }> {
-    const integration = await prisma.workspaceIntegration.findUnique({
+    let integration = await prisma.workspaceIntegration.findUnique({
       where: {
         workspaceId_provider: { workspaceId, provider: IntegrationProvider.JIRA },
       },
@@ -569,6 +569,9 @@ class JiraIntegrationService {
     if (!integration || !integration.accessToken) {
       throw new Error("Jira integration not found or unauthorized");
     }
+
+    // Refresh token if expired before creating the issue
+    integration = await this.refreshTokenIfExpired(workspaceId, integration);
 
     const task = await prisma.task.findUnique({
       where: { id: taskId },
