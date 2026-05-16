@@ -71,6 +71,7 @@ class JiraIntegrationService {
   private readonly scope = this.buildScopeString([
     "read:jira-work",
     "write:jira-work",
+    "read:board-scope:jira-software",
     process.env.JIRA_INCLUDE_USER_SCOPE === "true" ? "read:jira-user" : null,
     "offline_access",
   ]);
