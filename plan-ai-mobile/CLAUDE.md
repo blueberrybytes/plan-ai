@@ -1,7 +1,7 @@
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **plan-ai-mobile** (848 symbols, 1240 relationships, 44 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **plan-mobile** (974 symbols, 1546 relationships, 80 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
 
@@ -24,10 +24,14 @@ This project is indexed by GitNexus as **plan-ai-mobile** (848 symbols, 1240 rel
 
 | Resource | Use for |
 |----------|---------|
-| `gitnexus://repo/plan-ai-mobile/context` | Codebase overview, check index freshness |
-| `gitnexus://repo/plan-ai-mobile/clusters` | All functional areas |
-| `gitnexus://repo/plan-ai-mobile/processes` | All execution flows |
-| `gitnexus://repo/plan-ai-mobile/process/{name}` | Step-by-step execution trace |
+| `gitnexus://repo/plan-mobile/context` | Codebase overview, check index freshness |
+| `gitnexus://repo/plan-mobile/clusters` | All functional areas |
+| `gitnexus://repo/plan-mobile/processes` | All execution flows |
+| `gitnexus://repo/plan-mobile/process/{name}` | Step-by-step execution trace |
+
+## Cross-Repo Groups
+
+This repository is listed under GitNexus **group(s): plan-ai** (see `~/.gitnexus/groups/`). For cross-repo analysis, use MCP tools `impact`, `query`, and `context` with `repo` set to `@<groupName>` or `@<groupName>/<memberPath>` (paths match keys in that group’s `group.yaml`). Use `group_list` / `group_sync` for membership and sync. From the terminal: `npx gitnexus group list`, `npx gitnexus group sync <name>`, `npx gitnexus group impact <name> --target <symbol> --repo <group-path>`.
 
 ## CLI
 

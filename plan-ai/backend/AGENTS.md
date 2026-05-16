@@ -1,7 +1,7 @@
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **plan-mobile** (974 symbols, 1546 relationships, 80 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **plan-backend** (3154 symbols, 7788 relationships, 271 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
 
@@ -24,10 +24,10 @@ This project is indexed by GitNexus as **plan-mobile** (974 symbols, 1546 relati
 
 | Resource | Use for |
 |----------|---------|
-| `gitnexus://repo/plan-mobile/context` | Codebase overview, check index freshness |
-| `gitnexus://repo/plan-mobile/clusters` | All functional areas |
-| `gitnexus://repo/plan-mobile/processes` | All execution flows |
-| `gitnexus://repo/plan-mobile/process/{name}` | Step-by-step execution trace |
+| `gitnexus://repo/plan-backend/context` | Codebase overview, check index freshness |
+| `gitnexus://repo/plan-backend/clusters` | All functional areas |
+| `gitnexus://repo/plan-backend/processes` | All execution flows |
+| `gitnexus://repo/plan-backend/process/{name}` | Step-by-step execution trace |
 
 ## Cross-Repo Groups
 
