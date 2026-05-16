@@ -219,6 +219,10 @@ export class MicrosoftIntegrationService {
     } catch (error) {
       logger.error("[MicrosoftIntegrationService] Token refresh failed:", error);
       console.error("[MicrosoftIntegrationService] Token refresh failed:", error);
+      await prisma.workspaceIntegration.update({
+        where: { id: integration.id },
+        data: { status: IntegrationStatus.ERROR },
+      });
       throw new Error(
         "OneDrive token expired and could not be refreshed. Please reconnect OneDrive.",
       );

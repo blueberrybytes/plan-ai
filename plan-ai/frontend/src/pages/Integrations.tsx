@@ -263,6 +263,21 @@ const Integrations: React.FC = () => {
 
   const integrations = useMemo(() => integrationsData?.data ?? [], [integrationsData?.data]);
 
+  useEffect(() => {
+    if (integrations.length > 0) {
+      const brokenIntegrations = integrations.filter((i) => i.status === "ERROR");
+      if (brokenIntegrations.length > 0) {
+        const names = brokenIntegrations.map((i) => i.provider).join(", ");
+        dispatch(
+          setToastMessage({
+            severity: "error",
+            message: `Action Required: Your connection to ${names} has expired. Please reconnect.`,
+          }),
+        );
+      }
+    }
+  }, [integrations, dispatch]);
+
   const { data: notionDatabasesData } = useGetNotionDatabasesQuery(undefined, {
     skip: !integrations.some((i) => i.provider === "NOTION" && i.status === "CONNECTED"),
   });
@@ -1113,8 +1128,10 @@ const ConnectedIntegrationDetails: React.FC<{
   const dispatch = useDispatch();
   const [disconnectIntegration, { isLoading: isDisconnecting }] =
     useDisconnectIntegrationMutation();
-  const [setGoogleFolder, { isLoading: isSavingGoogleFolder }] = useSetGoogleDefaultFolderMutation();
-  const [setMicrosoftFolder, { isLoading: isSavingMicrosoftFolder }] = useSetMicrosoftDefaultFolderMutation();
+  const [setGoogleFolder, { isLoading: isSavingGoogleFolder }] =
+    useSetGoogleDefaultFolderMutation();
+  const [setMicrosoftFolder, { isLoading: isSavingMicrosoftFolder }] =
+    useSetMicrosoftDefaultFolderMutation();
   const { openPicker: openGooglePicker, loadPicker: loadGooglePicker } = useGooglePicker();
   const { openPicker: openOneDrivePicker } = useOneDrivePicker();
 
@@ -1493,6 +1510,13 @@ const ConnectedIntegrationDetails: React.FC<{
         )}
       </Stack>
 
+      {integration.status === "ERROR" && (
+        <Alert severity="error" sx={{ mt: 1 }}>
+          The connection to this integration has expired or failed. Please click
+          &quot;Reconnect&quot; to authorize it again.
+        </Alert>
+      )}
+
       <Typography variant="body2" color="text.secondary">
         {t("integrationsPage.connectedDetails.linkedAccount", {
           accountId: integration.accountId ?? t("integrationsPage.connectedDetails.unknownAccount"),
@@ -1851,7 +1875,8 @@ const ConnectedIntegrationDetails: React.FC<{
               size="small"
               disabled
               value={
-                ((integration.metadata as Record<string, unknown> | null)?.defaultFolderName as string) ?? "Root Directory"
+                ((integration.metadata as Record<string, unknown> | null)
+                  ?.defaultFolderName as string) ?? "Root Directory"
               }
               fullWidth
             />
@@ -1870,9 +1895,19 @@ const ConnectedIntegrationDetails: React.FC<{
                       try {
                         await setGoogleFolder({ folderId, folderName }).unwrap();
                         dispatch(integrationApi.util.invalidateTags(["Integration"]));
-                        dispatch(setToastMessage({ severity: "success", message: "Default folder updated" }));
+                        dispatch(
+                          setToastMessage({
+                            severity: "success",
+                            message: "Default folder updated",
+                          }),
+                        );
                       } catch {
-                        dispatch(setToastMessage({ severity: "error", message: "Failed to update folder" }));
+                        dispatch(
+                          setToastMessage({
+                            severity: "error",
+                            message: "Failed to update folder",
+                          }),
+                        );
                       }
                     }
                   },
@@ -1895,7 +1930,8 @@ const ConnectedIntegrationDetails: React.FC<{
               size="small"
               disabled
               value={
-                ((integration.metadata as Record<string, unknown> | null)?.defaultFolderName as string) ?? "Root Directory"
+                ((integration.metadata as Record<string, unknown> | null)
+                  ?.defaultFolderName as string) ?? "Root Directory"
               }
               fullWidth
             />
@@ -1908,18 +1944,38 @@ const ConnectedIntegrationDetails: React.FC<{
                   pickerType: "folder",
                   multiple: false,
                   onPick: async (fileIds, items) => {
-                    console.log("[Integrations] OneDrive folder pick - fileIds:", fileIds, "items:", items);
+                    console.log(
+                      "[Integrations] OneDrive folder pick - fileIds:",
+                      fileIds,
+                      "items:",
+                      items,
+                    );
                     if (fileIds.length > 0) {
                       const folderId = fileIds[0];
                       // OneDrive picker doesn't return name for folders — use fallback
                       const folderName = items?.[0]?.name || "OneDrive Folder";
-                      console.log("[Integrations] Sending to API - folderId:", folderId, "folderName:", folderName);
+                      console.log(
+                        "[Integrations] Sending to API - folderId:",
+                        folderId,
+                        "folderName:",
+                        folderName,
+                      );
                       try {
                         await setMicrosoftFolder({ folderId, folderName }).unwrap();
                         dispatch(integrationApi.util.invalidateTags(["Integration"]));
-                        dispatch(setToastMessage({ severity: "success", message: "Default folder updated" }));
+                        dispatch(
+                          setToastMessage({
+                            severity: "success",
+                            message: "Default folder updated",
+                          }),
+                        );
                       } catch {
-                        dispatch(setToastMessage({ severity: "error", message: "Failed to update folder" }));
+                        dispatch(
+                          setToastMessage({
+                            severity: "error",
+                            message: "Failed to update folder",
+                          }),
+                        );
                       }
                     }
                   },

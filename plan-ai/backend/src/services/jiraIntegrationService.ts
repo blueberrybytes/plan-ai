@@ -206,6 +206,10 @@ class JiraIntegrationService {
       return updated;
     } catch (error) {
       logger.error("Error refreshing Jira token", error);
+      await prisma.workspaceIntegration.update({
+        where: { id: integration.id },
+        data: { status: IntegrationStatus.ERROR },
+      });
       throw new Error("Jira token expired and could not be refreshed. Please reconnect Jira.");
     }
   }
