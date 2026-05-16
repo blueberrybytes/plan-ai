@@ -235,6 +235,58 @@ class TrelloIntegrationService {
       where: { workspaceId_provider: { workspaceId, provider: IntegrationProvider.TRELLO } },
       data: { metadata: newMetadata },
     });
+
+    // Ensure the Plan AI label exists on this board and cache its ID
+    await this.ensurePlanAiLabel(workspaceId, boardId);
+  }
+
+  public async ensurePlanAiLabel(workspaceId: string, boardId: string): Promise<string | undefined> {
+    const integration = await prisma.workspaceIntegration.findUnique({
+      where: { workspaceId_provider: { workspaceId, provider: IntegrationProvider.TRELLO } },
+    });
+    if (!integration || integration.status !== IntegrationStatus.CONNECTED) return undefined;
+
+    const { apiKey, token } = this.getCredentials(integration.accessToken);
+
+    try {
+      const labels = await this.fetchTrello<Array<{ id: string; name: string }>>(
+        `/boards/${boardId}/labels`,
+        apiKey,
+        token,
+      );
+
+      let label = labels.find((l) => l.name === "Plan AI");
+
+      if (!label) {
+        const params = new URLSearchParams({
+          name: "Plan AI",
+          color: "purple",
+          idBoard: boardId,
+        });
+        label = await this.fetchTrello<{ id: string; name: string }>(
+          `/labels?${params.toString()}`,
+          apiKey,
+          token,
+          { method: "POST" }
+        );
+      }
+
+      if (label?.id) {
+        const currentMeta = (integration.metadata ?? {}) as unknown as TrelloIntegrationMetadata;
+        const newMetadata: TrelloIntegrationMetadata = {
+          ...currentMeta,
+          planAiLabelId: label.id,
+        };
+        await prisma.workspaceIntegration.update({
+          where: { workspaceId_provider: { workspaceId, provider: IntegrationProvider.TRELLO } },
+          data: { metadata: newMetadata as unknown as Prisma.InputJsonObject },
+        });
+      }
+      return label?.id;
+    } catch (e) {
+      logger.error("Failed to ensure Plan AI label on Trello", e);
+      return undefined;
+    }
   }
 
   public async createTrelloCard(
@@ -270,12 +322,21 @@ class TrelloIntegrationService {
 
     const { apiKey, token } = this.getCredentials(integration.accessToken);
 
+    const currentMeta = (integration.metadata ?? {}) as unknown as TrelloIntegrationMetadata;
+    const labelIds: string[] = [];
+    if (currentMeta.planAiLabelId) {
+      labelIds.push(currentMeta.planAiLabelId);
+    }
+
     const prefix = `[📁 ${task.project.title}] `;
     const qsParams: Record<string, string> = {
       name: `${prefix}${task.title}`,
       desc: descLines.join("\n"),
       idList: listId,
     };
+    if (labelIds.length > 0) {
+      qsParams.idLabels = labelIds.join(",");
+    }
     if (task.dueDate) {
       qsParams.due = new Date(task.dueDate).toISOString();
     }

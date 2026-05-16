@@ -51,6 +51,8 @@ export class LinearController extends BaseWorkspaceController {
 
     try {
       await linearIntegrationService.verifyManualCredentials(workspaceId, body);
+      // Ensure the "Plan AI" label is created and cached
+      await linearIntegrationService.ensurePlanAiLabel(workspaceId);
       return {
         status: 200,
         data: null,
@@ -171,6 +173,9 @@ export class LinearController extends BaseWorkspaceController {
           metadata: { authType: "OAUTH" },
         },
       });
+
+      // Ensure the "Plan AI" label is created and cached for future task generation
+      await linearIntegrationService.ensurePlanAiLabel(workspaceId);
 
       if (res) {
         const targetUrl = new URL(redirectPath, baseUrl);

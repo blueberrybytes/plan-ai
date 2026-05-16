@@ -662,12 +662,19 @@ class JiraIntegrationService {
       }
     }
 
+    const sanitizedProjectName = task.project.title.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-]/g, '');
+    const labels = ["Plan-AI"];
+    if (sanitizedProjectName) {
+      labels.push(sanitizedProjectName);
+    }
+
     const payload: Record<string, unknown> = {
       fields: {
         project: { id: projectId },
         summary: (
           `[📁 ${task.project.title}] ` + (task.title || `Extracted Task ${task.id}`)
         ).substring(0, 250),
+        labels,
         duedate: task.dueDate ? new Date(task.dueDate).toISOString().split("T")[0] : undefined,
         description: {
           type: "doc",

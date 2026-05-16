@@ -19,6 +19,7 @@ export interface LinearIntegrationMetadata extends BaseIntegrationMetadata {
   defaultTeamId?: string;
   organizationUrlKey?: string;
   teamKey?: string;
+  planAiLabelId?: string;
 }
 
 export interface GoogleIntegrationMetadata extends BaseIntegrationMetadata {
@@ -34,6 +35,7 @@ export interface TrelloIntegrationMetadata extends BaseIntegrationMetadata {
   authType: "API_KEY" | "OAUTH";
   defaultBoardId?: string;
   defaultListId?: string;
+  planAiLabelId?: string;
 }
 
 export interface NotionIntegrationMetadata extends BaseIntegrationMetadata {

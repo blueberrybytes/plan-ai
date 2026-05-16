@@ -219,6 +219,41 @@ class LinearIntegrationService {
     console.log(`[linearIntegrationService] update complete for workspace ${workspaceId}`);
   }
 
+  public async ensurePlanAiLabel(workspaceId: string): Promise<string | undefined> {
+    const integration = await prisma.workspaceIntegration.findUnique({
+      where: { workspaceId_provider: { workspaceId, provider: IntegrationProvider.LINEAR } },
+    });
+    if (!integration || integration.status !== IntegrationStatus.CONNECTED) return undefined;
+
+    const client = this.getLinearClient(integration);
+    try {
+      const labelsRes = await client.issueLabels({ filter: { name: { eq: "Plan AI" } } });
+      let label = labelsRes.nodes.find((l) => l.name === "Plan AI");
+      if (!label) {
+        const payload = await client.createIssueLabel({
+          name: "Plan AI",
+          color: "#5E6AD2",
+        });
+        label = await payload.issueLabel;
+      }
+      if (label?.id) {
+        const currentMeta = (integration.metadata ?? {}) as unknown as LinearIntegrationMetadata;
+        const newMetadata: LinearIntegrationMetadata = {
+          ...currentMeta,
+          planAiLabelId: label.id,
+        };
+        await prisma.workspaceIntegration.update({
+          where: { workspaceId_provider: { workspaceId, provider: IntegrationProvider.LINEAR } },
+          data: { metadata: newMetadata as unknown as Prisma.InputJsonObject },
+        });
+      }
+      return label?.id;
+    } catch (e) {
+      logger.error("Failed to ensure Plan AI label", e);
+      return undefined;
+    }
+  }
+
   public async createLinearIssue(
     workspaceId: string,
     taskId: string,
@@ -265,6 +300,12 @@ class LinearIntegrationService {
       }
     }
 
+    const currentMeta = (integration.metadata ?? {}) as unknown as LinearIntegrationMetadata;
+    const labelIds: string[] = [];
+    if (currentMeta.planAiLabelId) {
+      labelIds.push(currentMeta.planAiLabelId);
+    }
+
     const prefix = `[📁 ${task.project.title}] `;
     const issuePayload = await client.createIssue({
       teamId,
@@ -273,6 +314,7 @@ class LinearIntegrationService {
       estimate: task.storyPoints ?? undefined,
       dueDate: task.dueDate ? new Date(task.dueDate).toISOString().split("T")[0] : undefined,
       parentId: linearParentId,
+      labelIds: labelIds.length > 0 ? labelIds : undefined,
     });
 
     const issue = await issuePayload.issue;
