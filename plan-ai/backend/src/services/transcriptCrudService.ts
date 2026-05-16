@@ -2,7 +2,7 @@ import { Prisma, Transcript, TranscriptSource } from "@prisma/client";
 import prisma from "../prisma/prismaClient";
 
 export interface TranscriptListResult {
-  transcripts: Transcript[];
+  transcripts: (Transcript & { project?: { id: string; name: string } | null })[];
   total: number;
 }
 
@@ -96,6 +96,9 @@ export class TranscriptCrudService {
         orderBy: { createdAt: "desc" },
         skip,
         take: pageSize,
+        include: {
+          project: { select: { id: true, name: true } },
+        },
       }),
       prisma.transcript.count({ where }),
     ]);

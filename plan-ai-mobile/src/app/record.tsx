@@ -556,8 +556,14 @@ export default function RecordScreen() {
           if (linear) setHasLinear(true);
           if (trello) setHasTrello(true);
           if (notion) setHasNotion(true);
-          if (googleDrive) setHasGoogleDrive(true);
-          if (oneDrive) setHasOneDrive(true);
+          if (googleDrive) {
+            setHasGoogleDrive(true);
+            setExportToGoogleDrive(true);
+          }
+          if (oneDrive) {
+            setHasOneDrive(true);
+            setExportToOneDrive(true);
+          }
 
           // As per UX requirement, default to OFF on mobile to avoid accidental spam
           setSyncToJira(false);
@@ -1075,33 +1081,37 @@ export default function RecordScreen() {
                 </View>
               )}
 
-              {hasGoogleDrive && (
-                <View style={styles.optionRow}>
-                  <Text style={styles.optionText}>
-                    Export document to Google Drive
-                  </Text>
-                  <Switch
-                    value={exportToGoogleDrive}
-                    onValueChange={setExportToGoogleDrive}
-                    trackColor={{ false: "#333", true: "#4ade80" }}
-                    thumbColor="#fff"
-                  />
-                </View>
-              )}
+              <View style={{
+                flexDirection: "row",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: 16,
+              }}>
+                <Text style={{ opacity: hasGoogleDrive ? 1 : 0.5 }}>
+                  Export to Google Drive
+                </Text>
+                <Switch
+                  value={exportToGoogleDrive}
+                  onValueChange={setExportToGoogleDrive}
+                  disabled={!hasGoogleDrive}
+                />
+              </View>
 
-              {hasOneDrive && (
-                <View style={styles.optionRow}>
-                  <Text style={styles.optionText}>
-                    Export document to OneDrive
-                  </Text>
-                  <Switch
-                    value={exportToOneDrive}
-                    onValueChange={setExportToOneDrive}
-                    trackColor={{ false: "#333", true: "#4ade80" }}
-                    thumbColor="#fff"
-                  />
-                </View>
-              )}
+              <View style={{
+                flexDirection: "row",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: 16,
+              }}>
+                <Text style={{ opacity: hasOneDrive ? 1 : 0.5 }}>
+                  Export to OneDrive
+                </Text>
+                <Switch
+                  value={exportToOneDrive}
+                  onValueChange={setExportToOneDrive}
+                  disabled={!hasOneDrive}
+                />
+              </View>
             </View>
 
             <Divider />

@@ -479,6 +479,14 @@ const Recording: React.FC = () => {
           if (notion) {
             setSyncToNotion(true);
           }
+          const google = ints.find((i) => i.provider === "GOOGLE_DRIVE" && i.status === "CONNECTED");
+          if (google) {
+            setExportToGoogleDrive(true);
+          }
+          const onedrive = ints.find((i) => i.provider === "ONEDRIVE" && i.status === "CONNECTED");
+          if (onedrive) {
+            setExportToOneDrive(true);
+          }
         }).catch(console.error);
       }
     }
@@ -806,25 +814,31 @@ const Recording: React.FC = () => {
           {integrations.find((i) => i.provider === "GOOGLE_DRIVE" && i.status === "CONNECTED") && (
             <FormControlLabel
               control={
-                <Switch
+                <Checkbox
                   checked={exportToGoogleDrive}
-                  onChange={(_, checked) => setExportToGoogleDrive(checked)}
-                  color="primary"
+                  onChange={(e) => setExportToGoogleDrive(e.target.checked)}
                 />
               }
-              label="Export document to Google Drive"
+              label={
+                <Typography variant="body2">
+                  Export transcript to Google Drive
+                </Typography>
+              }
             />
           )}
           {integrations.find((i) => i.provider === "ONEDRIVE" && i.status === "CONNECTED") && (
             <FormControlLabel
               control={
-                <Switch
+                <Checkbox
                   checked={exportToOneDrive}
-                  onChange={(_, checked) => setExportToOneDrive(checked)}
-                  color="primary"
+                  onChange={(e) => setExportToOneDrive(e.target.checked)}
                 />
               }
-              label="Export document to OneDrive"
+              label={
+                <Typography variant="body2">
+                  Export transcript to OneDrive
+                </Typography>
+              }
             />
           )}
         </FormGroup>

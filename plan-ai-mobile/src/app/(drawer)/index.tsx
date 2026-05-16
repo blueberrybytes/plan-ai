@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import React, { useState, useCallback, useEffect } from "react";
 import {
   View,
@@ -21,7 +22,6 @@ import { useAuth } from "../../context/AuthContext";
 import { ScreenHeader } from "../../components/ScreenHeader";
 import { WorkspaceSelector } from "../../components/WorkspaceSelector";
 import { useRouter, useFocusEffect, useNavigation } from "expo-router";
-import { DrawerActions } from "@react-navigation/native";
 import { Transcript } from "../../services/planAiApi";
 import { Directory, Paths, File } from "expo-file-system";
 
@@ -53,7 +53,9 @@ export default function DashboardScreen() {
     setRetryingIds((prev) => [...prev, transcriptId]);
     try {
       const updated = await api.reprocessTranscript(transcriptId);
-      setTranscripts((prev) => prev.map((t) => (t.id === transcriptId ? updated : t)));
+      setTranscripts((prev) =>
+        prev.map((t) => (t.id === transcriptId ? updated : t)),
+      );
     } catch (e) {
       console.error("[Retry] Failed to reprocess transcript", e);
     } finally {
@@ -61,7 +63,7 @@ export default function DashboardScreen() {
     }
   };
 
-  const fetchTranscripts = async () => {
+  const fetchTranscripts = useCallback(async () => {
     try {
       const data = await api.listTranscripts(debouncedSearch);
       setTranscripts(data || []);
@@ -93,37 +95,39 @@ export default function DashboardScreen() {
       setIsLoading(false);
       setIsRefreshing(false);
     }
-  };
+  }, [api, debouncedSearch]);
 
   useFocusEffect(
     useCallback(() => {
       if (activeWorkspaceId === null) return; // Prevent premature fetches causing 'no recordings' false positive
       fetchTranscripts();
-    }, [activeWorkspaceId, debouncedSearch]),
+    }, [activeWorkspaceId, fetchTranscripts]),
   );
 
   // Smart polling mechanism if any transcripts are currently processing
   const hasPending = transcripts.some((t) => {
-    const status = (t.metadata as Record<string, unknown>)?.processingStatus as string | undefined;
-    return status === "PENDING" || status === "PROCESSING" || status === "EXTRACTING_TASKS";
+    const status = (t.metadata as Record<string, unknown>)?.processingStatus as
+      | string
+      | undefined;
+    return (
+      status === "PENDING" ||
+      status === "PROCESSING" ||
+      status === "EXTRACTING_TASKS" ||
+      t.title?.includes("Generating")
+    );
   });
 
   useEffect(() => {
     let interval: ReturnType<typeof setInterval>;
     if (hasPending) {
       interval = setInterval(() => {
-        api
-          .listTranscripts()
-          .then((data) => {
-            if (data) setTranscripts(data);
-          })
-          .catch(console.error);
+        fetchTranscripts();
       }, 3000);
     }
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [hasPending, api]);
+  }, [hasPending, debouncedSearch, fetchTranscripts]);
 
   // Aggressive Auto-Sync Offline Pings
   useEffect(() => {
@@ -167,7 +171,7 @@ export default function DashboardScreen() {
       });
     }, 10000); // 10s auto-sync interval
     return () => clearInterval(syncInterval);
-  }, [pendingSyncs, syncingIds, api]);
+  }, [pendingSyncs, syncingIds, api, fetchTranscripts]);
 
   const onRefresh = () => {
     setIsRefreshing(true);
@@ -275,13 +279,13 @@ export default function DashboardScreen() {
       : "Unknown Date";
 
     const title = item.title || "Untitled Meeting";
-    
+
     // Feature: Analytics Extraction
-    const duration = item.durationSeconds 
-      ? `${Math.floor(item.durationSeconds / 60)}m ${item.durationSeconds % 60}s` 
+    const duration = item.durationSeconds
+      ? `${Math.floor(item.durationSeconds / 60)}m ${item.durationSeconds % 60}s`
       : null;
     const speakers = item.speakerCount ? `${item.speakerCount} Speakers` : null;
-    
+
     let sentimentColor = theme.colors.surfaceVariant;
     let sentimentTextColor = theme.colors.onSurfaceVariant;
     if (item.sentiment === "POSITIVE") {
@@ -394,40 +398,121 @@ export default function DashboardScreen() {
                 icon={retryingIds.includes(item.id) ? undefined : "refresh"}
                 loading={retryingIds.includes(item.id)}
                 disabled={retryingIds.includes(item.id)}
-                onPress={(e) => { e.stopPropagation?.(); handleRetry(item.id); }}
+                onPress={(e) => {
+                  e.stopPropagation?.();
+                  handleRetry(item.id);
+                }}
                 buttonColor="#fee2e2"
                 textColor="#991b1b"
                 compact
               >
-                {retryingIds.includes(item.id) ? "Queuing..." : "Retry AI Generation"}
+                {retryingIds.includes(item.id)
+                  ? "Queuing..."
+                  : "Retry AI Generation"}
               </Button>
             </View>
           )}
 
-          {(duration || speakers || item.sentiment) && summarySnippet !== "Processing summary..." && summarySnippet !== "AI processing failed." && (
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 12 }}>
-              {duration && (
-                <View style={{ backgroundColor: theme.colors.surfaceVariant, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12 }}>
-                  <Text variant="labelSmall" style={{ color: theme.colors.onSurfaceVariant }}>⏱️ {duration}</Text>
-                </View>
-              )}
-              {speakers && (
-                <View style={{ backgroundColor: theme.colors.surfaceVariant, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12 }}>
-                  <Text variant="labelSmall" style={{ color: theme.colors.onSurfaceVariant }}>🎙️ {speakers}</Text>
-                </View>
-              )}
-              {item.sentiment && (
-                <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-                  <Text variant="labelSmall" style={{ color: theme.colors.onSurfaceVariant }}>
-                    Sentiment:
-                  </Text>
-                  <View style={{ backgroundColor: sentimentColor, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12 }}>
-                    <Text variant="labelSmall" style={{ color: sentimentTextColor, fontWeight: 'bold' }}>{item.sentiment}</Text>
+          {((item as any).project?.name || duration || speakers || item.sentiment) &&
+            summarySnippet !== "Processing summary..." &&
+            summarySnippet !== "AI processing failed." && (
+              <View
+                style={{
+                  flexDirection: "row",
+                  flexWrap: "wrap",
+                  gap: 8,
+                  marginTop: 12,
+                }}
+              >
+                {(item as any).project?.name && (
+                  <View
+                    style={{
+                      backgroundColor: "rgba(147, 197, 253, 0.1)",
+                      paddingHorizontal: 8,
+                      paddingVertical: 4,
+                      borderRadius: 12,
+                      borderWidth: 1,
+                      borderColor: "rgba(147, 197, 253, 0.5)",
+                    }}
+                  >
+                    <Text
+                      variant="labelSmall"
+                      style={{ color: "#2563eb" }}
+                    >
+                      📁 {(item as any).project.name}
+                    </Text>
                   </View>
-                </View>
-              )}
-            </View>
-          )}
+                )}
+                {duration && (
+                  <View
+                    style={{
+                      backgroundColor: theme.colors.surfaceVariant,
+                      paddingHorizontal: 8,
+                      paddingVertical: 4,
+                      borderRadius: 12,
+                    }}
+                  >
+                    <Text
+                      variant="labelSmall"
+                      style={{ color: theme.colors.onSurfaceVariant }}
+                    >
+                      ⏱️ {duration}
+                    </Text>
+                  </View>
+                )}
+                {speakers && (
+                  <View
+                    style={{
+                      backgroundColor: theme.colors.surfaceVariant,
+                      paddingHorizontal: 8,
+                      paddingVertical: 4,
+                      borderRadius: 12,
+                    }}
+                  >
+                    <Text
+                      variant="labelSmall"
+                      style={{ color: theme.colors.onSurfaceVariant }}
+                    >
+                      🎙️ {speakers}
+                    </Text>
+                  </View>
+                )}
+                {item.sentiment && (
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: 4,
+                    }}
+                  >
+                    <Text
+                      variant="labelSmall"
+                      style={{ color: theme.colors.onSurfaceVariant }}
+                    >
+                      Sentiment:
+                    </Text>
+                    <View
+                      style={{
+                        backgroundColor: sentimentColor,
+                        paddingHorizontal: 8,
+                        paddingVertical: 4,
+                        borderRadius: 12,
+                      }}
+                    >
+                      <Text
+                        variant="labelSmall"
+                        style={{
+                          color: sentimentTextColor,
+                          fontWeight: "bold",
+                        }}
+                      >
+                        {item.sentiment}
+                      </Text>
+                    </View>
+                  </View>
+                )}
+              </View>
+            )}
         </Card.Content>
       </Card>
     );
@@ -455,13 +540,18 @@ export default function DashboardScreen() {
         </View>
       ) : (
         <View style={{ flex: 1 }}>
-          {(transcripts.length > 0 || pendingSyncs.length > 0 || searchQuery.length > 0) && (
+          {(transcripts.length > 0 ||
+            pendingSyncs.length > 0 ||
+            searchQuery.length > 0) && (
             <View style={{ paddingHorizontal: 16, marginBottom: 12 }}>
               <Searchbar
                 placeholder="Search by text, sentiment..."
                 onChangeText={setSearchQuery}
                 value={searchQuery}
-                style={{ backgroundColor: theme.colors.surfaceVariant, elevation: 0 }}
+                style={{
+                  backgroundColor: theme.colors.surfaceVariant,
+                  elevation: 0,
+                }}
                 inputStyle={{ color: theme.colors.onSurface }}
                 iconColor={theme.colors.primary}
               />
@@ -471,7 +561,7 @@ export default function DashboardScreen() {
             data={[
               ...pendingSyncs
                 .map((p) => ({ ...p, isLocalPending: true }))
-                .filter(t => {
+                .filter((t) => {
                   if (!searchQuery) return true;
                   const q = searchQuery.toLowerCase();
                   return (
@@ -484,21 +574,21 @@ export default function DashboardScreen() {
               ...transcripts,
             ]}
             keyExtractor={(item) => item.id}
-          renderItem={renderItem}
-          contentContainerStyle={
-            transcripts.length === 0 && pendingSyncs.length === 0
-              ? styles.emptyListContent
-              : [styles.listContent, { paddingBottom: 100 + insets.bottom }]
-          }
-          ListEmptyComponent={renderEmptyState}
-          refreshControl={
-            <RefreshControl
-              refreshing={isRefreshing}
-              onRefresh={onRefresh}
-              tintColor={theme.colors.primary}
-            />
-          }
-        />
+            renderItem={renderItem}
+            contentContainerStyle={
+              transcripts.length === 0 && pendingSyncs.length === 0
+                ? styles.emptyListContent
+                : [styles.listContent, { paddingBottom: 100 + insets.bottom }]
+            }
+            ListEmptyComponent={renderEmptyState}
+            refreshControl={
+              <RefreshControl
+                refreshing={isRefreshing}
+                onRefresh={onRefresh}
+                tintColor={theme.colors.primary}
+              />
+            }
+          />
         </View>
       )}
 

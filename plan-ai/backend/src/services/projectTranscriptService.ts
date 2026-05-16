@@ -1274,6 +1274,10 @@ ${content}`;
       });
     }
 
+    markdownContent += `\n## Full Transcript\n\n`;
+    markdownContent += transcript.transcript || "No transcript available.";
+    markdownContent += "\n";
+
     // Generate .docx Buffer
     const buffer = await DocumentGenerator.generateDocx(markdownContent);
 

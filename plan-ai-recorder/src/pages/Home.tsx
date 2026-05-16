@@ -107,25 +107,47 @@ const Home: React.FC = () => {
     return () => clearTimeout(handler);
   }, [searchQuery]);
 
-  const fetchData = useCallback(async () => {
+  const fetchData = useCallback(async (silent = false) => {
     if (!token) return;
-    setLoading(true);
-    setError(null);
+    if (!silent) setLoading(true);
+    if (!silent) setError(null);
     try {
       const list = await api.listTranscripts(debouncedSearch);
       setTranscripts(list);
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Failed to load recordings.",
-      );
+      if (!silent) {
+        setError(
+          err instanceof Error ? err.message : "Failed to load recordings.",
+        );
+      } else {
+        console.warn("[Home] Silent fetch failed", err);
+      }
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
-  }, [token, activeWorkspaceId, debouncedSearch]);
+  }, [token, activeWorkspaceId, debouncedSearch, api]);
 
   useEffect(() => {
-    void fetchData();
+    void fetchData(false);
   }, [fetchData]);
+
+  // Poll for updates if any transcript is pending/generating
+  useEffect(() => {
+    const hasPending = transcripts.some(
+      (t) =>
+        (t.metadata as any)?.processingStatus === "PENDING" ||
+        (t.metadata as any)?.processingStatus === "EXTRACTING_TASKS" ||
+        t.title?.includes("Generating")
+    );
+
+    if (hasPending) {
+      console.log("[Home] Pending transcripts found. Polling every 5s...");
+      const intervalId = setInterval(() => {
+        void fetchData(true);
+      }, 5000);
+      return () => clearInterval(intervalId);
+    }
+  }, [transcripts, fetchData]);
 
   // Enumerate microphone input devices
   useEffect(() => {
@@ -469,6 +491,11 @@ const Home: React.FC = () => {
                               {t.title || "Untitled Recording"}
                             </Typography>
                             <Box sx={{ display: 'flex', gap: 0.5, mt: 0.5, flexWrap: 'wrap' }}>
+                              {(t as any).project?.name && (
+                                <Typography variant="caption" sx={{ border: '1px solid rgba(147, 197, 253, 0.5)', px: 0.5, py: 0.2, borderRadius: 1, fontSize: '0.65rem', color: "#93c5fd", bgcolor: "rgba(147, 197, 253, 0.1)" }}>
+                                  📁 {(t as any).project.name}
+                                </Typography>
+                              )}
                               {t.durationSeconds && (
                                 <Typography variant="caption" sx={{ border: '1px solid rgba(255,255,255,0.2)', px: 0.5, py: 0.2, borderRadius: 1, fontSize: '0.65rem', color: "text.secondary" }}>
                                   ⏱️ {Math.floor(t.durationSeconds / 60)}m {t.durationSeconds % 60}s

@@ -2488,6 +2488,10 @@ export interface components {
         StandaloneTranscriptResponse: {
             id: string;
             projectId: string | null;
+            project?: {
+                name: string;
+                id: string;
+            } | null;
             userId: string;
             title: string | null;
             source: components["schemas"]["TranscriptSource"];

@@ -31,6 +31,10 @@ import { firebaseAdmin } from "../firebase/firebaseAdmin";
 interface StandaloneTranscriptResponse {
   id: string;
   projectId: string | null;
+  project?: {
+    id: string;
+    name: string;
+  } | null;
   userId: string;
   title: string | null;
   source: TranscriptSource;
@@ -103,10 +107,11 @@ interface UpdateStandaloneTranscriptBody {
 @Route("api/transcripts")
 @Tags("Transcripts")
 export class TranscriptsController extends BaseWorkspaceController {
-  private mapTranscriptResponse(t: Transcript): StandaloneTranscriptResponse {
+  private mapTranscriptResponse(t: Transcript & { project?: { id: string; name: string } | null }): StandaloneTranscriptResponse {
     return {
       id: t.id,
       projectId: t.projectId,
+      project: t.project,
       userId: t.userId,
       title: t.title,
       source: t.source,
