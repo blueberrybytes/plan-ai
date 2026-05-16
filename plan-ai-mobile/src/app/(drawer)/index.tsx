@@ -21,16 +21,32 @@ import {
 import { useAuth } from "../../context/AuthContext";
 import { ScreenHeader } from "../../components/ScreenHeader";
 import { WorkspaceSelector } from "../../components/WorkspaceSelector";
-import { useRouter, useFocusEffect, useNavigation } from "expo-router";
+import { useRouter, useFocusEffect, useNavigation, Href } from "expo-router";
 import { Transcript } from "../../services/planAiApi";
 import { Directory, Paths, File } from "expo-file-system";
+
+export interface PendingSyncItem {
+  id: string;
+  title: string;
+  audioUri?: string;
+  transcript?: string;
+  summary?: string;
+  sentiment?: string;
+  durationSeconds?: number;
+  speakerCount?: number;
+  timestamp: number;
+}
+
+export type FeedItem =
+  | (Transcript & { isLocalPending?: boolean })
+  | (PendingSyncItem & { isLocalPending: true });
 
 export default function DashboardScreen() {
   const [transcripts, setTranscripts] = useState<Transcript[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [workspaceMenuVisible, setWorkspaceMenuVisible] = useState(false);
-  const [pendingSyncs, setPendingSyncs] = useState<any[]>([]);
+  const [pendingSyncs, setPendingSyncs] = useState<PendingSyncItem[]>([]);
   const [syncingIds, setSyncingIds] = useState<string[]>([]);
   const [retryingIds, setRetryingIds] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -106,9 +122,7 @@ export default function DashboardScreen() {
 
   // Smart polling mechanism if any transcripts are currently processing
   const hasPending = transcripts.some((t) => {
-    const status = (t.metadata as Record<string, unknown>)?.processingStatus as
-      | string
-      | undefined;
+    const status = t.metadata?.processingStatus;
     return (
       status === "PENDING" ||
       status === "PROCESSING" ||
@@ -139,7 +153,7 @@ export default function DashboardScreen() {
         setSyncingIds((prev) => [...prev, item.id]);
         console.log(`[AutoSync] Attempting to push offline record: ${item.id}`);
         try {
-          const payload = { ...item };
+          const payload: Record<string, any> = { ...item };
           if (item.audioUri) {
             payload.micFile = {
               uri: item.audioUri,
@@ -214,7 +228,7 @@ export default function DashboardScreen() {
     </View>
   );
 
-  const renderItem = ({ item }: { item: any }) => {
+  const renderItem = ({ item }: { item: FeedItem }) => {
     // Determine if this is a local pending item mapped into the UI
     if (item.isLocalPending) {
       const isSyncing = syncingIds.includes(item.id);
@@ -302,9 +316,7 @@ export default function DashboardScreen() {
       sentimentTextColor = "#334155";
     }
 
-    const processingStatus = item.metadata?.processingStatus as
-      | string
-      | undefined;
+    const processingStatus = item.metadata?.processingStatus;
     const isDone =
       processingStatus === "COMPLETED" || processingStatus === "DONE";
 
@@ -331,7 +343,7 @@ export default function DashboardScreen() {
         style={[styles.card, { backgroundColor: theme.colors.surface }]}
         mode="elevated"
         elevation={1}
-        onPress={() => router.push(`/transcript/${item.id}` as any)}
+        onPress={() => router.push(`/transcript/${item.id}` as Href)}
       >
         <Card.Title
           title={title}
@@ -413,7 +425,10 @@ export default function DashboardScreen() {
             </View>
           )}
 
-          {((item as any).project?.name || duration || speakers || item.sentiment) &&
+          {(("project" in item && item.project?.title) ||
+            duration ||
+            speakers ||
+            item.sentiment) &&
             summarySnippet !== "Processing summary..." &&
             summarySnippet !== "AI processing failed." && (
               <View
@@ -424,7 +439,7 @@ export default function DashboardScreen() {
                   marginTop: 12,
                 }}
               >
-                {(item as any).project?.name && (
+                {"project" in item && item.project?.title && (
                   <View
                     style={{
                       backgroundColor: "rgba(147, 197, 253, 0.1)",
@@ -435,11 +450,8 @@ export default function DashboardScreen() {
                       borderColor: "rgba(147, 197, 253, 0.5)",
                     }}
                   >
-                    <Text
-                      variant="labelSmall"
-                      style={{ color: "#2563eb" }}
-                    >
-                      📁 {(item as any).project.name}
+                    <Text variant="labelSmall" style={{ color: "#2563eb" }}>
+                      📁 {item.project.title}
                     </Text>
                   </View>
                 )}
@@ -560,7 +572,7 @@ export default function DashboardScreen() {
           <FlatList
             data={[
               ...pendingSyncs
-                .map((p) => ({ ...p, isLocalPending: true }))
+                .map((p) => ({ ...p, isLocalPending: true as const }))
                 .filter((t) => {
                   if (!searchQuery) return true;
                   const q = searchQuery.toLowerCase();
@@ -599,7 +611,7 @@ export default function DashboardScreen() {
           { backgroundColor: theme.colors.primary, bottom: 20 + insets.bottom },
         ]}
         color={theme.colors.onPrimary}
-        onPress={() => router.push("/record" as any)}
+        onPress={() => router.push("/record" as Href)}
       />
     </View>
   );

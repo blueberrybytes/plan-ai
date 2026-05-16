@@ -135,8 +135,8 @@ const Home: React.FC = () => {
   useEffect(() => {
     const hasPending = transcripts.some(
       (t) =>
-        (t.metadata as any)?.processingStatus === "PENDING" ||
-        (t.metadata as any)?.processingStatus === "EXTRACTING_TASKS" ||
+        t.metadata?.processingStatus === "PENDING" ||
+        t.metadata?.processingStatus === "EXTRACTING_TASKS" ||
         t.title?.includes("Generating")
     );
 
@@ -205,13 +205,13 @@ const Home: React.FC = () => {
     setEditTitle(t.title || "Untitled Recording");
   };
 
-  const handleEditCancel = (e: React.MouseEvent) => {
+  const handleEditCancel = (e: React.SyntheticEvent) => {
     e.stopPropagation();
     setEditingId(null);
     setEditTitle("");
   };
 
-  const handleEditSave = async (e: React.MouseEvent, id: string) => {
+  const handleEditSave = async (e: React.SyntheticEvent, id: string) => {
     e.stopPropagation();
     if (!editTitle.trim() || !api) return;
 
@@ -453,8 +453,8 @@ const Home: React.FC = () => {
                         onChange={(e) => setEditTitle(e.target.value)}
                         onKeyDown={(e) => {
                           if (e.key === "Enter")
-                            void handleEditSave(e as any, t.id);
-                          if (e.key === "Escape") handleEditCancel(e as any);
+                            void handleEditSave(e, t.id);
+                          if (e.key === "Escape") handleEditCancel(e);
                         }}
                         sx={{ flex: 1 }}
                         InputProps={{
@@ -491,9 +491,9 @@ const Home: React.FC = () => {
                               {t.title || "Untitled Recording"}
                             </Typography>
                             <Box sx={{ display: 'flex', gap: 0.5, mt: 0.5, flexWrap: 'wrap' }}>
-                              {(t as any).project?.name && (
+                              {"project" in t && t.project?.title && (
                                 <Typography variant="caption" sx={{ border: '1px solid rgba(147, 197, 253, 0.5)', px: 0.5, py: 0.2, borderRadius: 1, fontSize: '0.65rem', color: "#93c5fd", bgcolor: "rgba(147, 197, 253, 0.1)" }}>
-                                  📁 {(t as any).project.name}
+                                  📁 {t.project.title}
                                 </Typography>
                               )}
                               {t.durationSeconds && (
@@ -516,8 +516,8 @@ const Home: React.FC = () => {
                                   </Typography>
                                 </Box>
                               )}
-                              {(t.metadata as any)?.processingStatus === "FAILED" && (
-                                <Tooltip title={(t.metadata as any)?.errorMessage || "Failed to process"}>
+                              {t.metadata?.processingStatus === "FAILED" && (
+                                <Tooltip title={t.metadata?.errorMessage || "Failed to process"}>
                                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                     <Typography variant="caption" sx={{ border: '1px solid #f87171', px: 0.5, py: 0.2, borderRadius: 1, fontSize: '0.65rem', color: '#f87171', bgcolor: 'rgba(248, 113, 113, 0.1)' }}>
                                       ⚠️ Failed

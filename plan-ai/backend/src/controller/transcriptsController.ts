@@ -33,7 +33,7 @@ interface StandaloneTranscriptResponse {
   projectId: string | null;
   project?: {
     id: string;
-    name: string;
+    title: string;
   } | null;
   userId: string;
   title: string | null;
@@ -107,7 +107,7 @@ interface UpdateStandaloneTranscriptBody {
 @Route("api/transcripts")
 @Tags("Transcripts")
 export class TranscriptsController extends BaseWorkspaceController {
-  private mapTranscriptResponse(t: Transcript & { project?: { id: string; name: string } | null }): StandaloneTranscriptResponse {
+  private mapTranscriptResponse(t: Transcript & { project?: { id: string; title: string } | null }): StandaloneTranscriptResponse {
     return {
       id: t.id,
       projectId: t.projectId,

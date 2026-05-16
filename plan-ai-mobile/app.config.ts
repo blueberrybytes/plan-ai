@@ -18,7 +18,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
   // ----------------------------------
 
   const isProduction = process.env.APP_ENV === "production";
-  const appVersion = "2.0.7";
+  const appVersion = "2.0.8";
   const bundleIdentifier = "com.blueberrybytes.planai";
 
   return {

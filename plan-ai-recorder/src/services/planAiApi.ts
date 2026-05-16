@@ -10,7 +10,15 @@ export type Project               = components['schemas']['ProjectResponse'];
 export type Task                  = components['schemas']['TaskResponse'];
 // StandaloneTranscriptResponse includes recorder-specific fields:
 // durationSeconds, speakerCount, sentiment, tasks, utterances, chatThread
-export type Transcript            = components['schemas']['StandaloneTranscriptResponse'];
+export interface TranscriptMetadata {
+  processingStatus?: "PENDING" | "PROCESSING" | "EXTRACTING_TASKS" | "COMPLETED" | "FAILED" | "DONE";
+  errorMessage?: string;
+  [key: string]: unknown;
+}
+
+export type Transcript = Omit<components['schemas']['StandaloneTranscriptResponse'], 'metadata'> & {
+  metadata?: TranscriptMetadata | null;
+};
 export type Context               = components['schemas']['ContextResponse'];
 export type AiModel               = components['schemas']['AiModelResponse'];
 export type UserIntegrationSummary = components['schemas']['IntegrationSummaryResponse'];

@@ -2489,7 +2489,7 @@ export interface components {
             id: string;
             projectId: string | null;
             project?: {
-                name: string;
+                title: string;
                 id: string;
             } | null;
             userId: string;

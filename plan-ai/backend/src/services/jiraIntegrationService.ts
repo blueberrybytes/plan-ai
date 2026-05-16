@@ -482,10 +482,17 @@ class JiraIntegrationService {
         }
       } else {
         const errorText = await boardRes.value.text();
-        logger.error("Jira board endpoint failed", {
-          status: boardRes.value.status,
-          body: errorText,
-        });
+        if (boardRes.value.status === 401 || boardRes.value.status === 403) {
+          logger.warn("Jira board endpoint failed (likely missing read:board-scope:jira-software scope)", {
+            status: boardRes.value.status,
+            body: errorText,
+          });
+        } else {
+          logger.error("Jira board endpoint failed", {
+            status: boardRes.value.status,
+            body: errorText,
+          });
+        }
       }
     }
 

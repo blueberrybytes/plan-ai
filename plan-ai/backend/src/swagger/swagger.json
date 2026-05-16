@@ -1547,7 +1547,7 @@
 					},
 					"project": {
 						"properties": {
-							"name": {
+							"title": {
 								"type": "string"
 							},
 							"id": {
@@ -1555,7 +1555,7 @@
 							}
 						},
 						"required": [
-							"name",
+							"title",
 							"id"
 						],
 						"type": "object",
