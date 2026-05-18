@@ -18,12 +18,14 @@ export const transcriptApi = createApi({
         page?: number;
         pageSize?: number;
         source?: "UPLOAD" | "RECORDING" | "ZOOM" | "GMEET" | "TEAMS";
+        q?: string;
       }
     >({
       query: (params: {
         page?: number;
         pageSize?: number;
         source?: "UPLOAD" | "RECORDING" | "ZOOM" | "GMEET" | "TEAMS";
+        q?: string;
       }) => ({
         url: "/api/transcripts",
         params,

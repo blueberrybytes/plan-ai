@@ -12,6 +12,8 @@ import {
   CardActionArea,
   Chip,
   Tooltip,
+  TextField,
+  InputAdornment,
 } from "@mui/material";
 import {
   Delete as DeleteIcon,
@@ -19,6 +21,7 @@ import {
   Refresh as RefreshIcon,
   AccessTime as TimeIcon,
   Group as GroupIcon,
+  Search as SearchIcon,
 } from "@mui/icons-material";
 import type { components } from "../types/api";
 import { useTranslation } from "react-i18next";
@@ -34,8 +37,19 @@ const Recordings: React.FC = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [page, setPage] = useState(1);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+
+  React.useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+      setPage(1); // Reset page on new search
+    }, 500);
+    return () => clearTimeout(handler);
+  }, [searchQuery]);
+
   const { data, isLoading, error, refetch, isFetching } = useListGlobalTranscriptsQuery(
-    { page, pageSize: 20, source: "RECORDING" },
+    { page, pageSize: 20, source: "RECORDING", q: debouncedSearch || undefined },
     { refetchOnFocus: true },
   );
   const [deleteTranscript] = useDeleteTranscriptMutation();
@@ -87,6 +101,24 @@ const Recordings: React.FC = () => {
             </Tooltip>
           }
         />
+
+        <Box sx={{ mb: 4, display: "flex", justifyContent: "flex-end" }}>
+          <TextField
+            placeholder={t("common.search", "Search recordings...")}
+            variant="outlined"
+            size="small"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon fontSize="small" />
+                </InputAdornment>
+              ),
+            }}
+            sx={{ width: { xs: "100%", sm: 300 } }}
+          />
+        </Box>
 
         {transcripts.length === 0 ? (
           <Card sx={{ textAlign: "center", py: 8 }}>
