@@ -873,8 +873,10 @@ const Home: React.FC = () => {
             />
 
             <FormControl fullWidth size="small" sx={{ mt: 2 }}>
-              <InputLabel shrink>Context (Optional)</InputLabel>
+              <InputLabel id="context-select-label">Context (Optional)</InputLabel>
               <Select
+                labelId="context-select-label"
+                id="context-select"
                 value={selectedContextId}
                 label="Context (Optional)"
                 onChange={(e) => setSelectedContextId(e.target.value)}
