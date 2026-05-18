@@ -92,7 +92,7 @@ export const createPlanAiApi = (
     return headers;
   };
 
-  const safeFetch = async (url: string, init?: RequestInit, silent = false, timeoutMs = 30000): Promise<Response> => {
+  const safeFetch = async (url: string, init?: RequestInit, silent = false, timeoutMs = 60000): Promise<Response> => {
     console.log(`[planAiApi] Invoking fetch to URL: ${url}`);
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs); // configurable timeout
@@ -118,7 +118,7 @@ export const createPlanAiApi = (
 
   // Variant of safeFetch that suppresses the alert banner on network errors.
   // Use this when the caller already handles the error gracefully (e.g. .catch(() => [])).
-  const silentFetch = (url: string, init?: RequestInit, timeoutMs = 30000) => safeFetch(url, init, true, timeoutMs);
+  const silentFetch = (url: string, init?: RequestInit, timeoutMs = 60000) => safeFetch(url, init, true, timeoutMs);
 
   return {
     getAuthHeaders,
@@ -344,7 +344,7 @@ export const createPlanAiApi = (
         url.searchParams.set("source", "RECORDING");
         if (q) url.searchParams.set("q", q);
 
-        return safeFetch(url.toString(), {
+        return silentFetch(url.toString(), {
           headers: await getAuthHeaders(force),
         });
       };
