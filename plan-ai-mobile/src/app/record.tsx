@@ -244,6 +244,7 @@ export default function RecordScreen() {
   const [audioBackupPath, setAudioBackupPath] = useState<string | null>(null);
   const [currentVolume, setCurrentVolume] = useState(0);
   const [isWsConnected, setIsWsConnected] = useState(true);
+  const [isConnectingWs, setIsConnectingWs] = useState(false);
   const [meetingLocation, setMeetingLocation] = useState<{
     latitude: number;
     longitude: number;
@@ -577,7 +578,9 @@ export default function RecordScreen() {
     }
   }, [phase, api]);
 
-  const connectWebSocket = async () => {
+  const connectWebSocket = useCallback(async () => {
+    if (isConnectingWs) return;
+    setIsConnectingWs(true);
     try {
       const ws = await api.startAudioStream(language);
       wsRef.current = ws;
@@ -585,6 +588,7 @@ export default function RecordScreen() {
       ws.onopen = () => {
         console.log("✅ WebSocket Connected!");
         setIsWsConnected(true);
+        setIsConnectingWs(false);
       };
 
       ws.onmessage = (event: MessageEvent) => {
@@ -625,14 +629,40 @@ export default function RecordScreen() {
           "WS Stream Closed (Network disconnected). Local WAV continues recording.",
         );
         setIsWsConnected(false);
+        setIsConnectingWs(false);
         wsRef.current = null;
       };
     } catch (e) {
       console.warn("Failed to initialize WS (offline):", e);
-      // ws.onclose already sets isWsConnected=false — no alert needed here
       setIsWsConnected(false);
+      setIsConnectingWs(false);
     }
-  };
+  }, [api, isConnectingWs, language]);
+
+  // Auto-reconnect loop when recording but websocket dropped
+  useEffect(() => {
+    let reconnectTimeout: NodeJS.Timeout;
+    if (
+      phase === "recording" &&
+      isRecording &&
+      !isWsConnected &&
+      !isConnectingWs
+    ) {
+      // Wait 3 seconds before automatically trying again
+      reconnectTimeout = setTimeout(() => {
+        console.log("🔄 Auto-reconnecting WebSocket...");
+        connectWebSocket();
+      }, 3000);
+    }
+    return () => clearTimeout(reconnectTimeout);
+  }, [
+    phase,
+    isRecording,
+    isWsConnected,
+    isConnectingWs,
+    language,
+    connectWebSocket,
+  ]);
 
   const handleLanguageChange = (newLang: string) => {
     setLanguage(newLang);
@@ -1081,12 +1111,14 @@ export default function RecordScreen() {
                 </View>
               )}
 
-              <View style={{
-                flexDirection: "row",
-                justifyContent: "space-between",
-                alignItems: "center",
-                marginBottom: 16,
-              }}>
+              <View
+                style={{
+                  flexDirection: "row",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  marginBottom: 16,
+                }}
+              >
                 <Text style={{ opacity: hasGoogleDrive ? 1 : 0.5 }}>
                   Export to Google Drive
                 </Text>
@@ -1097,12 +1129,14 @@ export default function RecordScreen() {
                 />
               </View>
 
-              <View style={{
-                flexDirection: "row",
-                justifyContent: "space-between",
-                alignItems: "center",
-                marginBottom: 16,
-              }}>
+              <View
+                style={{
+                  flexDirection: "row",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  marginBottom: 16,
+                }}
+              >
                 <Text style={{ opacity: hasOneDrive ? 1 : 0.5 }}>
                   Export to OneDrive
                 </Text>
@@ -1438,9 +1472,10 @@ export default function RecordScreen() {
             compact
             buttonColor={theme.colors.onErrorContainer}
             textColor={theme.colors.errorContainer}
+            loading={isConnectingWs}
+            disabled={isConnectingWs}
             onPress={() => {
               if (isRecording) {
-                // Prevent duplicate connections if somehow clicked repeatedly
                 if (wsRef.current) {
                   wsRef.current.close();
                 }
@@ -1448,7 +1483,7 @@ export default function RecordScreen() {
               }
             }}
           >
-            Reconnect
+            {isConnectingWs ? "Connecting..." : "Reconnect"}
           </Button>
         </View>
       )}
