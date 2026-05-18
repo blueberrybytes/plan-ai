@@ -33,7 +33,7 @@ import {
 } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
-import type { Transcript } from "../services/planAiApi";
+import type { Transcript, Context } from "../services/planAiApi";
 import type { DesktopSource } from "../types/electron";
 import { AudioLevelMonitor } from "../components/AudioLevelMonitor";
 import { saveConfig, type RecordingConfig } from "../utils/recorderConfig";
@@ -65,6 +65,9 @@ const Home: React.FC = () => {
     // gets hijacked by Zoom/Teams, so we need the auto-selection to find real hardware
     return saved && saved !== "default" ? saved : "default";
   });
+
+  const [contexts, setContexts] = useState<Context[]>([]);
+  const [selectedContextId, setSelectedContextId] = useState<string>("");
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState("");
@@ -129,7 +132,10 @@ const Home: React.FC = () => {
 
   useEffect(() => {
     void fetchData(false);
-  }, [fetchData]);
+    if (api) {
+      api.listContexts().then(setContexts).catch(console.error);
+    }
+  }, [fetchData, api]);
 
   // Poll for updates if any transcript is pending/generating
   useEffect(() => {
@@ -308,7 +314,12 @@ const Home: React.FC = () => {
   }, [systemSourceId]);
 
   const handleStartRecording = () => {
-    const config: RecordingConfig = { systemSourceId, language, micDeviceId };
+    const config: RecordingConfig = { 
+      systemSourceId, 
+      language, 
+      micDeviceId,
+      contextIds: selectedContextId ? [selectedContextId] : undefined 
+    };
     saveConfig(config);
     navigate(`/recording`);
   };
@@ -860,6 +871,29 @@ const Home: React.FC = () => {
                 />
               )}
             />
+
+            <FormControl fullWidth size="small" sx={{ mt: 2 }}>
+              <InputLabel shrink>Context (Optional)</InputLabel>
+              <Select
+                value={selectedContextId}
+                label="Context (Optional)"
+                onChange={(e) => setSelectedContextId(e.target.value)}
+                displayEmpty
+                sx={{
+                  bgcolor: "rgba(255,255,255,0.05)",
+                  fontSize: "0.8rem",
+                }}
+              >
+                <MenuItem value="" sx={{ fontSize: "0.8rem" }}>
+                  <em>None (Use default keywords)</em>
+                </MenuItem>
+                {contexts.map((c) => (
+                  <MenuItem key={c.id} value={c.id} sx={{ fontSize: "0.8rem" }}>
+                    {c.name}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
           </Box>
 
           <Box

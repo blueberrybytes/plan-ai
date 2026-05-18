@@ -1,6 +1,6 @@
 {
   "name": "bbb_content_generator_frontend",
-  "version": "2.0.8",
+  "version": "2.1.0",
   "license": "PolyForm-Noncommercial-1.0.0",
   "private": true,
   "engines": {

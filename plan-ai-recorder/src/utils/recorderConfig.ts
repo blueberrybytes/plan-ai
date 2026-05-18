@@ -2,6 +2,7 @@ export interface RecordingConfig {
   systemSourceId: string | null;
   language?: string;
   micDeviceId?: string;
+  contextIds?: string[];
 }
 
 const CONFIG_KEY = "recorder-config";

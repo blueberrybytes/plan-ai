@@ -158,7 +158,8 @@ export function setupAudioStream(server: Server) {
       const url = new URL(req.url || "", `http://${req.headers.host}`);
       const token = url.searchParams.get("token");
       const language = url.searchParams.get("language") || "multi";
-      console.log("[DEBUG WS] parsed URL parameters", Boolean(token), language);
+      const contextIdsParam = url.searchParams.get("contextIds");
+      console.log("[DEBUG WS] parsed URL parameters", Boolean(token), language, contextIdsParam);
 
       if (!token) {
         ws.send(JSON.stringify({ type: "error", message: "Unauthorized: Missing token" }));
@@ -202,6 +203,28 @@ export function setupAudioStream(server: Server) {
       console.log("[DEBUG WS] creating deepgram client");
       deepgram = createClient(deepgramApiKey);
 
+      // Collect keywords from contexts
+      let keyterms: string[] | undefined = undefined;
+      if (contextIdsParam) {
+        const ids = contextIdsParam.split(",");
+        const contexts = await prisma.context.findMany({
+          where: { id: { in: ids } },
+          select: { keywords: true },
+        });
+        
+        const allKeywords = new Set<string>();
+        contexts.forEach((c) => {
+          if (c.keywords && Array.isArray(c.keywords)) {
+            c.keywords.forEach((kw) => allKeywords.add(kw));
+          }
+        });
+        
+        if (allKeywords.size > 0) {
+          keyterms = Array.from(allKeywords);
+          console.log(`[DEBUG WS] Loaded ${keyterms.length} keyterms from contexts.`);
+        }
+      }
+
       dgConfig = {
         model: "nova-3",
         language: language === "multi" ? "multi" : language,
@@ -214,6 +237,7 @@ export function setupAudioStream(server: Server) {
         utterance_end_ms: 1000,
         vad_events: true,
         filler_words: false,
+        ...(keyterms && keyterms.length > 0 ? { keyterm: keyterms } : {}),
       };
 
       console.log(

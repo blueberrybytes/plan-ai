@@ -52,7 +52,13 @@ notifee.registerForegroundService(() => {
   });
 });
 
-type Phase = "recording" | "context_selection" | "saving" | "done" | "error";
+type Phase =
+  | "setup"
+  | "recording"
+  | "save_options"
+  | "saving"
+  | "done"
+  | "error";
 
 const PulsingRecordButton = ({
   onPress,
@@ -236,7 +242,7 @@ const LANGUAGE_OPTIONS = [
 ];
 
 export default function RecordScreen() {
-  const [phase, setPhase] = useState<Phase>("recording");
+  const [phase, setPhase] = useState<Phase>("setup");
   const [isRecording, setIsRecording] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [transcript, setTranscript] = useState("");
@@ -434,7 +440,7 @@ export default function RecordScreen() {
   };
 
   useEffect(() => {
-    if (phase === "context_selection" && transcript && !title) {
+    if (phase === "save_options" && transcript && !title) {
       setIsGeneratingTitle(true);
       api
         .sendLiveChatMessage({
@@ -524,7 +530,7 @@ export default function RecordScreen() {
   }, [isRecording]);
 
   useEffect(() => {
-    if (phase === "context_selection") {
+    if (phase === "setup") {
       setIsLoadingMetadata(true);
       Promise.all([
         api.listProjects().catch(() => []),
@@ -582,7 +588,7 @@ export default function RecordScreen() {
     if (isConnectingWs) return;
     setIsConnectingWs(true);
     try {
-      const ws = await api.startAudioStream(language);
+      const ws = await api.startAudioStream(language, selectedContextIds);
       wsRef.current = ws;
 
       ws.onopen = () => {
@@ -637,7 +643,7 @@ export default function RecordScreen() {
       setIsWsConnected(false);
       setIsConnectingWs(false);
     }
-  }, [api, isConnectingWs, language]);
+  }, [api, isConnectingWs, language, selectedContextIds]);
 
   // Auto-reconnect loop when recording but websocket dropped
   useEffect(() => {
@@ -823,7 +829,7 @@ export default function RecordScreen() {
   const handleStopRecordingBtn = async () => {
     const hasData = await stopAudioStream();
     if (hasData) {
-      setPhase("context_selection");
+      setPhase("save_options");
     } else {
       router.back();
     }
@@ -924,7 +930,7 @@ export default function RecordScreen() {
       } catch (offlineErr) {
         console.error("Fatal offline storage failure", offlineErr);
         alert("Failed to save meeting both online and offline.");
-        setPhase("context_selection");
+        setPhase("save_options");
       }
     }
   };
@@ -1003,7 +1009,111 @@ export default function RecordScreen() {
     );
   }
 
-  if (phase === "context_selection") {
+  if (phase === "setup") {
+    return (
+      <View
+        style={[styles.container, { backgroundColor: theme.colors.background }]}
+      >
+        <View style={styles.header}>
+          <Text
+            variant="headlineSmall"
+            style={{ color: theme.colors.primary, fontWeight: "bold" }}
+          >
+            Setup Meeting
+          </Text>
+          <IconButton icon="close" size={24} onPress={() => router.back()} />
+        </View>
+
+        {isLoadingMetadata ? (
+          <View style={{ flex: 1, justifyContent: "center" }}>
+            <ActivityIndicator />
+          </View>
+        ) : (
+          <ScrollView contentContainerStyle={{ padding: 24, gap: 24 }}>
+            <View>
+              <Text
+                variant="labelLarge"
+                style={{ marginBottom: 8, opacity: 0.7 }}
+              >
+                Target Project (Optional)
+              </Text>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={{ gap: 8 }}
+              >
+                <Chip
+                  selected={selectedProjectId === null}
+                  onPress={() => setSelectedProjectId(null)}
+                  mode={selectedProjectId === null ? "flat" : "outlined"}
+                >
+                  Create New Project
+                </Chip>
+                {projects.map((p) => (
+                  <Chip
+                    key={p.id}
+                    selected={selectedProjectId === p.id}
+                    onPress={() => setSelectedProjectId(p.id)}
+                    mode={selectedProjectId === p.id ? "flat" : "outlined"}
+                  >
+                    {p.title}
+                  </Chip>
+                ))}
+              </ScrollView>
+            </View>
+
+            <View>
+              <Text
+                variant="labelLarge"
+                style={{ marginBottom: 8, opacity: 0.7 }}
+              >
+                Background Contexts (Improves Transcription)
+              </Text>
+              {contexts.length === 0 ? (
+                <Text style={{ opacity: 0.5 }}>No contexts available.</Text>
+              ) : (
+                <View
+                  style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}
+                >
+                  {contexts.map((c) => (
+                    <Chip
+                      key={c.id}
+                      selected={selectedContextIds.includes(c.id)}
+                      onPress={() => toggleContext(c.id)}
+                      mode={
+                        selectedContextIds.includes(c.id) ? "flat" : "outlined"
+                      }
+                    >
+                      {c.name}
+                    </Chip>
+                  ))}
+                </View>
+              )}
+            </View>
+          </ScrollView>
+        )}
+
+        <View
+          style={{
+            padding: 24,
+            paddingBottom: Math.max(24, insets.bottom + 16),
+            borderTopWidth: 1,
+            borderTopColor: "rgba(0,0,0,0.05)",
+          }}
+        >
+          <Button
+            mode="contained"
+            onPress={() => setPhase("recording")}
+            icon="microphone"
+          >
+            Continue to Recording
+          </Button>
+        </View>
+      </View>
+    );
+  }
+
+  if (phase === "save_options") {
     return (
       <View
         style={[styles.container, { backgroundColor: theme.colors.background }]}
@@ -1052,65 +1162,6 @@ export default function RecordScreen() {
             </View>
 
             <View>
-              <Text
-                variant="labelLarge"
-                style={{ marginBottom: 8, opacity: 0.7 }}
-              >
-                Target Project (Optional)
-              </Text>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={{ gap: 8 }}
-              >
-                <Chip
-                  selected={selectedProjectId === null}
-                  onPress={() => setSelectedProjectId(null)}
-                  mode={selectedProjectId === null ? "flat" : "outlined"}
-                >
-                  Create New Project
-                </Chip>
-                {projects.map((p) => (
-                  <Chip
-                    key={p.id}
-                    selected={selectedProjectId === p.id}
-                    onPress={() => setSelectedProjectId(p.id)}
-                    mode={selectedProjectId === p.id ? "flat" : "outlined"}
-                  >
-                    {p.title}
-                  </Chip>
-                ))}
-              </ScrollView>
-            </View>
-
-            <View>
-              <Text
-                variant="labelLarge"
-                style={{ marginBottom: 8, opacity: 0.7 }}
-              >
-                Background Contexts
-              </Text>
-              {contexts.length === 0 ? (
-                <Text style={{ opacity: 0.5 }}>No contexts available.</Text>
-              ) : (
-                <View
-                  style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}
-                >
-                  {contexts.map((c) => (
-                    <Chip
-                      key={c.id}
-                      selected={selectedContextIds.includes(c.id)}
-                      onPress={() => toggleContext(c.id)}
-                      mode={
-                        selectedContextIds.includes(c.id) ? "flat" : "outlined"
-                      }
-                    >
-                      {c.name}
-                    </Chip>
-                  ))}
-                </View>
-              )}
-
               <View
                 style={{
                   flexDirection: "row",

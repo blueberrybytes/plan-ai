@@ -229,7 +229,7 @@ export const createPlanAiApi = (
       return handleResponseWithRetry<{ text: string }>(res, () => req(true)).then((d) => d.text);
     },
 
-    async startAudioStream(language?: string): Promise<WebSocket> {
+    async startAudioStream(language?: string, contextIds?: string[]): Promise<WebSocket> {
       const token = await getToken(false);
       if (!token) throw new Error("No auth token available");
 
@@ -239,6 +239,9 @@ export const createPlanAiApi = (
 
       if (language) {
         wsUrl.searchParams.set("language", language);
+      }
+      if (contextIds && contextIds.length > 0) {
+        wsUrl.searchParams.set("contextIds", contextIds.join(","));
       }
 
       const wsId = getWorkspaceId();

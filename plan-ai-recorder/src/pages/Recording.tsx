@@ -194,7 +194,10 @@ const Recording: React.FC = () => {
   const [selectedProjectId, setSelectedProjectId] = useState<string>("");
 
   const [contexts, setContexts] = useState<Context[]>([]);
-  const [selectedContextId, setSelectedContextId] = useState<string>("");
+  const [selectedContextId, setSelectedContextId] = useState<string>(() => {
+    const config = loadConfig();
+    return config?.contextIds && config.contextIds.length > 0 ? config.contextIds[0] : "";
+  });
 
   const [aiModels, setAiModels] = useState<AiModel[]>([]);
   const [modelKey, setModelKey] = useState<string>("");
@@ -661,29 +664,7 @@ const Recording: React.FC = () => {
           </Select>
         </FormControl>
 
-        <Typography variant="body2" color="text.secondary">
-          You can also specify an optional Context to inject project knowledge
-          when analyzing the recording.
-        </Typography>
 
-        <FormControl sx={{ minWidth: 240, mt: 1 }}>
-          <InputLabel shrink>Context (Optional)</InputLabel>
-          <Select
-            value={selectedContextId}
-            label="Context (Optional)"
-            onChange={(e) => setSelectedContextId(e.target.value)}
-            displayEmpty
-          >
-            <MenuItem value="">
-              <em>None</em>
-            </MenuItem>
-            {contexts.map((c) => (
-              <MenuItem key={c.id} value={c.id}>
-                {c.name}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
 
         <FormControl sx={{ minWidth: 240, mt: 1 }}>
           <InputLabel shrink>AI Model</InputLabel>
@@ -1307,23 +1288,7 @@ const Recording: React.FC = () => {
               borderBottom: "1px solid rgba(255,255,255,0.06)",
             }}
           >
-            <FormControl fullWidth size="small">
-              <Select
-                value={selectedContextId}
-                onChange={(e) => setSelectedContextId(e.target.value)}
-                displayEmpty
-                sx={{ fontSize: "0.8rem", height: 32 }}
-              >
-                <MenuItem value="" sx={{ fontSize: "0.8rem" }}>
-                  <em>No Context DB</em>
-                </MenuItem>
-                {contexts.map((c) => (
-                  <MenuItem key={c.id} value={c.id} sx={{ fontSize: "0.8rem" }}>
-                    {c.name}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
+
 
             <FormControl fullWidth size="small" sx={{ mt: 1 }}>
               <Select
