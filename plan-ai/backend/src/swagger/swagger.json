@@ -4034,6 +4034,12 @@
 						],
 						"nullable": true
 					},
+					"keywords": {
+						"items": {
+							"type": "string"
+						},
+						"type": "array"
+					},
 					"files": {
 						"items": {
 							"$ref": "#/components/schemas/ContextFileResponse"
@@ -4055,6 +4061,7 @@
 					"description",
 					"color",
 					"metadata",
+					"keywords",
 					"files",
 					"createdAt",
 					"updatedAt"

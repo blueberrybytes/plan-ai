@@ -3133,6 +3133,7 @@ export interface components {
             description: string | null;
             color: string | null;
             metadata: components["schemas"]["TsoaJsonObject"] | null;
+            keywords: string[];
             files: components["schemas"]["ContextFileResponse"][];
             /** Format: date-time */
             createdAt: string;

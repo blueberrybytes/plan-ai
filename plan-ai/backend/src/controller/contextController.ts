@@ -63,6 +63,7 @@ interface ContextResponse {
   description: string | null;
   color: string | null;
   metadata: TsoaJsonObject | null;
+  keywords: string[];
   files: ContextFileResponse[];
   createdAt: Date;
   updatedAt: Date;
@@ -778,6 +779,7 @@ export class ContextController extends BaseWorkspaceController {
       description: context.description,
       color: context.color,
       metadata: context.metadata as TsoaJsonObject,
+      keywords: context.keywords,
       createdAt: context.createdAt,
       updatedAt: context.updatedAt,
       files: context.files.map((file) => ({
