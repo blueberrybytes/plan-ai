@@ -41,7 +41,7 @@ import { authApi } from "../apis/authApi";
 
 // Helper to ensure base URL never ends with a trailing slash
 const getApiBaseUrl = () => {
-  const url = process.env.REACT_APP_API_BACKEND_URL || "http://localhost:8080";
+  const url = process.env.REACT_APP_API_BACKEND_URL || "";
   return url.replace(/\/+$/, "");
 };
 

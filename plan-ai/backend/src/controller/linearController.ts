@@ -148,6 +148,12 @@ export class LinearController extends BaseWorkspaceController {
       // Exchange code via service
       const tokens = await linearIntegrationService.exchangeCode(code);
 
+      let expiresAt: Date | null = null;
+      if (tokens.expiresIn) {
+        expiresAt = new Date();
+        expiresAt.setSeconds(expiresAt.getSeconds() + tokens.expiresIn);
+      }
+
       // Upsert the workspace integration record
       await prisma.workspaceIntegration.upsert({
         where: {
@@ -159,6 +165,8 @@ export class LinearController extends BaseWorkspaceController {
         update: {
           status: "CONNECTED",
           accessToken: tokens.accessToken,
+          refreshToken: tokens.refreshToken ?? null,
+          expiresAt,
           accountId: tokens.accountId,
           accountName: tokens.accountName,
           metadata: { authType: "OAUTH" },
@@ -168,6 +176,8 @@ export class LinearController extends BaseWorkspaceController {
           provider: "LINEAR",
           status: "CONNECTED",
           accessToken: tokens.accessToken,
+          refreshToken: tokens.refreshToken ?? null,
+          expiresAt,
           accountId: tokens.accountId,
           accountName: tokens.accountName,
           metadata: { authType: "OAUTH" },

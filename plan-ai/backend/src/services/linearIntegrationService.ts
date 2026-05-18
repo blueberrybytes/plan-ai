@@ -9,6 +9,14 @@ import type { LinearIntegrationMetadata } from "./integrationMetadataTypes";
 import type { TaskMetadata } from "./taskMetadataTypes";
 import type { WorkspaceIntegration } from "@prisma/client";
 
+interface LinearTokenResponse {
+  access_token: string;
+  refresh_token?: string;
+  expires_in?: number;
+  token_type?: string;
+  scope?: string;
+}
+
 class LinearIntegrationService {
   private getLinearClient(integration: WorkspaceIntegration): LinearClient {
     const metadata = integration.metadata as LinearIntegrationMetadata | null;
@@ -39,7 +47,9 @@ class LinearIntegrationService {
     return `https://linear.app/oauth/authorize?${params.toString()}`;
   }
 
-  public async exchangeCode(code: string): Promise<{ accessToken: string; accountId: string; accountName: string }> {
+  public async exchangeCode(
+    code: string,
+  ): Promise<{ accessToken: string; accountId: string; accountName: string; refreshToken?: string; expiresIn?: number }> {
     const clientId = EnvUtils.get("LINEAR_CLIENT_ID");
     const clientSecret = EnvUtils.get("LINEAR_CLIENT_SECRET");
     const redirectUri = EnvUtils.get(
@@ -70,7 +80,7 @@ class LinearIntegrationService {
       throw new Error("Failed to exchange Linear authorization code");
     }
 
-    const tokenData = await tokenResponse.json() as { access_token: string };
+    const tokenData = await tokenResponse.json() as LinearTokenResponse;
     if (!tokenData.access_token) {
       throw new Error("No access token returned from Linear");
     }
@@ -83,7 +93,78 @@ class LinearIntegrationService {
       accessToken: tokenData.access_token,
       accountId: viewer.id,
       accountName: viewer.name,
+      refreshToken: tokenData.refresh_token,
+      expiresIn: tokenData.expires_in,
     };
+  }
+
+  public async refreshTokenIfExpired(
+    workspaceId: string,
+    integration: WorkspaceIntegration,
+  ): Promise<WorkspaceIntegration> {
+    const meta = integration.metadata as unknown as LinearIntegrationMetadata;
+    const isApiKey = meta?.authType === "API_KEY";
+    if (isApiKey || !integration.refreshToken) {
+      return integration;
+    }
+
+    const buffer = 5 * 60 * 1000;
+    if (integration.expiresAt && integration.expiresAt.getTime() - buffer > Date.now()) {
+      return integration;
+    }
+
+    try {
+      const clientId = EnvUtils.get("LINEAR_CLIENT_ID");
+      const clientSecret = EnvUtils.get("LINEAR_CLIENT_SECRET");
+
+      if (!clientId || !clientSecret) {
+        throw new Error("Linear OAuth credentials are not configured");
+      }
+
+      const params = new URLSearchParams();
+      params.append("grant_type", "refresh_token");
+      params.append("refresh_token", integration.refreshToken);
+      params.append("client_id", clientId);
+      params.append("client_secret", clientSecret);
+
+      const response = await fetch("https://api.linear.app/oauth/token", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: params.toString(),
+      });
+
+      const rawBody = await response.text();
+      if (!response.ok) {
+        logger.error("Failed to refresh Linear token", { status: response.status, body: rawBody });
+        throw new Error("Failed to refresh Linear token");
+      }
+
+      const parsed = JSON.parse(rawBody) as LinearTokenResponse;
+
+      let expiresAt: Date | null = null;
+      if (parsed.expires_in) {
+        expiresAt = new Date();
+        expiresAt.setSeconds(expiresAt.getSeconds() + parsed.expires_in);
+      }
+
+      const updated = await prisma.workspaceIntegration.update({
+        where: { id: integration.id },
+        data: {
+          accessToken: parsed.access_token,
+          refreshToken: parsed.refresh_token ?? integration.refreshToken,
+          expiresAt,
+        },
+      });
+
+      return updated;
+    } catch (error) {
+      logger.error("Error refreshing Linear token", error);
+      await prisma.workspaceIntegration.update({
+        where: { id: integration.id },
+        data: { status: IntegrationStatus.DISCONNECTED },
+      });
+      throw new Error("Linear token expired and could not be refreshed. Please reconnect.");
+    }
   }
 
   public async verifyManualCredentials(workspaceId: string, payload: LinearManualConnectRequest) {
@@ -139,7 +220,7 @@ class LinearIntegrationService {
   }
 
   public async getLinearSummary(workspaceId: string): Promise<LinearSummaryResponse> {
-    const integration = await prisma.workspaceIntegration.findUnique({
+    let integration = await prisma.workspaceIntegration.findUnique({
       where: {
         workspaceId_provider: {
           workspaceId,
@@ -152,6 +233,7 @@ class LinearIntegrationService {
       throw new Error("Linear is not connected");
     }
 
+    integration = await this.refreshTokenIfExpired(workspaceId, integration);
     const client = this.getLinearClient(integration);
 
     try {
@@ -181,23 +263,25 @@ class LinearIntegrationService {
   }
 
   public async listLinearTeams(workspaceId: string): Promise<{ id: string; name: string }[]> {
-    const integration = await prisma.workspaceIntegration.findUnique({
+    let integration = await prisma.workspaceIntegration.findUnique({
       where: { workspaceId_provider: { workspaceId, provider: IntegrationProvider.LINEAR } },
     });
     if (!integration || integration.status !== IntegrationStatus.CONNECTED) {
       throw new Error("Linear is not connected");
     }
+    integration = await this.refreshTokenIfExpired(workspaceId, integration);
     const client = this.getLinearClient(integration);
     const teamsRes = await client.teams();
     return teamsRes.nodes.map((t) => ({ id: t.id, name: t.name }));
   }
 
   public async setDefaultLinearTeam(workspaceId: string, teamId: string): Promise<void> {
-    const integration = await prisma.workspaceIntegration.findUnique({
+    let integration = await prisma.workspaceIntegration.findUnique({
       where: { workspaceId_provider: { workspaceId, provider: IntegrationProvider.LINEAR } },
     });
     if (!integration) throw new Error("Linear integration not found");
 
+    integration = await this.refreshTokenIfExpired(workspaceId, integration);
     const client = this.getLinearClient(integration);
     const team = await client.team(teamId);
 
@@ -220,11 +304,12 @@ class LinearIntegrationService {
   }
 
   public async ensurePlanAiLabel(workspaceId: string): Promise<string | undefined> {
-    const integration = await prisma.workspaceIntegration.findUnique({
+    let integration = await prisma.workspaceIntegration.findUnique({
       where: { workspaceId_provider: { workspaceId, provider: IntegrationProvider.LINEAR } },
     });
     if (!integration || integration.status !== IntegrationStatus.CONNECTED) return undefined;
 
+    integration = await this.refreshTokenIfExpired(workspaceId, integration);
     const client = this.getLinearClient(integration);
     try {
       const labelsRes = await client.issueLabels({ filter: { name: { eq: "Plan AI" } } });
@@ -259,7 +344,7 @@ class LinearIntegrationService {
     taskId: string,
     teamId: string,
   ): Promise<{ issueId: string; identifier: string; url: string }> {
-    const integration = await prisma.workspaceIntegration.findUnique({
+    let integration = await prisma.workspaceIntegration.findUnique({
       where: {
         workspaceId_provider: { workspaceId, provider: IntegrationProvider.LINEAR },
       },
@@ -268,6 +353,8 @@ class LinearIntegrationService {
     if (!integration || integration.status !== IntegrationStatus.CONNECTED) {
       throw new Error("Linear integration not found or unauthorized");
     }
+
+    integration = await this.refreshTokenIfExpired(workspaceId, integration);
 
     const task = await prisma.task.findUnique({
       where: { id: taskId },

@@ -11,6 +11,7 @@ import {
   Grid,
   CardActionArea,
   Chip,
+  Tooltip,
 } from "@mui/material";
 import {
   Delete as DeleteIcon,
@@ -79,9 +80,11 @@ const Recordings: React.FC = () => {
           subtitle={t("recordings.subtitle")}
           icon={<MicIcon />}
           actions={
-            <IconButton onClick={() => refetch()} disabled={isLoading || isFetching}>
-              <RefreshIcon />
-            </IconButton>
+            <Tooltip title="Refresh">
+              <IconButton onClick={() => refetch()} disabled={isLoading || isFetching} size="small">
+                <RefreshIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
           }
         />
 

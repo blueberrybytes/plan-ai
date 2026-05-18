@@ -104,7 +104,7 @@ const DesktopCallback: React.FC = () => {
       // To prevent 'User not found' crashes strictly enforce Database existence right here:
       try {
         const idToken = await firebaseUser.getIdToken();
-        const baseUrl = (process.env.REACT_APP_API_BACKEND_URL || "http://localhost:8080").replace(
+        const baseUrl = (process.env.REACT_APP_API_BACKEND_URL || "").replace(
           /\/+$/,
           "",
         );

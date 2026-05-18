@@ -43,7 +43,7 @@ const ContextFileViewer: React.FC = () => {
 
     if (isTextBase && contextId && file.id && token && activeWorkspaceId) {
       setIsFetchingText(true);
-      const baseUrl = process.env.REACT_APP_API_BACKEND_URL || "http://localhost:8080";
+      const baseUrl = (process.env.REACT_APP_API_BACKEND_URL || "").replace(/\/+$/, "");
       fetch(`${baseUrl}/api/contexts/${contextId}/files/${file.id}/content`, {
         headers: {
           Authorization: `Bearer ${token}`,

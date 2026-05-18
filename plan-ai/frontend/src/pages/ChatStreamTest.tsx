@@ -112,7 +112,7 @@ const ChatStreamTest: React.FC = () => {
 
   const [input, setInput] = useState("");
 
-  const backendUrl = process.env.REACT_APP_API_BACKEND_URL || "http://localhost:8080";
+  const backendUrl = process.env.REACT_APP_API_BACKEND_URL || "";
   const endpoint = `${backendUrl.replace(/\/$/, "")}/api/chat-streaming/api/chat/stream`;
 
   const { messages, sendMessage, status } = useChat({
