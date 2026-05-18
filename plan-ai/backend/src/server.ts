@@ -197,8 +197,13 @@ const startServer = async () => {
     console.log(`Qdrant dashboard at ${QDRANT_URL}/dashboard`);
   });
 
+  // Explicitly set high timeouts for long-running AI generation requests (5 minutes)
+  server.timeout = 300000;
+  server.keepAliveTimeout = 300000;
+  server.headersTimeout = 301000;
+
   // Bind WebSocket server after the HTTP server starts listening
-  setupAudioStream(server!);
+  setupAudioStream(server);
 };
 
 void startServer();

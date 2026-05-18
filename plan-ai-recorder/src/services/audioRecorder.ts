@@ -20,6 +20,8 @@ export interface AudioRecorderOptions {
   ) => void;
   /** Called when recording fully stops and the socket closes */
   onStop: () => void;
+  /** Called when the websocket connection is lost unexpectedly */
+  onDisconnect?: () => void;
   /** Called on any error */
   onError: (error: Error) => void;
 }
@@ -104,59 +106,10 @@ export class AudioRecorder {
       }
 
       // 2. Establish the WebSocket connection
-      const config = loadConfig();
-      this.ws = await this.options.api.startAudioStream(config?.language);
-
-      if (this.ws) {
-        this.ws.onmessage = (event) => {
-          try {
-            const data = JSON.parse(event.data);
-            if (data.type === "transcript") {
-              this.options.onTranscript(data.source, data.text, data.isFinal);
-            } else if (
-              data.type === "speech_started" ||
-              data.type === "utterance_end"
-            ) {
-              if (this.options.onSpeechEvent) {
-                this.options.onSpeechEvent(data.source, data.type);
-              }
-            } else if (data.type === "error") {
-              this.options.onError(new Error(data.message));
-            }
-          } catch (e) {
-            console.error(
-              "Failed to parse WebSocket message",
-              e instanceof Error ? e.message : e,
-            );
-          }
-        };
-
-        this.ws.onerror = (e) => {
-          // WebSockets only provide an 'Event', which hides the exact raw network failure.
-          // By pulling type and isTrusted, we can at least confirm it fired.
-          const errorDetails =
-            e instanceof Event
-              ? `Type: ${e.type}, isTrusted: ${e.isTrusted}`
-              : String(e);
-          console.error(
-            `WebSocket error encountered. Details: ${errorDetails}`,
-          );
-          this.options.onError(
-            new Error(
-              "Audio streaming connection failed. Check your network or VPN.",
-            ),
-          );
-          this.stop();
-        };
-
-        this.ws.onclose = () => {
-          console.log("WebSocket closed.");
-          this.stop();
-        };
-      }
+      await this.initializeWebSocket();
 
       // 3. Microphone stream acquisition
-
+      const config = loadConfig();
       const micDeviceId = config?.micDeviceId;
       console.log(`[AudioRecorder] 🎤 Requesting mic with deviceId: "${micDeviceId}"`);
       this.micStream = await navigator.mediaDevices.getUserMedia({
@@ -599,5 +552,76 @@ export class AudioRecorder {
         "[AudioRecorder] Cannot change language: WebSocket not open",
       );
     }
+  }
+  private async initializeWebSocket(): Promise<void> {
+    const config = loadConfig();
+    this.ws = await this.options.api.startAudioStream(config?.language);
+
+    if (this.ws) {
+      this.ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data.type === "transcript") {
+            this.options.onTranscript(data.source, data.text, data.isFinal);
+          } else if (
+            data.type === "speech_started" ||
+            data.type === "utterance_end"
+          ) {
+            if (this.options.onSpeechEvent) {
+              this.options.onSpeechEvent(data.source, data.type);
+            }
+          } else if (data.type === "error") {
+            this.options.onError(new Error(data.message));
+          }
+        } catch (e) {
+          console.error(
+            "Failed to parse WebSocket message",
+            e instanceof Error ? e.message : e,
+          );
+        }
+      };
+
+      this.ws.onerror = (e) => {
+        const errorDetails =
+          e instanceof Event
+            ? `Type: ${e.type}, isTrusted: ${e.isTrusted}`
+            : String(e);
+        console.error(
+          `WebSocket error encountered. Details: ${errorDetails}`,
+        );
+        this.options.onError(
+          new Error(
+            "Audio streaming connection failed. Check your network or VPN.",
+          ),
+        );
+        if (this.state !== "stopping") {
+          this.options.onDisconnect?.();
+        }
+      };
+
+      this.ws.onclose = () => {
+        console.log("WebSocket closed.");
+        if (this.state !== "stopping") {
+          this.options.onDisconnect?.();
+        }
+      };
+    }
+  }
+
+  async reconnect(): Promise<void> {
+    if (this.state !== "recording") return;
+    
+    // Cleanup old socket if any
+    if (this.ws) {
+      this.ws.onmessage = null;
+      this.ws.onerror = null;
+      this.ws.onclose = null;
+      if (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING) {
+        this.ws.close();
+      }
+      this.ws = null;
+    }
+
+    await this.initializeWebSocket();
   }
 }

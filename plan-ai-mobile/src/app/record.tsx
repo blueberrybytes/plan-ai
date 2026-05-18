@@ -1433,6 +1433,23 @@ export default function RecordScreen() {
               your device.
             </Text>
           </View>
+          <Button
+            mode="contained"
+            compact
+            buttonColor={theme.colors.onErrorContainer}
+            textColor={theme.colors.errorContainer}
+            onPress={() => {
+              if (isRecording) {
+                // Prevent duplicate connections if somehow clicked repeatedly
+                if (wsRef.current) {
+                  wsRef.current.close();
+                }
+                connectWebSocket();
+              }
+            }}
+          >
+            Reconnect
+          </Button>
         </View>
       )}
 

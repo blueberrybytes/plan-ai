@@ -177,6 +177,7 @@ const Recording: React.FC = () => {
   const config = loadConfig();
 
   const [phase, setPhase] = useState<Phase>("recording");
+  const [isWsConnected, setIsWsConnected] = useState(true);
   const [isStopping, setIsStopping] = useState(false);
   const [isMicSpeaking, setIsMicSpeaking] = useState(false);
   const [isSysSpeaking, setIsSysSpeaking] = useState(false);
@@ -571,10 +572,9 @@ const Recording: React.FC = () => {
         if (source === "sys") setIsSysSpeaking(isSpeaking);
       },
       onStop: () => void handleStop(),
+      onDisconnect: () => setIsWsConnected(false),
       onError: (err) => {
         setError(err.message || "Connection lost. Audio transcription stopped.");
-        // We do NOT setPhase("error") here. The recorder will call onStop() 
-        // automatically when the socket closes, which will move us to the save screen.
       },
     });
 
@@ -1085,7 +1085,31 @@ const Recording: React.FC = () => {
         </Stack>
       </Stack>
 
-      {error && (
+      {!isWsConnected && (
+        <Alert
+          severity="error"
+          sx={{ m: 2 }}
+          action={
+            <Button
+              color="inherit"
+              size="small"
+              onClick={() => {
+                if (recorderRef.current) {
+                  recorderRef.current.reconnect();
+                  setIsWsConnected(true);
+                  setError(null);
+                }
+              }}
+            >
+              RECONNECT
+            </Button>
+          }
+        >
+          Poor Connection Detected: Live transcription paused. Audio is still recording.
+        </Alert>
+      )}
+
+      {error && isWsConnected && (
         <Alert severity="warning" onClose={() => setError(null)} sx={{ m: 2 }}>
           {error}
         </Alert>
