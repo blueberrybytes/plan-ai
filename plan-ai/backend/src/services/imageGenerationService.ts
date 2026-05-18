@@ -1,16 +1,11 @@
 import { openai } from "@ai-sdk/openai";
 import { generateImage } from "ai";
-import { createOpenRouter } from "@openrouter/ai-sdk-provider";
 import { logger } from "../utils/logger";
 import { firebaseAdmin } from "../firebase/firebaseAdmin";
 import { v4 as uuidv4 } from "uuid";
 import prisma from "../prisma/prismaClient";
 import { aiUsageService } from "./aiUsageService";
 import EnvUtils from "../utils/EnvUtils";
-
-const openrouter = createOpenRouter({
-  apiKey: EnvUtils.get("OPENROUTER_API_KEY"),
-});
 
 export class ImageGenerationService {
   /**

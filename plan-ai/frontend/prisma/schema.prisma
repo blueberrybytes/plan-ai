@@ -324,6 +324,7 @@ model Context {
   description String?
   color       String?  @db.VarChar(24)
   metadata    Json?
+  keywords    String[] @default([])
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   workspaceId String

@@ -11,7 +11,9 @@ import {
 } from "../utils/documentTextExtractor";
 import { indexRawText } from "../vector/contextFileVectorService";
 import { aiUsageService } from "../services/aiUsageService";
-import OpenAI from "openai";
+import { generateText, Output } from "ai";
+import { getWorkspaceModel, FAST_AI_MODEL } from "../utils/aiModelUtils";
+import { z } from "zod";
 
 const prisma = new PrismaClient();
 const REDIS_URL = EnvUtils.get("REDIS_URL") || "redis://localhost:6379";
@@ -61,20 +63,32 @@ export const contextDocumentWorker = new Worker<ContextDocumentJobPayload>(
         fileRecord.mimeType === "application/json" ||
         fileRecord.mimeType === "application/xml";
 
-      // Only use LLM to structure messy OCR text. Skip structured files.
+      const model = await getWorkspaceModel(workspaceId, FAST_AI_MODEL);
+
+      // 1. Setup Keyword Extraction Promise
+      const keywordPrompt = `Extract up to 10 of the most unique, specific, and important domain-specific terms, acronyms, jargon, or product names from this document. 
+Do NOT include generic English words. We need these for a Speech-To-Text dictionary to help recognize unique terminology.
+
+Document text snippet:
+${rawText.slice(0, 10000)}`;
+
+      const keywordsPromise = generateText({
+        model,
+        temperature: 0.1,
+        output: Output.object({
+          schema: z.object({
+            keywords: z.array(z.string()).describe("The extracted unique keywords and terms."),
+          }),
+        }),
+        prompt: keywordPrompt,
+      }).catch((err) => {
+        logger.warn(`Keyword extraction failed for document ${fileId}`, err);
+        return null;
+      });
+
+      // 2. Setup Markdown Formatting Promise (only if unstructured)
+      let formattingPromise: Promise<Awaited<ReturnType<typeof generateText>> | null> | null = null;
       if (!isStructuredFormat) {
-        const workspace = await prisma.workspace.findUnique({
-          where: { id: workspaceId },
-          select: { openRouterKey: true },
-        });
-
-        const apiKey = workspace?.openRouterKey || EnvUtils.get("OPENROUTER_API_KEY");
-
-        const openai = new OpenAI({
-          apiKey: apiKey,
-          baseURL: "https://openrouter.ai/api/v1",
-        });
-
         const systemPrompt = `You are an expert Document Recovery AI.
 The user has provided raw OCR text extracted from a Presentation or PDF document. 
 Your job is to rebuild the logical structure of this document into a pristine Markdown format.
@@ -84,32 +98,75 @@ Rules:
 3. Do NOT add commentary or fake information. Preserve all facts and data from the document.
 4. Output cleanly formatted Markdown that is ideal for Vector Embeddings (RAG).`;
 
-        const response = await openai.chat.completions.create({
-          model: "openai/gpt-4o-mini",
+        formattingPromise = generateText({
+          model,
           temperature: 0.1,
-          messages: [
-            { role: "system", content: systemPrompt },
-            { role: "user", content: rawText },
-          ],
+          system: systemPrompt,
+          prompt: rawText,
+        }).catch((err) => {
+          logger.warn(`Formatting failed for document ${fileId}`, err);
+          return null;
         });
+      }
 
-        cleanedMarkdown = response.choices[0]?.message?.content || rawText;
-        const usage = response.usage;
+      // 3. Execute concurrently
+      const [keywordsResult, formattingResult] = await Promise.all([
+        keywordsPromise,
+        formattingPromise,
+      ]);
 
-        // Log Token Usage
-        if (usage) {
+      // 4. Process formatting result
+      if (formattingResult) {
+        cleanedMarkdown = formattingResult.text || rawText;
+        if (formattingResult.usage) {
           await aiUsageService.logUsage({
             userId,
             workspaceId,
             feature: "DOC",
             provider: "OPENROUTER",
-            model: "openai/gpt-4o-mini",
-            inputTokens: usage.prompt_tokens || 0,
-            outputTokens: usage.completion_tokens || 0,
+            model: FAST_AI_MODEL,
+            inputTokens: formattingResult.usage.inputTokens || 0,
+            outputTokens: formattingResult.usage.outputTokens || 0,
           });
         }
       }
 
+      // 5. Process keyword result
+      if (keywordsResult && keywordsResult.output) {
+        const extractedKeywords = keywordsResult.output.keywords.map(String);
+
+        if (keywordsResult.usage) {
+          await aiUsageService.logUsage({
+            userId,
+            workspaceId,
+            feature: "DOC", // Logging under DOC
+            provider: "OPENROUTER",
+            model: FAST_AI_MODEL,
+            inputTokens: keywordsResult.usage.inputTokens || 0,
+            outputTokens: keywordsResult.usage.outputTokens || 0,
+          });
+        }
+
+        if (extractedKeywords.length > 0) {
+          const ctx = await prisma.context.findUnique({
+            where: { id: contextId },
+            select: { keywords: true },
+          });
+          if (ctx) {
+            const currentKeywords = ctx.keywords || [];
+            // Merge unique keywords
+            const uniqueKeywords = Array.from(new Set([...currentKeywords, ...extractedKeywords]));
+
+            await prisma.context.update({
+              where: { id: contextId },
+              data: { keywords: uniqueKeywords },
+            });
+            logger.info(
+              `Extracted ${extractedKeywords.length} new keywords. Context ${contextId} now has ${uniqueKeywords.length} keywords.`,
+            );
+          }
+        }
+      }
       // Index the Cleaned Markdown
       await indexRawText({
         contextId,
