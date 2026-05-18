@@ -22,6 +22,7 @@ export class WebScraperService {
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
         },
         timeout: 10000,
+        responseType: "arraybuffer",
       });
 
       const html = response.data;
@@ -82,7 +83,7 @@ export class WebScraperService {
    */
   private async getDeepLinks(baseUrl: string): Promise<string[]> {
     try {
-      const response = await axios.get(baseUrl, { timeout: 10000 });
+      const response = await axios.get(baseUrl, { timeout: 10000, responseType: "arraybuffer" });
       const dom = new JSDOM(response.data, { url: baseUrl });
       const document = dom.window.document;
       const links = document.querySelectorAll("a");
