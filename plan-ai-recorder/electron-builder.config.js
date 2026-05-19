@@ -34,7 +34,7 @@ module.exports = {
       channel: isHouseGroup ? "housegroup" : "latest",
     },
   ],
-  buildVersion: "115",
+  buildVersion: "116",
   protocols: [
     {
       name: productName,
