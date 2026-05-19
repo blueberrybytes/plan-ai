@@ -133,9 +133,12 @@ const ProjectDetails: React.FC = () => {
   const [taskPendingDeletion, setTaskPendingDeletion] = useState<TaskResponse | null>(null);
 
   const session = data?.data;
-  // Create shallow clones of the tasks to prevent "object is not extensible" errors
-  // when charting libraries (like Recharts) try to mutate them by adding properties like __indexColor
-  const tasks = useMemo(() => (tasksData?.data?.tasks ?? []).map(t => ({ ...t })), [tasksData]);
+  // Create deep clones of the tasks to prevent "object is not extensible" errors
+  // when charting libraries (like Recharts) try to mutate deeply nested properties.
+  const tasks = useMemo(() => {
+    const rawTasks = tasksData?.data?.tasks ?? [];
+    return JSON.parse(JSON.stringify(rawTasks)) as typeof rawTasks;
+  }, [tasksData]);
   const exportableTasks = useMemo(() => tasks, [tasks]);
   const [deleteProjectTask, { isLoading: isDeletingTask }] = useDeleteProjectTaskMutation();
 

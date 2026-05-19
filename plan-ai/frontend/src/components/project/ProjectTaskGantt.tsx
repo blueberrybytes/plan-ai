@@ -107,7 +107,7 @@ const ProjectTaskGantt: React.FC<ProjectTaskGanttProps> = ({ tasks, onTaskClick 
       <Box sx={{ flexGrow: 1 }}>
         <ResponsiveContainer width="100%" height="100%">
           <ComposedChart
-            data={data}
+            data={JSON.parse(JSON.stringify(data))}
             layout="vertical"
             margin={{ top: 16, right: 24, bottom: 16, left: 180 }}
           >
