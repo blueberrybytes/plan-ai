@@ -52,6 +52,7 @@ const Recordings: React.FC = () => {
     { page, pageSize: 20, source: "RECORDING", q: debouncedSearch || undefined },
     { refetchOnFocus: true },
   );
+
   const [deleteTranscript] = useDeleteTranscriptMutation();
 
   const handleDelete = async (id: string) => {
@@ -94,10 +95,20 @@ const Recordings: React.FC = () => {
           subtitle={t("recordings.subtitle")}
           icon={<MicIcon />}
           actions={
-            <Tooltip title="Refresh">
-              <IconButton onClick={() => refetch()} disabled={isLoading || isFetching} size="small">
-                <RefreshIcon fontSize="small" />
-              </IconButton>
+            <Tooltip title={isFetching ? "Refreshing..." : "Refresh"}>
+              <span>
+                <IconButton
+                  onClick={() => refetch()}
+                  disabled={isLoading || isFetching}
+                  size="small"
+                >
+                  {isFetching ? (
+                    <CircularProgress size={20} color="inherit" />
+                  ) : (
+                    <RefreshIcon fontSize="small" />
+                  )}
+                </IconButton>
+              </span>
             </Tooltip>
           }
         />
