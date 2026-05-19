@@ -48,7 +48,7 @@ export const StatsSlide: React.FC<SlideProps> = ({
             fontSize: 36,
             fontWeight: 700,
             mb: 6,
-            color: primary,
+            color: "inherit",
             fontFamily: `'${fonts?.heading || "Inter"}', sans-serif`,
           }}
         >

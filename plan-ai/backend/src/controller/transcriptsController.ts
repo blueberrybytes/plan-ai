@@ -27,6 +27,8 @@ import { projectTranscriptService } from "../services/projectTranscriptService";
 import { mapTaskResponse, type TaskResponse } from "./projectsModelController";
 import { transcriptGenerationQueue } from "../queue/transcriptGenerationQueue";
 import { firebaseAdmin } from "../firebase/firebaseAdmin";
+import { DocDocumentResponse } from "./docController";
+import { TranscriptMetadata } from "../services/transcriptMetadataTypes";
 
 interface StandaloneTranscriptResponse {
   id: string;
@@ -42,7 +44,7 @@ interface StandaloneTranscriptResponse {
   summary: string | null;
   transcript: string | null;
   recordedAt: Date | null;
-  metadata: TsoaJsonObject | null;
+  metadata: TranscriptMetadata | null;
   durationSeconds?: number | null;
   speakerCount?: number | null;
   sentiment?: string | null;
@@ -50,6 +52,7 @@ interface StandaloneTranscriptResponse {
   createdAt: Date;
   updatedAt: Date;
   tasks?: TaskResponse[];
+  documents?: DocDocumentResponse[];
   chatThread?: {
     id: string;
     title: string;
@@ -119,7 +122,7 @@ export class TranscriptsController extends BaseWorkspaceController {
       summary: t.summary,
       transcript: t.transcript,
       recordedAt: t.recordedAt,
-      metadata: t.metadata as TsoaJsonObject,
+      metadata: t.metadata as unknown as TranscriptMetadata,
       durationSeconds: t.durationSeconds,
       speakerCount: t.speakerCount,
       sentiment: t.sentiment,
@@ -548,11 +551,22 @@ export class TranscriptsController extends BaseWorkspaceController {
 
     const mappedTasks = rawTasks.map((t) => mapTaskResponse(t as unknown as TaskWithRelations));
 
+    const rawDocuments = await prisma.docDocument.findMany({
+      where: {
+        transcriptIds: {
+          has: id,
+        },
+        workspaceId,
+      },
+      include: { theme: true }
+    });
+
     return {
       status: 200,
       data: {
         ...this.mapTranscriptResponse(transcript),
         tasks: mappedTasks,
+        documents: rawDocuments as unknown as DocDocumentResponse[],
       },
     };
   }

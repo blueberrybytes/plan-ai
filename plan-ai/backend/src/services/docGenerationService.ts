@@ -243,7 +243,7 @@ If you return the exact same broken code without quotes around parentheses and a
     const transcriptSection =
       transcripts.length > 0 ? `## Transcripts\n\n${transcripts.join("\n\n---\n\n")}\n` : "";
 
-    return `You are an expert document writer. Generate a well-structured, professional document in **rich Markdown format**.
+    return `You are an expert document writer. Generate a well-structured, highly corporate, formal, and professional document in **rich Markdown format**.
 ${personaInstructions}
 
 Use appropriate headings (# ## ###), bold, italic, bullet lists, numbered lists, tables, and blockquotes where suitable.

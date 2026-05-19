@@ -35,7 +35,7 @@ const BrandThemes: React.FC = () => {
     <SidebarLayout>
       <Box sx={{ p: { xs: 2, md: 4 }, maxWidth: 1400, mx: "auto" }}>
         <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 3 }}>
-          <Button startIcon={<ArrowBackIcon />} onClick={() => navigate("/slides")}>
+          <Button startIcon={<ArrowBackIcon />} onClick={() => navigate(-1)}>
             {t("slides.actions.back")}
           </Button>
           <Box sx={{ flex: 1, display: "flex", alignItems: "center", gap: 1 }}>

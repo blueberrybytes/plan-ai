@@ -10,11 +10,7 @@ export type Project                = components['schemas']['ProjectResponse'];
 export type Task                   = components['schemas']['TaskResponse'];
 // StandaloneTranscriptResponse includes mobile-specific fields:
 // durationSeconds, speakerCount, sentiment, tasks, utterances, chatThread
-export interface TranscriptMetadata {
-  processingStatus?: "PENDING" | "PROCESSING" | "EXTRACTING_TASKS" | "COMPLETED" | "FAILED" | "DONE";
-  errorMessage?: string;
-  [key: string]: unknown;
-}
+export type TranscriptMetadata = components['schemas']['TranscriptMetadata'];
 
 export type Transcript = Omit<components['schemas']['StandaloneTranscriptResponse'], 'metadata'> & {
   metadata?: TranscriptMetadata | null;

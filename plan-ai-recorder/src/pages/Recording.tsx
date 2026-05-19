@@ -213,7 +213,7 @@ const Recording: React.FC = () => {
   const [taskStrategy, setTaskStrategy] = useState<"AUTO" | "SINGLE_TICKET" | "SPECIFIC_COUNT">("AUTO");
   const [taskCount, setTaskCount] = useState<number>(5);
 
-  const [createDoc, setCreateDoc] = useState<boolean>(false);
+  const [createDoc, setCreateDoc] = useState<boolean>(true);
   const [createSlides, setCreateSlides] = useState<boolean>(false);
 
   const [chatMessage, setChatMessage] = useState("");

@@ -307,7 +307,7 @@ export default function RecordScreen() {
   const [syncToNotion, setSyncToNotion] = useState(false);
   const [exportToGoogleDrive, setExportToGoogleDrive] = useState(false);
   const [exportToOneDrive, setExportToOneDrive] = useState(false);
-  const [createDoc, setCreateDoc] = useState(false);
+  const [createDoc, setCreateDoc] = useState(true);
   const [createSlides, setCreateSlides] = useState(false);
   const [hasJira, setHasJira] = useState(false);
   const [hasLinear, setHasLinear] = useState(false);

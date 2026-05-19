@@ -171,7 +171,7 @@ const RenderTranscriptContent = ({
 }) => {
   type Utterance = { speaker: string; transcript: string; start: number; end: number };
   const utterances = transcript.utterances as Utterance[] | null | undefined;
-  const principalSpeaker = (transcript?.metadata as Record<string, unknown>)?.principalSpeaker as string | undefined;
+  const principalSpeaker = transcript?.metadata?.principalSpeaker as string | undefined;
 
   if (utterances && utterances.length > 0) {
     return (
@@ -312,11 +312,12 @@ const TranscriptView: React.FC = () => {
 
   useEffect(() => {
     let timeoutId: ReturnType<typeof setTimeout>;
-    const processingStatus = (
-      transcript?.metadata as { processingStatus?: string }
-    )?.processingStatus;
+    const isProcessing =
+      transcript?.metadata?.processingStatus === "PENDING" ||
+      transcript?.metadata?.processingStatus === "PROCESSING" ||
+      transcript?.metadata?.processingStatus === "EXTRACTING_TASKS";
 
-    if (processingStatus === "PENDING" || processingStatus === "EXTRACTING_TASKS") {
+    if (isProcessing) {
       timeoutId = setTimeout(() => {
         void fetchTranscript(true);
       }, 3000);
@@ -523,8 +524,7 @@ const TranscriptView: React.FC = () => {
               )}
             </Stack>
 
-            {(transcript.metadata as { sentimentExplanation?: string })
-              ?.sentimentExplanation && (
+            {transcript.metadata?.sentimentExplanation && (
               <Typography
                 variant="body2"
                 color="text.secondary"
@@ -537,15 +537,11 @@ const TranscriptView: React.FC = () => {
                   py: 0.5,
                 }}
               >
-                {
-                  (transcript.metadata as { sentimentExplanation?: string })
-                    .sentimentExplanation
-                }
+                {transcript.metadata.sentimentExplanation}
               </Typography>
             )}
 
-            {(transcript.metadata as { processingStatus?: string })
-              ?.processingStatus === "PENDING" ? (
+            {transcript.metadata?.processingStatus === "PENDING" ? (
               <Box
                 sx={{
                   mt: 6,
@@ -570,8 +566,7 @@ const TranscriptView: React.FC = () => {
                   The page will refresh automatically when finished.
                 </Typography>
               </Box>
-            ) : (transcript.metadata as { processingStatus?: string })
-                ?.processingStatus === "FAILED" ? (
+            ) : transcript.metadata?.processingStatus === "FAILED" ? (
               <Alert 
                 severity="error" 
                 sx={{ mt: 6 }}
@@ -597,8 +592,8 @@ const TranscriptView: React.FC = () => {
               >
                 We have encountered an error while processing this transcript:{" "}
                 <strong>
-                  {(transcript.metadata as any)?.errorMessage ||
-                    "Unknown Error"}
+                  {transcript.metadata?.errorMessage ||
+                    "Could not complete the process"}
                 </strong>
                 <br />
                 <br />
@@ -606,7 +601,7 @@ const TranscriptView: React.FC = () => {
               </Alert>
             ) : transcript.summary ? (
               <>
-                {(transcript.metadata as any)?.processingStatus === "EXTRACTING_TASKS" && (
+                {transcript.metadata?.processingStatus === "EXTRACTING_TASKS" && (
                   <Alert severity="info" sx={{ mb: 2 }}>
                     🤖 AI is currently extracting tasks from this transcript in the background. They will appear here shortly!
                   </Alert>
@@ -628,6 +623,13 @@ const TranscriptView: React.FC = () => {
                     value="summary"
                     sx={{ fontWeight: 600 }}
                   />
+                  {(transcript.documents && transcript.documents.length > 0) && (
+                    <Tab label="Generated Docs" value="documents" sx={{ fontWeight: 600 }} />
+                  )}
+                  {transcript.metadata?.keyPoints && 
+                   transcript.metadata.keyPoints.length > 0 && (
+                    <Tab label="Key Points" value="keypoints" sx={{ fontWeight: 600 }} />
+                  )}
                   <Tab
                     label="Raw Transcript"
                     value="transcript"
@@ -665,6 +667,44 @@ const TranscriptView: React.FC = () => {
                     >
                       {transcript.summary}
                     </Typography>
+                  </Box>
+                )}
+
+                {tabValue === "documents" && (
+                  <Box sx={{ p: 2, bgcolor: "background.paper", borderRadius: 1, border: "1px solid", borderColor: "divider" }}>
+                    <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 700, textTransform: "uppercase" }}>Generated Documents</Typography>
+                    <Stack spacing={1}>
+                      {(transcript.documents || []).map((doc) => (
+                        <Box 
+                          key={doc.id} 
+                          sx={{ 
+                            p: 2, 
+                            border: "1px solid", 
+                            borderColor: "divider", 
+                            borderRadius: 1, 
+                            cursor: 'pointer',
+                            '&:hover': { bgcolor: 'action.hover' } 
+                          }}
+                          onClick={() => window.open(`${import.meta.env.VITE_PLAN_AI_WEB_URL}/docs/view/${doc.id}`, '_blank')}
+                        >
+                          <Typography variant="subtitle2" fontWeight={600}>{doc.title}</Typography>
+                          <Typography variant="caption" color="text.secondary">Status: {doc.status}</Typography>
+                        </Box>
+                      ))}
+                    </Stack>
+                  </Box>
+                )}
+
+                {tabValue === "keypoints" && (
+                  <Box sx={{ p: 2, bgcolor: "background.paper", borderRadius: 1, border: "1px solid", borderColor: "divider" }}>
+                    <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 700, textTransform: "uppercase" }}>Critical Insights & Pain Points</Typography>
+                    <Stack spacing={2} component="ul" sx={{ m: 0, pl: 2 }}>
+                      {(transcript.metadata?.keyPoints || []).map((point, idx) => (
+                        <Typography component="li" key={idx} variant="body2" sx={{ lineHeight: 1.5 }}>
+                          {point}
+                        </Typography>
+                      ))}
+                    </Stack>
                   </Box>
                 )}
 

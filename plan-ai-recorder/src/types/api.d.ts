@@ -413,6 +413,70 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/documents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["List"];
+        put?: never;
+        post: operations["Create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/documents/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetById"];
+        put?: never;
+        post?: never;
+        delete: operations["Delete"];
+        options?: never;
+        head?: never;
+        patch: operations["Update"];
+        trace?: never;
+    };
+    "/api/documents/import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ImportDoc"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/documents/assistant/mermaid-fix": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["FixMermaid"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/transcripts": {
         parameters: {
             query?: never;
@@ -1380,70 +1444,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/documents": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["List"];
-        put?: never;
-        post: operations["Create"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/documents/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["GetById"];
-        put?: never;
-        post?: never;
-        delete: operations["Delete"];
-        options?: never;
-        head?: never;
-        patch: operations["Update"];
-        trace?: never;
-    };
-    "/api/documents/import": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["ImportDoc"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/documents/assistant/mermaid-fix": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["FixMermaid"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/contexts": {
         parameters: {
             query?: never;
@@ -1730,6 +1730,22 @@ export interface paths {
         options?: never;
         head?: never;
         patch: operations["Update"];
+        trace?: never;
+    };
+    "/api/brand-themes/analyze-url": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AnalyzeUrl"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/audio/transcribe-chunk": {
@@ -2485,6 +2501,67 @@ export interface components {
             taskCount?: number;
             agenticInvestigation?: boolean;
         };
+        BrandThemeSummary: {
+            id: string;
+            name: string;
+            logoUrl: string | null;
+            primaryColor: string;
+            secondaryColor: string;
+            backgroundColor: string;
+            textColor: string;
+            headingFont: string;
+            bodyFont: string;
+            backgroundStyle: string | null;
+            cardStyle: string | null;
+        };
+        DocDocumentResponse: {
+            id: string;
+            userId: string;
+            title: string;
+            content: string;
+            status: string;
+            isPublic: boolean;
+            contextIds: string[];
+            transcriptIds: string[];
+            prompt: string | null;
+            themeId: string | null;
+            theme: components["schemas"]["BrandThemeSummary"] | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        CreateDocInput: {
+            title: string;
+            prompt?: string;
+            contextIds?: string[];
+            transcriptIds?: string[];
+            themeId?: string;
+            isBlank?: boolean;
+        };
+        UpdateDocInput: {
+            title?: string;
+            content?: string;
+            themeId?: string | null;
+            isPublic?: boolean;
+        };
+        TranscriptMetadata: {
+            /** @enum {string} */
+            processingStatus?: "PENDING" | "PROCESSING" | "EXTRACTING_TASKS" | "COMPLETED" | "FAILED" | "DONE";
+            errorMessage?: string;
+            sentimentExplanation?: string;
+            keyPoints?: string[];
+            location?: {
+                /** Format: double */
+                accuracy?: number | null;
+                /** Format: double */
+                longitude: number;
+                /** Format: double */
+                latitude: number;
+            };
+            rawTasks?: unknown[];
+            principalSpeaker?: string;
+        };
         StandaloneTranscriptResponse: {
             id: string;
             projectId: string | null;
@@ -2500,7 +2577,7 @@ export interface components {
             transcript: string | null;
             /** Format: date-time */
             recordedAt: string | null;
-            metadata: components["schemas"]["TsoaJsonObject"] | null;
+            metadata: components["schemas"]["TranscriptMetadata"] | null;
             /** Format: double */
             durationSeconds?: number | null;
             /** Format: double */
@@ -2512,6 +2589,7 @@ export interface components {
             /** Format: date-time */
             updatedAt: string;
             tasks?: components["schemas"]["TaskResponse"][];
+            documents?: components["schemas"]["DocDocumentResponse"][];
             chatThread?: {
                 messages: {
                     /** Format: date-time */
@@ -3071,50 +3149,6 @@ export interface components {
             installationId: number;
             repositories: components["schemas"]["GithubRepository"][];
         };
-        BrandThemeSummary: {
-            id: string;
-            name: string;
-            logoUrl: string | null;
-            primaryColor: string;
-            secondaryColor: string;
-            backgroundColor: string;
-            textColor: string;
-            headingFont: string;
-            bodyFont: string;
-            backgroundStyle: string | null;
-            cardStyle: string | null;
-        };
-        DocDocumentResponse: {
-            id: string;
-            userId: string;
-            title: string;
-            content: string;
-            status: string;
-            isPublic: boolean;
-            contextIds: string[];
-            transcriptIds: string[];
-            prompt: string | null;
-            themeId: string | null;
-            theme: components["schemas"]["BrandThemeSummary"] | null;
-            /** Format: date-time */
-            createdAt: string;
-            /** Format: date-time */
-            updatedAt: string;
-        };
-        CreateDocInput: {
-            title: string;
-            prompt?: string;
-            contextIds?: string[];
-            transcriptIds?: string[];
-            themeId?: string;
-            isBlank?: boolean;
-        };
-        UpdateDocInput: {
-            title?: string;
-            content?: string;
-            themeId?: string | null;
-            isPublic?: boolean;
-        };
         ContextFileResponse: {
             id: string;
             fileName: string;
@@ -3305,6 +3339,17 @@ export interface components {
             textColor?: string;
             backgroundStyle?: string | null;
             cardStyle?: string | null;
+        };
+        AnalyzeUrlResponse: {
+            primaryColor: string;
+            secondaryColor: string;
+            backgroundColor: string;
+            headingFont: string;
+            bodyFont: string;
+            candidateLogos: string[];
+        };
+        AnalyzeUrlRequest: {
+            url: string;
         };
         /** @description Make all properties in T optional */
         Partial_CreateBrandThemeInput_: {
@@ -4752,6 +4797,180 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ApiResponse_null_"];
+                };
+            };
+        };
+    };
+    List: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DocDocumentResponse"][];
+                };
+            };
+        };
+    };
+    Create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateDocInput"];
+            };
+        };
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DocDocumentResponse"];
+                };
+            };
+        };
+    };
+    GetById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DocDocumentResponse"];
+                };
+            };
+        };
+    };
+    Delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        success: boolean;
+                    };
+                };
+            };
+        };
+    };
+    Update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateDocInput"];
+            };
+        };
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DocDocumentResponse"];
+                };
+            };
+        };
+    };
+    ImportDoc: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    file: string;
+                    contextIds?: string;
+                    transcriptIds?: string;
+                    themeId?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DocDocumentResponse"];
+                };
+            };
+        };
+    };
+    FixMermaid: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    brokenCode: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        fixedCode: string;
+                    };
                 };
             };
         };
@@ -6398,180 +6617,6 @@ export interface operations {
             };
         };
     };
-    List: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Ok */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DocDocumentResponse"][];
-                };
-            };
-        };
-    };
-    Create: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CreateDocInput"];
-            };
-        };
-        responses: {
-            /** @description Ok */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DocDocumentResponse"];
-                };
-            };
-        };
-    };
-    GetById: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Ok */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DocDocumentResponse"];
-                };
-            };
-        };
-    };
-    Delete: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Ok */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        success: boolean;
-                    };
-                };
-            };
-        };
-    };
-    Update: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["UpdateDocInput"];
-            };
-        };
-        responses: {
-            /** @description Ok */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DocDocumentResponse"];
-                };
-            };
-        };
-    };
-    ImportDoc: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "multipart/form-data": {
-                    /** Format: binary */
-                    file: string;
-                    contextIds?: string;
-                    transcriptIds?: string;
-                    themeId?: string;
-                };
-            };
-        };
-        responses: {
-            /** @description Ok */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DocDocumentResponse"];
-                };
-            };
-        };
-    };
-    FixMermaid: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": {
-                    brokenCode: string;
-                };
-            };
-        };
-        responses: {
-            /** @description Ok */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        fixedCode: string;
-                    };
-                };
-            };
-        };
-    };
     ListContexts: {
         parameters: {
             query?: never;
@@ -7217,6 +7262,30 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["BrandThemeResponse"];
+                };
+            };
+        };
+    };
+    AnalyzeUrl: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AnalyzeUrlRequest"];
+            };
+        };
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AnalyzeUrlResponse"];
                 };
             };
         };

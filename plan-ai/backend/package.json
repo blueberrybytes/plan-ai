@@ -1,6 +1,6 @@
 {
   "name": "backend",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "description": "",
   "engines": {
     "node": "22.17.1"
@@ -60,6 +60,7 @@
     "ai": "^6.0.177",
     "axios": "^1.15.0",
     "bullmq": "^5.73.0",
+    "cheerio": "^1.2.0",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.1",
     "cors": "^2.8.5",

@@ -1,5 +1,15 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import React, { useEffect, useState } from "react";
-import { View, StyleSheet, ScrollView, Platform, Alert, TouchableOpacity } from "react-native";
+import {
+  View,
+  StyleSheet,
+  ScrollView,
+  Platform,
+  Alert,
+  TouchableOpacity,
+  Share,
+  Linking,
+} from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import {
   Text,
@@ -14,7 +24,6 @@ import {
 import { useAuth } from "@/context/AuthContext";
 import Markdown from "react-native-markdown-display";
 import * as Clipboard from "expo-clipboard";
-import { Share, Linking } from "react-native";
 import * as FileSystem from "expo-file-system/legacy";
 import * as Sharing from "expo-sharing";
 import MermaidViewer from "../../components/MermaidViewer";
@@ -31,7 +40,7 @@ export default function TranscriptViewScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const theme = useTheme();
-  const { api, backendUser } = useAuth();
+  const { api } = useAuth();
 
   const [transcript, setTranscript] = useState<Transcript | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -101,7 +110,9 @@ export default function TranscriptViewScreen() {
     try {
       const fileName = `Transcript_${transcript?.id || "download"}.txt`;
       const fileUri = `${FileSystem.documentDirectory}${fileName}`;
-      await FileSystem.writeAsStringAsync(fileUri, getShareableText(), { encoding: FileSystem.EncodingType.UTF8 });
+      await FileSystem.writeAsStringAsync(fileUri, getShareableText(), {
+        encoding: FileSystem.EncodingType.UTF8,
+      });
       if (await Sharing.isAvailableAsync()) {
         await Sharing.shareAsync(fileUri);
       } else {
@@ -112,9 +123,10 @@ export default function TranscriptViewScreen() {
     }
   };
 
-  const processingStatus = (transcript?.metadata as Record<string, unknown>)?.processingStatus as string | undefined;
+  const processingStatus = transcript?.metadata?.processingStatus;
   const isFailed = processingStatus === "FAILED";
-  const isPending = processingStatus === "PENDING" || processingStatus === "PROCESSING";
+  const isPending =
+    processingStatus === "PENDING" || processingStatus === "PROCESSING";
 
   const renderSummaryTab = () => {
     if (!transcript?.summary) {
@@ -122,12 +134,31 @@ export default function TranscriptViewScreen() {
         <View style={styles.emptyContainer}>
           {isFailed ? (
             <>
-              <IconButton icon="alert-circle-outline" size={40} iconColor={theme.colors.error} />
-              <Text variant="titleMedium" style={{ color: theme.colors.error, fontWeight: "bold", marginBottom: 8 }}>
+              <IconButton
+                icon="alert-circle-outline"
+                size={40}
+                iconColor={theme.colors.error}
+              />
+              <Text
+                variant="titleMedium"
+                style={{
+                  color: theme.colors.error,
+                  fontWeight: "bold",
+                  marginBottom: 8,
+                }}
+              >
                 AI Processing Failed
               </Text>
-              <Text style={{ color: theme.colors.onSurfaceVariant, textAlign: "center", marginBottom: 20, paddingHorizontal: 16 }}>
-                The AI could not analyze this meeting. You can retry or view the raw transcript below.
+              <Text
+                style={{
+                  color: theme.colors.onSurfaceVariant,
+                  textAlign: "center",
+                  marginBottom: 20,
+                  paddingHorizontal: 16,
+                }}
+              >
+                The AI could not analyze this meeting. You can retry or view the
+                raw transcript below.
               </Text>
               <Button
                 mode="contained"
@@ -141,8 +172,14 @@ export default function TranscriptViewScreen() {
             </>
           ) : isPending ? (
             <>
-              <ActivityIndicator size="large" color={theme.colors.primary} style={{ marginBottom: 16 }} />
-              <Text style={{ color: theme.colors.onSurfaceVariant }}>AI is analyzing this meeting...</Text>
+              <ActivityIndicator
+                size="large"
+                color={theme.colors.primary}
+                style={{ marginBottom: 16 }}
+              />
+              <Text style={{ color: theme.colors.onSurfaceVariant }}>
+                AI is analyzing this meeting...
+              </Text>
             </>
           ) : (
             <Text style={{ color: theme.colors.onSurfaceVariant }}>
@@ -213,17 +250,24 @@ export default function TranscriptViewScreen() {
   };
 
   const renderUtterancesTab = () => {
-    type Utterance = { speaker: string; transcript: string; start: number; end: number };
+    type Utterance = {
+      speaker: string;
+      transcript: string;
+      start: number;
+      end: number;
+    };
     const utterances = transcript?.utterances as Utterance[] | null | undefined;
     if (utterances && utterances.length > 0) {
-      const principalSpeaker = (transcript?.metadata as Record<string, unknown>)?.principalSpeaker as string | undefined;
+      const principalSpeaker = transcript?.metadata?.principalSpeaker as string | undefined;
 
       return (
         <View style={{ paddingBottom: 40, gap: 16 }}>
           {utterances.map((u, i) => {
             console.log("Utterance:", u);
             const speakerStr = u.speaker || "Unknown";
-            const isMe = principalSpeaker ? speakerStr === principalSpeaker : false;
+            const isMe = principalSpeaker
+              ? speakerStr === principalSpeaker
+              : false;
             const speakerLabel = isMe ? "(Me)" : speakerStr;
             return (
               <Surface
@@ -274,7 +318,7 @@ export default function TranscriptViewScreen() {
     console.log("🛑 Has Labels:", hasLabels);
 
     if (hasLabels) {
-      const principalSpeaker = (transcript?.metadata as any)?.principalSpeaker;
+      const principalSpeaker = transcript?.metadata?.principalSpeaker as string | undefined;
 
       return (
         <View style={{ paddingBottom: 40, gap: 16 }}>
@@ -307,12 +351,12 @@ export default function TranscriptViewScreen() {
               );
             }
 
-            const isMe = principalSpeaker ? speaker === principalSpeaker : false;
+            const isMe = principalSpeaker
+              ? speaker === principalSpeaker
+              : false;
             const displaySpeaker = isMe ? "(Me)" : speaker;
 
-            console.log(
-              `🧐 Speaker Parsed: '${speaker}', isMe: ${isMe}`,
-            );
+            console.log(`🧐 Speaker Parsed: '${speaker}', isMe: ${isMe}`);
 
             return (
               <Surface
@@ -360,6 +404,93 @@ export default function TranscriptViewScreen() {
     );
   };
 
+  const renderKeyPointsTab = () => {
+    const keyPoints = transcript?.metadata?.keyPoints || [];
+    return (
+      <View style={{ paddingBottom: 40, gap: 12 }}>
+        <Text
+          variant="titleMedium"
+          style={{
+            fontWeight: "bold",
+            color: theme.colors.primary,
+            marginBottom: 8,
+            marginTop: 8,
+          }}
+        >
+          Critical Insights & Pain Points
+        </Text>
+        {keyPoints.map((point: string, idx: number) => (
+          <Surface
+            key={idx}
+            style={{
+              padding: 16,
+              borderRadius: 12,
+              backgroundColor: theme.colors.surfaceVariant,
+            }}
+            elevation={0}
+          >
+            <Text style={{ color: theme.colors.onSurface, lineHeight: 22 }}>
+              • {point}
+            </Text>
+          </Surface>
+        ))}
+      </View>
+    );
+  };
+
+  const renderDocumentsTab = () => {
+    const documents = transcript?.documents || [];
+    return (
+      <View style={{ paddingBottom: 40, gap: 12 }}>
+        <Text
+          variant="titleMedium"
+          style={{
+            fontWeight: "bold",
+            color: theme.colors.primary,
+            marginBottom: 8,
+            marginTop: 8,
+          }}
+        >
+          Generated Documents
+        </Text>
+        {documents.map((doc, idx: number) => (
+          <TouchableOpacity
+            key={idx}
+            onPress={() => router.push(`/doc/${doc.id}`)}
+          >
+            <Surface
+              style={{
+                padding: 16,
+                borderRadius: 12,
+                backgroundColor: theme.colors.surfaceVariant,
+              }}
+              elevation={0}
+            >
+              <Text
+                style={{
+                  color: theme.colors.onSurface,
+                  fontWeight: "600",
+                  fontSize: 16,
+                }}
+              >
+                {doc.title}
+              </Text>
+              <Text
+                style={{
+                  color: theme.colors.onSurfaceVariant,
+                  fontSize: 14,
+                  marginTop: 4,
+                }}
+              >
+                Status: {doc.status}
+              </Text>
+            </Surface>
+          </TouchableOpacity>
+        ))}
+      </View>
+    );
+  };
+
   return (
     <View
       style={[styles.container, { backgroundColor: theme.colors.background }]}
@@ -389,7 +520,9 @@ export default function TranscriptViewScreen() {
               variant="labelSmall"
               style={{ color: theme.colors.onSurfaceVariant }}
             >
-              {new Date(transcript.recordedAt ?? transcript.createdAt).toLocaleDateString()}
+              {new Date(
+                transcript.recordedAt ?? transcript.createdAt,
+              ).toLocaleDateString()}
             </Text>
           )}
           {transcript &&
@@ -439,12 +572,14 @@ export default function TranscriptViewScreen() {
                     </Text>
                   </View>
                 ) : null}
-                {(transcript.metadata as any)?.location && (
+                {transcript.metadata?.location && (
                   <TouchableOpacity
                     onPress={() => {
-                      const lat = (transcript.metadata as any).location.latitude;
-                      const lng = (transcript.metadata as any).location.longitude;
-                      Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${lat},${lng}`);
+                      const lat = transcript.metadata?.location?.latitude;
+                      const lng = transcript.metadata?.location?.longitude;
+                      Linking.openURL(
+                        `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`,
+                      );
                     }}
                     style={{
                       backgroundColor: theme.colors.surfaceVariant,
@@ -452,20 +587,29 @@ export default function TranscriptViewScreen() {
                       paddingVertical: 2,
                       borderRadius: 8,
                       flexDirection: "row",
-                      alignItems: "center"
+                      alignItems: "center",
                     }}
                   >
                     <Text
                       variant="labelSmall"
                       style={{ color: theme.colors.onSurfaceVariant }}
                     >
-                      📍 {(transcript.metadata as any).location.latitude.toFixed(4)}, {(transcript.metadata as any).location.longitude.toFixed(4)}
+                      📍 {transcript.metadata?.location?.latitude.toFixed(4)}, {transcript.metadata?.location?.longitude.toFixed(4)}
                     </Text>
                   </TouchableOpacity>
                 )}
                 {transcript.sentiment && (
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-                    <Text variant="labelSmall" style={{ color: theme.colors.onSurfaceVariant }}>
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: 4,
+                    }}
+                  >
+                    <Text
+                      variant="labelSmall"
+                      style={{ color: theme.colors.onSurfaceVariant }}
+                    >
                       Sentiment:
                     </Text>
                     <View
@@ -504,7 +648,7 @@ export default function TranscriptViewScreen() {
                 )}
               </View>
             )}
-          {(transcript?.metadata as { sentimentExplanation?: string })?.sentimentExplanation && (
+          {transcript?.metadata?.sentimentExplanation && (
             <Text
               style={{
                 marginTop: 8,
@@ -516,7 +660,7 @@ export default function TranscriptViewScreen() {
                 paddingLeft: 8,
               }}
             >
-              {(transcript?.metadata as { sentimentExplanation?: string }).sentimentExplanation}
+              {transcript.metadata.sentimentExplanation}
             </Text>
           )}
         </View>
@@ -564,14 +708,19 @@ export default function TranscriptViewScreen() {
               onValueChange={setActiveTab}
               buttons={[
                 { value: "summary", label: "Summary" },
+                ...(transcript?.documents?.length && transcript.documents.length > 0
+                  ? [{ value: "documents", label: "Docs" }]
+                  : []),
+                ...(transcript?.metadata?.keyPoints && transcript.metadata.keyPoints.length > 0 ? [{ value: "keypoints", label: "Points" }] : []),
                 { value: "utterances", label: "Transcript" },
               ]}
             />
           </View>
           <ScrollView contentContainerStyle={styles.scrollContent}>
-            {activeTab === "summary"
-              ? renderSummaryTab()
-              : renderUtterancesTab()}
+            {activeTab === "summary" && renderSummaryTab()}
+            {activeTab === "documents" && renderDocumentsTab()}
+            {activeTab === "keypoints" && renderKeyPointsTab()}
+            {activeTab === "utterances" && renderUtterancesTab()}
           </ScrollView>
         </View>
       )}

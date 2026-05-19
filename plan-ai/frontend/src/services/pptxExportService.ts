@@ -821,7 +821,7 @@ export const exportToPptx = async (options: ExportOptions) => {
           h: scTitleH,
           fontFace: safeHeadingFont,
           fontSize: tConf.size,
-          color: primaryColor.replace("#", ""),
+          color: cardTitleColor,
           bold: true,
           valign: "top",
         });
@@ -947,7 +947,7 @@ export const exportToPptx = async (options: ExportOptions) => {
           h: 0.6,
           fontFace: safeHeadingFont,
           fontSize: tConf.size,
-          color: primaryColor.replace("#", ""),
+          color: cardTitleColor,
           bold: true,
         });
 
@@ -1059,7 +1059,7 @@ export const exportToPptx = async (options: ExportOptions) => {
           h: 0.6,
           fontFace: safeHeadingFont,
           fontSize: 28,
-          color: primaryColor.replace("#", ""),
+          color: cardTitleColor,
           bold: true,
           align: "center",
         });
@@ -1240,7 +1240,7 @@ export const exportToPptx = async (options: ExportOptions) => {
           h: 0.6,
           fontFace: safeHeadingFont,
           fontSize: tConf.size,
-          color: primaryColor.replace("#", ""),
+          color: cardTitleColor,
           bold: true,
           align: "center",
         });
@@ -1331,7 +1331,7 @@ export const exportToPptx = async (options: ExportOptions) => {
           h: 0.6,
           fontFace: safeHeadingFont,
           fontSize: tConf.size,
-          color: primaryColor.replace("#", ""),
+          color: cardTitleColor,
           bold: true,
           align: "center",
         });
@@ -1428,7 +1428,7 @@ export const exportToPptx = async (options: ExportOptions) => {
           h: 0.8,
           fontFace: safeHeadingFont,
           fontSize: 32,
-          color: primaryColor.replace("#", ""),
+          color: cardTitleColor,
           bold: true,
         });
         addSlideText(slidePage, "Content not fully supported in PPTX export natively.", {

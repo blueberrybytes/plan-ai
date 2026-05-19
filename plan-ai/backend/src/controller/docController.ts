@@ -35,7 +35,7 @@ interface BrandThemeSummary {
   cardStyle: string | null;
 }
 
-interface DocDocumentResponse {
+export interface DocDocumentResponse {
   id: string;
   userId: string;
   title: string;

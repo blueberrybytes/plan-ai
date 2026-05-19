@@ -45,6 +45,16 @@ export const brandThemeApi = createApi({
       }),
       invalidatesTags: ["BrandTheme"],
     }),
+    analyzeWebsiteForTheme: builder.mutation<
+      components["schemas"]["AnalyzeUrlResponse"],
+      components["schemas"]["AnalyzeUrlRequest"]
+    >({
+      query: (body) => ({
+        url: "/api/brand-themes/analyze-url",
+        method: "POST",
+        body,
+      }),
+    }),
   }),
 });
 
@@ -54,4 +64,5 @@ export const {
   useCreateBrandThemeMutation,
   useUpdateBrandThemeMutation,
   useDeleteBrandThemeMutation,
+  useAnalyzeWebsiteForThemeMutation,
 } = brandThemeApi;

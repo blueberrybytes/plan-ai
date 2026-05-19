@@ -82,6 +82,12 @@ const TranscriptAnalysisRawSchema = z.object({
   language: z.string().min(1),
   title: z.string().optional(),
   summary: z.string().optional(),
+  keyPoints: z
+    .array(z.string())
+    .optional()
+    .describe(
+      "A list of 3-7 key points, pain points, or critical insights discussed in the meeting.",
+    ),
   sentiment: z
     .string()
     .optional()
@@ -106,6 +112,12 @@ const transcriptAnalysisSchemaForGeneration: ZodTypeAny = z.object({
   language: z.string().min(1),
   title: z.string().optional(),
   summary: z.string().optional(),
+  keyPoints: z
+    .array(z.string())
+    .optional()
+    .describe(
+      "A list of 3-7 key points, pain points, or critical insights discussed in the meeting.",
+    ),
   sentiment: z
     .string()
     .optional()
@@ -126,6 +138,7 @@ export interface TranscriptAnalysis {
   language: string;
   title?: string;
   summary?: string;
+  keyPoints?: string[];
   sentiment?: string;
   sentimentExplanation?: string;
   tasks: TranscriptTask[];
@@ -567,6 +580,7 @@ export class ProjectTranscriptService {
         ...currentMetadata,
         processingStatus: "COMPLETED",
         rawTasks: analysisRaw.tasks,
+        keyPoints: analysisRaw.keyPoints,
         sentimentExplanation: analysisRaw.sentimentExplanation,
         principalSpeaker,
         aiGraphTrace: {
@@ -748,7 +762,7 @@ export class ProjectTranscriptService {
       docGenerationService
         .startGeneration(input.userId, input.workspaceId, {
           title: result.transcript.title || "Meeting Document",
-          prompt: `Generate a comprehensive meeting document based on the following transcript summary and extracted tasks.`,
+          prompt: `Generate a comprehensive meeting document based on the following transcript summary and extracted tasks. Ensure the language and style are highly corporate, formal, and professional.`,
           transcriptIds: [result.transcript.id],
           contextIds: input.contextIds,
         })

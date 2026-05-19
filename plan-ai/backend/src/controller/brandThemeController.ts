@@ -2,6 +2,20 @@ import { BaseWorkspaceController } from "./BaseWorkspaceController";
 import { Get, Post, Patch, Delete, Route, Tags, Body, Path, Security, Request } from "tsoa";
 import { type AuthenticatedRequest } from "../middleware/authMiddleware";
 import { brandThemeService, CreateBrandThemeInput } from "../services/brandThemeService";
+import { WebsiteThemeAnalyzerService } from "../services/websiteThemeAnalyzerService";
+
+export interface AnalyzeUrlRequest {
+  url: string;
+}
+
+export interface AnalyzeUrlResponse {
+  primaryColor: string;
+  secondaryColor: string;
+  backgroundColor: string;
+  headingFont: string;
+  bodyFont: string;
+  candidateLogos: string[];
+}
 
 interface BrandThemeResponse {
   id: string;
@@ -51,6 +65,16 @@ export class BrandThemeController extends BaseWorkspaceController {
       ...body,
       workspaceId,
     }) as Promise<BrandThemeResponse>;
+  }
+
+  @Post("analyze-url")
+  public async analyzeUrl(
+    @Body() body: AnalyzeUrlRequest,
+    @Request() request: AuthenticatedRequest,
+  ): Promise<AnalyzeUrlResponse> {
+    const { workspaceId } = await this.getAuthorizedWorkspaceAccess(request);
+    const analyzer = new WebsiteThemeAnalyzerService();
+    return analyzer.analyzeUrl(body.url, workspaceId);
   }
 
   @Patch("{id}")

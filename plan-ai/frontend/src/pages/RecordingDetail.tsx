@@ -104,7 +104,7 @@ const RecordingDetail: React.FC = () => {
 
   React.useEffect(() => {
     const isPending =
-      (transcript?.data?.metadata as { processingStatus?: string })?.processingStatus === "PENDING";
+      transcript?.data?.metadata?.processingStatus === "PENDING";
     setPollingInterval(isPending ? 3000 : 0);
   }, [transcript]);
 
@@ -119,8 +119,8 @@ const RecordingDetail: React.FC = () => {
   const generateMermaidFromTasks = () => {
     // For standalone recordings, tasks are not stored in the DB as Task entities,
     // but they are auto-injected into metadata.rawTasks by the backend.
-    const metadata = transcript?.data?.metadata as Record<string, unknown> | undefined;
-    const rawMetaTasks = metadata?.rawTasks as unknown as RawTask[] | undefined;
+    const metadata = transcript?.data?.metadata;
+    const rawMetaTasks = metadata?.rawTasks as RawTask[] | undefined;
     const tasks = transcript?.data?.tasks?.length ? transcript.data.tasks : rawMetaTasks;
     if (!tasks || tasks.length === 0) return null;
     let code = "graph TD;\n";
@@ -224,10 +224,7 @@ const RecordingDetail: React.FC = () => {
     );
   }
 
-  const locMetadata = transcript.data?.metadata as {
-    location?: { latitude: number; longitude: number };
-  } | null;
-  const location = locMetadata?.location;
+  const location = transcript.data?.metadata?.location;
 
   return (
     <SidebarLayout>
@@ -316,8 +313,7 @@ const RecordingDetail: React.FC = () => {
                 )}
               </Stack>
 
-              {(transcript.data?.metadata as { sentimentExplanation?: string })
-                ?.sentimentExplanation && (
+            {transcript.data?.metadata?.sentimentExplanation && (
                 <Typography
                   variant="body2"
                   color="text.secondary"
@@ -330,10 +326,7 @@ const RecordingDetail: React.FC = () => {
                     py: 0.5,
                   }}
                 >
-                  {
-                    (transcript.data?.metadata as { sentimentExplanation?: string })
-                      .sentimentExplanation
-                  }
+                  {transcript.data.metadata.sentimentExplanation}
                 </Typography>
               )}
             </Box>
@@ -368,7 +361,7 @@ const RecordingDetail: React.FC = () => {
               {transcript.data?.summary ? "AI Summary & Transcript" : "Transcript"}
             </Typography>
 
-            {(transcript.data?.metadata as { processingStatus?: string })?.processingStatus ===
+            {transcript.data?.metadata?.processingStatus ===
             "PENDING" ? (
               <Box
                 sx={{
@@ -394,7 +387,7 @@ const RecordingDetail: React.FC = () => {
                   refresh automatically when finished.
                 </Typography>
               </Box>
-            ) : (transcript.data?.metadata as { processingStatus?: string })?.processingStatus ===
+            ) : transcript.data?.metadata?.processingStatus ===
               "FAILED" ? (
               <Alert severity="error" sx={{ mt: 2 }}>
                 The background AI worker encountered an error while processing this transcript.
@@ -408,6 +401,13 @@ const RecordingDetail: React.FC = () => {
                   sx={{ borderBottom: 1, borderColor: "divider", mb: 3 }}
                 >
                   <Tab label="AI Summary" value="summary" sx={{ fontWeight: 600 }} />
+                  {(transcript.data?.documents && transcript.data.documents.length > 0) && (
+                    <Tab label="Generated Docs" value="documents" sx={{ fontWeight: 600 }} />
+                  )}
+                  {transcript.data?.metadata?.keyPoints && 
+                   transcript.data.metadata.keyPoints.length > 0 && (
+                    <Tab label="Key Points" value="keypoints" sx={{ fontWeight: 600 }} />
+                  )}
                   <Tab label="Raw Transcript" value="transcript" sx={{ fontWeight: 600 }} />
                   {generatedChart && (
                     <Tab label="Architecture Map" value="architecture" sx={{ fontWeight: 600 }} />
@@ -422,6 +422,35 @@ const RecordingDetail: React.FC = () => {
                     <Typography variant="body1" sx={{ lineHeight: 1.7, fontSize: "1.05rem" }}>
                       {transcript.data.summary}
                     </Typography>
+                  </Box>
+                )}
+
+                {tabValue === "documents" && (
+                  <Box sx={{ p: 3, bgcolor: "background.paper", borderRadius: 2, border: "1px solid", borderColor: "divider" }}>
+                    <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>Generated Documents</Typography>
+                    <Stack spacing={2}>
+                      {(transcript.data?.documents || []).map((doc) => (
+                        <Card key={doc.id} variant="outlined" sx={{ '&:hover': { bgcolor: 'action.hover', cursor: 'pointer' } }} onClick={() => navigate(`/docs/view/${doc.id}`)}>
+                          <CardContent>
+                            <Typography variant="subtitle1" fontWeight={600}>{doc.title}</Typography>
+                            <Typography variant="body2" color="text.secondary">Status: {doc.status}</Typography>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </Stack>
+                  </Box>
+                )}
+
+                {tabValue === "keypoints" && (
+                  <Box sx={{ p: 3, bgcolor: "background.paper", borderRadius: 2, border: "1px solid", borderColor: "divider" }}>
+                    <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>Critical Insights & Pain Points</Typography>
+                    <Stack spacing={2} component="ul" sx={{ m: 0, pl: 2 }}>
+                      {(transcript.data?.metadata?.keyPoints || []).map((point, idx) => (
+                        <Typography component="li" key={idx} variant="body1" sx={{ lineHeight: 1.6 }}>
+                          {point}
+                        </Typography>
+                      ))}
+                    </Stack>
                   </Box>
                 )}
 

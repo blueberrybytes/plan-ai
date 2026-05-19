@@ -1536,6 +1536,246 @@
 				"type": "object",
 				"additionalProperties": false
 			},
+			"BrandThemeSummary": {
+				"properties": {
+					"id": {
+						"type": "string"
+					},
+					"name": {
+						"type": "string"
+					},
+					"logoUrl": {
+						"type": "string",
+						"nullable": true
+					},
+					"primaryColor": {
+						"type": "string"
+					},
+					"secondaryColor": {
+						"type": "string"
+					},
+					"backgroundColor": {
+						"type": "string"
+					},
+					"textColor": {
+						"type": "string"
+					},
+					"headingFont": {
+						"type": "string"
+					},
+					"bodyFont": {
+						"type": "string"
+					},
+					"backgroundStyle": {
+						"type": "string",
+						"nullable": true
+					},
+					"cardStyle": {
+						"type": "string",
+						"nullable": true
+					}
+				},
+				"required": [
+					"id",
+					"name",
+					"logoUrl",
+					"primaryColor",
+					"secondaryColor",
+					"backgroundColor",
+					"textColor",
+					"headingFont",
+					"bodyFont",
+					"backgroundStyle",
+					"cardStyle"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"DocDocumentResponse": {
+				"properties": {
+					"id": {
+						"type": "string"
+					},
+					"userId": {
+						"type": "string"
+					},
+					"title": {
+						"type": "string"
+					},
+					"content": {
+						"type": "string"
+					},
+					"status": {
+						"type": "string"
+					},
+					"isPublic": {
+						"type": "boolean"
+					},
+					"contextIds": {
+						"items": {
+							"type": "string"
+						},
+						"type": "array"
+					},
+					"transcriptIds": {
+						"items": {
+							"type": "string"
+						},
+						"type": "array"
+					},
+					"prompt": {
+						"type": "string",
+						"nullable": true
+					},
+					"themeId": {
+						"type": "string",
+						"nullable": true
+					},
+					"theme": {
+						"allOf": [
+							{
+								"$ref": "#/components/schemas/BrandThemeSummary"
+							}
+						],
+						"nullable": true
+					},
+					"createdAt": {
+						"type": "string",
+						"format": "date-time"
+					},
+					"updatedAt": {
+						"type": "string",
+						"format": "date-time"
+					}
+				},
+				"required": [
+					"id",
+					"userId",
+					"title",
+					"content",
+					"status",
+					"isPublic",
+					"contextIds",
+					"transcriptIds",
+					"prompt",
+					"themeId",
+					"theme",
+					"createdAt",
+					"updatedAt"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"CreateDocInput": {
+				"properties": {
+					"title": {
+						"type": "string"
+					},
+					"prompt": {
+						"type": "string"
+					},
+					"contextIds": {
+						"items": {
+							"type": "string"
+						},
+						"type": "array"
+					},
+					"transcriptIds": {
+						"items": {
+							"type": "string"
+						},
+						"type": "array"
+					},
+					"themeId": {
+						"type": "string"
+					},
+					"isBlank": {
+						"type": "boolean"
+					}
+				},
+				"required": [
+					"title"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"UpdateDocInput": {
+				"properties": {
+					"title": {
+						"type": "string"
+					},
+					"content": {
+						"type": "string"
+					},
+					"themeId": {
+						"type": "string",
+						"nullable": true
+					},
+					"isPublic": {
+						"type": "boolean"
+					}
+				},
+				"type": "object",
+				"additionalProperties": false
+			},
+			"TranscriptMetadata": {
+				"properties": {
+					"processingStatus": {
+						"type": "string",
+						"enum": [
+							"PENDING",
+							"PROCESSING",
+							"EXTRACTING_TASKS",
+							"COMPLETED",
+							"FAILED",
+							"DONE"
+						]
+					},
+					"errorMessage": {
+						"type": "string"
+					},
+					"sentimentExplanation": {
+						"type": "string"
+					},
+					"keyPoints": {
+						"items": {
+							"type": "string"
+						},
+						"type": "array"
+					},
+					"location": {
+						"properties": {
+							"accuracy": {
+								"type": "number",
+								"format": "double",
+								"nullable": true
+							},
+							"longitude": {
+								"type": "number",
+								"format": "double"
+							},
+							"latitude": {
+								"type": "number",
+								"format": "double"
+							}
+						},
+						"required": [
+							"longitude",
+							"latitude"
+						],
+						"type": "object"
+					},
+					"rawTasks": {
+						"items": {},
+						"type": "array"
+					},
+					"principalSpeaker": {
+						"type": "string"
+					}
+				},
+				"type": "object",
+				"additionalProperties": false
+			},
 			"StandaloneTranscriptResponse": {
 				"properties": {
 					"id": {
@@ -1591,7 +1831,7 @@
 					"metadata": {
 						"allOf": [
 							{
-								"$ref": "#/components/schemas/TsoaJsonObject"
+								"$ref": "#/components/schemas/TranscriptMetadata"
 							}
 						],
 						"nullable": true
@@ -1629,6 +1869,12 @@
 					"tasks": {
 						"items": {
 							"$ref": "#/components/schemas/TaskResponse"
+						},
+						"type": "array"
+					},
+					"documents": {
+						"items": {
+							"$ref": "#/components/schemas/DocDocumentResponse"
 						},
 						"type": "array"
 					},
@@ -3781,188 +4027,6 @@
 				"type": "object",
 				"additionalProperties": false
 			},
-			"BrandThemeSummary": {
-				"properties": {
-					"id": {
-						"type": "string"
-					},
-					"name": {
-						"type": "string"
-					},
-					"logoUrl": {
-						"type": "string",
-						"nullable": true
-					},
-					"primaryColor": {
-						"type": "string"
-					},
-					"secondaryColor": {
-						"type": "string"
-					},
-					"backgroundColor": {
-						"type": "string"
-					},
-					"textColor": {
-						"type": "string"
-					},
-					"headingFont": {
-						"type": "string"
-					},
-					"bodyFont": {
-						"type": "string"
-					},
-					"backgroundStyle": {
-						"type": "string",
-						"nullable": true
-					},
-					"cardStyle": {
-						"type": "string",
-						"nullable": true
-					}
-				},
-				"required": [
-					"id",
-					"name",
-					"logoUrl",
-					"primaryColor",
-					"secondaryColor",
-					"backgroundColor",
-					"textColor",
-					"headingFont",
-					"bodyFont",
-					"backgroundStyle",
-					"cardStyle"
-				],
-				"type": "object",
-				"additionalProperties": false
-			},
-			"DocDocumentResponse": {
-				"properties": {
-					"id": {
-						"type": "string"
-					},
-					"userId": {
-						"type": "string"
-					},
-					"title": {
-						"type": "string"
-					},
-					"content": {
-						"type": "string"
-					},
-					"status": {
-						"type": "string"
-					},
-					"isPublic": {
-						"type": "boolean"
-					},
-					"contextIds": {
-						"items": {
-							"type": "string"
-						},
-						"type": "array"
-					},
-					"transcriptIds": {
-						"items": {
-							"type": "string"
-						},
-						"type": "array"
-					},
-					"prompt": {
-						"type": "string",
-						"nullable": true
-					},
-					"themeId": {
-						"type": "string",
-						"nullable": true
-					},
-					"theme": {
-						"allOf": [
-							{
-								"$ref": "#/components/schemas/BrandThemeSummary"
-							}
-						],
-						"nullable": true
-					},
-					"createdAt": {
-						"type": "string",
-						"format": "date-time"
-					},
-					"updatedAt": {
-						"type": "string",
-						"format": "date-time"
-					}
-				},
-				"required": [
-					"id",
-					"userId",
-					"title",
-					"content",
-					"status",
-					"isPublic",
-					"contextIds",
-					"transcriptIds",
-					"prompt",
-					"themeId",
-					"theme",
-					"createdAt",
-					"updatedAt"
-				],
-				"type": "object",
-				"additionalProperties": false
-			},
-			"CreateDocInput": {
-				"properties": {
-					"title": {
-						"type": "string"
-					},
-					"prompt": {
-						"type": "string"
-					},
-					"contextIds": {
-						"items": {
-							"type": "string"
-						},
-						"type": "array"
-					},
-					"transcriptIds": {
-						"items": {
-							"type": "string"
-						},
-						"type": "array"
-					},
-					"themeId": {
-						"type": "string"
-					},
-					"isBlank": {
-						"type": "boolean"
-					}
-				},
-				"required": [
-					"title"
-				],
-				"type": "object",
-				"additionalProperties": false
-			},
-			"UpdateDocInput": {
-				"properties": {
-					"title": {
-						"type": "string"
-					},
-					"content": {
-						"type": "string"
-					},
-					"themeId": {
-						"type": "string",
-						"nullable": true
-					},
-					"isPublic": {
-						"type": "boolean"
-					}
-				},
-				"type": "object",
-				"additionalProperties": false
-			},
 			"ContextFileResponse": {
 				"properties": {
 					"id": {
@@ -4721,6 +4785,53 @@
 				"required": [
 					"workspaceId",
 					"name"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"AnalyzeUrlResponse": {
+				"properties": {
+					"primaryColor": {
+						"type": "string"
+					},
+					"secondaryColor": {
+						"type": "string"
+					},
+					"backgroundColor": {
+						"type": "string"
+					},
+					"headingFont": {
+						"type": "string"
+					},
+					"bodyFont": {
+						"type": "string"
+					},
+					"candidateLogos": {
+						"items": {
+							"type": "string"
+						},
+						"type": "array"
+					}
+				},
+				"required": [
+					"primaryColor",
+					"secondaryColor",
+					"backgroundColor",
+					"headingFont",
+					"bodyFont",
+					"candidateLogos"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"AnalyzeUrlRequest": {
+				"properties": {
+					"url": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"url"
 				],
 				"type": "object",
 				"additionalProperties": false
@@ -6109,7 +6220,7 @@
 	},
 	"info": {
 		"title": "backend",
-		"version": "2.1.0",
+		"version": "2.2.0",
 		"license": {
 			"name": "PolyForm-Noncommercial-1.0.0"
 		},
@@ -7804,6 +7915,294 @@
 						}
 					}
 				]
+			}
+		},
+		"/api/documents": {
+			"get": {
+				"operationId": "List",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"items": {
+										"$ref": "#/components/schemas/DocDocumentResponse"
+									},
+									"type": "array"
+								}
+							}
+						}
+					}
+				},
+				"tags": [
+					"Documents"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": []
+			},
+			"post": {
+				"operationId": "Create",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/DocDocumentResponse"
+								}
+							}
+						}
+					}
+				},
+				"tags": [
+					"Documents"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": [],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/CreateDocInput"
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/documents/{id}": {
+			"get": {
+				"operationId": "GetById",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/DocDocumentResponse"
+								}
+							}
+						}
+					}
+				},
+				"tags": [
+					"Documents"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": [
+					{
+						"in": "path",
+						"name": "id",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				]
+			},
+			"patch": {
+				"operationId": "Update",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/DocDocumentResponse"
+								}
+							}
+						}
+					}
+				},
+				"tags": [
+					"Documents"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": [
+					{
+						"in": "path",
+						"name": "id",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/UpdateDocInput"
+							}
+						}
+					}
+				}
+			},
+			"delete": {
+				"operationId": "Delete",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"success": {
+											"type": "boolean"
+										}
+									},
+									"required": [
+										"success"
+									],
+									"type": "object"
+								}
+							}
+						}
+					}
+				},
+				"tags": [
+					"Documents"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": [
+					{
+						"in": "path",
+						"name": "id",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				]
+			}
+		},
+		"/api/documents/import": {
+			"post": {
+				"operationId": "ImportDoc",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/DocDocumentResponse"
+								}
+							}
+						}
+					}
+				},
+				"tags": [
+					"Documents"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": [],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"multipart/form-data": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"file": {
+										"type": "string",
+										"format": "binary"
+									},
+									"contextIds": {
+										"type": "string"
+									},
+									"transcriptIds": {
+										"type": "string"
+									},
+									"themeId": {
+										"type": "string"
+									}
+								},
+								"required": [
+									"file"
+								]
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/documents/assistant/mermaid-fix": {
+			"post": {
+				"operationId": "FixMermaid",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"fixedCode": {
+											"type": "string"
+										}
+									},
+									"required": [
+										"fixedCode"
+									],
+									"type": "object"
+								}
+							}
+						}
+					}
+				},
+				"tags": [
+					"Documents"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": [],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"properties": {
+									"brokenCode": {
+										"type": "string"
+									}
+								},
+								"required": [
+									"brokenCode"
+								],
+								"type": "object"
+							}
+						}
+					}
+				}
 			}
 		},
 		"/api/transcripts": {
@@ -10379,294 +10778,6 @@
 				]
 			}
 		},
-		"/api/documents": {
-			"get": {
-				"operationId": "List",
-				"responses": {
-					"200": {
-						"description": "Ok",
-						"content": {
-							"application/json": {
-								"schema": {
-									"items": {
-										"$ref": "#/components/schemas/DocDocumentResponse"
-									},
-									"type": "array"
-								}
-							}
-						}
-					}
-				},
-				"tags": [
-					"Documents"
-				],
-				"security": [
-					{
-						"ClientLevel": []
-					}
-				],
-				"parameters": []
-			},
-			"post": {
-				"operationId": "Create",
-				"responses": {
-					"200": {
-						"description": "Ok",
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/DocDocumentResponse"
-								}
-							}
-						}
-					}
-				},
-				"tags": [
-					"Documents"
-				],
-				"security": [
-					{
-						"ClientLevel": []
-					}
-				],
-				"parameters": [],
-				"requestBody": {
-					"required": true,
-					"content": {
-						"application/json": {
-							"schema": {
-								"$ref": "#/components/schemas/CreateDocInput"
-							}
-						}
-					}
-				}
-			}
-		},
-		"/api/documents/{id}": {
-			"get": {
-				"operationId": "GetById",
-				"responses": {
-					"200": {
-						"description": "Ok",
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/DocDocumentResponse"
-								}
-							}
-						}
-					}
-				},
-				"tags": [
-					"Documents"
-				],
-				"security": [
-					{
-						"ClientLevel": []
-					}
-				],
-				"parameters": [
-					{
-						"in": "path",
-						"name": "id",
-						"required": true,
-						"schema": {
-							"type": "string"
-						}
-					}
-				]
-			},
-			"patch": {
-				"operationId": "Update",
-				"responses": {
-					"200": {
-						"description": "Ok",
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/DocDocumentResponse"
-								}
-							}
-						}
-					}
-				},
-				"tags": [
-					"Documents"
-				],
-				"security": [
-					{
-						"ClientLevel": []
-					}
-				],
-				"parameters": [
-					{
-						"in": "path",
-						"name": "id",
-						"required": true,
-						"schema": {
-							"type": "string"
-						}
-					}
-				],
-				"requestBody": {
-					"required": true,
-					"content": {
-						"application/json": {
-							"schema": {
-								"$ref": "#/components/schemas/UpdateDocInput"
-							}
-						}
-					}
-				}
-			},
-			"delete": {
-				"operationId": "Delete",
-				"responses": {
-					"200": {
-						"description": "Ok",
-						"content": {
-							"application/json": {
-								"schema": {
-									"properties": {
-										"success": {
-											"type": "boolean"
-										}
-									},
-									"required": [
-										"success"
-									],
-									"type": "object"
-								}
-							}
-						}
-					}
-				},
-				"tags": [
-					"Documents"
-				],
-				"security": [
-					{
-						"ClientLevel": []
-					}
-				],
-				"parameters": [
-					{
-						"in": "path",
-						"name": "id",
-						"required": true,
-						"schema": {
-							"type": "string"
-						}
-					}
-				]
-			}
-		},
-		"/api/documents/import": {
-			"post": {
-				"operationId": "ImportDoc",
-				"responses": {
-					"200": {
-						"description": "Ok",
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/DocDocumentResponse"
-								}
-							}
-						}
-					}
-				},
-				"tags": [
-					"Documents"
-				],
-				"security": [
-					{
-						"ClientLevel": []
-					}
-				],
-				"parameters": [],
-				"requestBody": {
-					"required": true,
-					"content": {
-						"multipart/form-data": {
-							"schema": {
-								"type": "object",
-								"properties": {
-									"file": {
-										"type": "string",
-										"format": "binary"
-									},
-									"contextIds": {
-										"type": "string"
-									},
-									"transcriptIds": {
-										"type": "string"
-									},
-									"themeId": {
-										"type": "string"
-									}
-								},
-								"required": [
-									"file"
-								]
-							}
-						}
-					}
-				}
-			}
-		},
-		"/api/documents/assistant/mermaid-fix": {
-			"post": {
-				"operationId": "FixMermaid",
-				"responses": {
-					"200": {
-						"description": "Ok",
-						"content": {
-							"application/json": {
-								"schema": {
-									"properties": {
-										"fixedCode": {
-											"type": "string"
-										}
-									},
-									"required": [
-										"fixedCode"
-									],
-									"type": "object"
-								}
-							}
-						}
-					}
-				},
-				"tags": [
-					"Documents"
-				],
-				"security": [
-					{
-						"ClientLevel": []
-					}
-				],
-				"parameters": [],
-				"requestBody": {
-					"required": true,
-					"content": {
-						"application/json": {
-							"schema": {
-								"properties": {
-									"brokenCode": {
-										"type": "string"
-									}
-								},
-								"required": [
-									"brokenCode"
-								],
-								"type": "object"
-							}
-						}
-					}
-				}
-			}
-		},
 		"/api/contexts": {
 			"get": {
 				"operationId": "ListContexts",
@@ -11740,6 +11851,42 @@
 						}
 					}
 				]
+			}
+		},
+		"/api/brand-themes/analyze-url": {
+			"post": {
+				"operationId": "AnalyzeUrl",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/AnalyzeUrlResponse"
+								}
+							}
+						}
+					}
+				},
+				"tags": [
+					"Brand Themes"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": [],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/AnalyzeUrlRequest"
+							}
+						}
+					}
+				}
 			}
 		},
 		"/api/audio/transcribe-chunk": {

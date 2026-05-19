@@ -19,10 +19,12 @@ import {
   Save as SaveIcon,
   CloudUpload as CloudUploadIcon,
   Delete as DeleteIcon,
+  Language as LanguageIcon,
 } from "@mui/icons-material";
 import { storage, auth } from "../firebase/firebase";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { useNavigate, useParams } from "react-router-dom";
+import { AnalyzeWebsiteDialog } from "../components/slides/AnalyzeWebsiteDialog";
 import { useTranslation } from "react-i18next";
 import { useDispatch, useSelector } from "react-redux";
 import { setToastMessage } from "../store/slices/app/appSlice";
@@ -93,6 +95,7 @@ const BrandThemeCreate: React.FC = () => {
   const [previewMode, setPreviewMode] = useState<"SLIDE" | "DOC" | "DIAGRAM">("SLIDE");
   const [previewSlide, setPreviewSlide] = useState(0);
   const [previewDiagram, setPreviewDiagram] = useState<string>("FLOWCHART");
+  const [analyzeDialogOpen, setAnalyzeDialogOpen] = useState(false);
 
   React.useEffect(() => {
     if (themeToEdit) {
@@ -278,7 +281,7 @@ const BrandThemeCreate: React.FC = () => {
             p: 3,
           }}
         >
-          <Button startIcon={<ArrowBackIcon />} onClick={() => navigate("/slides")} sx={{ mb: 2 }}>
+          <Button startIcon={<ArrowBackIcon />} onClick={() => navigate(-1)} sx={{ mb: 2 }}>
             {t("slides.actions.back")}
           </Button>
 
@@ -288,17 +291,41 @@ const BrandThemeCreate: React.FC = () => {
             <Typography variant="h5" fontWeight={700}>
               Brand Themes
             </Typography>
-            <Button
-              variant="contained"
-              startIcon={<SaveIcon />}
-              onClick={handleSave}
-              disabled={!themeName.trim() || isCreating || isUpdating}
-            >
-              {isCreating || isUpdating
-                ? t("slides.themes.form.saving")
-                : t("slides.themes.form.save")}
-            </Button>
+            <Box sx={{ display: "flex", gap: 1 }}>
+              <Button
+                variant="outlined"
+                startIcon={<LanguageIcon />}
+                onClick={() => setAnalyzeDialogOpen(true)}
+              >
+                Import
+              </Button>
+              <Button
+                variant="contained"
+                startIcon={<SaveIcon />}
+                onClick={handleSave}
+                disabled={!themeName.trim() || isCreating || isUpdating}
+              >
+                {isCreating || isUpdating
+                  ? t("slides.themes.form.saving")
+                  : t("slides.themes.form.save")}
+              </Button>
+            </Box>
           </Box>
+
+          <AnalyzeWebsiteDialog
+            open={analyzeDialogOpen}
+            onClose={() => setAnalyzeDialogOpen(false)}
+            onApply={(data) => {
+              setPrimaryColor(data.primaryColor);
+              setSecondaryColor(data.secondaryColor);
+              setBackgroundColor(data.backgroundColor);
+              setHeadingFont(data.headingFont);
+              setBodyFont(data.bodyFont);
+              if (data.logoUrl) {
+                setLogoUrl(data.logoUrl);
+              }
+            }}
+          />
 
           {/* Theme Name */}
           <TextField
