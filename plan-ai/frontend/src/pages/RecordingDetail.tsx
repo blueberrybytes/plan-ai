@@ -33,6 +33,7 @@ import { setToastMessage } from "../store/slices/app/appSlice";
 import ReactMarkdown from "react-markdown";
 import MermaidRenderer from "../components/common/MermaidRenderer";
 import { exportMarkdownToDocx } from "../utils/docxExport";
+import { jsPDF } from "jspdf";
 
 const ChatMessageItem = ({ msg }: { msg: { role: string; content: string } }) => {
   const [copied, setCopied] = useState(false);
@@ -235,9 +236,74 @@ const RecordingDetail: React.FC = () => {
 
   const handleExportPdf = () => {
     setExportAnchor(null);
-    setTimeout(() => {
-      window.print();
-    }, 100);
+    const tData = transcript?.data;
+    if (!tData) return;
+
+    const pdf = new jsPDF();
+    const margin = 15;
+    const maxLineWidth = pdf.internal.pageSize.width - margin * 2;
+    const pageHeight = pdf.internal.pageSize.height;
+    let cursorY = margin;
+
+    const addText = (text: string, fontSize = 12, isBold = false) => {
+      pdf.setFontSize(fontSize);
+      pdf.setFont("helvetica", isBold ? "bold" : "normal");
+      const lines = pdf.splitTextToSize(text, maxLineWidth);
+      lines.forEach((line: string) => {
+        if (cursorY + fontSize * 0.35 > pageHeight - margin) {
+          pdf.addPage();
+          cursorY = margin + 5;
+        }
+        pdf.text(line, margin, cursorY);
+        cursorY += fontSize * 0.45;
+      });
+      cursorY += fontSize * 0.2; // spacing after block
+    };
+
+    addText(tData.title || "Untitled Recording", 18, true);
+    cursorY += 5;
+
+    if (tData.recordedAt || tData.createdAt) {
+      addText(`Recorded on: ${new Date(tData.recordedAt || tData.createdAt).toLocaleString()}`, 11);
+    }
+    if (tData.durationSeconds) {
+      addText(`Duration: ${Math.floor(tData.durationSeconds / 60)}m ${tData.durationSeconds % 60}s`, 11);
+    }
+    if (tData.speakerCount) {
+      addText(`Speakers: ${tData.speakerCount}`, 11);
+    }
+    if (tData.sentiment) {
+      addText(`Sentiment: ${tData.sentiment}`, 11);
+    }
+    if (tData.metadata?.sentimentExplanation) {
+      cursorY += 2;
+      addText(tData.metadata.sentimentExplanation, 11, true);
+    }
+    
+    cursorY += 10;
+
+    if (tData.summary) {
+      addText("AI Summary", 14, true);
+      addText(tData.summary, 11);
+      cursorY += 5;
+    }
+
+    if (tData.metadata?.keyPoints && tData.metadata.keyPoints.length > 0) {
+      addText("Critical Insights & Pain Points", 14, true);
+      tData.metadata.keyPoints.forEach((point: string) => {
+        addText(`• ${point}`, 11);
+      });
+      cursorY += 5;
+    }
+
+    if (tData.transcript) {
+      addText("Full Transcript", 14, true);
+      // Remove generic filler characters to prevent rendering glitches
+      const cleanTranscript = tData.transcript.replace(/\t/g, "  ");
+      addText(cleanTranscript, 11);
+    }
+
+    pdf.save(`${(tData.title || "transcript").replace(/[/\\?%*:|"<>]/g, "-")}.pdf`);
   };
 
   const handleExportMarkdown = () => {
