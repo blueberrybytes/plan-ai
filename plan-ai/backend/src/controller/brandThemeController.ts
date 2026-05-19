@@ -9,6 +9,7 @@ export interface AnalyzeUrlRequest {
 }
 
 export interface AnalyzeUrlResponse {
+  suggestedName: string;
   primaryColor: string;
   secondaryColor: string;
   backgroundColor: string;

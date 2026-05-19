@@ -1673,6 +1673,7 @@ const models: TsoaRoute.Models = {
     "AnalyzeUrlResponse": {
         "dataType": "refObject",
         "properties": {
+            "suggestedName": {"dataType":"string","required":true},
             "primaryColor": {"dataType":"string","required":true},
             "secondaryColor": {"dataType":"string","required":true},
             "backgroundColor": {"dataType":"string","required":true},

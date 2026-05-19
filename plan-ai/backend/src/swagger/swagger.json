@@ -4791,6 +4791,9 @@
 			},
 			"AnalyzeUrlResponse": {
 				"properties": {
+					"suggestedName": {
+						"type": "string"
+					},
 					"primaryColor": {
 						"type": "string"
 					},
@@ -4814,6 +4817,7 @@
 					}
 				},
 				"required": [
+					"suggestedName",
 					"primaryColor",
 					"secondaryColor",
 					"backgroundColor",

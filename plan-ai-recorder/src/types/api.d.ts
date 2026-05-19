@@ -3341,6 +3341,7 @@ export interface components {
             cardStyle?: string | null;
         };
         AnalyzeUrlResponse: {
+            suggestedName: string;
             primaryColor: string;
             secondaryColor: string;
             backgroundColor: string;

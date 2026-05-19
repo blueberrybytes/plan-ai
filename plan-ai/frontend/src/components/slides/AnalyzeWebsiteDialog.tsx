@@ -19,6 +19,7 @@ interface AnalyzeWebsiteDialogProps {
   open: boolean;
   onClose: () => void;
   onApply: (data: {
+    suggestedName: string;
     primaryColor: string;
     secondaryColor: string;
     backgroundColor: string;
@@ -58,6 +59,7 @@ export const AnalyzeWebsiteDialog: React.FC<AnalyzeWebsiteDialogProps> = ({
   const handleApply = () => {
     if (result) {
       onApply({
+        suggestedName: result.suggestedName || "",
         primaryColor: result.primaryColor,
         secondaryColor: result.secondaryColor,
         backgroundColor: result.backgroundColor,

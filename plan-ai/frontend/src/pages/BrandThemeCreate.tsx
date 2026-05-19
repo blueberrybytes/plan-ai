@@ -316,6 +316,9 @@ const BrandThemeCreate: React.FC = () => {
             open={analyzeDialogOpen}
             onClose={() => setAnalyzeDialogOpen(false)}
             onApply={(data) => {
+              if (data.suggestedName && !themeName) {
+                setThemeName(data.suggestedName);
+              }
               setPrimaryColor(data.primaryColor);
               setSecondaryColor(data.secondaryColor);
               setBackgroundColor(data.backgroundColor);
