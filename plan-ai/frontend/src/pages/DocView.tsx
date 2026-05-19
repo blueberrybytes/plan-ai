@@ -468,7 +468,6 @@ const DocView: React.FC = () => {
                 src={theme.logoUrl}
                 alt="Brand Logo"
                 style={{ height: 48, objectFit: "contain" }}
-                crossOrigin="anonymous"
               />
             </Box>
           )}
