@@ -286,6 +286,7 @@ class GoogleIntegrationService {
           body: stream,
         },
         fields: "id, webViewLink",
+        supportsAllDrives: true,
       });
     } catch (error: any) {
       if (
@@ -310,6 +311,7 @@ class GoogleIntegrationService {
               body: retryStream,
             },
             fields: "id, webViewLink",
+            supportsAllDrives: true,
           });
         } else {
           throw error;
