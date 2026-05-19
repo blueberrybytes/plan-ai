@@ -13,6 +13,8 @@ import {
   Tab,
   Alert,
   Chip,
+  Menu,
+  MenuItem,
 } from "@mui/material";
 import {
   ArrowBack as BackIcon,
@@ -30,6 +32,7 @@ import { useDispatch } from "react-redux";
 import { setToastMessage } from "../store/slices/app/appSlice";
 import ReactMarkdown from "react-markdown";
 import MermaidRenderer from "../components/common/MermaidRenderer";
+import { exportMarkdownToDocx } from "../utils/docxExport";
 
 const ChatMessageItem = ({ msg }: { msg: { role: string; content: string } }) => {
   const [copied, setCopied] = useState(false);
@@ -166,6 +169,7 @@ const RecordingDetail: React.FC = () => {
 
   const [copying, setCopying] = useState(false);
   const [tabValue, setTabValue] = useState("summary");
+  const [exportAnchor, setExportAnchor] = useState<null | HTMLElement>(null);
 
   const handleTabChange = (_event: React.SyntheticEvent, newValue: string) => {
     setTabValue(newValue);
@@ -188,9 +192,9 @@ const RecordingDetail: React.FC = () => {
     }
   };
 
-  const handleDownload = () => {
+  const generateExportContent = () => {
     const tData = transcript?.data;
-    if (!tData) return;
+    if (!tData) return "";
 
     let exportContent = `# ${tData.title || "Untitled Recording"}\n\n`;
 
@@ -226,14 +230,34 @@ const RecordingDetail: React.FC = () => {
     if (tData.transcript) {
       exportContent += `## Full Transcript\n\n${tData.transcript}\n\n`;
     }
+    return exportContent;
+  };
 
-    const element = document.createElement("a");
-    const file = new Blob([exportContent], { type: "text/markdown" });
-    element.href = URL.createObjectURL(file);
-    element.download = `${(tData.title || "transcript").replace(/[/\\?%*:|"<>]/g, "-")}.md`;
-    document.body.appendChild(element);
-    element.click();
-    document.body.removeChild(element);
+  const handleExportPdf = () => {
+    setExportAnchor(null);
+    setTimeout(() => {
+      window.print();
+    }, 100);
+  };
+
+  const handleExportMarkdown = () => {
+    setExportAnchor(null);
+    const content = generateExportContent();
+    if (!content) return;
+    const blob = new Blob([content], { type: "text/markdown;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${(transcript?.data?.title || "transcript").replace(/[/\\?%*:|"<>]/g, "-")}.md`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleExportDocx = async () => {
+    setExportAnchor(null);
+    const content = generateExportContent();
+    if (!content) return;
+    await exportMarkdownToDocx(transcript?.data?.title || "Export", content);
   };
 
   if (isLoading) {
@@ -263,9 +287,20 @@ const RecordingDetail: React.FC = () => {
 
   return (
     <SidebarLayout>
-      <Box sx={{ p: { xs: 2, md: 4 }, maxWidth: 1000, mx: "auto" }}>
+      <style>{`
+        @media print {
+          body * { visibility: hidden; }
+          #export-content, #export-content * { visibility: visible; }
+          #export-content { position: absolute; left: 0; top: 0; margin: 0; padding: 0; max-width: 100% !important; }
+          .no-print { display: none !important; }
+          pre, code, blockquote, img, svg, table, tr { page-break-inside: avoid !important; break-inside: avoid !important; }
+          h1, h2, h3 { page-break-after: avoid !important; break-after: avoid !important; }
+        }
+      `}</style>
+      <Box id="export-content" sx={{ p: { xs: 2, md: 4 }, maxWidth: 1000, mx: "auto" }}>
         {/* Header */}
         <Stack
+          className="no-print"
           direction={{ xs: "column", sm: "row" }}
           justifyContent="space-between"
           alignItems={{ xs: "flex-start", sm: "center" }}
@@ -367,15 +402,24 @@ const RecordingDetail: React.FC = () => {
             </Box>
           </Stack>
 
-          <Stack direction="row" spacing={2}>
+          <Stack direction="row" spacing={2} className="no-print">
             <Button
               variant="contained"
               startIcon={<DownloadIcon />}
-              onClick={handleDownload}
+              onClick={(e) => setExportAnchor(e.currentTarget)}
               disabled={!transcript.data?.transcript}
             >
-              Export Complete Report
+              Export
             </Button>
+            <Menu
+              anchorEl={exportAnchor}
+              open={Boolean(exportAnchor)}
+              onClose={() => setExportAnchor(null)}
+            >
+              <MenuItem onClick={handleExportPdf}>Export to PDF</MenuItem>
+              <MenuItem onClick={handleExportMarkdown}>Export to Markdown</MenuItem>
+              <MenuItem onClick={handleExportDocx}>Export to Word (.docx)</MenuItem>
+            </Menu>
           </Stack>
         </Stack>
 

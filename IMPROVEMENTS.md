@@ -139,3 +139,6 @@ we can add also the pain points if exists of the client and things that client c
 
 ## 18 Error on Sync task
 If after a meet a sync fails to Jira, Linear or whatever we need to somehow store the error and show in the UI
+
+## 19 Improve location
+Use latitude and longitude to place like Barcelona.
