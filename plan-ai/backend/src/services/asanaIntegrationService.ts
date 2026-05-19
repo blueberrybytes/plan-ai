@@ -89,7 +89,7 @@ class AsanaIntegrationService {
     url.searchParams.set("response_type", "code");
     url.searchParams.set(
       "scope",
-      "openid email profile projects:read tasks:read tasks:write workspaces:read",
+      "openid email profile users:read projects:read tasks:read tasks:write workspaces:read",
     );
     if (state) {
       url.searchParams.set("state", state);
