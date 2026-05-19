@@ -628,7 +628,7 @@ const TranscriptView: React.FC = () => {
                   )}
                   {transcript.metadata?.keyPoints && 
                    transcript.metadata.keyPoints.length > 0 && (
-                    <Tab label="Key Points" value="keypoints" sx={{ fontWeight: 600 }} />
+                    <Tab label="Key Points & Pain Points" value="keypoints" sx={{ fontWeight: 600 }} />
                   )}
                   <Tab
                     label="Raw Transcript"
