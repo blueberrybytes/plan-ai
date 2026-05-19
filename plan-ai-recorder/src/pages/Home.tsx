@@ -872,30 +872,27 @@ const Home: React.FC = () => {
               )}
             />
 
-            <FormControl fullWidth size="small" sx={{ mt: 2 }}>
-              <InputLabel id="context-select-label">Context (Optional)</InputLabel>
-              <Select
-                labelId="context-select-label"
-                id="context-select"
-                value={selectedContextId}
-                label="Context (Optional)"
-                onChange={(e) => setSelectedContextId(e.target.value)}
-                displayEmpty
-                sx={{
-                  bgcolor: "rgba(255,255,255,0.05)",
-                  fontSize: "0.8rem",
-                }}
-              >
-                <MenuItem value="" sx={{ fontSize: "0.8rem" }}>
-                  <em>None (Use default keywords)</em>
+            <TextField
+              select
+              fullWidth
+              size="small"
+              sx={{ mt: 2, bgcolor: "rgba(255,255,255,0.05)" }}
+              label="Context (Optional)"
+              value={selectedContextId || "none"}
+              onChange={(e) => setSelectedContextId(e.target.value === "none" ? "" : e.target.value)}
+              InputProps={{
+                sx: { fontSize: "0.8rem" }
+              }}
+            >
+              <MenuItem value="none" sx={{ fontSize: "0.8rem" }}>
+                <em>None (Use default keywords)</em>
+              </MenuItem>
+              {contexts.map((c) => (
+                <MenuItem key={c.id} value={c.id} sx={{ fontSize: "0.8rem" }}>
+                  {c.name}
                 </MenuItem>
-                {contexts.map((c) => (
-                  <MenuItem key={c.id} value={c.id} sx={{ fontSize: "0.8rem" }}>
-                    {c.name}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
+              ))}
+            </TextField>
           </Box>
 
           <Box

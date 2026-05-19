@@ -817,18 +817,7 @@ const Contexts: React.FC = () => {
                     </Stack>
                   </Stack>
 
-                  {context.keywords && context.keywords.length > 0 && (
-                    <Box sx={{ mt: 2 }}>
-                      <Typography variant="overline" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
-                        Keywords
-                      </Typography>
-                      <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
-                        {context.keywords.map((kw, i) => (
-                          <Chip key={i} label={kw} size="small" variant="outlined" color="primary" />
-                        ))}
-                      </Box>
-                    </Box>
-                  )}
+
                   {/* Actions */}
                   <Stack direction="row" spacing={1} sx={{ flexShrink: 0, ml: 2 }}>
                     <Tooltip title={t("contexts.buttons.edit")}>
@@ -964,6 +953,19 @@ const Contexts: React.FC = () => {
                     </Menu>
                   </Stack>
                 </Stack>
+
+                {context.keywords && context.keywords.length > 0 && (
+                  <Box sx={{ mt: 0, mb: 2 }}>
+                    <Typography variant="overline" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
+                      Extracted Keywords
+                    </Typography>
+                    <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
+                      {context.keywords.map((kw, i) => (
+                        <Chip key={i} label={kw} size="small" variant="outlined" color="primary" />
+                      ))}
+                    </Box>
+                  </Box>
+                )}
 
                 {uploadError && (
                   <Alert severity="error" onClose={() => setUploadError(null)}>

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { IntegrationProvider, IntegrationStatus, Prisma } from "@prisma/client";
 import prisma from "../prisma/prismaClient";
@@ -394,15 +395,29 @@ class LinearIntegrationService {
     }
 
     const prefix = `[📁 ${task.project.title}] `;
-    const issuePayload = await client.createIssue({
-      teamId,
-      title: `${prefix}${task.title || `Extracted Task ${task.id}`}`,
-      description,
-      estimate: task.storyPoints ?? undefined,
-      dueDate: task.dueDate ? new Date(task.dueDate).toISOString().split("T")[0] : undefined,
-      parentId: linearParentId,
-      labelIds: labelIds.length > 0 ? labelIds : undefined,
-    });
+    let issuePayload;
+    try {
+      issuePayload = await client.createIssue({
+        teamId,
+        title: `${prefix}${task.title || `Extracted Task ${task.id}`}`,
+        description,
+        estimate: task.storyPoints ?? undefined,
+        dueDate: task.dueDate ? new Date(task.dueDate).toISOString().split("T")[0] : undefined,
+        parentId: linearParentId,
+        labelIds: labelIds.length > 0 ? labelIds : undefined,
+      });
+    } catch (error: any) {
+      // Handle authentication errors gracefully (revoked token, expired without refresh)
+      if (error.message && (error.message.includes("not authenticated") || error.message.includes("Authentication required"))) {
+        logger.warn(`Linear integration revoked or expired for workspace ${workspaceId}. Disconnecting...`);
+        await prisma.workspaceIntegration.update({
+          where: { workspaceId_provider: { workspaceId, provider: IntegrationProvider.LINEAR } },
+          data: { status: IntegrationStatus.DISCONNECTED },
+        });
+        throw new Error("Linear integration authentication failed (token revoked or expired). The integration has been automatically disconnected. Please reconnect from the Integrations page.");
+      }
+      throw error;
+    }
 
     const issue = await issuePayload.issue;
     if (!issue) {
