@@ -1,4 +1,4 @@
-export type AuthMechanism = "BASIC" | "API_KEY" | "OAUTH";
+export type AuthMechanism = "BASIC" | "API_KEY" | "OAUTH" | "PAT";
 
 export interface BaseIntegrationMetadata {
   authType: AuthMechanism;
@@ -48,6 +48,13 @@ export interface MicrosoftIntegrationMetadata extends BaseIntegrationMetadata {
   userEmail?: string;
 }
 
+export interface AsanaIntegrationMetadata extends BaseIntegrationMetadata {
+  authType: "OAUTH" | "PAT";
+  asanaWorkspaceGid?: string;
+  asanaWorkspaceName?: string;
+  defaultProjectGid?: string;
+}
+
 export type IntegrationMetadata =
   | JiraIntegrationMetadata
   | LinearIntegrationMetadata
@@ -55,4 +62,5 @@ export type IntegrationMetadata =
   | GithubIntegrationMetadata
   | TrelloIntegrationMetadata
   | NotionIntegrationMetadata
-  | MicrosoftIntegrationMetadata;
+  | MicrosoftIntegrationMetadata
+  | AsanaIntegrationMetadata;

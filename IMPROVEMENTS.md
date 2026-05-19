@@ -136,3 +136,6 @@ Only ADMIN or OWNER of the workspace can create integrations. And an integration
 
 ## 17 On meetings
 we can add also the pain points if exists of the client and things that client consider important
+
+## 18 Error on Sync task
+If after a meet a sync fails to Jira, Linear or whatever we need to somehow store the error and show in the UI

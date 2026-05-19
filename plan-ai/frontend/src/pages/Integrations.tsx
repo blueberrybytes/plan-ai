@@ -35,6 +35,7 @@ import linearSvg from "../icons/linear.svg";
 import trelloSvg from "../icons/trello.svg";
 import googleDriveSvg from "../icons/google-drive.svg";
 import oneDriveSvg from "../icons/one-drive.svg";
+import asanaSvg from "../icons/asana.svg";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import SidebarLayout from "../components/layout/SidebarLayout";
@@ -84,6 +85,13 @@ import {
   useGetNotionDatabasesQuery,
   useSetNotionDefaultDatabaseMutation,
 } from "../store/apis/notionApi";
+import {
+  useLazyGetAsanaAuthUrlQuery,
+  useConnectAsanaManuallyMutation,
+  useGetAsanaSummaryQuery,
+  useGetAsanaProjectsQuery,
+  useSetAsanaDefaultProjectMutation,
+} from "../store/apis/asanaApi";
 import type { components } from "../types/api";
 import { useTranslation } from "react-i18next";
 import { useGooglePicker } from "../hooks/useGooglePicker";
@@ -95,7 +103,15 @@ const PROVIDER_TAB_PARAM = "provider";
 const STATUS_PARAM = "status";
 const MESSAGE_PARAM = "message";
 
-type ProviderTabValue = "jira" | "linear" | "trello" | "github" | "google" | "notion" | "microsoft";
+type ProviderTabValue =
+  | "jira"
+  | "linear"
+  | "trello"
+  | "github"
+  | "google"
+  | "notion"
+  | "microsoft"
+  | "asana";
 
 type ProviderConfig = {
   tabValue: ProviderTabValue;
@@ -141,6 +157,17 @@ const PROVIDER_CONFIGS: ProviderConfig[] = [
     connectCtaKey: "integrationsPage.providers.trello.connectCta",
     comingSoon: false,
     notConnectedKey: "integrationsPage.providers.trello.notConnected",
+    isWorkspaceLevel: true,
+  },
+  {
+    tabValue: "asana",
+    provider: "ASANA",
+    labelKey: "integrationsPage.providers.asana.label",
+    descriptionKey: "integrationsPage.providers.asana.description",
+    connectCtaKey: "integrationsPage.providers.asana.connectCta",
+    comingSoon: false,
+    notConnectedKey: "integrationsPage.providers.asana.notConnected",
+    isBeta: true,
     isWorkspaceLevel: true,
   },
   {
@@ -247,6 +274,13 @@ const Integrations: React.FC = () => {
     useLazyGetNotionAuthUrlQuery();
   const [notionAuthError, setNotionAuthError] = useState<string | null>(null);
 
+  const [triggerAsanaAuthorization, { isFetching: isAsanaAuthLoading }] =
+    useLazyGetAsanaAuthUrlQuery();
+  const [asanaAuthError, setAsanaAuthError] = useState<string | null>(null);
+  const [asanaPat, setAsanaPat] = useState("");
+  const [connectAsanaManually, { isLoading: isAsanaManualConnecting }] =
+    useConnectAsanaManuallyMutation();
+
   const [trelloApiKey, setTrelloApiKey] = useState("");
   const [trelloApiToken, setTrelloApiToken] = useState("");
   const [connectTrelloManually, { isLoading: isTrelloManualConnecting }] =
@@ -312,6 +346,33 @@ const Integrations: React.FC = () => {
     } catch (error) {
       console.error(error);
       setNotionAuthError("Failed to fetch Notion authorization URL.");
+    }
+  };
+
+  const handleConnectAsana = async () => {
+    try {
+      const response = await triggerAsanaAuthorization().unwrap();
+      const authorizationUrl = response.data?.authorizationUrl;
+      if (authorizationUrl) {
+        window.location.href = authorizationUrl;
+      }
+    } catch (error) {
+      console.error("Failed to fetch Asana authorization URL", error);
+      setAsanaAuthError("Failed to start Asana Auth");
+    }
+  };
+
+  const handleManualAsanaConnect = async () => {
+    setAsanaAuthError(null);
+    try {
+      await connectAsanaManually({ personalAccessToken: asanaPat }).unwrap();
+      dispatch(setToastMessage({ severity: "success", message: "Asana connected successfully" }));
+      refetchIntegrations();
+      setAsanaPat("");
+    } catch (err: unknown) {
+      console.error("Failed to connect to Asana manually", err);
+      const rtkError = err as { data?: { message?: string } };
+      setAsanaAuthError(rtkError?.data?.message || "Failed to connect Asana");
     }
   };
 
@@ -606,7 +667,9 @@ const Integrations: React.FC = () => {
                         ? handleConnectGoogle
                         : config.tabValue === "microsoft"
                           ? handleConnectMicrosoft
-                          : undefined
+                          : config.tabValue === "asana"
+                            ? handleConnectAsana
+                            : undefined
               }
               canEdit={canEdit}
             />
@@ -920,13 +983,69 @@ const Integrations: React.FC = () => {
                   </Box>
                 </Box>
               )}
+              {config.tabValue === "asana" && (
+                <Box
+                  sx={{ mt: 2, display: "flex", flexDirection: "column", gap: 3, maxWidth: 400 }}
+                >
+                  <Box>
+                    <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
+                      Option 1: Connect via Asana (Recommended)
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                      Authorize Plan AI to access your Asana workspace securely.
+                    </Typography>
+                    <Button
+                      variant="contained"
+                      onClick={handleConnectAsana}
+                      disabled={isAsanaAuthLoading}
+                    >
+                      {isAsanaAuthLoading ? "Redirecting..." : "Connect with Asana"}
+                    </Button>
+                  </Box>
+
+                  <Box sx={{ borderTop: 1, borderColor: "divider", pt: 3 }}>
+                    <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
+                      Option 2: Connect with Personal Access Token
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                      For custom or restricted setups.
+                    </Typography>
+                    <Box component="form" sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                      <TextField
+                        size="small"
+                        label="Personal Access Token"
+                        value={asanaPat}
+                        onChange={(e) => setAsanaPat(e.target.value)}
+                        placeholder="0/abc123..."
+                        type="password"
+                        required
+                      />
+                      <Stack direction="row" spacing={2} sx={{ mt: 1 }}>
+                        <Button
+                          variant="outlined"
+                          onClick={handleManualAsanaConnect}
+                          disabled={isAsanaManualConnecting || !asanaPat.trim()}
+                        >
+                          {isAsanaManualConnecting ? "Connecting..." : "Connect Asana"}
+                        </Button>
+                      </Stack>
+                      {asanaAuthError && (
+                        <Typography variant="body2" color="error">
+                          {asanaAuthError}
+                        </Typography>
+                      )}
+                    </Box>
+                  </Box>
+                </Box>
+              )}
               {config.tabValue !== "jira" &&
                 config.tabValue !== "linear" &&
                 config.tabValue !== "trello" &&
                 config.tabValue !== "github" &&
                 config.tabValue !== "google" &&
                 config.tabValue !== "notion" &&
-                config.tabValue !== "microsoft" && (
+                config.tabValue !== "microsoft" &&
+                config.tabValue !== "asana" && (
                   <Button variant="contained" color="primary" disabled>
                     {config.connectCtaKey ? t(config.connectCtaKey) : undefined}
                   </Button>
@@ -1003,6 +1122,9 @@ const Integrations: React.FC = () => {
                     break;
                   case "microsoft":
                     iconEl = <img src={oneDriveSvg} alt="Microsoft" width={16} height={16} />;
+                    break;
+                  case "asana":
+                    iconEl = <img src={asanaSvg} alt="Asana" width={16} height={16} />;
                     break;
                 }
 
@@ -1182,6 +1304,26 @@ const ConnectedIntegrationDetails: React.FC<{
       ((integration.metadata as Record<string, unknown> | null)?.defaultDatabaseId as string) ?? "",
   );
 
+  const {
+    data: asanaSummaryResponse,
+    isLoading: isAsanaSummaryLoading,
+    isFetching: isAsanaSummaryFetching,
+    refetch: refetchAsanaSummary,
+  } = useGetAsanaSummaryQuery(undefined, {
+    skip: integration.provider !== "ASANA" || integration.status !== "CONNECTED",
+  });
+
+  const { data: asanaProjectsData, isLoading: isAsanaProjectsLoading } = useGetAsanaProjectsQuery(
+    undefined,
+    { skip: integration.provider !== "ASANA" || integration.status !== "CONNECTED" },
+  );
+  const [setAsanaDefaultProject, { isLoading: isSavingAsanaProject }] =
+    useSetAsanaDefaultProjectMutation();
+  const [selectedAsanaProjectGid, setSelectedAsanaProjectGid] = React.useState(
+    () =>
+      ((integration.metadata as Record<string, unknown> | null)?.defaultProjectGid as string) ?? "",
+  );
+
   const { data: trelloBoardsData, isLoading: isTrelloBoardsLoading } = useGetTrelloBoardsQuery(
     undefined,
     { skip: integration.provider !== "TRELLO" || integration.status !== "CONNECTED" },
@@ -1218,11 +1360,13 @@ const ConnectedIntegrationDetails: React.FC<{
     const boardId = (meta?.defaultBoardId as string) ?? "";
     const listId = (meta?.defaultListId as string) ?? "";
     const notionDbId = (meta?.defaultDatabaseId as string) ?? "";
+    const asanaProjectGid = (meta?.defaultProjectGid as string) ?? "";
     setSelectedJiraProjectId(projectId);
     setSelectedLinearTeamId(teamId);
     setSelectedTrelloBoardId(boardId);
     setSelectedTrelloListId(listId);
     setSelectedNotionDatabaseId(notionDbId);
+    setSelectedAsanaProjectGid(asanaProjectGid);
   }, [integration.metadata, integration.provider]);
 
   // Use a ref to prevent race conditions / duplicate auto-selects
@@ -1232,6 +1376,7 @@ const ConnectedIntegrationDetails: React.FC<{
     trelloBoard: false,
     trelloList: false,
     notion: false,
+    asana: false,
   });
 
   // Auto-select first options if none selected
@@ -1379,6 +1524,35 @@ const ConnectedIntegrationDetails: React.FC<{
     notionDatabasesData,
     canEdit,
     setNotionDefaultDatabase,
+    dispatch,
+  ]);
+
+  React.useEffect(() => {
+    if (
+      integration.provider === "ASANA" &&
+      integration.status === "CONNECTED" &&
+      !selectedAsanaProjectGid &&
+      asanaProjectsData?.data?.length &&
+      canEdit &&
+      !autoSelectRef.current.asana
+    ) {
+      autoSelectRef.current.asana = true;
+      const firstGid = asanaProjectsData.data[0].gid;
+      setSelectedAsanaProjectGid(firstGid);
+      setAsanaDefaultProject({ projectGid: firstGid })
+        .unwrap()
+        .then(() => dispatch(integrationApi.util.invalidateTags(["Integration"])))
+        .catch(() => {
+          autoSelectRef.current.asana = false;
+        });
+    }
+  }, [
+    integration.provider,
+    integration.status,
+    selectedAsanaProjectGid,
+    asanaProjectsData,
+    canEdit,
+    setAsanaDefaultProject,
     dispatch,
   ]);
 
@@ -1862,6 +2036,90 @@ const ConnectedIntegrationDetails: React.FC<{
             Notion is connected. Tasks from your recordings will automatically be exported as pages
             in your Notion workspace.
           </Alert>
+        </Box>
+      )}
+
+      {integration.provider === "ASANA" && integration.status === "CONNECTED" && (
+        <Box sx={{ mt: 2 }}>
+          <Alert severity="success" sx={{ mb: 2 }}>
+            Asana is connected. Tasks from your recordings will automatically be synced to your
+            Asana workspace.
+          </Alert>
+
+          <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }}>
+            <Typography variant="subtitle2" sx={{ flexGrow: 1 }}>
+              Asana Workspace Overview
+            </Typography>
+            <IconButton
+              size="small"
+              onClick={() => refetchAsanaSummary()}
+              disabled={isAsanaSummaryFetching || isAsanaSummaryLoading}
+            >
+              <SyncIcon fontSize="small" sx={{ color: "text.secondary" }} />
+            </IconButton>
+          </Stack>
+
+          {isAsanaSummaryLoading || isAsanaSummaryFetching ? (
+            <CircularProgress size={20} />
+          ) : asanaSummaryResponse?.data ? (
+            <Stack spacing={2} sx={{ mt: 1, mb: 2 }}>
+              <Paper variant="outlined" sx={{ p: 2 }}>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                  <strong>Total Projects:</strong> {asanaSummaryResponse.data.totalProjects ?? "N/A"}
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                  <strong>Total Tasks:</strong> {asanaSummaryResponse.data.totalTasks ?? "N/A"}
+                </Typography>
+              </Paper>
+            </Stack>
+          ) : (
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              Unable to load Asana summary statistics.
+            </Typography>
+          )}
+
+          <Typography variant="subtitle2" sx={{ mb: 1 }}>
+            Default Destination Project
+          </Typography>
+          {isAsanaProjectsLoading ? (
+            <CircularProgress size={20} />
+          ) : (
+            <FormControl size="small" sx={{ minWidth: 280 }}>
+              <InputLabel>Select Default Project</InputLabel>
+              <Select
+                label="Select Default Project"
+                value={selectedAsanaProjectGid}
+                disabled={isSavingAsanaProject || !canEdit}
+                onChange={async (e) => {
+                  const projectGid = e.target.value as string;
+                  setSelectedAsanaProjectGid(projectGid);
+                  try {
+                    await setAsanaDefaultProject({ projectGid }).unwrap();
+                    dispatch(integrationApi.util.invalidateTags(["Integration"]));
+                    dispatch(
+                      setToastMessage({
+                        severity: "success",
+                        message: "Default Asana project saved",
+                      }),
+                    );
+                  } catch {
+                    dispatch(
+                      setToastMessage({
+                        severity: "error",
+                        message: "Failed to save default project",
+                      }),
+                    );
+                  }
+                }}
+              >
+                {(asanaProjectsData?.data ?? []).map((p) => (
+                  <MenuItem key={p.gid} value={p.gid}>
+                    {p.name}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          )}
         </Box>
       )}
 

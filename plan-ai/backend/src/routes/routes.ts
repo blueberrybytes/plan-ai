@@ -58,6 +58,8 @@ import { BrandThemeController } from './../controller/brandThemeController';
 // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
 import { AudioController } from './../controller/audioController';
 // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+import { AsanaController } from './../controller/asanaController';
+// WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
 import { AnalyticsController } from './../controller/analyticsController';
 // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
 import { AiUsageController } from './../controller/aiUsageController';
@@ -758,6 +760,7 @@ const models: TsoaRoute.Models = {
             "syncToLinear": {"dataType":"boolean"},
             "syncToTrello": {"dataType":"boolean"},
             "syncToNotion": {"dataType":"boolean"},
+            "syncToAsana": {"dataType":"boolean"},
             "exportToGoogleDrive": {"dataType":"boolean"},
             "exportToOneDrive": {"dataType":"boolean"},
             "taskStrategy": {"dataType":"union","subSchemas":[{"dataType":"enum","enums":["AUTO"]},{"dataType":"enum","enums":["SINGLE_TICKET"]},{"dataType":"enum","enums":["SPECIFIC_COUNT"]}]},
@@ -795,6 +798,7 @@ const models: TsoaRoute.Models = {
             "linear": {"dataType":"nestedObjectLiteral","nestedProperties":{"url":{"dataType":"string","required":true},"identifier":{"dataType":"string","required":true},"issueId":{"dataType":"string","required":true}}},
             "trello": {"dataType":"nestedObjectLiteral","nestedProperties":{"shortLink":{"dataType":"string","required":true},"url":{"dataType":"string","required":true},"cardId":{"dataType":"string","required":true}}},
             "notion": {"dataType":"nestedObjectLiteral","nestedProperties":{"url":{"dataType":"string","required":true},"pageId":{"dataType":"string","required":true}}},
+            "asana": {"dataType":"nestedObjectLiteral","nestedProperties":{"url":{"dataType":"string","required":true},"taskGid":{"dataType":"string","required":true}}},
         },
         "additionalProperties": false,
     },
@@ -1308,7 +1312,7 @@ const models: TsoaRoute.Models = {
     // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
     "_36_Enums.IntegrationProvider": {
         "dataType": "refAlias",
-        "type": {"dataType":"union","subSchemas":[{"dataType":"enum","enums":["JIRA"]},{"dataType":"enum","enums":["LINEAR"]},{"dataType":"enum","enums":["GITHUB"]},{"dataType":"enum","enums":["GOOGLE_DRIVE"]},{"dataType":"enum","enums":["TRELLO"]},{"dataType":"enum","enums":["NOTION"]},{"dataType":"enum","enums":["ONEDRIVE"]}],"validators":{}},
+        "type": {"dataType":"union","subSchemas":[{"dataType":"enum","enums":["JIRA"]},{"dataType":"enum","enums":["LINEAR"]},{"dataType":"enum","enums":["GITHUB"]},{"dataType":"enum","enums":["GOOGLE_DRIVE"]},{"dataType":"enum","enums":["TRELLO"]},{"dataType":"enum","enums":["NOTION"]},{"dataType":"enum","enums":["ONEDRIVE"]},{"dataType":"enum","enums":["ASANA"]}],"validators":{}},
     },
     // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
     "IntegrationProvider": {
@@ -1700,6 +1704,63 @@ const models: TsoaRoute.Models = {
     "ApiResponse__text-string__": {
         "dataType": "refAlias",
         "type": {"dataType":"nestedObjectLiteral","nestedProperties":{"message":{"dataType":"string"},"data":{"dataType":"union","subSchemas":[{"dataType":"nestedObjectLiteral","nestedProperties":{"text":{"dataType":"string","required":true}}},{"dataType":"enum","enums":[null]}],"required":true},"status":{"dataType":"double","required":true}},"validators":{}},
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "AsanaAuthorizationResponse": {
+        "dataType": "refObject",
+        "properties": {
+            "authorizationUrl": {"dataType":"string","required":true},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "ApiResponse_AsanaAuthorizationResponse_": {
+        "dataType": "refAlias",
+        "type": {"dataType":"nestedObjectLiteral","nestedProperties":{"message":{"dataType":"string"},"data":{"dataType":"union","subSchemas":[{"ref":"AsanaAuthorizationResponse"},{"dataType":"enum","enums":[null]}],"required":true},"status":{"dataType":"double","required":true}},"validators":{}},
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "AsanaManualConnectRequest": {
+        "dataType": "refObject",
+        "properties": {
+            "personalAccessToken": {"dataType":"string","required":true},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "AsanaSummaryResponse": {
+        "dataType": "refObject",
+        "properties": {
+            "totalTasks": {"dataType":"union","subSchemas":[{"dataType":"double"},{"dataType":"enum","enums":[null]}],"required":true},
+            "totalProjects": {"dataType":"union","subSchemas":[{"dataType":"double"},{"dataType":"enum","enums":[null]}],"required":true},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "ApiResponse_AsanaSummaryResponse_": {
+        "dataType": "refAlias",
+        "type": {"dataType":"nestedObjectLiteral","nestedProperties":{"message":{"dataType":"string"},"data":{"dataType":"union","subSchemas":[{"ref":"AsanaSummaryResponse"},{"dataType":"enum","enums":[null]}],"required":true},"status":{"dataType":"double","required":true}},"validators":{}},
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "AsanaProjectItem": {
+        "dataType": "refObject",
+        "properties": {
+            "gid": {"dataType":"string","required":true},
+            "name": {"dataType":"string","required":true},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "ApiResponse_AsanaProjectItem-Array_": {
+        "dataType": "refAlias",
+        "type": {"dataType":"nestedObjectLiteral","nestedProperties":{"message":{"dataType":"string"},"data":{"dataType":"union","subSchemas":[{"dataType":"array","array":{"dataType":"refObject","ref":"AsanaProjectItem"}},{"dataType":"enum","enums":[null]}],"required":true},"status":{"dataType":"double","required":true}},"validators":{}},
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "AsanaSetDefaultProjectRequest": {
+        "dataType": "refObject",
+        "properties": {
+            "projectGid": {"dataType":"string","required":true},
+        },
+        "additionalProperties": false,
     },
     // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
     "DashboardAnalytics": {
@@ -3404,6 +3465,7 @@ export function RegisterRoutes(app: Router,opts?:{multer?:ReturnType<typeof mult
                 syncToLinear: {"in":"formData","name":"syncToLinear","dataType":"string"},
                 syncToTrello: {"in":"formData","name":"syncToTrello","dataType":"string"},
                 syncToNotion: {"in":"formData","name":"syncToNotion","dataType":"string"},
+                syncToAsana: {"in":"formData","name":"syncToAsana","dataType":"string"},
                 exportToGoogleDrive: {"in":"formData","name":"exportToGoogleDrive","dataType":"string"},
                 exportToOneDrive: {"in":"formData","name":"exportToOneDrive","dataType":"string"},
                 skipAi: {"in":"formData","name":"skipAi","dataType":"string"},
@@ -6459,6 +6521,197 @@ export function RegisterRoutes(app: Router,opts?:{multer?:ReturnType<typeof mult
 
               await templateService.apiHandler({
                 methodName: 'transcribeChunk',
+                controller,
+                response,
+                next,
+                validatedArgs,
+                successStatus: undefined,
+              });
+            } catch (err) {
+                return next(err);
+            }
+        });
+        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+        const argsAsanaController_getAuthorizationUrl: Record<string, TsoaRoute.ParameterSchema> = {
+                request: {"in":"request","name":"request","required":true,"dataType":"object"},
+                state: {"in":"query","name":"state","dataType":"string"},
+        };
+        app.get('/api/asana/auth',
+            authenticateMiddleware([{"ClientLevel":[]}]),
+            ...(fetchMiddlewares<RequestHandler>(AsanaController)),
+            ...(fetchMiddlewares<RequestHandler>(AsanaController.prototype.getAuthorizationUrl)),
+
+            async function AsanaController_getAuthorizationUrl(request: ExRequest, response: ExResponse, next: any) {
+
+            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+
+            let validatedArgs: any[] = [];
+            try {
+                validatedArgs = templateService.getValidatedArgs({ args: argsAsanaController_getAuthorizationUrl, request, response });
+
+                const controller = new AsanaController();
+
+              await templateService.apiHandler({
+                methodName: 'getAuthorizationUrl',
+                controller,
+                response,
+                next,
+                validatedArgs,
+                successStatus: undefined,
+              });
+            } catch (err) {
+                return next(err);
+            }
+        });
+        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+        const argsAsanaController_handleCallback: Record<string, TsoaRoute.ParameterSchema> = {
+                request: {"in":"request","name":"request","required":true,"dataType":"object"},
+                code: {"in":"query","name":"code","dataType":"string"},
+                state: {"in":"query","name":"state","dataType":"string"},
+                error: {"in":"query","name":"error","dataType":"string"},
+        };
+        app.get('/api/asana/callback',
+            ...(fetchMiddlewares<RequestHandler>(AsanaController)),
+            ...(fetchMiddlewares<RequestHandler>(AsanaController.prototype.handleCallback)),
+
+            async function AsanaController_handleCallback(request: ExRequest, response: ExResponse, next: any) {
+
+            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+
+            let validatedArgs: any[] = [];
+            try {
+                validatedArgs = templateService.getValidatedArgs({ args: argsAsanaController_handleCallback, request, response });
+
+                const controller = new AsanaController();
+
+              await templateService.apiHandler({
+                methodName: 'handleCallback',
+                controller,
+                response,
+                next,
+                validatedArgs,
+                successStatus: undefined,
+              });
+            } catch (err) {
+                return next(err);
+            }
+        });
+        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+        const argsAsanaController_manualConnect: Record<string, TsoaRoute.ParameterSchema> = {
+                request: {"in":"request","name":"request","required":true,"dataType":"object"},
+                body: {"in":"body","name":"body","required":true,"ref":"AsanaManualConnectRequest"},
+        };
+        app.post('/api/asana/manual-connect',
+            authenticateMiddleware([{"ClientLevel":[]}]),
+            ...(fetchMiddlewares<RequestHandler>(AsanaController)),
+            ...(fetchMiddlewares<RequestHandler>(AsanaController.prototype.manualConnect)),
+
+            async function AsanaController_manualConnect(request: ExRequest, response: ExResponse, next: any) {
+
+            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+
+            let validatedArgs: any[] = [];
+            try {
+                validatedArgs = templateService.getValidatedArgs({ args: argsAsanaController_manualConnect, request, response });
+
+                const controller = new AsanaController();
+
+              await templateService.apiHandler({
+                methodName: 'manualConnect',
+                controller,
+                response,
+                next,
+                validatedArgs,
+                successStatus: undefined,
+              });
+            } catch (err) {
+                return next(err);
+            }
+        });
+        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+        const argsAsanaController_getSummary: Record<string, TsoaRoute.ParameterSchema> = {
+                request: {"in":"request","name":"request","required":true,"dataType":"object"},
+        };
+        app.get('/api/asana/summary',
+            authenticateMiddleware([{"ClientLevel":[]}]),
+            ...(fetchMiddlewares<RequestHandler>(AsanaController)),
+            ...(fetchMiddlewares<RequestHandler>(AsanaController.prototype.getSummary)),
+
+            async function AsanaController_getSummary(request: ExRequest, response: ExResponse, next: any) {
+
+            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+
+            let validatedArgs: any[] = [];
+            try {
+                validatedArgs = templateService.getValidatedArgs({ args: argsAsanaController_getSummary, request, response });
+
+                const controller = new AsanaController();
+
+              await templateService.apiHandler({
+                methodName: 'getSummary',
+                controller,
+                response,
+                next,
+                validatedArgs,
+                successStatus: undefined,
+              });
+            } catch (err) {
+                return next(err);
+            }
+        });
+        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+        const argsAsanaController_getProjects: Record<string, TsoaRoute.ParameterSchema> = {
+                request: {"in":"request","name":"request","required":true,"dataType":"object"},
+        };
+        app.get('/api/asana/projects',
+            authenticateMiddleware([{"ClientLevel":[]}]),
+            ...(fetchMiddlewares<RequestHandler>(AsanaController)),
+            ...(fetchMiddlewares<RequestHandler>(AsanaController.prototype.getProjects)),
+
+            async function AsanaController_getProjects(request: ExRequest, response: ExResponse, next: any) {
+
+            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+
+            let validatedArgs: any[] = [];
+            try {
+                validatedArgs = templateService.getValidatedArgs({ args: argsAsanaController_getProjects, request, response });
+
+                const controller = new AsanaController();
+
+              await templateService.apiHandler({
+                methodName: 'getProjects',
+                controller,
+                response,
+                next,
+                validatedArgs,
+                successStatus: undefined,
+              });
+            } catch (err) {
+                return next(err);
+            }
+        });
+        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+        const argsAsanaController_setDefaultProject: Record<string, TsoaRoute.ParameterSchema> = {
+                request: {"in":"request","name":"request","required":true,"dataType":"object"},
+                body: {"in":"body","name":"body","required":true,"ref":"AsanaSetDefaultProjectRequest"},
+        };
+        app.post('/api/asana/default-project',
+            authenticateMiddleware([{"ClientLevel":[]}]),
+            ...(fetchMiddlewares<RequestHandler>(AsanaController)),
+            ...(fetchMiddlewares<RequestHandler>(AsanaController.prototype.setDefaultProject)),
+
+            async function AsanaController_setDefaultProject(request: ExRequest, response: ExResponse, next: any) {
+
+            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+
+            let validatedArgs: any[] = [];
+            try {
+                validatedArgs = templateService.getValidatedArgs({ args: argsAsanaController_setDefaultProject, request, response });
+
+                const controller = new AsanaController();
+
+              await templateService.apiHandler({
+                methodName: 'setDefaultProject',
                 controller,
                 response,
                 next,

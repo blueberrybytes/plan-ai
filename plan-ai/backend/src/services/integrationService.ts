@@ -11,7 +11,7 @@ import prisma from "../prisma/prismaClient";
  * Providers managed at the Workspace level (ticketing tools).
  * OWNER/ADMIN connects once, all members can use them.
  */
-const WORKSPACE_PROVIDERS: Set<string> = new Set(["JIRA", "LINEAR", "TRELLO"]);
+const WORKSPACE_PROVIDERS: Set<string> = new Set(["JIRA", "LINEAR", "TRELLO", "ASANA"]);
 
 /**
  * Providers managed at the User level (personal tokens).

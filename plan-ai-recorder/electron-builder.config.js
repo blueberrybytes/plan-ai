@@ -34,13 +34,14 @@ module.exports = {
       channel: isHouseGroup ? "housegroup" : "latest",
     },
   ],
-  buildVersion: "112",
+  buildVersion: "115",
   protocols: [
     {
       name: productName,
       schemes: [protocolScheme],
     },
   ],
+  afterSign: "scripts/notarize.js",
   directories: {
     output: "release",
   },
@@ -50,6 +51,7 @@ module.exports = {
     "!**/node_modules/@sentry/cli/**/*",
   ],
   mac: {
+    notarize: false,
     icon: `${iconPath}/icon.icns`,
     category: "public.app-category.productivity",
     minimumSystemVersion: "12.0.0",

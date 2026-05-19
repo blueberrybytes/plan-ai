@@ -189,14 +189,49 @@ const RecordingDetail: React.FC = () => {
   };
 
   const handleDownload = () => {
-    const text = transcript?.data?.transcript;
-    if (!text) return;
+    const tData = transcript?.data;
+    if (!tData) return;
+
+    let exportContent = `# ${tData.title || "Untitled Recording"}\n\n`;
+
+    if (tData.recordedAt || tData.createdAt) {
+      exportContent += `**Recorded on:** ${new Date(tData.recordedAt || tData.createdAt).toLocaleString()}\n`;
+    }
+    if (tData.durationSeconds) {
+      exportContent += `**Duration:** ${Math.floor(tData.durationSeconds / 60)}m ${tData.durationSeconds % 60}s\n`;
+    }
+    if (tData.speakerCount) {
+      exportContent += `**Speakers:** ${tData.speakerCount}\n`;
+    }
+    if (tData.sentiment) {
+      exportContent += `**Sentiment:** ${tData.sentiment}\n`;
+    }
+    if (tData.metadata?.sentimentExplanation) {
+      exportContent += `*${tData.metadata.sentimentExplanation}*\n`;
+    }
+    exportContent += `\n---\n\n`;
+
+    if (tData.summary) {
+      exportContent += `## AI Summary\n\n${tData.summary}\n\n`;
+    }
+
+    if (tData.metadata?.keyPoints && tData.metadata.keyPoints.length > 0) {
+      exportContent += `## Critical Insights & Pain Points\n\n`;
+      tData.metadata.keyPoints.forEach((point: string) => {
+        exportContent += `- ${point}\n`;
+      });
+      exportContent += `\n\n`;
+    }
+
+    if (tData.transcript) {
+      exportContent += `## Full Transcript\n\n${tData.transcript}\n\n`;
+    }
 
     const element = document.createElement("a");
-    const file = new Blob([text], { type: "text/plain" });
+    const file = new Blob([exportContent], { type: "text/markdown" });
     element.href = URL.createObjectURL(file);
-    element.download = `${transcript.data?.title || "transcript"}.txt`;
-    document.body.appendChild(element); // Required for this to work in FireFox
+    element.download = `${(tData.title || "transcript").replace(/[/\\?%*:|"<>]/g, "-")}.md`;
+    document.body.appendChild(element);
     element.click();
     document.body.removeChild(element);
   };
@@ -334,20 +369,12 @@ const RecordingDetail: React.FC = () => {
 
           <Stack direction="row" spacing={2}>
             <Button
-              variant="outlined"
-              startIcon={<CopyIcon />}
-              onClick={handleCopy}
-              disabled={copying || !transcript.data?.transcript}
-            >
-              {copying ? "Copied!" : "Copy Text"}
-            </Button>
-            <Button
               variant="contained"
               startIcon={<DownloadIcon />}
               onClick={handleDownload}
               disabled={!transcript.data?.transcript}
             >
-              Download .txt
+              Export Complete Report
             </Button>
           </Stack>
         </Stack>
@@ -455,17 +482,30 @@ const RecordingDetail: React.FC = () => {
                 )}
 
                 {tabValue === "transcript" && (
-                  <Typography
-                    variant="body1"
-                    sx={{
-                      whiteSpace: "pre-wrap",
-                      color: "text.primary",
-                      lineHeight: 1.8,
-                      fontSize: "1.05rem",
-                    }}
-                  >
-                    {transcript.data.transcript || "No transcript content available."}
-                  </Typography>
+                  <Box sx={{ position: "relative", p: 3, bgcolor: "background.paper", borderRadius: 2, border: "1px solid", borderColor: "divider" }}>
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      startIcon={<CopyIcon />}
+                      onClick={handleCopy}
+                      disabled={copying || !transcript.data?.transcript}
+                      sx={{ position: "absolute", top: 16, right: 16 }}
+                    >
+                      {copying ? "Copied!" : "Copy Text"}
+                    </Button>
+                    <Typography
+                      variant="body1"
+                      sx={{
+                        mt: 4,
+                        whiteSpace: "pre-wrap",
+                        color: "text.primary",
+                        lineHeight: 1.8,
+                        fontSize: "1.05rem",
+                      }}
+                    >
+                      {transcript.data.transcript || "No transcript content available."}
+                    </Typography>
+                  </Box>
                 )}
 
                 {tabValue === "architecture" && generatedChart && (
@@ -493,17 +533,30 @@ const RecordingDetail: React.FC = () => {
             ) : (
               <>
                 {transcript.data?.transcript ? (
-                  <Typography
-                    variant="body1"
-                    sx={{
-                      whiteSpace: "pre-wrap",
-                      color: "text.primary",
-                      lineHeight: 1.8,
-                      fontSize: "1.05rem",
-                    }}
-                  >
-                    {transcript.data.transcript}
-                  </Typography>
+                  <Box sx={{ position: "relative", p: 3, bgcolor: "background.paper", borderRadius: 2, border: "1px solid", borderColor: "divider" }}>
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      startIcon={<CopyIcon />}
+                      onClick={handleCopy}
+                      disabled={copying || !transcript.data?.transcript}
+                      sx={{ position: "absolute", top: 16, right: 16 }}
+                    >
+                      {copying ? "Copied!" : "Copy Text"}
+                    </Button>
+                    <Typography
+                      variant="body1"
+                      sx={{
+                        mt: 4,
+                        whiteSpace: "pre-wrap",
+                        color: "text.primary",
+                        lineHeight: 1.8,
+                        fontSize: "1.05rem",
+                      }}
+                    >
+                      {transcript.data.transcript}
+                    </Typography>
+                  </Box>
                 ) : (
                   <Typography color="text.secondary" sx={{ fontStyle: "italic" }}>
                     No transcript text generated yet.

@@ -595,6 +595,7 @@ enum IntegrationProvider {
   TRELLO
   NOTION
   ONEDRIVE
+  ASANA
 }
 
 enum IntegrationStatus {

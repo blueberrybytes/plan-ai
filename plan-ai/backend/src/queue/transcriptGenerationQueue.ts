@@ -31,6 +31,7 @@ export interface TranscriptGenerationJobPayload {
   syncToLinear?: boolean;
   syncToTrello?: boolean;
   syncToNotion?: boolean;
+  syncToAsana?: boolean;
   exportToGoogleDrive?: boolean;
   exportToOneDrive?: boolean;
   contextPrompt?: string;

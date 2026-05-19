@@ -208,6 +208,7 @@ const Recording: React.FC = () => {
   const [syncToLinear, setSyncToLinear] = useState<boolean>(false);
   const [syncToTrello, setSyncToTrello] = useState<boolean>(false);
   const [syncToNotion, setSyncToNotion] = useState<boolean>(false);
+  const [syncToAsana, setSyncToAsana] = useState<boolean>(false);
   const [exportToGoogleDrive, setExportToGoogleDrive] = useState<boolean>(false);
   const [exportToOneDrive, setExportToOneDrive] = useState<boolean>(false);
   const [taskStrategy, setTaskStrategy] = useState<"AUTO" | "SINGLE_TICKET" | "SPECIFIC_COUNT">("AUTO");
@@ -412,6 +413,7 @@ const Recording: React.FC = () => {
         syncToLinear,
         syncToTrello,
         syncToNotion,
+        syncToAsana,
         exportToGoogleDrive,
         exportToOneDrive,
         taskStrategy,
@@ -444,6 +446,7 @@ const Recording: React.FC = () => {
     syncToLinear,
     syncToTrello,
     syncToNotion,
+    syncToAsana,
     exportToGoogleDrive,
     exportToOneDrive,
     taskStrategy,
@@ -482,6 +485,10 @@ const Recording: React.FC = () => {
           const notion = ints.find((i) => i.provider === "NOTION" && i.status === "CONNECTED");
           if (notion) {
             setSyncToNotion(true);
+          }
+          const asana = ints.find((i) => i.provider === "ASANA" && i.status === "CONNECTED");
+          if (asana && (asana.metadata as Record<string, unknown>)?.defaultProjectGid) {
+            setSyncToAsana(true);
           }
           const google = ints.find((i) => i.provider === "GOOGLE_DRIVE" && i.status === "CONNECTED");
           if (google) {
@@ -788,6 +795,21 @@ const Recording: React.FC = () => {
               label={
                 <Typography variant="body2">
                   Sync generated tasks to Notion
+                </Typography>
+              }
+            />
+          )}
+          {integrations.some((i) => i.provider === "ASANA" && i.status === "CONNECTED") && (
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={syncToAsana}
+                  onChange={(e) => setSyncToAsana(e.target.checked)}
+                />
+              }
+              label={
+                <Typography variant="body2">
+                  Sync generated tasks to Asana
                 </Typography>
               }
             />

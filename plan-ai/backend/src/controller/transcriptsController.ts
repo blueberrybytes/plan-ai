@@ -88,6 +88,7 @@ interface CreateStandaloneTranscriptBody {
   syncToLinear?: boolean;
   syncToTrello?: boolean;
   syncToNotion?: boolean;
+  syncToAsana?: boolean;
   exportToGoogleDrive?: boolean;
   exportToOneDrive?: boolean;
   taskStrategy?: "AUTO" | "SINGLE_TICKET" | "SPECIFIC_COUNT";
@@ -245,6 +246,7 @@ export class TranscriptsController extends BaseWorkspaceController {
     @FormField() syncToLinear?: string,
     @FormField() syncToTrello?: string,
     @FormField() syncToNotion?: string,
+    @FormField() syncToAsana?: string,
     @FormField() exportToGoogleDrive?: string,
     @FormField() exportToOneDrive?: string,
     @FormField() skipAi?: string,
@@ -337,6 +339,7 @@ export class TranscriptsController extends BaseWorkspaceController {
       syncToLinear: syncToLinear === "true",
       syncToTrello: syncToTrello === "true",
       syncToNotion: syncToNotion === "true",
+      syncToAsana: syncToAsana === "true",
       exportToGoogleDrive: exportToGoogleDrive === "true",
       exportToOneDrive: exportToOneDrive === "true",
       taskStrategy,
@@ -451,6 +454,7 @@ export class TranscriptsController extends BaseWorkspaceController {
           syncToLinear: body.syncToLinear,
           syncToTrello: body.syncToTrello,
           syncToNotion: body.syncToNotion,
+          syncToAsana: body.syncToAsana,
           exportToGoogleDrive: body.exportToGoogleDrive,
           exportToOneDrive: body.exportToOneDrive,
           taskStrategy: body.taskStrategy,

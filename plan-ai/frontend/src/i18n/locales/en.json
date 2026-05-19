@@ -451,6 +451,12 @@
         "description": "Connect your Microsoft OneDrive to generate and export documents.",
         "connectCta": "Connect OneDrive",
         "notConnected": "Microsoft OneDrive is not connected yet."
+      },
+      "asana": {
+        "label": "Asana",
+        "description": "Connect your Asana workspace to automatically push AI-generated tasks to your projects and boards.",
+        "connectCta": "Connect Asana",
+        "notConnected": "Asana is not connected yet."
       }
     },
     "connectedDetails": {

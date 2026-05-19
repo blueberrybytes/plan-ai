@@ -25,6 +25,7 @@ import { jiraIntegrationService } from "./jiraIntegrationService";
 import { linearIntegrationService } from "./linearIntegrationService";
 import { trelloIntegrationService } from "./trelloIntegrationService";
 import { notionIntegrationService } from "./notionIntegrationService";
+import { asanaIntegrationService } from "./asanaIntegrationService";
 import { googleIntegrationService } from "./googleIntegrationService";
 import { microsoftIntegrationService } from "./microsoftIntegrationService";
 import { DocumentGenerator } from "../utils/documentGenerator";
@@ -36,6 +37,7 @@ import type {
   JiraIntegrationMetadata,
   LinearIntegrationMetadata,
   TrelloIntegrationMetadata,
+  AsanaIntegrationMetadata,
 } from "./integrationMetadataTypes";
 import { getPersonaInstructions } from "./personaService";
 import { mcpClientService } from "./mcpClientService";
@@ -176,6 +178,7 @@ export interface CreateTranscriptInput {
   syncToLinear?: boolean;
   syncToTrello?: boolean;
   syncToNotion?: boolean;
+  syncToAsana?: boolean;
   exportToGoogleDrive?: boolean;
   exportToOneDrive?: boolean;
   workspaceId: string;
@@ -742,6 +745,7 @@ export class ProjectTranscriptService {
         syncToLinear: input.syncToLinear,
         syncToTrello: input.syncToTrello,
         syncToNotion: input.syncToNotion,
+        syncToAsana: input.syncToAsana,
       }).catch((err) => {
         logger.warn("Failed to auto-sync tasks for transcript import", err);
       });
@@ -1136,6 +1140,7 @@ ${content}`;
       syncToLinear?: boolean;
       syncToTrello?: boolean;
       syncToNotion?: boolean;
+      syncToAsana?: boolean;
     },
   ): Promise<void> {
     const integrations = await prisma.workspaceIntegration.findMany({
@@ -1224,6 +1229,24 @@ ${content}`;
               url: syncResult.url,
             });
           }
+        } else if (
+          integration.provider === IntegrationProvider.ASANA &&
+          options?.syncToAsana !== false
+        ) {
+          const meta = integration.metadata as unknown as AsanaIntegrationMetadata | null;
+          if (!meta?.defaultProjectGid) continue;
+          for (const task of tasks) {
+            const syncResult = await asanaIntegrationService.createAsanaTask(
+              workspaceId,
+              task.id,
+              meta.defaultProjectGid,
+            );
+            logger.info(`Auto-synced task ${task.id} to Asana task ${syncResult.taskGid}`);
+            await this.updateTaskTargetMetadata(task.id, "asana", {
+              taskGid: syncResult.taskGid,
+              url: syncResult.url,
+            });
+          }
         }
       } catch (error) {
         logger.error(`Auto-sync failed for ${integration.provider}`, error);
@@ -1233,7 +1256,7 @@ ${content}`;
 
   private async updateTaskTargetMetadata(
     taskId: string,
-    provider: "jira" | "linear" | "trello" | "notion",
+    provider: "jira" | "linear" | "trello" | "notion" | "asana",
     payload: unknown,
   ) {
     const task = await prisma.task.findUnique({
@@ -1250,6 +1273,8 @@ ${content}`;
       existingMetadata.linear = payload as TaskMetadata["linear"];
     } else if (provider === "trello") {
       existingMetadata.trello = payload as TaskMetadata["trello"];
+    } else if (provider === "asana") {
+      existingMetadata.asana = payload as TaskMetadata["asana"];
     }
 
     await prisma.task.update({

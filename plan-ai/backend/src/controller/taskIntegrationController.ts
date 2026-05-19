@@ -8,12 +8,14 @@ import { jiraIntegrationService } from "../services/jiraIntegrationService";
 import { linearIntegrationService } from "../services/linearIntegrationService";
 import { trelloIntegrationService } from "../services/trelloIntegrationService";
 import { notionIntegrationService } from "../services/notionIntegrationService";
+import { asanaIntegrationService } from "../services/asanaIntegrationService";
 import type { TaskMetadata } from "../services/taskMetadataTypes";
 import type {
   JiraIntegrationMetadata,
   LinearIntegrationMetadata,
   TrelloIntegrationMetadata,
   NotionIntegrationMetadata,
+  AsanaIntegrationMetadata,
 } from "../services/integrationMetadataTypes";
 
 interface SyncTaskRequest {
@@ -55,7 +57,8 @@ export class TaskIntegrationController extends BaseWorkspaceController {
       (providerEnum !== IntegrationProvider.JIRA &&
         providerEnum !== IntegrationProvider.LINEAR &&
         providerEnum !== IntegrationProvider.TRELLO &&
-        providerEnum !== IntegrationProvider.NOTION)
+        providerEnum !== IntegrationProvider.NOTION &&
+        providerEnum !== IntegrationProvider.ASANA)
     ) {
       this.setStatus(400);
       throw { status: 400, message: "Invalid provider for task synchronization" };
@@ -194,6 +197,36 @@ export class TaskIntegrationController extends BaseWorkspaceController {
         externalIssueKey: notionResult.pageId,
         url: notionResult.url,
       };
+    } else if (providerEnum === IntegrationProvider.ASANA) {
+      const wsIntegration = await prisma.workspaceIntegration.findUnique({
+        where: { workspaceId_provider: { workspaceId, provider: IntegrationProvider.ASANA } },
+      });
+      const meta = wsIntegration?.metadata as AsanaIntegrationMetadata | null;
+      const targetProjectGid = body.targetTeamId || meta?.defaultProjectGid || undefined;
+
+      if (!targetProjectGid) {
+        this.setStatus(400);
+        throw {
+          status: 400,
+          message: "Target Project GID is required for Asana sync (no default configured)",
+        };
+      }
+
+      const asanaResult = await asanaIntegrationService.createAsanaTask(
+        workspaceId,
+        taskId,
+        targetProjectGid,
+      );
+      existingMetadata.asana = {
+        taskGid: asanaResult.taskGid,
+        url: asanaResult.url,
+      };
+      responseData = {
+        success: true,
+        externalIssueId: asanaResult.taskGid,
+        externalIssueKey: asanaResult.taskGid,
+        url: asanaResult.url,
+      };
     }
 
     if (!responseData) {
@@ -256,15 +289,20 @@ export class TaskIntegrationController extends BaseWorkspaceController {
     const notionIntegration = await prisma.workspaceIntegration.findUnique({
       where: { workspaceId_provider: { workspaceId, provider: IntegrationProvider.NOTION } },
     });
+    const asanaIntegration = await prisma.workspaceIntegration.findUnique({
+      where: { workspaceId_provider: { workspaceId, provider: IntegrationProvider.ASANA } },
+    });
 
     const jiraMeta = jiraIntegration?.metadata as JiraIntegrationMetadata | null;
     const linearMeta = linearIntegration?.metadata as LinearIntegrationMetadata | null;
     const trelloMeta = trelloIntegration?.metadata as TrelloIntegrationMetadata | null;
+    const asanaMeta = asanaIntegration?.metadata as AsanaIntegrationMetadata | null;
 
     const jiraDefaultProjectId = jiraMeta?.defaultProjectId;
     const linearDefaultTeamId = linearMeta?.defaultTeamId;
     const trelloDefaultBoardId = trelloMeta?.defaultBoardId;
     const trelloDefaultListId = trelloMeta?.defaultListId;
+    const asanaDefaultProjectGid = asanaMeta?.defaultProjectGid;
 
     let pushed = 0;
     let skipped = 0;
@@ -301,6 +339,7 @@ export class TaskIntegrationController extends BaseWorkspaceController {
           !jiraDefaultProjectId &&
           !linearDefaultTeamId &&
           !trelloDefaultListId &&
+          !asanaDefaultProjectGid &&
           !notionSyncResult
         ) {
           skipped++;
@@ -364,6 +403,25 @@ export class TaskIntegrationController extends BaseWorkspaceController {
           } catch (err) {
             errors.push(
               `Trello task ${task.id}: ${err instanceof Error ? err.message : "Unknown error"}`,
+            );
+          }
+        }
+
+        if (asanaIntegration?.status === "CONNECTED" && asanaDefaultProjectGid) {
+          try {
+            const result = await asanaIntegrationService.createAsanaTask(
+              workspaceId,
+              task.id,
+              asanaDefaultProjectGid,
+            );
+            taskMeta.asana = {
+              taskGid: result.taskGid,
+              url: result.url,
+            };
+            pushed++;
+          } catch (err) {
+            errors.push(
+              `Asana task ${task.id}: ${err instanceof Error ? err.message : "Unknown error"}`,
             );
           }
         }

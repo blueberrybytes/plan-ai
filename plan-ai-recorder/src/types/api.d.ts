@@ -1768,6 +1768,102 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/asana/auth": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetAuthorizationUrl"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/asana/callback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["HandleCallback"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/asana/manual-connect": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ManualConnect"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/asana/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetSummary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/asana/projects": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetProjects"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/asana/default-project": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["SetDefaultProject"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/analytics/dashboard": {
         parameters: {
             query?: never;
@@ -2645,6 +2741,7 @@ export interface components {
             syncToLinear?: boolean;
             syncToTrello?: boolean;
             syncToNotion?: boolean;
+            syncToAsana?: boolean;
             exportToGoogleDrive?: boolean;
             exportToOneDrive?: boolean;
             /** @enum {string} */
@@ -2692,6 +2789,10 @@ export interface components {
             notion?: {
                 url: string;
                 pageId: string;
+            };
+            asana?: {
+                url: string;
+                taskGid: string;
             };
         };
         ApiResponse_TaskMetadata_: {
@@ -3083,7 +3184,7 @@ export interface components {
             projectId: string;
         };
         /** @enum {string} */
-        "_36_Enums.IntegrationProvider": "JIRA" | "LINEAR" | "GITHUB" | "GOOGLE_DRIVE" | "TRELLO" | "NOTION" | "ONEDRIVE";
+        "_36_Enums.IntegrationProvider": "JIRA" | "LINEAR" | "GITHUB" | "GOOGLE_DRIVE" | "TRELLO" | "NOTION" | "ONEDRIVE" | "ASANA";
         IntegrationProvider: components["schemas"]["_36_Enums.IntegrationProvider"];
         /** @enum {string} */
         "_36_Enums.IntegrationStatus": "CONNECTED" | "DISCONNECTED" | "ERROR";
@@ -3373,6 +3474,43 @@ export interface components {
             } | null;
             /** Format: double */
             status: number;
+        };
+        AsanaAuthorizationResponse: {
+            authorizationUrl: string;
+        };
+        ApiResponse_AsanaAuthorizationResponse_: {
+            message?: string;
+            data: components["schemas"]["AsanaAuthorizationResponse"] | null;
+            /** Format: double */
+            status: number;
+        };
+        AsanaManualConnectRequest: {
+            personalAccessToken: string;
+        };
+        AsanaSummaryResponse: {
+            /** Format: double */
+            totalTasks: number | null;
+            /** Format: double */
+            totalProjects: number | null;
+        };
+        ApiResponse_AsanaSummaryResponse_: {
+            message?: string;
+            data: components["schemas"]["AsanaSummaryResponse"] | null;
+            /** Format: double */
+            status: number;
+        };
+        AsanaProjectItem: {
+            gid: string;
+            name: string;
+        };
+        "ApiResponse_AsanaProjectItem-Array_": {
+            message?: string;
+            data: components["schemas"]["AsanaProjectItem"][] | null;
+            /** Format: double */
+            status: number;
+        };
+        AsanaSetDefaultProjectRequest: {
+            projectGid: string;
         };
         DashboardAnalytics: {
             period: {
@@ -5048,6 +5186,7 @@ export interface operations {
                     syncToLinear?: string;
                     syncToTrello?: string;
                     syncToNotion?: string;
+                    syncToAsana?: string;
                     exportToGoogleDrive?: string;
                     exportToOneDrive?: string;
                     skipAi?: string;
@@ -7316,6 +7455,138 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ApiResponse__text-string__"];
+                };
+            };
+        };
+    };
+    GetAuthorizationUrl: {
+        parameters: {
+            query?: {
+                state?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_AsanaAuthorizationResponse_"];
+                };
+            };
+        };
+    };
+    HandleCallback: {
+        parameters: {
+            query?: {
+                code?: string;
+                state?: string;
+                error?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ManualConnect: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AsanaManualConnectRequest"];
+            };
+        };
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse__success-boolean__"];
+                };
+            };
+        };
+    };
+    GetSummary: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_AsanaSummaryResponse_"];
+                };
+            };
+        };
+    };
+    GetProjects: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_AsanaProjectItem-Array_"];
+                };
+            };
+        };
+    };
+    SetDefaultProject: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AsanaSetDefaultProjectRequest"];
+            };
+        };
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_null_"];
                 };
             };
         };

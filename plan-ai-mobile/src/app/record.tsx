@@ -305,6 +305,7 @@ export default function RecordScreen() {
   const [syncToLinear, setSyncToLinear] = useState(false);
   const [syncToTrello, setSyncToTrello] = useState(false);
   const [syncToNotion, setSyncToNotion] = useState(false);
+  const [syncToAsana, setSyncToAsana] = useState(false);
   const [exportToGoogleDrive, setExportToGoogleDrive] = useState(false);
   const [exportToOneDrive, setExportToOneDrive] = useState(false);
   const [createDoc, setCreateDoc] = useState(true);
@@ -313,6 +314,7 @@ export default function RecordScreen() {
   const [hasLinear, setHasLinear] = useState(false);
   const [hasTrello, setHasTrello] = useState(false);
   const [hasNotion, setHasNotion] = useState(false);
+  const [hasAsana, setHasAsana] = useState(false);
   const [hasGoogleDrive, setHasGoogleDrive] = useState(false);
   const [hasOneDrive, setHasOneDrive] = useState(false);
 
@@ -553,6 +555,9 @@ export default function RecordScreen() {
           const notion = (ints as any[]).find(
             (i) => i.provider === "NOTION" && i.status === "CONNECTED",
           );
+          const asana = (ints as any[]).find(
+            (i) => i.provider === "ASANA" && i.status === "CONNECTED",
+          );
           const googleDrive = (ints as any[]).find(
             (i) => i.provider === "GOOGLE_DRIVE" && i.status === "CONNECTED",
           );
@@ -563,6 +568,7 @@ export default function RecordScreen() {
           if (linear) setHasLinear(true);
           if (trello) setHasTrello(true);
           if (notion) setHasNotion(true);
+          if (asana) setHasAsana(true);
           if (googleDrive) {
             setHasGoogleDrive(true);
             setExportToGoogleDrive(true);
@@ -577,6 +583,7 @@ export default function RecordScreen() {
           setSyncToLinear(false);
           setSyncToTrello(false);
           setSyncToNotion(false);
+          setSyncToAsana(false);
         })
         .finally(() => {
           setIsLoadingMetadata(false);
@@ -864,6 +871,7 @@ export default function RecordScreen() {
         syncToLinear,
         syncToTrello,
         syncToNotion,
+        syncToAsana,
         exportToGoogleDrive,
         exportToOneDrive,
         createDoc,
@@ -908,6 +916,7 @@ export default function RecordScreen() {
           syncToLinear,
           syncToTrello,
           syncToNotion,
+          syncToAsana,
           exportToGoogleDrive,
           exportToOneDrive,
           createDoc,
@@ -1303,6 +1312,22 @@ export default function RecordScreen() {
                   value={syncToNotion}
                   onValueChange={setSyncToNotion}
                   disabled={!hasNotion}
+                />
+              </View>
+              <View
+                style={{
+                  flexDirection: "row",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                }}
+              >
+                <Text style={{ opacity: hasAsana ? 1 : 0.5 }}>
+                  Sync to Asana
+                </Text>
+                <Switch
+                  value={syncToAsana}
+                  onValueChange={setSyncToAsana}
+                  disabled={!hasAsana}
                 />
               </View>
             </View>

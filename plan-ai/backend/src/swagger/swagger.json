@@ -2109,6 +2109,9 @@
 					"syncToNotion": {
 						"type": "boolean"
 					},
+					"syncToAsana": {
+						"type": "boolean"
+					},
 					"exportToGoogleDrive": {
 						"type": "boolean"
 					},
@@ -2277,6 +2280,21 @@
 						"required": [
 							"url",
 							"pageId"
+						],
+						"type": "object"
+					},
+					"asana": {
+						"properties": {
+							"url": {
+								"type": "string"
+							},
+							"taskGid": {
+								"type": "string"
+							}
+						},
+						"required": [
+							"url",
+							"taskGid"
 						],
 						"type": "object"
 					}
@@ -3776,7 +3794,8 @@
 					"GOOGLE_DRIVE",
 					"TRELLO",
 					"NOTION",
-					"ONEDRIVE"
+					"ONEDRIVE",
+					"ASANA"
 				]
 			},
 			"IntegrationProvider": {
@@ -4906,6 +4925,149 @@
 					"status"
 				],
 				"type": "object"
+			},
+			"AsanaAuthorizationResponse": {
+				"properties": {
+					"authorizationUrl": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"authorizationUrl"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"ApiResponse_AsanaAuthorizationResponse_": {
+				"properties": {
+					"message": {
+						"type": "string"
+					},
+					"data": {
+						"allOf": [
+							{
+								"$ref": "#/components/schemas/AsanaAuthorizationResponse"
+							}
+						],
+						"nullable": true
+					},
+					"status": {
+						"type": "number",
+						"format": "double"
+					}
+				},
+				"required": [
+					"data",
+					"status"
+				],
+				"type": "object"
+			},
+			"AsanaManualConnectRequest": {
+				"properties": {
+					"personalAccessToken": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"personalAccessToken"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"AsanaSummaryResponse": {
+				"properties": {
+					"totalTasks": {
+						"type": "number",
+						"format": "double",
+						"nullable": true
+					},
+					"totalProjects": {
+						"type": "number",
+						"format": "double",
+						"nullable": true
+					}
+				},
+				"required": [
+					"totalTasks",
+					"totalProjects"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"ApiResponse_AsanaSummaryResponse_": {
+				"properties": {
+					"message": {
+						"type": "string"
+					},
+					"data": {
+						"allOf": [
+							{
+								"$ref": "#/components/schemas/AsanaSummaryResponse"
+							}
+						],
+						"nullable": true
+					},
+					"status": {
+						"type": "number",
+						"format": "double"
+					}
+				},
+				"required": [
+					"data",
+					"status"
+				],
+				"type": "object"
+			},
+			"AsanaProjectItem": {
+				"properties": {
+					"gid": {
+						"type": "string"
+					},
+					"name": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"gid",
+					"name"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"ApiResponse_AsanaProjectItem-Array_": {
+				"properties": {
+					"message": {
+						"type": "string"
+					},
+					"data": {
+						"items": {
+							"$ref": "#/components/schemas/AsanaProjectItem"
+						},
+						"type": "array",
+						"nullable": true
+					},
+					"status": {
+						"type": "number",
+						"format": "double"
+					}
+				},
+				"required": [
+					"data",
+					"status"
+				],
+				"type": "object"
+			},
+			"AsanaSetDefaultProjectRequest": {
+				"properties": {
+					"projectGid": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"projectGid"
+				],
+				"type": "object",
+				"additionalProperties": false
 			},
 			"DashboardAnalytics": {
 				"properties": {
@@ -8374,6 +8536,9 @@
 										"type": "string"
 									},
 									"syncToNotion": {
+										"type": "string"
+									},
+									"syncToAsana": {
 										"type": "string"
 									},
 									"exportToGoogleDrive": {
@@ -11934,6 +12099,205 @@
 										"format": "binary"
 									}
 								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/asana/auth": {
+			"get": {
+				"operationId": "GetAuthorizationUrl",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiResponse_AsanaAuthorizationResponse_"
+								}
+							}
+						}
+					}
+				},
+				"tags": [
+					"Integrations"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": [
+					{
+						"in": "query",
+						"name": "state",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					}
+				]
+			}
+		},
+		"/api/asana/callback": {
+			"get": {
+				"operationId": "HandleCallback",
+				"responses": {
+					"204": {
+						"description": "No content"
+					}
+				},
+				"tags": [
+					"Integrations"
+				],
+				"security": [],
+				"parameters": [
+					{
+						"in": "query",
+						"name": "code",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"in": "query",
+						"name": "state",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"in": "query",
+						"name": "error",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					}
+				]
+			}
+		},
+		"/api/asana/manual-connect": {
+			"post": {
+				"operationId": "ManualConnect",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiResponse__success-boolean__"
+								}
+							}
+						}
+					}
+				},
+				"tags": [
+					"Integrations"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": [],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/AsanaManualConnectRequest"
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/asana/summary": {
+			"get": {
+				"operationId": "GetSummary",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiResponse_AsanaSummaryResponse_"
+								}
+							}
+						}
+					}
+				},
+				"tags": [
+					"Integrations"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": []
+			}
+		},
+		"/api/asana/projects": {
+			"get": {
+				"operationId": "GetProjects",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiResponse_AsanaProjectItem-Array_"
+								}
+							}
+						}
+					}
+				},
+				"tags": [
+					"Integrations"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": []
+			}
+		},
+		"/api/asana/default-project": {
+			"post": {
+				"operationId": "SetDefaultProject",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiResponse_null_"
+								}
+							}
+						}
+					}
+				},
+				"tags": [
+					"Integrations"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": [],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/AsanaSetDefaultProjectRequest"
 							}
 						}
 					}

@@ -5,7 +5,7 @@ import { type ApiResponse, type TsoaJsonObject } from "./controllerTypes";
 import { integrationService } from "../services/integrationService";
 import type { IntegrationSummary } from "../services/integrationService";
 import { IntegrationProvider, IntegrationStatus } from "@prisma/client";
-import type { TrelloIntegrationMetadata, JiraIntegrationMetadata } from "../services/integrationMetadataTypes";
+import type { TrelloIntegrationMetadata, JiraIntegrationMetadata, AsanaIntegrationMetadata } from "../services/integrationMetadataTypes";
 
 interface IntegrationSummaryResponse {
   id: string;
@@ -140,6 +140,13 @@ export class IntegrationController extends BaseWorkspaceController {
         defaultBoardUrl = metadata.defaultProjectId 
           ? `${metadata.jiraSiteUrl}/browse/${metadata.defaultProjectId}`
           : metadata.jiraSiteUrl;
+      }
+    } else if (integration.provider === "ASANA") {
+      const metadata = (integration.metadata ?? {}) as Partial<AsanaIntegrationMetadata>;
+      if (metadata.defaultProjectGid) {
+        defaultBoardUrl = `https://app.asana.com/0/${metadata.defaultProjectGid}`;
+      } else {
+        defaultBoardUrl = "https://app.asana.com";
       }
     }
 

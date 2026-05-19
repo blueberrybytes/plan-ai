@@ -298,6 +298,7 @@ export const createPlanAiApi = (
         if (payload.syncToLinear) formData.append("syncToLinear", "true");
         if (payload.syncToTrello) formData.append("syncToTrello", "true");
         if (payload.syncToNotion) formData.append("syncToNotion", "true");
+        if (payload.syncToAsana) formData.append("syncToAsana", "true");
         if (payload.exportToGoogleDrive) formData.append("exportToGoogleDrive", "true");
         if (payload.exportToOneDrive) formData.append("exportToOneDrive", "true");
         if (payload.createDoc) formData.append("createDoc", "true");

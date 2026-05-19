@@ -18,4 +18,8 @@ export interface TaskMetadata {
     pageId: string;
     url: string;
   };
+  asana?: {
+    taskGid: string;
+    url: string;
+  };
 }
