@@ -87,6 +87,10 @@ class AsanaIntegrationService {
     url.searchParams.set("client_id", this.clientId);
     url.searchParams.set("redirect_uri", redirectUri);
     url.searchParams.set("response_type", "code");
+    url.searchParams.set(
+      "scope",
+      "openid email profile projects:read tasks:read tasks:write workspaces:read",
+    );
     if (state) {
       url.searchParams.set("state", state);
     }
