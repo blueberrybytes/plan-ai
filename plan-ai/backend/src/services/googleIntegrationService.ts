@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { google, drive_v3, Auth } from "googleapis";
 import { Readable } from "stream";
 import EnvUtils from "../utils/EnvUtils";
@@ -276,14 +277,47 @@ class GoogleIntegrationService {
       requestBody.parents = [parentFolderId];
     }
 
-    const response = await drive.files.create({
-      requestBody,
-      media: {
-        mimeType,
-        body: stream,
-      },
-      fields: "id, webViewLink",
-    });
+    let response;
+    try {
+      response = await drive.files.create({
+        requestBody,
+        media: {
+          mimeType,
+          body: stream,
+        },
+        fields: "id, webViewLink",
+      });
+    } catch (error: any) {
+      if (
+        (error.code === 403 && error.message?.includes("permissions for the specified parent")) ||
+        (error.code === 404 && error.message?.includes("File not found"))
+      ) {
+        if (parentFolderId) {
+          console.warn(
+            `[GoogleDrive] Invalid parent folder ${parentFolderId} (Code: ${error.code}). Falling back to root.`,
+          );
+          delete requestBody.parents;
+
+          // Recreate the stream since the original one was consumed
+          const retryStream = new Readable();
+          retryStream.push(buffer);
+          retryStream.push(null);
+
+          response = await drive.files.create({
+            requestBody,
+            media: {
+              mimeType,
+              body: retryStream,
+            },
+            fields: "id, webViewLink",
+          });
+        } else {
+          throw error;
+        }
+      } else {
+        throw error;
+      }
+    }
 
     return response.data.webViewLink || "";
   }
