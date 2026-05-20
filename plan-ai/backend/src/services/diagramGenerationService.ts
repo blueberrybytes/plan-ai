@@ -102,7 +102,7 @@ class DiagramGenerationService {
         prompt: `User Request: ${prompt}`,
         temperature: 0.2,
         maxRetries: 3,
-        maxOutputTokens: 4000,
+        //maxOutputTokens: 4000,
       });
 
       let fullMermaidCode = "";
@@ -218,7 +218,7 @@ ${transcriptContent ? `## Source Transcripts\n${transcriptContent}` : ""}`;
         prompt: `Please apply this instruction to the diagram: ${instruction}`,
         temperature: 0.2,
         maxRetries: 3,
-        maxOutputTokens: 4000,
+        //maxOutputTokens: 4000,
       });
 
       let fullMermaidCode = "";
