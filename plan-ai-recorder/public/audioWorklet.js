@@ -120,9 +120,10 @@ class PCMProcessor extends AudioWorkletProcessor {
         if (this.frameCount % 20 === 0) {
           const hasOutputs = outputs && outputs.length > 0;
           const numOutputs = hasOutputs ? outputs[0].length : 0;
+          const currentDuck = this.smoothedDuckFactor || 1.0;
           this.port.postMessage({
             type: "debug",
-            message: `[Worklet] Captured audio. RMS Mic: ${rmsMic.toFixed(4)}, RMS Sys: ${rmsSys.toFixed(4)}, duckFactor: ${duckFactor.toFixed(2)}, outputs: ${hasOutputs}, numChannels: ${numOutputs}`,
+            message: `[Worklet] Captured audio. RMS Mic: ${rmsMic.toFixed(4)}, RMS Sys: ${rmsSys.toFixed(4)}, duckFactor: ${currentDuck.toFixed(2)}, outputs: ${hasOutputs}, numChannels: ${numOutputs}`,
             rmsMic: rmsMic,
             rmsSys: rmsSys,
           });

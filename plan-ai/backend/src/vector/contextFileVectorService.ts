@@ -25,6 +25,8 @@ const TEXT_CHUNK_OVERLAP = Number.parseInt(process.env.CONTEXT_VECTOR_CHUNK_OVER
 const embeddings = new OpenAIEmbeddings({
   openAIApiKey: EnvUtils.get("OPENAI_API_KEY"),
   model: EMBEDDING_MODEL,
+  maxRetries: 2,
+  timeout: 60000,
 });
 
 const textSplitter = new RecursiveCharacterTextSplitter({
@@ -211,6 +213,7 @@ export const indexContextFileVectors = async (args: IndexContextFileVectorsArgs)
     });
   } catch (error) {
     logger.error(`Failed to completely process file ${args.fileId}`, error);
+    throw error;
   }
 };
 
