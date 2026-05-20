@@ -13,7 +13,7 @@ import {
   DEFAULT_AI_MODEL,
   getMaxContextChunks,
 } from "../utils/aiModelUtils";
-import { generateText, stepCountIs, Output } from "ai";
+import { generateText, generateObject, stepCountIs } from "ai";
 import { z, type ZodTypeAny } from "zod";
 import { DeepgramClient } from "@deepgram/sdk";
 import { logger } from "../utils/logger";
@@ -476,15 +476,13 @@ export class ProjectTranscriptService {
     // PHASE 1: Fast Summary to Unlock UI Early
     try {
       const fastModel = await getWorkspaceModel(input.workspaceId, "openai/gpt-4o-mini");
-      const { output: fastParsed, usage } = await generateText({
+      const { object: fastParsed, usage } = await generateObject({
         model: fastModel,
         providerOptions: getFallbackProviderOptions("openai/gpt-4o-mini"),
-        output: Output.object({
-          schema: z.object({
-            title: z.string(),
-            language: z.string(),
-            summary: z.string(),
-          }),
+        schema: z.object({
+          title: z.string(),
+          language: z.string(),
+          summary: z.string(),
         }),
         system:
           "Extract a short title (max 6 words), language (e.g. 'english'), and a 2-sentence summary.",
@@ -962,15 +960,14 @@ Transcript/Request:
 ${content}`;
 
     try {
-      const { output: object, totalUsage } = await generateText({
+      const { object, usage: totalUsage } = await generateObject({
         model,
         providerOptions: getFallbackProviderOptions(activeModel),
-        output: Output.object({ schema: transcriptAnalysisSchemaForGeneration }),
+        schema: transcriptAnalysisSchemaForGeneration,
         prompt,
 
         temperature: 0.2,
         maxRetries: 3,
-        maxOutputTokens: 8192,
       });
 
       if (totalUsage) {
