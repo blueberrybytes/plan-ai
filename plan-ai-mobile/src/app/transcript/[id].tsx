@@ -27,6 +27,7 @@ import * as Clipboard from "expo-clipboard";
 import * as FileSystem from "expo-file-system/legacy";
 import * as Sharing from "expo-sharing";
 import MermaidViewer from "../../components/MermaidViewer";
+import PostMeetingTasksPanel from "../../components/PostMeetingTasksPanel";
 import { Transcript } from "@/services/planAiApi";
 
 const formatTimestamp = (seconds?: number | null) => {
@@ -47,6 +48,16 @@ export default function TranscriptViewScreen() {
   const [activeTab, setActiveTab] = useState("summary");
   const [isRetrying, setIsRetrying] = useState(false);
   const [menuVisible, setMenuVisible] = useState(false);
+
+  const refetchTranscript = React.useCallback(() => {
+    if (!id) return;
+    api
+      .getTranscript(id)
+      .then(setTranscript)
+      .catch((e) => {
+        console.error("Failed to load transcript", e);
+      });
+  }, [id, api]);
 
   useEffect(() => {
     if (id) {
@@ -245,6 +256,17 @@ export default function TranscriptViewScreen() {
         >
           {transcript.summary}
         </Markdown>
+
+        <PostMeetingTasksPanel
+          transcriptId={transcript.id}
+          tasks={
+            (transcript.metadata as { postMeetingTasks?: Record<string, never> })
+              ?.postMeetingTasks as React.ComponentProps<
+              typeof PostMeetingTasksPanel
+            >["tasks"]
+          }
+          onAfterRetry={refetchTranscript}
+        />
       </View>
     );
   };
