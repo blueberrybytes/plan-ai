@@ -1001,6 +1001,13 @@ const TranscriptView: React.FC = () => {
                 {tabValue === "diagram" && transcript.tasks && (
                   <MermaidImgRenderer tasks={transcript.tasks} />
                 )}
+
+                <PostMeetingTasksPanel
+                  api={api}
+                  transcriptId={transcript.id}
+                  tasks={transcript.metadata?.postMeetingTasks}
+                  onAfterRetry={() => void fetchTranscript(true)}
+                />
               </>
             ) : (
               <>

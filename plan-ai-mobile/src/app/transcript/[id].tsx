@@ -76,6 +76,18 @@ export default function TranscriptViewScreen() {
     }
   }, [id, api]);
 
+  // Live-poll the transcript while any post-meeting task is still PENDING so
+  // doc/slides generation transitions appear without manual refresh.
+  useEffect(() => {
+    const meta = transcript?.metadata as TranscriptMetadata | null | undefined;
+    const hasPendingPostMeetingTask =
+      meta?.postMeetingTasks &&
+      Object.values(meta.postMeetingTasks).some((t) => t?.status === "PENDING");
+    if (!hasPendingPostMeetingTask) return;
+    const timeoutId = setTimeout(() => refetchTranscript(), 3000);
+    return () => clearTimeout(timeoutId);
+  }, [transcript, refetchTranscript]);
+
   const handleRetry = async () => {
     if (!transcript) return;
     setIsRetrying(true);
