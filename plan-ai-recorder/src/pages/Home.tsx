@@ -548,6 +548,37 @@ const Home: React.FC = () => {
                                   </Box>
                                 </Tooltip>
                               )}
+                              {t.metadata?.processingStatus !== "FAILED" && (() => {
+                                const postMeetingTasks =
+                                  (t.metadata as { postMeetingTasks?: Record<string, { status?: string; error?: string }> })
+                                    ?.postMeetingTasks;
+                                if (!postMeetingTasks) return null;
+                                const failed = Object.entries(postMeetingTasks).filter(
+                                  ([, v]) => v?.status === "FAILED",
+                                );
+                                if (failed.length === 0) return null;
+                                const tooltip = failed
+                                  .map(([k, v]) => `${k}: ${v?.error || "failed"}`)
+                                  .join("\n");
+                                return (
+                                  <Tooltip title={<span style={{ whiteSpace: "pre-line" }}>{tooltip}</span>}>
+                                    <Typography
+                                      variant="caption"
+                                      sx={{
+                                        border: '1px solid #fbbf24',
+                                        px: 0.5,
+                                        py: 0.2,
+                                        borderRadius: 1,
+                                        fontSize: '0.65rem',
+                                        color: '#fbbf24',
+                                        bgcolor: 'rgba(251, 191, 36, 0.1)',
+                                      }}
+                                    >
+                                      ⚠️ {failed.length} sync failed
+                                    </Typography>
+                                  </Tooltip>
+                                );
+                              })()}
                             </Box>
                           </Box>
                         }

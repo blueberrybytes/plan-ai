@@ -235,9 +235,15 @@ const ProjectTranscriptDetail: React.FC = () => {
   );
 
   React.useEffect(() => {
-    const status = (transcriptData?.data?.metadata as { processingStatus?: string })?.processingStatus;
+    const meta = transcriptData?.data?.metadata as
+      | { processingStatus?: string; postMeetingTasks?: Record<string, { status?: string }> }
+      | undefined;
+    const status = meta?.processingStatus;
     const isPending = status === "PENDING" || status === "EXTRACTING_TASKS";
-    setPollingInterval(isPending ? 3000 : 0);
+    const hasPendingPostMeetingTask =
+      meta?.postMeetingTasks &&
+      Object.values(meta.postMeetingTasks).some((t) => t?.status === "PENDING");
+    setPollingInterval(isPending || hasPendingPostMeetingTask ? 3000 : 0);
   }, [transcriptData]);
 
   const { data: allTasksData } = useListProjectTasksQuery(
