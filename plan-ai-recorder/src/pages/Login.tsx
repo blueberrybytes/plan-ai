@@ -23,9 +23,7 @@ const Login: React.FC = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [googleLoading, setGoogleLoading] = useState(false);
-  const [microsoftLoading, setMicrosoftLoading] = useState(false);
-  const [appleLoading, setAppleLoading] = useState(false);
+  const [waitingProvider, setWaitingProvider] = useState<"google" | "microsoft" | "apple" | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -43,45 +41,40 @@ const Login: React.FC = () => {
 
   const handleGoogleBrowser = async () => {
     setError(null);
-    setGoogleLoading(true);
+    setWaitingProvider("google");
     try {
       await signInWithDesktopBrowser("google");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not open browser.");
-    } finally {
-      setGoogleLoading(false);
+      setWaitingProvider(null);
     }
   };
 
   const handleMicrosoftBrowser = async () => {
     setError(null);
-    setMicrosoftLoading(true);
+    setWaitingProvider("microsoft");
     try {
       await signInWithDesktopBrowser("microsoft");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not open browser.");
-    } finally {
-      setMicrosoftLoading(false);
+      setWaitingProvider(null);
     }
   };
 
   const handleAppleBrowser = async () => {
     setError(null);
-    setAppleLoading(true);
+    setWaitingProvider("apple");
     try {
       await signInWithDesktopBrowser("apple");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not open browser.");
-    } finally {
-      setAppleLoading(false);
+      setWaitingProvider(null);
     }
   };
 
   useEffect(() => {
     const unsubscribe = window.electron.onDesktopAuthCancelled(() => {
-      setGoogleLoading(false);
-      setMicrosoftLoading(false);
-      setAppleLoading(false);
+      setWaitingProvider(null);
     });
     return unsubscribe;
   }, []);
@@ -141,66 +134,92 @@ const Login: React.FC = () => {
           </Alert>
         )}
 
-        {/* Google via system browser — the right Electron pattern */}
-        <Button
-          fullWidth
-          variant="outlined"
-          startIcon={
-            googleLoading ? (
-              <CircularProgress size={16} color="inherit" />
-            ) : (
-              <GoogleIcon />
-            )
-          }
-          onClick={handleGoogleBrowser}
-          disabled={googleLoading || microsoftLoading}
-          sx={{ mb: 2, py: 1.2 }}
-        >
-          Continue with Google
-        </Button>
+        {waitingProvider ? (
+          <Box sx={{ textAlign: "center", py: 4 }}>
+            <CircularProgress sx={{ mb: 3 }} />
+            <Typography variant="h6" gutterBottom>
+              Check your browser
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+              {waitingProvider === "apple" 
+                ? "Please complete sign in with Apple in the popup window."
+                : `We've opened your default browser to continue with ${
+                    waitingProvider === "google" ? "Google" : "Microsoft"
+                  }.`}
+            </Typography>
+            
+            {waitingProvider !== "apple" && (
+              <Alert severity="info" sx={{ mb: 3, textAlign: "left" }}>
+                Opened the wrong browser? <br/>
+                <Button 
+                  size="small" 
+                  onClick={() => {
+                    const baseUrl = import.meta.env.VITE_PLAN_AI_WEB_URL || "http://localhost:3000";
+                    const authUrl = `${baseUrl.replace(/\/+$/, "")}/login?desktop_auth=true`;
+                    navigator.clipboard.writeText(authUrl);
+                  }}
+                  sx={{ p: 0, minWidth: 'auto', textTransform: 'none', mt: 0.5 }}
+                >
+                  Copy Auth Link
+                </Button>
+                {" "}to paste in your preferred one.
+              </Alert>
+            )}
 
-        {/* Microsoft via internal browser window */}
-        <Button
-          fullWidth
-          variant="outlined"
-          startIcon={
-            microsoftLoading ? (
-              <CircularProgress size={16} color="inherit" />
-            ) : (
-              <MicrosoftIcon />
-            )
-          }
-          onClick={handleMicrosoftBrowser}
-          disabled={googleLoading || microsoftLoading || appleLoading}
-          sx={{ mb: 2, py: 1.2 }}
-        >
-          Continue with Microsoft
-        </Button>
+            <Button 
+              variant="text" 
+              color="inherit" 
+              onClick={() => setWaitingProvider(null)}
+            >
+              Cancel
+            </Button>
+          </Box>
+        ) : (
+          <>
+            {/* Google via system browser — the right Electron pattern */}
+            <Button
+              fullWidth
+              variant="outlined"
+              startIcon={<GoogleIcon />}
+              onClick={handleGoogleBrowser}
+              disabled={loading}
+              sx={{ mb: 2, py: 1.2 }}
+            >
+              Continue with Google
+            </Button>
 
-        {/* Apple via internal browser window */}
-        <Button
-          fullWidth
-          variant="outlined"
-          startIcon={
-            appleLoading ? (
-              <CircularProgress size={16} color="inherit" />
-            ) : (
-              <AppleIcon />
-            )
-          }
-          onClick={handleAppleBrowser}
-          disabled={googleLoading || microsoftLoading || appleLoading}
-          sx={{
-            mb: 2,
-            py: 1.2,
-            bgcolor: "#fff",
-            color: "#000",
-            borderColor: "#000",
-            "&:hover": { bgcolor: "#f5f5f5", borderColor: "#000" },
-          }}
-        >
-          Continue with Apple
-        </Button>
+            {/* Microsoft via internal browser window */}
+            <Button
+              fullWidth
+              variant="outlined"
+              startIcon={<MicrosoftIcon />}
+              onClick={handleMicrosoftBrowser}
+              disabled={loading}
+              sx={{ mb: 2, py: 1.2 }}
+            >
+              Continue with Microsoft
+            </Button>
+
+            {/* Apple via internal browser window */}
+            <Button
+              fullWidth
+              variant="outlined"
+              startIcon={<AppleIcon />}
+              onClick={handleAppleBrowser}
+              disabled={loading}
+              sx={{
+                mb: 2,
+                py: 1.2,
+                bgcolor: "#fff",
+                color: "#000",
+                borderColor: "#000",
+                "&:hover": { bgcolor: "#f5f5f5", borderColor: "#000" },
+              }}
+            >
+              Continue with Apple
+            </Button>
+          </>
+        )}
 
         <Divider sx={{ mb: 2, opacity: 0.4 }}>
           <Typography variant="caption" color="text.secondary">

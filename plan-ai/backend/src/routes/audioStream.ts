@@ -193,10 +193,33 @@ export function setupAudioStream(server: Server) {
       }
 
       console.log("[DEBUG WS] looking up DEEPGRAM_API_KEY");
-      const deepgramApiKey = workspaceRecord?.deepgramKey || EnvUtils.get("DEEPGRAM_API_KEY");
+      let deepgramApiKey: string | undefined = undefined;
+      const isCourtesy = workspaceRecord?.isCourtesy ?? false;
+
+      // Deepgram keys are 32+ char hex strings — basic shape check rejects obvious junk
+      if (
+        workspaceRecord?.deepgramKey &&
+        /^[a-f0-9]{32,}$/i.test(workspaceRecord.deepgramKey.trim())
+      ) {
+        deepgramApiKey = workspaceRecord.deepgramKey.trim();
+      }
+
+      // Fall back to the global key ONLY if the workspace has courtesy access
+      if (!deepgramApiKey && isCourtesy) {
+        deepgramApiKey = EnvUtils.get("DEEPGRAM_API_KEY");
+      }
+
       if (!deepgramApiKey) {
-        ws.send(JSON.stringify({ type: "error", message: "Deepgram API Key missing on server" }));
-        ws.close(1011);
+        ws.send(
+          JSON.stringify({
+            type: "error",
+            code: "MISSING_API_KEY",
+            provider: "DEEPGRAM",
+            message:
+              "MISSING_API_KEY: Configure a Deepgram API key in Workspace Settings to start recording.",
+          }),
+        );
+        ws.close(1011, "MISSING_API_KEY");
         return;
       }
 
@@ -327,6 +350,21 @@ export function setupAudioStream(server: Server) {
               errMsg = String(err.message);
             else if (typeof err === "string") errMsg = err;
             else errMsg = String(err);
+
+            // Auth errors get a structured code so the recorder can show an actionable CTA
+            if (/401|403|unauthor|invalid_auth/i.test(errMsg)) {
+              const authMsg =
+                "INVALID_API_KEY: Your Deepgram API key was rejected. Verify it in Workspace Settings.";
+              ws.send(
+                JSON.stringify({
+                  type: "error",
+                  code: "INVALID_API_KEY",
+                  provider: "DEEPGRAM",
+                  message: authMsg,
+                }),
+              );
+              return;
+            }
 
             // Format for a better user experience
             if (errMsg.includes("Received network error or non-101 status code")) {

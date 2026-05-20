@@ -880,7 +880,11 @@ export class ProjectTranscriptService {
           })
           .catch(() => {});
       } catch (err) {
-        logger.error("Failed during MCP agentic investigation step for transcript", err);
+        if (err instanceof Error && (err.message.includes("Missing Authentication header") || err.message.includes("401"))) {
+          logger.warn("Auth error during MCP agentic investigation step (skipping)", err.message);
+        } else {
+          logger.error("Failed during MCP agentic investigation step for transcript", err);
+        }
       }
     }
 
@@ -1022,6 +1026,20 @@ ${content}`;
         })),
       } satisfies TranscriptAnalysis;
     } catch (error: unknown) {
+      const isAuthError = error instanceof Error && (error.message.includes("Missing Authentication header") || error.message.includes("401"));
+      
+      if (isAuthError) {
+        logger.warn("OpenRouter API key is invalid or missing.", (error as Error).message);
+        return {
+          chainOfThought: "The provided OpenRouter API key is invalid or revoked.",
+          title: "Authentication Error",
+          summary: "Your OpenRouter API key is invalid or revoked. Please update it in your Workspace Settings.",
+          sentiment: "NEUTRAL",
+          language: "unknown",
+          tasks: [],
+        } satisfies TranscriptAnalysis;
+      }
+
       logger.error("Failed to analyse transcript with OpenAI", error);
       return {
         chainOfThought:

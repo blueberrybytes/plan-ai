@@ -332,10 +332,10 @@ export default function LandingPage() {
                 Also available as native apps
               </Typography>
               <Box sx={{ display: "flex", gap: 2, justifyContent: "center", flexWrap: "wrap" }}>
-                {/* Mac App Store */}
+                {/* macOS Recorder (signed & notarized DMG from GitHub Releases) */}
                 <Button
                   component="a"
-                  href="https://apps.apple.com/es/app/plan-ai-recorder/id6759553699?l=en-GB&mt=12"
+                  href="https://github.com/blueberrybytes/plan-ai-recorder-releases/releases/latest"
                   target="_blank"
                   rel="noopener noreferrer"
                   variant="text"

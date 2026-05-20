@@ -903,6 +903,11 @@ ipcMain.on("simulate-main-crash", () => {
   process.crash();
 });
 
+ipcMain.handle("quit-and-install", () => {
+  console.log("[IPC main] Received quit-and-install. Restarting app...");
+  autoUpdater.quitAndInstall();
+});
+
 // ─── Dual-Track Auto Updater ──────────────────────────────────────────────────
 function setupAutoUpdater() {
   if (process.mas) {

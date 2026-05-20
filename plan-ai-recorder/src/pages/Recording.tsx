@@ -188,6 +188,7 @@ const Recording: React.FC = () => {
   const [sysDelta, setSysDelta] = useState("");
   const [chunkCount, setChunkCount] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [errorCode, setErrorCode] = useState<string | null>(null);
   const [blobs, setBlobs] = useState<{ micBlob?: Blob; sysBlob?: Blob }>({});
 
   const [projects, setProjects] = useState<Project[]>([]);
@@ -585,6 +586,13 @@ const Recording: React.FC = () => {
       onDisconnect: () => setIsWsConnected(false),
       onError: (err) => {
         setError(err.message || "Connection lost. Audio transcription stopped.");
+        const code = (err as Error & { code?: string }).code ?? null;
+        setErrorCode(code);
+        // Unrecoverable backend signals (bad/missing keys) should land on the error screen
+        // so the user sees the actionable CTA instead of the transient "poor connection" warning.
+        if (code === "MISSING_API_KEY" || code === "INVALID_API_KEY") {
+          setPhase("error");
+        }
       },
     });
 
@@ -965,6 +973,16 @@ const Recording: React.FC = () => {
   }
 
   if (phase === "error") {
+    const isKeyIssue =
+      errorCode === "MISSING_API_KEY" ||
+      errorCode === "INVALID_API_KEY" ||
+      (error ? /MISSING_API_KEY|INVALID_API_KEY|API key|Deepgram|OpenRouter/i.test(error) : false);
+
+    const openWorkspaceSettings = () => {
+      const baseUrl = import.meta.env.VITE_PLAN_AI_WEB_URL || "http://localhost:3000";
+      window.open(`${baseUrl.replace(/\/+$/, "")}/settings/workspace`, "_blank");
+    };
+
     return (
       <Box
         sx={{
@@ -980,6 +998,11 @@ const Recording: React.FC = () => {
         <Alert severity="error" sx={{ width: "100%", maxWidth: 400 }}>
           {error ?? "An unexpected error occurred."}
         </Alert>
+        {isKeyIssue && (
+          <Button variant="contained" onClick={openWorkspaceSettings}>
+            Open Workspace Settings
+          </Button>
+        )}
         <Button
           variant="outlined"
           startIcon={<BackIcon />}
@@ -1101,6 +1124,7 @@ const Recording: React.FC = () => {
                   recorderRef.current.reconnect();
                   setIsWsConnected(true);
                   setError(null);
+                  setErrorCode(null);
                 }
               }}
             >

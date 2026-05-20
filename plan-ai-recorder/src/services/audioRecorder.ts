@@ -22,8 +22,14 @@ export interface AudioRecorderOptions {
   onStop: () => void;
   /** Called when the websocket connection is lost unexpectedly */
   onDisconnect?: () => void;
-  /** Called on any error */
-  onError: (error: Error) => void;
+  /** Called on any error. May include a structured `code`/`provider` when the backend tagged it. */
+  onError: (error: Error & { code?: string; provider?: string }) => void;
+}
+
+interface TypedBackendError {
+  code?: string;
+  provider?: string;
+  message: string;
 }
 
 /**
@@ -56,6 +62,7 @@ export class AudioRecorder {
 
   private state: RecorderState = "idle";
   private options: AudioRecorderOptions;
+  private lastTypedError: TypedBackendError | null = null;
 
   constructor(options: AudioRecorderOptions) {
     this.options = options;
@@ -571,7 +578,18 @@ export class AudioRecorder {
               this.options.onSpeechEvent(data.source, data.type);
             }
           } else if (data.type === "error") {
-            this.options.onError(new Error(data.message));
+            this.lastTypedError = {
+              code: typeof data.code === "string" ? data.code : undefined,
+              provider: typeof data.provider === "string" ? data.provider : undefined,
+              message: typeof data.message === "string" ? data.message : "Unknown error",
+            };
+            const err = new Error(this.lastTypedError.message) as Error & {
+              code?: string;
+              provider?: string;
+            };
+            err.code = this.lastTypedError.code;
+            err.provider = this.lastTypedError.provider;
+            this.options.onError(err);
           }
         } catch (e) {
           console.error(
@@ -589,11 +607,22 @@ export class AudioRecorder {
         console.error(
           `WebSocket error encountered. Details: ${errorDetails}`,
         );
-        this.options.onError(
-          new Error(
-            "Audio streaming connection failed. Check your network or VPN.",
-          ),
-        );
+        // Prefer the most recent typed error message from the backend, if any
+        if (this.lastTypedError) {
+          const err = new Error(this.lastTypedError.message) as Error & {
+            code?: string;
+            provider?: string;
+          };
+          err.code = this.lastTypedError.code;
+          err.provider = this.lastTypedError.provider;
+          this.options.onError(err);
+        } else {
+          this.options.onError(
+            new Error(
+              "Audio streaming connection failed. Check your network or VPN.",
+            ),
+          );
+        }
         if (this.state !== "stopping") {
           this.options.onDisconnect?.();
         }

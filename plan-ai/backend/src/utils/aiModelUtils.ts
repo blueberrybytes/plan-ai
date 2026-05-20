@@ -11,6 +11,13 @@ export const FALLBACK_MODELS = [
   "google/gemini-3.1-pro-preview",
 ];
 
+export class MissingApiKeyError extends Error {
+  constructor() {
+    super("MISSING_API_KEY: Please configure an OpenRouter API key in your Workspace Settings to use AI features.");
+    this.name = "MissingApiKeyError";
+  }
+}
+
 /**
  * Returns a configured model instance dynamically with an optional API key.
  */
@@ -30,17 +37,35 @@ export function getConfiguredModel(modelKey?: string, apiKey?: string) {
  */
 export async function getWorkspaceModel(workspaceId: string, modelKey?: string) {
   let apiKey: string | undefined = undefined;
+  let isCourtesy = false;
+
   try {
     const workspace = await prisma.workspace.findUnique({
       where: { id: workspaceId },
-      select: { openRouterKey: true },
+      select: { openRouterKey: true, isCourtesy: true },
     });
-    if (workspace?.openRouterKey) {
-      apiKey = workspace.openRouterKey;
+
+    if (workspace?.isCourtesy) {
+      isCourtesy = true;
+    }
+
+    // Only accept valid-looking OpenRouter keys (sk-or-)
+    if (workspace?.openRouterKey && workspace.openRouterKey.trim().startsWith("sk-or-")) {
+      apiKey = workspace.openRouterKey.trim();
     }
   } catch (error) {
     console.warn(`[getWorkspaceModel] Failed to fetch workspace ${workspaceId}`, error);
   }
+
+  // Fallback to the global key ONLY if the workspace has courtesy access
+  if (!apiKey && isCourtesy) {
+    apiKey = EnvUtils.get("OPENROUTER_API_KEY");
+  }
+
+  if (!apiKey) {
+    throw new MissingApiKeyError();
+  }
+
   return getConfiguredModel(modelKey, apiKey);
 }
 

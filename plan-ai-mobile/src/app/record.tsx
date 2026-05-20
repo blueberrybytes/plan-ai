@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   Alert,
   FlatList,
+  Linking,
 } from "react-native";
 import { Buffer } from "buffer";
 import {
@@ -251,6 +252,7 @@ export default function RecordScreen() {
   const [currentVolume, setCurrentVolume] = useState(0);
   const [isWsConnected, setIsWsConnected] = useState(true);
   const [isConnectingWs, setIsConnectingWs] = useState(false);
+  const [wsUnrecoverable, setWsUnrecoverable] = useState(false);
   const [meetingLocation, setMeetingLocation] = useState<{
     latitude: number;
     longitude: number;
@@ -626,11 +628,35 @@ export default function RecordScreen() {
             setIsSpeaking(false);
           } else if (msg.type === "error") {
             console.error("[WS Error from Backend]", msg.message);
-            Alert.alert(
-              "Connection Warning",
-              msg.message ||
-                "Lost connection to the transcription server. You can still save what you have.",
-            );
+            const isKeyIssue =
+              msg.code === "MISSING_API_KEY" || msg.code === "INVALID_API_KEY";
+
+            if (isKeyIssue) {
+              // Unrecoverable from inside the app — stop the auto-reconnect loop
+              setWsUnrecoverable(true);
+              const webAppUrl =
+                process.env.EXPO_PUBLIC_PLAN_AI_WEB_URL ??
+                "https://plan-ai.blueberrybytes.com";
+              Alert.alert(
+                "Configuration Required",
+                msg.message ||
+                  "Your workspace is missing a required API key.",
+                [
+                  {
+                    text: "Open Workspace Settings",
+                    onPress: () =>
+                      Linking.openURL(`${webAppUrl.replace(/\/+$/, "")}/settings/workspace`),
+                  },
+                  { text: "Dismiss", style: "cancel" },
+                ],
+              );
+            } else {
+              Alert.alert(
+                "Connection Warning",
+                msg.message ||
+                  "Lost connection to the transcription server. You can still save what you have.",
+              );
+            }
           }
         } catch (e) {
           console.error("[WS Data Handling Error]", e);
@@ -659,7 +685,8 @@ export default function RecordScreen() {
       phase === "recording" &&
       isRecording &&
       !isWsConnected &&
-      !isConnectingWs
+      !isConnectingWs &&
+      !wsUnrecoverable
     ) {
       // Wait 3 seconds before automatically trying again
       reconnectTimeout = setTimeout(() => {
@@ -673,6 +700,7 @@ export default function RecordScreen() {
     isRecording,
     isWsConnected,
     isConnectingWs,
+    wsUnrecoverable,
     language,
     connectWebSocket,
   ]);
@@ -1555,6 +1583,7 @@ export default function RecordScreen() {
                 if (wsRef.current) {
                   wsRef.current.close();
                 }
+                setWsUnrecoverable(false);
                 connectWebSocket();
               }
             }}

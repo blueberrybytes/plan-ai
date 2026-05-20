@@ -38,7 +38,7 @@
     "rollup": "4.52.5"
   },
   "dependencies": {
-    "@ai-sdk/openai": "^3.0.63",
+    "@ai-sdk/openai": "^3.0.64",
     "@bull-board/api": "^6.20.6",
     "@bull-board/express": "^6.20.6",
     "@deepgram/sdk": "^4.11.3",
@@ -57,7 +57,7 @@
     "@prisma/client": "^6.12.0",
     "@qdrant/js-client-rest": "^1.15.1",
     "@sentry/node": "^10.48.0",
-    "ai": "^6.0.177",
+    "ai": "^6.0.185",
     "axios": "^1.15.0",
     "bullmq": "^5.73.0",
     "cheerio": "^1.2.0",

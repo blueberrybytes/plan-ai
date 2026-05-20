@@ -59,6 +59,8 @@ declare global {
       onOtaUpdateDownloaded: (callback: (info: { version: string; [key: string]: any }) => void) => () => void;
       /** Trigger a native main process crash (for Sentry testing) */
       simulateMainCrash: () => void;
+      /** Auto-Updater: Restart and install the downloaded update */
+      quitAndInstall: () => Promise<void>;
     };
   }
 }

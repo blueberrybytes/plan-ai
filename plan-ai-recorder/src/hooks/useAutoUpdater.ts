@@ -33,8 +33,9 @@ export function useAutoUpdater() {
   };
 
   const handleOtaRestart = () => {
-    // Requires an IPC call to restart and install, which we can implement later if needed.
-    // For now, restarting manually works too.
+    if (window.electron?.quitAndInstall) {
+      window.electron.quitAndInstall();
+    }
   };
 
   const dismissMasUpdate = () => setMasUpdate(null);

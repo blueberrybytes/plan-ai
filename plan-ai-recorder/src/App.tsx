@@ -212,6 +212,7 @@ const App: React.FC = () => {
     otaAvailable, 
     otaDownloaded, 
     handleMasUpdate,
+    handleOtaRestart,
     dismissMasUpdate,
     dismissOtaDownloaded
   } = useAutoUpdater();
@@ -254,7 +255,15 @@ const App: React.FC = () => {
         anchorOrigin={{ vertical: "top", horizontal: "center" }}
         onClose={dismissOtaDownloaded}
       >
-        <Alert severity="success" onClose={dismissOtaDownloaded}>
+        <Alert 
+          severity="success" 
+          onClose={dismissOtaDownloaded}
+          action={
+            <Button color="inherit" size="small" onClick={handleOtaRestart}>
+              RESTART & INSTALL
+            </Button>
+          }
+        >
           Update downloaded! Restart the application to install.
         </Alert>
       </Snackbar>

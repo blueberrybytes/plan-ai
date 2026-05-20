@@ -91,6 +91,9 @@ contextBridge.exposeInMainWorld("electron", {
 
   // Trigger a native main process crash (for Sentry testing)
   simulateMainCrash: (): void => ipcRenderer.send("simulate-main-crash"),
+
+  // Auto-Updater: Restart and install the downloaded update
+  quitAndInstall: (): Promise<void> => ipcRenderer.invoke("quit-and-install"),
 });
 
 interface DesktopSource {
