@@ -1,5 +1,6 @@
 import { Worker, Job } from "bullmq";
 import Redis from "ioredis";
+import * as Sentry from "@sentry/node";
 import EnvUtils from "../utils/EnvUtils";
 import { logger } from "../utils/logger";
 import { GithubContextJobPayload } from "../queue/githubContextQueue";
@@ -26,12 +27,32 @@ const connection = new Redis(REDIS_URL, {
 export const githubContextWorker = new Worker<GithubContextJobPayload>(
   "GithubContextQueue",
   async (job: Job<GithubContextJobPayload>) => {
-    logger.info(`Processing GithubContextJob ${job.id} for context ${job.data.contextId}`);
     const { contextId, githubRepoId, installationId } = job.data;
+    return Sentry.withScope(async (scope) => {
+      scope.setTag("contextId", contextId);
+      scope.setTag("githubRepoId", githubRepoId);
+      scope.setTag("jobId", String(job.id ?? "unknown"));
+      scope.setTag("queue", "GithubContextQueue");
 
-    const tmpDir = path.join("/tmp", "planai_repos", contextId);
+      // Resolve workspace/user from the context record for richer attribution
+      try {
+        const ctx = await prisma.context.findUnique({
+          where: { id: contextId },
+          select: { workspaceId: true, userId: true },
+        });
+        if (ctx) {
+          scope.setUser({ id: ctx.userId });
+          scope.setTag("workspaceId", ctx.workspaceId);
+        }
+      } catch {
+        // Best-effort context lookup — don't block the job on it
+      }
 
-    try {
+      logger.info(`Processing GithubContextJob ${job.id} for context ${contextId}`);
+
+      const tmpDir = path.join("/tmp", "planai_repos", contextId);
+
+      try {
       const [owner, repo] = githubRepoId.split("/");
       if (!owner || !repo) throw new Error(`Invalid repo string: ${githubRepoId}`);
 
@@ -200,6 +221,7 @@ export const githubContextWorker = new Worker<GithubContextJobPayload>(
         logger.info(`Cleaned up temp directory ${tmpDir}`);
       }
     }
+    });
   },
   { connection, concurrency: 1 },
 );

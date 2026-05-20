@@ -1,5 +1,6 @@
 import { Worker, Job } from "bullmq";
 import Redis from "ioredis";
+import * as Sentry from "@sentry/node";
 import EnvUtils from "../utils/EnvUtils";
 import { logger } from "../utils/logger";
 import { ContextDocumentJobPayload } from "../queue/contextDocumentQueue";
@@ -25,11 +26,18 @@ const connection = new Redis(REDIS_URL, {
 export const contextDocumentWorker = new Worker<ContextDocumentJobPayload>(
   "ContextDocumentQueue",
   async (job: Job<ContextDocumentJobPayload>) => {
-    logger.info(`Processing ContextDocumentJob ${job.id} for file ${job.data.fileId}`);
-
     const { contextId, fileId, userId, workspaceId } = job.data;
+    return Sentry.withScope(async (scope) => {
+      scope.setUser({ id: userId });
+      scope.setTag("workspaceId", workspaceId);
+      scope.setTag("contextId", contextId);
+      scope.setTag("fileId", fileId);
+      scope.setTag("jobId", String(job.id ?? "unknown"));
+      scope.setTag("queue", "ContextDocumentQueue");
 
-    try {
+      logger.info(`Processing ContextDocumentJob ${job.id} for file ${fileId}`);
+
+      try {
       const fileRecord = await prisma.contextFile.findUnique({
         where: { id: fileId },
       });
@@ -188,30 +196,30 @@ Rules:
         data: { metadata: meta },
       });
 
-      logger.info(`Successfully completed ContextDocumentJob ${job.id}`);
-    } catch (error) {
-      console.error(error);
-      logger.error(`Error processing ContextDocumentJob ${job.id}`, error);
+        logger.info(`Successfully completed ContextDocumentJob ${job.id}`);
+      } catch (error) {
+        logger.error(`Error processing ContextDocumentJob ${job.id}`, error);
 
-      // Update Prisma to FAILED
-      const fileRecord = await prisma.contextFile.findUnique({
-        where: { id: fileId },
-      });
-      if (fileRecord) {
-        const meta =
-          typeof fileRecord.metadata === "object" && fileRecord.metadata
-            ? { ...(fileRecord.metadata as Prisma.JsonObject) }
-            : {};
-        meta.processingStatus = "FAILED";
-        meta.processingError = (error as Error).message || "Unknown error";
-
-        await prisma.contextFile.update({
+        // Update Prisma to FAILED
+        const fileRecord = await prisma.contextFile.findUnique({
           where: { id: fileId },
-          data: { metadata: meta },
         });
+        if (fileRecord) {
+          const meta =
+            typeof fileRecord.metadata === "object" && fileRecord.metadata
+              ? { ...(fileRecord.metadata as Prisma.JsonObject) }
+              : {};
+          meta.processingStatus = "FAILED";
+          meta.processingError = (error as Error).message || "Unknown error";
+
+          await prisma.contextFile.update({
+            where: { id: fileId },
+            data: { metadata: meta },
+          });
+        }
+        throw error;
       }
-      throw error;
-    }
+    });
   },
   { connection, concurrency: 2 },
 );
