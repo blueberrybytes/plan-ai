@@ -27,7 +27,7 @@ import * as Clipboard from "expo-clipboard";
 import * as FileSystem from "expo-file-system/legacy";
 import * as Sharing from "expo-sharing";
 import MermaidViewer from "../../components/MermaidViewer";
-import PostMeetingTasksPanel from "../../components/PostMeetingTasksPanel";
+import { PostMeetingTasksPanel } from "../../components/PostMeetingTasksPanel";
 import { Transcript } from "@/services/planAiApi";
 import type { components } from "@/types/api";
 
