@@ -35,7 +35,7 @@ import { useNavigate } from "react-router-dom";
 import AiModelSelector from "../common/AiModelSelector";
 
 // Feature flag — set to true to re-enable the AI Graph Trace visualization in chat replies.
-const SHOW_AI_GRAPH_TRACE: boolean = false;
+const SHOW_AI_GRAPH_TRACE = false;
 
 interface ChatWindowProps {
   activeThread: ChatThread | null;
