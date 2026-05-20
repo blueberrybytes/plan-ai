@@ -34,6 +34,12 @@ import {
 } from "../services/transcriptMetadataTypes";
 import { logger } from "../utils/logger";
 
+interface TranscriptContextSummary {
+  id: string;
+  name: string;
+  color: string | null;
+}
+
 interface StandaloneTranscriptResponse {
   id: string;
   projectId: string | null;
@@ -57,6 +63,10 @@ interface StandaloneTranscriptResponse {
   updatedAt: Date;
   tasks?: TaskResponse[];
   documents?: DocDocumentResponse[];
+  /** IDs of contexts attached to this transcript. */
+  contextIds: string[];
+  /** Resolved context summaries (id + name + color). Empty when not enriched by the caller. */
+  contexts: TranscriptContextSummary[];
   chatThread?: {
     id: string;
     title: string;
@@ -115,7 +125,12 @@ interface UpdateStandaloneTranscriptBody {
 @Route("api/transcripts")
 @Tags("Transcripts")
 export class TranscriptsController extends BaseWorkspaceController {
-  private mapTranscriptResponse(t: Transcript & { project?: { id: string; title: string } | null }): StandaloneTranscriptResponse {
+  private mapTranscriptResponse(
+    t: Transcript & {
+      project?: { id: string; title: string } | null;
+      contexts?: TranscriptContextSummary[];
+    },
+  ): StandaloneTranscriptResponse {
     return {
       id: t.id,
       projectId: t.projectId,
@@ -134,6 +149,8 @@ export class TranscriptsController extends BaseWorkspaceController {
       utterances: t.utterances as TsoaJsonObject,
       createdAt: t.createdAt,
       updatedAt: t.updatedAt,
+      contextIds: t.contextIds ?? [],
+      contexts: t.contexts ?? [],
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       chatThread: (t as any).chatThread
         ? {
@@ -152,6 +169,36 @@ export class TranscriptsController extends BaseWorkspaceController {
     };
   }
 
+  /**
+   * Batch-fetch context summaries (id, name, color) for every context referenced
+   * by the supplied transcripts and return one resolved list per transcript.
+   * Single SQL hit regardless of page size.
+   */
+  private async enrichTranscriptsWithContexts(
+    workspaceId: string,
+    transcripts: Transcript[],
+  ): Promise<Map<string, TranscriptContextSummary[]>> {
+    const allContextIds = Array.from(
+      new Set(transcripts.flatMap((t) => t.contextIds ?? [])),
+    );
+    if (allContextIds.length === 0) return new Map();
+
+    const contexts = await prisma.context.findMany({
+      where: { id: { in: allContextIds }, workspaceId },
+      select: { id: true, name: true, color: true },
+    });
+    const byId = new Map(contexts.map((c) => [c.id, c]));
+
+    const result = new Map<string, TranscriptContextSummary[]>();
+    for (const t of transcripts) {
+      const resolved = (t.contextIds ?? [])
+        .map((id) => byId.get(id))
+        .filter((c): c is TranscriptContextSummary => Boolean(c));
+      result.set(t.id, resolved);
+    }
+    return result;
+  }
+
   @Get()
   @Security("ClientLevel")
   public async listTranscripts(
@@ -165,11 +212,17 @@ export class TranscriptsController extends BaseWorkspaceController {
     const options: TranscriptListOptions = { workspaceId, page, pageSize, source, query: q };
 
     const result = await transcriptCrudService.listTranscriptsForUser(user.id, options);
+    const contextsByTranscript = await this.enrichTranscriptsWithContexts(
+      workspaceId,
+      result.transcripts,
+    );
 
     return {
       status: 200,
       data: {
-        transcripts: result.transcripts.map(this.mapTranscriptResponse),
+        transcripts: result.transcripts.map((t) =>
+          this.mapTranscriptResponse({ ...t, contexts: contextsByTranscript.get(t.id) ?? [] }),
+        ),
         total: result.total,
       },
     };

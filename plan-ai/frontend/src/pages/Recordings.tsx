@@ -22,6 +22,7 @@ import {
   AccessTime as TimeIcon,
   Group as GroupIcon,
   Search as SearchIcon,
+  Bookmark as ContextIcon,
 } from "@mui/icons-material";
 import type { components } from "../types/api";
 import { useTranslation } from "react-i18next";
@@ -253,6 +254,21 @@ const Recordings: React.FC = () => {
                                 />
                               </Box>
                             )}
+                            {(transcript.contexts ?? []).map((ctx) => (
+                              <Chip
+                                key={ctx.id}
+                                size="small"
+                                icon={<ContextIcon fontSize="small" />}
+                                label={ctx.name}
+                                variant="outlined"
+                                sx={{
+                                  fontWeight: 500,
+                                  borderColor: ctx.color || undefined,
+                                  color: ctx.color || undefined,
+                                  "& .MuiChip-icon": { color: ctx.color || undefined },
+                                }}
+                              />
+                            ))}
                           </Stack>
                         </CardContent>
                       </CardActionArea>
