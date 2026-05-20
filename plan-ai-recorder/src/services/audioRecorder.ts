@@ -1,5 +1,6 @@
 import { createPlanAiApi } from "./planAiApi";
 import { loadConfig } from "../utils/recorderConfig";
+import * as Sentry from "@sentry/electron/renderer";
 
 // @ts-ignore
 import rawAudioWorklet from "../../public/audioWorklet.js?raw";
@@ -583,6 +584,13 @@ export class AudioRecorder {
               provider: typeof data.provider === "string" ? data.provider : undefined,
               message: typeof data.message === "string" ? data.message : "Unknown error",
             };
+            Sentry.captureException(new Error(`WS backend error: ${this.lastTypedError.message}`), {
+              tags: {
+                source: "audio_stream_ws",
+                code: this.lastTypedError.code ?? "unknown",
+                provider: this.lastTypedError.provider ?? "unknown",
+              },
+            });
             const err = new Error(this.lastTypedError.message) as Error & {
               code?: string;
               provider?: string;

@@ -750,7 +750,10 @@ export class ProjectTranscriptService {
         syncToNotion: input.syncToNotion,
         syncToAsana: input.syncToAsana,
       }).catch((err) => {
-        logger.warn("Failed to auto-sync tasks for transcript import", err);
+        logger.error(
+          `Failed to auto-sync tasks for transcript ${result.transcript.id}`,
+          err,
+        );
       });
     }
 
@@ -760,7 +763,10 @@ export class ProjectTranscriptService {
         exportToGoogleDrive: input.exportToGoogleDrive,
         exportToOneDrive: input.exportToOneDrive,
       }).catch((err) => {
-        logger.warn("Failed to auto-export document to cloud storage", err);
+        logger.error(
+          `Failed to auto-export document to cloud storage for transcript ${result.transcript.id}`,
+          err,
+        );
       });
     }
 
@@ -782,7 +788,10 @@ export class ProjectTranscriptService {
           });
         })
         .catch(async (err) => {
-          logger.warn("Failed to auto-generate document for transcript", err);
+          logger.error(
+            `Failed to auto-generate document for transcript ${result.transcript.id}`,
+            err,
+          );
           await this.setPostMeetingTaskStatus(result.transcript.id, "doc", {
             status: "FAILED",
             error: err instanceof Error ? err.message : String(err),
@@ -812,7 +821,10 @@ export class ProjectTranscriptService {
           });
         })
         .catch(async (err) => {
-          logger.warn("Failed to auto-generate slides for transcript", err);
+          logger.error(
+            `Failed to auto-generate slides for transcript ${result.transcript.id}`,
+            err,
+          );
           await this.setPostMeetingTaskStatus(result.transcript.id, "slides", {
             status: "FAILED",
             error: err instanceof Error ? err.message : String(err),
@@ -1375,7 +1387,7 @@ ${content}`;
 
     const fireAndForget = (work: () => Promise<unknown>, label: string) => {
       work().catch((err) => {
-        logger.warn(`Retry of post-meeting task ${kind} (${label}) errored`, err);
+        logger.error(`Retry of post-meeting task ${kind} (${label}) errored`, err);
       });
     };
 
@@ -1436,6 +1448,10 @@ ${content}`;
             url: `/docs/view/${doc.id}`,
           });
         } catch (err) {
+          logger.error(
+            `[retryPostMeetingTask] doc generation failed for transcript ${transcriptId}`,
+            err,
+          );
           await this.setPostMeetingTaskStatus(transcriptId, "doc", {
             status: "FAILED",
             error: err instanceof Error ? err.message : String(err),
@@ -1463,6 +1479,10 @@ ${content}`;
             url: `/presentations/${pres.id}`,
           });
         } catch (err) {
+          logger.error(
+            `[retryPostMeetingTask] slides generation failed for transcript ${transcriptId}`,
+            err,
+          );
           await this.setPostMeetingTaskStatus(transcriptId, "slides", {
             status: "FAILED",
             error: err instanceof Error ? err.message : String(err),
@@ -1511,7 +1531,7 @@ ${content}`;
         data: { metadata: meta as Prisma.InputJsonValue },
       });
     } catch (err) {
-      logger.warn(
+      logger.error(
         `Failed to record post-meeting task status (${kind}) for transcript ${transcriptId}`,
         err,
       );

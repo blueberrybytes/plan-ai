@@ -2,6 +2,7 @@ import { createOpenRouter } from "@openrouter/ai-sdk-provider";
 import EnvUtils from "./EnvUtils";
 import { AI_MODEL_LIMITS } from "../services/aiContextRouter";
 import prisma from "../prisma/prismaClient";
+import { logger } from "./logger";
 
 export const DEFAULT_AI_MODEL = "anthropic/claude-sonnet-4.6";
 export const FAST_AI_MODEL = "google/gemini-2.5-flash";
@@ -54,7 +55,7 @@ export async function getWorkspaceModel(workspaceId: string, modelKey?: string) 
       apiKey = workspace.openRouterKey.trim();
     }
   } catch (error) {
-    console.warn(`[getWorkspaceModel] Failed to fetch workspace ${workspaceId}`, error);
+    logger.error(`[getWorkspaceModel] Failed to fetch workspace ${workspaceId}`, error);
   }
 
   // Fallback to the global key ONLY if the workspace has courtesy access

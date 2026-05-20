@@ -42,6 +42,7 @@ import notifee, { AndroidImportance } from "@notifee/react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Project, Context } from "@/services/planAiApi";
 import * as Location from "expo-location";
+import * as Sentry from "@sentry/react-native";
 
 // Using global object so it survives React Native Fast Refresh (HMR) without dropping native locks
 const g = global as any;
@@ -630,6 +631,16 @@ export default function RecordScreen() {
             console.error("[WS Error from Backend]", msg.message);
             const isKeyIssue =
               msg.code === "MISSING_API_KEY" || msg.code === "INVALID_API_KEY";
+            Sentry.captureException(
+              new Error(`WS backend error: ${msg.message ?? "(no message)"}`),
+              {
+                tags: {
+                  source: "audio_stream_ws",
+                  code: msg.code ?? "unknown",
+                  provider: msg.provider ?? "unknown",
+                },
+              },
+            );
 
             if (isKeyIssue) {
               // Unrecoverable from inside the app — stop the auto-reconnect loop

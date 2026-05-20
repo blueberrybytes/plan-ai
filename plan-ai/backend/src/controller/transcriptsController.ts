@@ -32,6 +32,7 @@ import {
   TranscriptMetadata,
   type PostMeetingTaskKind,
 } from "../services/transcriptMetadataTypes";
+import { logger } from "../utils/logger";
 
 interface StandaloneTranscriptResponse {
   id: string;
@@ -689,6 +690,10 @@ export class TranscriptsController extends BaseWorkspaceController {
         this.setStatus(409);
         throw { status: 409, message: "This post-meeting task is already in progress" };
       }
+      logger.error(
+        `[retryPostMeetingTask] dispatch failed for transcript ${id}, kind=${kind}`,
+        err,
+      );
       this.setStatus(500);
       throw { status: 500, message: msg };
     }

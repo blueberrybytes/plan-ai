@@ -353,6 +353,10 @@ export function setupAudioStream(server: Server) {
 
             // Auth errors get a structured code so the recorder can show an actionable CTA
             if (/401|403|unauthor|invalid_auth/i.test(errMsg)) {
+              logger.error(
+                `[Deepgram] Auth failure on ${source} stream for workspace ${currentWorkspaceId}`,
+                err,
+              );
               const authMsg =
                 "INVALID_API_KEY: Your Deepgram API key was rejected. Verify it in Workspace Settings.";
               ws.send(
@@ -365,6 +369,11 @@ export function setupAudioStream(server: Server) {
               );
               return;
             }
+
+            logger.error(
+              `[Deepgram] Runtime error on ${source} stream for workspace ${currentWorkspaceId}: ${errMsg}`,
+              err,
+            );
 
             // Format for a better user experience
             if (errMsg.includes("Received network error or non-101 status code")) {
