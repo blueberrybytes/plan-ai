@@ -34,6 +34,11 @@ import { slideGenerationService } from "./slideGenerationService";
 import { aiUsageService } from "./aiUsageService";
 import type { TaskMetadata } from "./taskMetadataTypes";
 import type {
+  PostMeetingTaskKind,
+  PostMeetingTaskStatus,
+  PostMeetingTasksRecord,
+} from "./transcriptMetadataTypes";
+import type {
   JiraIntegrationMetadata,
   LinearIntegrationMetadata,
   TrelloIntegrationMetadata,
@@ -761,6 +766,7 @@ export class ProjectTranscriptService {
 
     // Auto-Generate Document
     if (input.createDoc) {
+      void this.setPostMeetingTaskStatus(result.transcript.id, "doc", { status: "PENDING" });
       docGenerationService
         .startGeneration(input.userId, input.workspaceId, {
           title: result.transcript.title || "Meeting Document",
@@ -768,12 +774,25 @@ export class ProjectTranscriptService {
           transcriptIds: [result.transcript.id],
           contextIds: input.contextIds,
         })
-        .then((doc) => logger.info(`Auto-generated document ${doc.id} for transcript ${result.transcript.id}`))
-        .catch((err) => logger.warn("Failed to auto-generate document for transcript", err));
+        .then(async (doc) => {
+          logger.info(`Auto-generated document ${doc.id} for transcript ${result.transcript.id}`);
+          await this.setPostMeetingTaskStatus(result.transcript.id, "doc", {
+            status: "OK",
+            url: `/docs/view/${doc.id}`,
+          });
+        })
+        .catch(async (err) => {
+          logger.warn("Failed to auto-generate document for transcript", err);
+          await this.setPostMeetingTaskStatus(result.transcript.id, "doc", {
+            status: "FAILED",
+            error: err instanceof Error ? err.message : String(err),
+          });
+        });
     }
 
     // Auto-Generate Slides
     if (input.createSlides) {
+      void this.setPostMeetingTaskStatus(result.transcript.id, "slides", { status: "PENDING" });
       slideGenerationService
         .startPresentationGeneration(
           input.userId,
@@ -785,8 +804,20 @@ export class ProjectTranscriptService {
           `Create a presentation summarizing the key points, decisions, and action items from the meeting.`,
           result.transcript.title || "Meeting Slides",
         )
-        .then((pres) => logger.info(`Auto-generated slides ${pres.id} for transcript ${result.transcript.id}`))
-        .catch((err) => logger.warn("Failed to auto-generate slides for transcript", err));
+        .then(async (pres) => {
+          logger.info(`Auto-generated slides ${pres.id} for transcript ${result.transcript.id}`);
+          await this.setPostMeetingTaskStatus(result.transcript.id, "slides", {
+            status: "OK",
+            url: `/presentations/${pres.id}`,
+          });
+        })
+        .catch(async (err) => {
+          logger.warn("Failed to auto-generate slides for transcript", err);
+          await this.setPostMeetingTaskStatus(result.transcript.id, "slides", {
+            status: "FAILED",
+            error: err instanceof Error ? err.message : String(err),
+          });
+        });
     }
 
     return {
@@ -1167,11 +1198,21 @@ ${content}`;
 
     if (integrations.length === 0) return;
 
+    const providerToKind: Partial<Record<IntegrationProvider, PostMeetingTaskKind>> = {
+      [IntegrationProvider.JIRA]: "jira",
+      [IntegrationProvider.LINEAR]: "linear",
+      [IntegrationProvider.TRELLO]: "trello",
+      [IntegrationProvider.NOTION]: "notion",
+      [IntegrationProvider.ASANA]: "asana",
+    };
+
     for (const integration of integrations) {
+      const kind = providerToKind[integration.provider];
       try {
         if (integration.provider === IntegrationProvider.JIRA && options?.syncToJira !== false) {
           const meta = integration.metadata as unknown as JiraIntegrationMetadata | null;
           if (!meta?.defaultProjectId) continue;
+          await this.setPostMeetingTaskStatus(transcript.id, "jira", { status: "PENDING" });
           for (const task of tasks) {
             const syncResult = await jiraIntegrationService.createJiraIssue(
               workspaceId,
@@ -1184,12 +1225,17 @@ ${content}`;
               url: syncResult.url,
             });
           }
+          await this.setPostMeetingTaskStatus(transcript.id, "jira", {
+            status: "OK",
+            count: tasks.length,
+          });
         } else if (
           integration.provider === IntegrationProvider.LINEAR &&
           options?.syncToLinear !== false
         ) {
           const meta = integration.metadata as unknown as LinearIntegrationMetadata | null;
           if (!meta?.defaultTeamId) continue;
+          await this.setPostMeetingTaskStatus(transcript.id, "linear", { status: "PENDING" });
           for (const task of tasks) {
             const syncResult = await linearIntegrationService.createLinearIssue(
               workspaceId,
@@ -1202,12 +1248,17 @@ ${content}`;
               url: syncResult.url,
             });
           }
+          await this.setPostMeetingTaskStatus(transcript.id, "linear", {
+            status: "OK",
+            count: tasks.length,
+          });
         } else if (
           integration.provider === IntegrationProvider.TRELLO &&
           options?.syncToTrello !== false
         ) {
           const meta = integration.metadata as unknown as TrelloIntegrationMetadata | null;
           if (!meta?.defaultBoardId || !meta?.defaultListId) continue;
+          await this.setPostMeetingTaskStatus(transcript.id, "trello", { status: "PENDING" });
           for (const task of tasks) {
             const syncResult = await trelloIntegrationService.createTrelloCard(
               workspaceId,
@@ -1222,10 +1273,15 @@ ${content}`;
               url: syncResult.url,
             });
           }
+          await this.setPostMeetingTaskStatus(transcript.id, "trello", {
+            status: "OK",
+            count: tasks.length,
+          });
         } else if (
           integration.provider === IntegrationProvider.NOTION &&
           options?.syncToNotion !== false
         ) {
+          await this.setPostMeetingTaskStatus(transcript.id, "notion", { status: "PENDING" });
           // Export the entire transcript instead of individual tasks
           const syncResult = await notionIntegrationService.exportTranscriptToNotion(
             workspaceId,
@@ -1244,12 +1300,18 @@ ${content}`;
               url: syncResult.url,
             });
           }
+          await this.setPostMeetingTaskStatus(transcript.id, "notion", {
+            status: "OK",
+            count: 1,
+            url: syncResult.url,
+          });
         } else if (
           integration.provider === IntegrationProvider.ASANA &&
           options?.syncToAsana !== false
         ) {
           const meta = integration.metadata as unknown as AsanaIntegrationMetadata | null;
           if (!meta?.defaultProjectGid) continue;
+          await this.setPostMeetingTaskStatus(transcript.id, "asana", { status: "PENDING" });
           for (const task of tasks) {
             const syncResult = await asanaIntegrationService.createAsanaTask(
               workspaceId,
@@ -1262,10 +1324,65 @@ ${content}`;
               url: syncResult.url,
             });
           }
+          await this.setPostMeetingTaskStatus(transcript.id, "asana", {
+            status: "OK",
+            count: tasks.length,
+          });
         }
       } catch (error) {
         logger.error(`Auto-sync failed for ${integration.provider}`, error);
+        if (kind) {
+          await this.setPostMeetingTaskStatus(transcript.id, kind, {
+            status: "FAILED",
+            error: error instanceof Error ? error.message : String(error),
+          });
+        }
       }
+    }
+  }
+
+  /**
+   * Persist the outcome of a single fire-and-forget post-meeting task to the
+   * transcript's `metadata.postMeetingTasks.{kind}`. Best-effort: failures to
+   * write status never bubble up — the side effect itself is what matters.
+   */
+  private async setPostMeetingTaskStatus(
+    transcriptId: string,
+    kind: PostMeetingTaskKind,
+    update: Omit<PostMeetingTaskStatus, "finishedAt"> & { finishedAt?: string },
+  ): Promise<void> {
+    try {
+      const transcript = await prisma.transcript.findUnique({
+        where: { id: transcriptId },
+        select: { metadata: true },
+      });
+      if (!transcript) return;
+
+      const meta: Prisma.JsonObject =
+        typeof transcript.metadata === "object" && transcript.metadata
+          ? { ...(transcript.metadata as Prisma.JsonObject) }
+          : {};
+
+      const tasks: PostMeetingTasksRecord =
+        (meta.postMeetingTasks as PostMeetingTasksRecord | undefined) ?? {};
+
+      const finishedAt =
+        update.status === "OK" || update.status === "FAILED" || update.status === "SKIPPED"
+          ? update.finishedAt ?? new Date().toISOString()
+          : update.finishedAt;
+
+      tasks[kind] = { ...update, finishedAt };
+      meta.postMeetingTasks = tasks as unknown as Prisma.JsonObject;
+
+      await prisma.transcript.update({
+        where: { id: transcriptId },
+        data: { metadata: meta as Prisma.InputJsonValue },
+      });
+    } catch (err) {
+      logger.warn(
+        `Failed to record post-meeting task status (${kind}) for transcript ${transcriptId}`,
+        err,
+      );
     }
   }
 
@@ -1336,6 +1453,7 @@ ${content}`;
     const buffer = await DocumentGenerator.generateDocx(markdownContent);
 
     if (options.exportToGoogleDrive) {
+      await this.setPostMeetingTaskStatus(transcript.id, "googleDrive", { status: "PENDING" });
       try {
         const link = await googleIntegrationService.uploadFileToDrive(
           workspaceId,
@@ -1344,12 +1462,21 @@ ${content}`;
           "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         );
         logger.info(`Successfully exported document to Google Drive: ${link}`);
+        await this.setPostMeetingTaskStatus(transcript.id, "googleDrive", {
+          status: "OK",
+          url: typeof link === "string" ? link : undefined,
+        });
       } catch (err) {
         logger.error("Error exporting to Google Drive:", err);
+        await this.setPostMeetingTaskStatus(transcript.id, "googleDrive", {
+          status: "FAILED",
+          error: err instanceof Error ? err.message : String(err),
+        });
       }
     }
 
     if (options.exportToOneDrive) {
+      await this.setPostMeetingTaskStatus(transcript.id, "oneDrive", { status: "PENDING" });
       try {
         const link = await microsoftIntegrationService.uploadFileToOneDrive(
           workspaceId,
@@ -1357,8 +1484,16 @@ ${content}`;
           buffer,
         );
         logger.info(`Successfully exported document to OneDrive: ${link}`);
+        await this.setPostMeetingTaskStatus(transcript.id, "oneDrive", {
+          status: "OK",
+          url: typeof link === "string" ? link : undefined,
+        });
       } catch (err) {
         logger.error("Error exporting to OneDrive:", err);
+        await this.setPostMeetingTaskStatus(transcript.id, "oneDrive", {
+          status: "FAILED",
+          error: err instanceof Error ? err.message : String(err),
+        });
       }
     }
   }

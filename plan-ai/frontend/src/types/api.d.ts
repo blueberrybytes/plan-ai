@@ -2641,6 +2641,34 @@ export interface components {
             themeId?: string | null;
             isPublic?: boolean;
         };
+        PostMeetingTaskStatus: {
+            /** @enum {string} */
+            status: "PENDING" | "OK" | "FAILED" | "SKIPPED";
+            /** @description Short error message when status is FAILED */
+            error?: string;
+            /** @description ISO timestamp of when the task reached its terminal state */
+            finishedAt?: string;
+            /**
+             * Format: double
+             * @description Number of items processed (e.g. tickets created, tasks synced)
+             */
+            count?: number;
+            /** @description Optional deep link to the produced resource (doc URL, page URL, etc.) */
+            url?: string;
+        };
+        /** @description Make all properties in T optional */
+        "Partial_Record_PostMeetingTaskKind.PostMeetingTaskStatus__": {
+            jira?: components["schemas"]["PostMeetingTaskStatus"];
+            linear?: components["schemas"]["PostMeetingTaskStatus"];
+            trello?: components["schemas"]["PostMeetingTaskStatus"];
+            notion?: components["schemas"]["PostMeetingTaskStatus"];
+            asana?: components["schemas"]["PostMeetingTaskStatus"];
+            googleDrive?: components["schemas"]["PostMeetingTaskStatus"];
+            oneDrive?: components["schemas"]["PostMeetingTaskStatus"];
+            doc?: components["schemas"]["PostMeetingTaskStatus"];
+            slides?: components["schemas"]["PostMeetingTaskStatus"];
+        };
+        PostMeetingTasksRecord: components["schemas"]["Partial_Record_PostMeetingTaskKind.PostMeetingTaskStatus__"];
         TranscriptMetadata: {
             /** @enum {string} */
             processingStatus?: "PENDING" | "PROCESSING" | "EXTRACTING_TASKS" | "COMPLETED" | "FAILED" | "DONE";
@@ -2657,6 +2685,8 @@ export interface components {
             };
             rawTasks?: unknown[];
             principalSpeaker?: string;
+            /** @description Per-step status of fire-and-forget effects kicked off after a transcript is processed */
+            postMeetingTasks?: components["schemas"]["PostMeetingTasksRecord"];
         };
         StandaloneTranscriptResponse: {
             id: string;

@@ -34,6 +34,7 @@ import { ContentCopy as CopyIcon, Check as CheckIcon } from "@mui/icons-material
 import ReactMarkdown from "react-markdown";
 import MermaidRenderer from "../components/common/MermaidRenderer";
 import { AiGraphTrace, ContextGraph } from "../components/project/ContextGraph";
+import PostMeetingTasksPanel from "../components/project/PostMeetingTasksPanel";
 
 const ChatMessageItem = ({ msg }: { msg: { role: string; content: string } }) => {
   const [copied, setCopied] = React.useState(false);
@@ -621,6 +622,8 @@ const ProjectTranscriptDetail: React.FC = () => {
                 </CardContent>
               </Card>
             )}
+
+            <PostMeetingTasksPanel tasks={(transcript.metadata as any)?.postMeetingTasks} />
 
             {transcript.chatThread && transcript.chatThread.messages.length > 0 && (
               <Card variant="outlined">

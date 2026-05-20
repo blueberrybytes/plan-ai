@@ -670,6 +670,28 @@ const models: TsoaRoute.Models = {
         "additionalProperties": false,
     },
     // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "PostMeetingTaskStatus": {
+        "dataType": "refObject",
+        "properties": {
+            "status": {"dataType":"union","subSchemas":[{"dataType":"enum","enums":["PENDING"]},{"dataType":"enum","enums":["OK"]},{"dataType":"enum","enums":["FAILED"]},{"dataType":"enum","enums":["SKIPPED"]}],"required":true},
+            "error": {"dataType":"string"},
+            "finishedAt": {"dataType":"string"},
+            "count": {"dataType":"double"},
+            "url": {"dataType":"string"},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "Partial_Record_PostMeetingTaskKind.PostMeetingTaskStatus__": {
+        "dataType": "refAlias",
+        "type": {"dataType":"nestedObjectLiteral","nestedProperties":{"jira":{"ref":"PostMeetingTaskStatus"},"linear":{"ref":"PostMeetingTaskStatus"},"trello":{"ref":"PostMeetingTaskStatus"},"notion":{"ref":"PostMeetingTaskStatus"},"asana":{"ref":"PostMeetingTaskStatus"},"googleDrive":{"ref":"PostMeetingTaskStatus"},"oneDrive":{"ref":"PostMeetingTaskStatus"},"doc":{"ref":"PostMeetingTaskStatus"},"slides":{"ref":"PostMeetingTaskStatus"}},"validators":{}},
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "PostMeetingTasksRecord": {
+        "dataType": "refAlias",
+        "type": {"ref":"Partial_Record_PostMeetingTaskKind.PostMeetingTaskStatus__","validators":{}},
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
     "TranscriptMetadata": {
         "dataType": "refObject",
         "properties": {
@@ -680,6 +702,7 @@ const models: TsoaRoute.Models = {
             "location": {"dataType":"nestedObjectLiteral","nestedProperties":{"accuracy":{"dataType":"union","subSchemas":[{"dataType":"double"},{"dataType":"enum","enums":[null]}]},"longitude":{"dataType":"double","required":true},"latitude":{"dataType":"double","required":true}}},
             "rawTasks": {"dataType":"array","array":{"dataType":"any"}},
             "principalSpeaker": {"dataType":"string"},
+            "postMeetingTasks": {"ref":"PostMeetingTasksRecord"},
         },
         "additionalProperties": false,
     },

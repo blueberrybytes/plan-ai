@@ -1718,6 +1718,77 @@
 				"type": "object",
 				"additionalProperties": false
 			},
+			"PostMeetingTaskStatus": {
+				"properties": {
+					"status": {
+						"type": "string",
+						"enum": [
+							"PENDING",
+							"OK",
+							"FAILED",
+							"SKIPPED"
+						]
+					},
+					"error": {
+						"type": "string",
+						"description": "Short error message when status is FAILED"
+					},
+					"finishedAt": {
+						"type": "string",
+						"description": "ISO timestamp of when the task reached its terminal state"
+					},
+					"count": {
+						"type": "number",
+						"format": "double",
+						"description": "Number of items processed (e.g. tickets created, tasks synced)"
+					},
+					"url": {
+						"type": "string",
+						"description": "Optional deep link to the produced resource (doc URL, page URL, etc.)"
+					}
+				},
+				"required": [
+					"status"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"Partial_Record_PostMeetingTaskKind.PostMeetingTaskStatus__": {
+				"properties": {
+					"jira": {
+						"$ref": "#/components/schemas/PostMeetingTaskStatus"
+					},
+					"linear": {
+						"$ref": "#/components/schemas/PostMeetingTaskStatus"
+					},
+					"trello": {
+						"$ref": "#/components/schemas/PostMeetingTaskStatus"
+					},
+					"notion": {
+						"$ref": "#/components/schemas/PostMeetingTaskStatus"
+					},
+					"asana": {
+						"$ref": "#/components/schemas/PostMeetingTaskStatus"
+					},
+					"googleDrive": {
+						"$ref": "#/components/schemas/PostMeetingTaskStatus"
+					},
+					"oneDrive": {
+						"$ref": "#/components/schemas/PostMeetingTaskStatus"
+					},
+					"doc": {
+						"$ref": "#/components/schemas/PostMeetingTaskStatus"
+					},
+					"slides": {
+						"$ref": "#/components/schemas/PostMeetingTaskStatus"
+					}
+				},
+				"type": "object",
+				"description": "Make all properties in T optional"
+			},
+			"PostMeetingTasksRecord": {
+				"$ref": "#/components/schemas/Partial_Record_PostMeetingTaskKind.PostMeetingTaskStatus__"
+			},
 			"TranscriptMetadata": {
 				"properties": {
 					"processingStatus": {
@@ -1771,6 +1842,10 @@
 					},
 					"principalSpeaker": {
 						"type": "string"
+					},
+					"postMeetingTasks": {
+						"$ref": "#/components/schemas/PostMeetingTasksRecord",
+						"description": "Per-step status of fire-and-forget effects kicked off after a transcript is processed"
 					}
 				},
 				"type": "object",
@@ -6386,7 +6461,7 @@
 	},
 	"info": {
 		"title": "backend",
-		"version": "2.2.0",
+		"version": "2.3.0",
 		"license": {
 			"name": "PolyForm-Noncommercial-1.0.0"
 		},
