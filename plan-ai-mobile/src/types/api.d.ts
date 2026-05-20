@@ -2848,6 +2848,8 @@ export interface components {
                 url: string;
                 taskGid: string;
             };
+            publicDocUrl?: string;
+            publicSlidesUrl?: string;
         };
         ApiResponse_TaskMetadata_: {
             message?: string;

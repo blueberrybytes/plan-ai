@@ -142,3 +142,17 @@ If after a meet a sync fails to Jira, Linear or whatever we need to somehow stor
 
 ## 19 Improve location
 Use latitude and longitude to place like Barcelona.
+
+## 20 Add doc/slides public meet to the ticket
+✅ **Done** — Public doc/slides URLs are now written to task metadata and displayed on web, Electron, and mobile. All 5 ticketing integrations (Linear, Jira, Trello, Notion, Asana) include the links in the ticket description when available.
+
+## 21 Refactor of Recorder when generating tasks (UI overhaul)
+✅ **Done** — Removed AI model selector, reorganized layout into 3 grouped card sections (Project & Task Strategy, Sync to Integrations, Generate Assets) with 2-column checkbox grids, reduced top padding, wider max-width.
+
+## 22 Show integration metadata & badges on task details (Web/Recorder/Mobile)
+✅ **Done** — All three apps (Web, Recorder, Mobile) now show clickable integration badges (Jira, Linear, Trello, Notion, Asana) with external links from `task.metadata`, plus public doc/slides chips.
+**Remaining:** Cloud storage badges (Google Drive, OneDrive) are not yet shown on task detail views — these are transcript-level metadata, not task-level.
+
+## 23 Sequence doc/slides generation before ticket sync
+**Problem:** `autoSyncTasks` fires concurrently with doc/slides generation, so the initial auto-created tickets (Jira, Linear, etc.) don't include the public doc/slides links — they only appear on manual re-sync.
+**Solution:** Restructure `processPendingTranscript` so that doc/slides generation runs first (awaited), then `autoSyncTasks` fires after metadata is populated. Trade-off: initial processing becomes slightly slower (sequential instead of parallel), but guarantees links are always on the ticket from the start.

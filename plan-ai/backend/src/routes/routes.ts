@@ -827,6 +827,8 @@ const models: TsoaRoute.Models = {
             "trello": {"dataType":"nestedObjectLiteral","nestedProperties":{"shortLink":{"dataType":"string","required":true},"url":{"dataType":"string","required":true},"cardId":{"dataType":"string","required":true}}},
             "notion": {"dataType":"nestedObjectLiteral","nestedProperties":{"url":{"dataType":"string","required":true},"pageId":{"dataType":"string","required":true}}},
             "asana": {"dataType":"nestedObjectLiteral","nestedProperties":{"url":{"dataType":"string","required":true},"taskGid":{"dataType":"string","required":true}}},
+            "publicDocUrl": {"dataType":"string"},
+            "publicSlidesUrl": {"dataType":"string"},
         },
         "additionalProperties": false,
     },

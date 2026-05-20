@@ -809,6 +809,129 @@ const TranscriptView: React.FC = () => {
                               </Typography>
                             </Box>
                           )}
+
+                          {/* Integration Badges */}
+                          {((selectedTask.metadata as Record<string, unknown> | null)?.jira ||
+                            (selectedTask.metadata as Record<string, unknown> | null)?.linear ||
+                            (selectedTask.metadata as Record<string, unknown> | null)?.trello ||
+                            (selectedTask.metadata as Record<string, unknown> | null)?.notion ||
+                            (selectedTask.metadata as Record<string, unknown> | null)?.asana) ? (
+                            <Box sx={{ mb: 3 }}>
+                              <Typography
+                                variant="subtitle2"
+                                color="text.secondary"
+                                gutterBottom
+                                sx={{
+                                  textTransform: "uppercase",
+                                  letterSpacing: 0.5,
+                                }}
+                              >
+                                Integrations
+                              </Typography>
+                              <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', gap: 0.5 }}>
+                                {(selectedTask.metadata as Record<string, Record<string, string>> | null)?.jira && (
+                                  <Chip
+                                    label={(selectedTask.metadata as Record<string, Record<string, string>>).jira.issueKey || "Jira"}
+                                    size="small"
+                                    color="primary"
+                                    variant="filled"
+                                    onClick={() => window.open((selectedTask.metadata as Record<string, Record<string, string>>).jira.url, "_blank")}
+                                    sx={{ cursor: "pointer", fontWeight: 600 }}
+                                  />
+                                )}
+                                {(selectedTask.metadata as Record<string, Record<string, string>> | null)?.linear && (
+                                  <Chip
+                                    label={(selectedTask.metadata as Record<string, Record<string, string>>).linear.identifier || "Linear"}
+                                    size="small"
+                                    style={{ backgroundColor: "#5E6AD2", color: "white" }}
+                                    variant="filled"
+                                    onClick={() => window.open((selectedTask.metadata as Record<string, Record<string, string>>).linear.url, "_blank")}
+                                    sx={{ cursor: "pointer", fontWeight: 600 }}
+                                  />
+                                )}
+                                {(selectedTask.metadata as Record<string, Record<string, string>> | null)?.trello && (
+                                  <Chip
+                                    label={(selectedTask.metadata as Record<string, Record<string, string>>).trello.shortLink || "Trello"}
+                                    size="small"
+                                    style={{ backgroundColor: "#0079BF", color: "white" }}
+                                    variant="filled"
+                                    onClick={() => window.open((selectedTask.metadata as Record<string, Record<string, string>>).trello.url, "_blank")}
+                                    sx={{ cursor: "pointer", fontWeight: 600 }}
+                                  />
+                                )}
+                                {(selectedTask.metadata as Record<string, Record<string, string>> | null)?.notion && (
+                                  <Chip
+                                    label="Notion"
+                                    size="small"
+                                    style={{ backgroundColor: "#000000", color: "white" }}
+                                    variant="filled"
+                                    onClick={() => window.open((selectedTask.metadata as Record<string, Record<string, string>>).notion.url, "_blank")}
+                                    sx={{ cursor: "pointer", fontWeight: 600 }}
+                                  />
+                                )}
+                                {(selectedTask.metadata as Record<string, Record<string, string>> | null)?.asana && (
+                                  <Chip
+                                    label="Asana"
+                                    size="small"
+                                    style={{ backgroundColor: "#F06A6A", color: "white" }}
+                                    variant="filled"
+                                    onClick={() => window.open((selectedTask.metadata as Record<string, Record<string, string>>).asana.url, "_blank")}
+                                    sx={{ cursor: "pointer", fontWeight: 600 }}
+                                  />
+                                )}
+                              </Stack>
+                            </Box>
+                          ) : null}
+
+                          {/* Generated Assets */}
+                          {((selectedTask.metadata as Record<string, unknown> | null)?.publicDocUrl ||
+                            (selectedTask.metadata as Record<string, unknown> | null)?.publicSlidesUrl) ? (
+                            <Box sx={{ mb: 3 }}>
+                              <Typography
+                                variant="subtitle2"
+                                color="text.secondary"
+                                gutterBottom
+                                sx={{
+                                  textTransform: "uppercase",
+                                  letterSpacing: 0.5,
+                                }}
+                              >
+                                Generated Assets
+                              </Typography>
+                              <Stack direction="row" spacing={1}>
+                                {(selectedTask.metadata as Record<string, unknown> | null)?.publicDocUrl ? (
+                                  <Chip
+                                    label="📄 Public Document"
+                                    size="small"
+                                    color="secondary"
+                                    variant="outlined"
+                                    onClick={() =>
+                                      window.open(
+                                        `${import.meta.env.VITE_PLAN_AI_WEB_URL}${(selectedTask.metadata as Record<string, unknown>)?.publicDocUrl}`,
+                                        "_blank",
+                                      )
+                                    }
+                                    sx={{ cursor: "pointer", fontWeight: 600 }}
+                                  />
+                                ) : null}
+                                {(selectedTask.metadata as Record<string, unknown> | null)?.publicSlidesUrl ? (
+                                  <Chip
+                                    label="📊 Public Slides"
+                                    size="small"
+                                    color="secondary"
+                                    variant="outlined"
+                                    onClick={() =>
+                                      window.open(
+                                        `${import.meta.env.VITE_PLAN_AI_WEB_URL}${(selectedTask.metadata as Record<string, unknown>)?.publicSlidesUrl}`,
+                                        "_blank",
+                                      )
+                                    }
+                                    sx={{ cursor: "pointer", fontWeight: 600 }}
+                                  />
+                                ) : null}
+                              </Stack>
+                            </Box>
+                          ) : null}
                         </Box>
                       ) : (
                         <Box

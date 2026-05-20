@@ -23,6 +23,7 @@ import {
   WarningAmber as WarningIcon,
   Info as InfoIcon,
   Fingerprint as FingerprintIcon,
+  BugReport as BugIcon,
 } from "@mui/icons-material";
 import AppleIcon from "@mui/icons-material/Apple";
 import GoogleIcon from "@mui/icons-material/Google";
@@ -408,11 +409,28 @@ const Profile: React.FC = () => {
 
             <Button
               variant="outlined"
+              color="inherit"
+              fullWidth
+              startIcon={<BugIcon />}
+              onClick={() => navigate("/debug")}
+              sx={{
+                mt: "auto",
+                py: 1.2,
+                mb: 1.5,
+                borderColor: "rgba(255,255,255,0.2)",
+                color: "text.secondary",
+              }}
+            >
+              Export Debug Logs
+            </Button>
+
+            <Button
+              variant="outlined"
               color="error"
               fullWidth
               startIcon={<LogoutIcon />}
               onClick={handleLogout}
-              sx={{ mt: "auto", py: 1.2, mb: 1 }}
+              sx={{ py: 1.2, mb: 1 }}
             >
               Sign Out Securely
             </Button>

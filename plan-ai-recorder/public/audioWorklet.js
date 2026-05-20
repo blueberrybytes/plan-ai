@@ -70,23 +70,30 @@ class PCMProcessor extends AudioWorkletProcessor {
       }
 
       // Echo Suppression: Duck microphone if system audio is playing
-      let duckFactor = 1.0;
+      let targetDuck = 1.0;
       if (!this.disableDucking) {
-        // We estimate the echo level in the mic. Usually echo is much quieter than sysSample (e.g. 10-20%)
-        // We use the smoothed envelopes to avoid zero-crossing distortion
-        const expectedEcho = this.sysEnvelope * 0.3; // Assume max 30% acoustic coupling
-        const isUserSpeaking = this.micEnvelope > expectedEcho * 1.5;
+        // We estimate the echo level in the mic. Usually echo is much quieter than sysSample
+        const expectedEcho = this.sysEnvelope * 0.15; 
+        const isUserSpeaking = this.micEnvelope > expectedEcho * 2.0;
 
         if (!isUserSpeaking) {
-          if (this.sysEnvelope > 0.005) { 
-              duckFactor = 0.0; // fully mute mic to prevent echo
-          } else if (this.sysEnvelope > 0.001) { 
-              duckFactor = 1.0 - ((this.sysEnvelope - 0.001) / 0.004);
+          if (this.sysEnvelope > 0.02) { 
+              targetDuck = 0.1; // duck by 20dB instead of fully muting
+          } else if (this.sysEnvelope > 0.005) { 
+              targetDuck = 1.0 - ((this.sysEnvelope - 0.005) / 0.015) * 0.9;
           }
         }
       }
       
-      micSample = micSample * duckFactor;
+      // Smoothly approach target duck factor to prevent audio popping/dropouts
+      if (this.smoothedDuckFactor === undefined) this.smoothedDuckFactor = 1.0;
+      if (targetDuck < this.smoothedDuckFactor) {
+         this.smoothedDuckFactor = 0.995 * this.smoothedDuckFactor + 0.005 * targetDuck; // 5ms attack
+      } else {
+         this.smoothedDuckFactor = 0.9995 * this.smoothedDuckFactor + 0.0005 * targetDuck; // 50ms release
+      }
+
+      micSample = micSample * this.smoothedDuckFactor;
 
       // 0. Pass-through original audio to outputs for MediaRecorder
       if (outputs && outputs.length > 0 && outputs[0] && outputs[0].length > 0) {
@@ -113,9 +120,10 @@ class PCMProcessor extends AudioWorkletProcessor {
         if (this.frameCount % 20 === 0) {
           const hasOutputs = outputs && outputs.length > 0;
           const numOutputs = hasOutputs ? outputs[0].length : 0;
+          const currentDuck = this.smoothedDuckFactor || 1.0;
           this.port.postMessage({
             type: "debug",
-            message: `[Worklet] Captured audio. RMS Mic: ${rmsMic.toFixed(4)}, RMS Sys: ${rmsSys.toFixed(4)}, duckFactor: ${duckFactor.toFixed(2)}, outputs: ${hasOutputs}, numChannels: ${numOutputs}`,
+            message: `[Worklet] Captured audio. RMS Mic: ${rmsMic.toFixed(4)}, RMS Sys: ${rmsSys.toFixed(4)}, duckFactor: ${currentDuck.toFixed(2)}, outputs: ${hasOutputs}, numChannels: ${numOutputs}`,
             rmsMic: rmsMic,
             rmsSys: rmsSys,
           });

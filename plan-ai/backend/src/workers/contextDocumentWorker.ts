@@ -83,6 +83,7 @@ ${rawText.slice(0, 10000)}`;
       const keywordsPromise = generateText({
         model,
         temperature: 0.1,
+        abortSignal: AbortSignal.timeout(30000),
         output: Output.object({
           schema: z.object({
             keywords: z.array(z.string()).describe("The extracted unique keywords and terms."),
@@ -109,6 +110,7 @@ Rules:
         formattingPromise = generateText({
           model,
           temperature: 0.1,
+          abortSignal: AbortSignal.timeout(60000),
           system: systemPrompt,
           prompt: rawText,
         }).catch((err) => {

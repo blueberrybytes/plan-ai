@@ -22,4 +22,6 @@ export interface TaskMetadata {
     taskGid: string;
     url: string;
   };
+  publicDocUrl?: string;
+  publicSlidesUrl?: string;
 }

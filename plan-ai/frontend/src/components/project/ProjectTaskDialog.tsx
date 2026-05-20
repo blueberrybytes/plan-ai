@@ -286,6 +286,54 @@ const ProjectTaskDialog: React.FC<ProjectTaskDialogProps> = ({
               </Stack>
             </Stack>
 
+            {(extendedTask.metadata?.publicDocUrl || extendedTask.metadata?.publicSlidesUrl) ? (
+              <Stack spacing={0.5}>
+                <Typography variant="subtitle2" color="text.secondary">
+                  Generated Assets
+                </Typography>
+                <Stack direction="row" spacing={1}>
+                  {extendedTask.metadata?.publicDocUrl ? (
+                    <Chip
+                      label="Public Document"
+                      size="small"
+                      color="secondary"
+                      variant="filled"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (extendedTask.metadata?.publicDocUrl) {
+                          window.open(
+                            extendedTask.metadata.publicDocUrl,
+                            "_blank",
+                            "noopener,noreferrer",
+                          );
+                        }
+                      }}
+                      sx={{ cursor: "pointer", fontWeight: 600, height: 24 }}
+                    />
+                  ) : null}
+                  {extendedTask.metadata?.publicSlidesUrl ? (
+                    <Chip
+                      label="Public Slides"
+                      size="small"
+                      color="secondary"
+                      variant="filled"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (extendedTask.metadata?.publicSlidesUrl) {
+                          window.open(
+                            extendedTask.metadata.publicSlidesUrl,
+                            "_blank",
+                            "noopener,noreferrer",
+                          );
+                        }
+                      }}
+                      sx={{ cursor: "pointer", fontWeight: 600, height: 24 }}
+                    />
+                  ) : null}
+                </Stack>
+              </Stack>
+            ) : null}
+
             <Stack spacing={0.5}>
               <Typography variant="subtitle2" color="text.secondary">
                 Dependencies

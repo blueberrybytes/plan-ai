@@ -259,8 +259,8 @@ function handleProtocolUrl(rawUrl: string) {
 
 function createWindow(): void {
   mainWindow = new BrowserWindow({
-    width: 920,
-    height: 800,
+    width: 1200,
+    height: 900,
     minWidth: 800,
     minHeight: 600,
     backgroundColor: "#0b0d11",

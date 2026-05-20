@@ -782,10 +782,23 @@ export class ProjectTranscriptService {
         })
         .then(async (doc) => {
           logger.info(`Auto-generated document ${doc.id} for transcript ${result.transcript.id}`);
+          const publicUrl = `/doc/public/${doc.id}`;
           await this.setPostMeetingTaskStatus(result.transcript.id, "doc", {
             status: "OK",
             url: `/docs/view/${doc.id}`,
           });
+
+          for (const task of result.createdTasks) {
+            const currentTask = await prisma.task.findUnique({ where: { id: task.id } });
+            if (currentTask) {
+              const metadata: TaskMetadata = (currentTask.metadata as TaskMetadata) ?? {};
+              metadata.publicDocUrl = publicUrl;
+              await prisma.task.update({
+                where: { id: task.id },
+                data: { metadata: metadata as Prisma.InputJsonObject }
+              });
+            }
+          }
         })
         .catch(async (err) => {
           logger.error(
@@ -815,10 +828,23 @@ export class ProjectTranscriptService {
         )
         .then(async (pres) => {
           logger.info(`Auto-generated slides ${pres.id} for transcript ${result.transcript.id}`);
+          const publicUrl = `/p/${pres.id}`;
           await this.setPostMeetingTaskStatus(result.transcript.id, "slides", {
             status: "OK",
             url: `/presentations/${pres.id}`,
           });
+
+          for (const task of result.createdTasks) {
+            const currentTask = await prisma.task.findUnique({ where: { id: task.id } });
+            if (currentTask) {
+              const metadata: TaskMetadata = (currentTask.metadata as TaskMetadata) ?? {};
+              metadata.publicSlidesUrl = publicUrl;
+              await prisma.task.update({
+                where: { id: task.id },
+                data: { metadata: metadata as Prisma.InputJsonObject }
+              });
+            }
+          }
         })
         .catch(async (err) => {
           logger.error(
