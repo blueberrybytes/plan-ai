@@ -385,6 +385,23 @@ export const createPlanAiApi = (
       return handleResponseWithRetry<Transcript>(res, () => req(true));
     },
 
+    async retryPostMeetingTask(
+      transcriptId: string,
+      kind: components["schemas"]["PostMeetingTaskKind"],
+    ): Promise<{ success: boolean }> {
+      const req = async (force: boolean) =>
+        safeFetch(
+          `${BASE_URL}/api/transcripts/${transcriptId}/post-meeting-tasks/${kind}/retry`,
+          {
+            method: "POST",
+            headers: await getAuthHeaders(force),
+          },
+        );
+
+      const res = await req(false);
+      return handleResponseWithRetry<{ success: boolean }>(res, () => req(true));
+    },
+
     async sendLiveChatMessage(payload: {
       content: string;
       liveTranscript: string;
