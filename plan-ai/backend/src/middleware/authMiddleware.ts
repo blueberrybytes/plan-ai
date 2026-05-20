@@ -46,6 +46,19 @@ export const authenticateUser = async (
       authRole: decodedToken.role || Role.CLIENT,
     };
 
+    // Attach workspace/user context so any logger.error fired during the
+    // request lands in Sentry tagged correctly. Best-effort — never blocks.
+    try {
+      const wsHeader = req.headers["x-workspace-id"];
+      const workspaceId = Array.isArray(wsHeader) ? wsHeader[0] : wsHeader;
+      const scope = Sentry.getCurrentScope();
+      scope.setUser({ id: decodedToken.uid, email: userEmail });
+      if (workspaceId) scope.setTag("workspaceId", workspaceId);
+      scope.setTag("route", `${req.method} ${req.path}`);
+    } catch {
+      // ignore — scope mutation must never break the request
+    }
+
     // Fetch user from DB using the secure Firebase UID
     const dbUser = await prisma.user.findUnique({
       where: { firebaseUid: decodedToken.uid },
@@ -157,6 +170,19 @@ export function expressAuthentication(
           // Set user role on request object for later use if it exists
           if (dbUser) {
             request.userRole = dbUser.role;
+          }
+
+          // Attach workspace/user context to the current Sentry scope so any
+          // logger.error fired during the request is attributable.
+          try {
+            const wsHeader = request.headers["x-workspace-id"];
+            const workspaceId = Array.isArray(wsHeader) ? wsHeader[0] : wsHeader;
+            const scope = Sentry.getCurrentScope();
+            scope.setUser({ id: decodedToken.uid, email: userEmail });
+            if (workspaceId) scope.setTag("workspaceId", workspaceId);
+            scope.setTag("route", `${request.method} ${request.path}`);
+          } catch {
+            // ignore — scope mutation must never break auth
           }
 
           // Handle different security schemes

@@ -34,6 +34,9 @@ import { RootState } from "../../store/store";
 import { useNavigate } from "react-router-dom";
 import AiModelSelector from "../common/AiModelSelector";
 
+// Feature flag — set to true to re-enable the AI Graph Trace visualization in chat replies.
+const SHOW_AI_GRAPH_TRACE = false;
+
 interface ChatWindowProps {
   activeThread: ChatThread | null;
   messages: ChatMessage[];
@@ -433,7 +436,8 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
                   </Box>
                 )}
 
-                {aiGraphTrace && aiGraphTrace.nodes.length > 0 && (
+                {/* AI Graph Trace temporarily hidden — flip SHOW_AI_GRAPH_TRACE to re-enable. */}
+                {SHOW_AI_GRAPH_TRACE && aiGraphTrace && aiGraphTrace.nodes.length > 0 && (
                   <Box sx={{ mt: 2, pt: 1, borderTop: 1, borderColor: "divider" }}>
                     <Box sx={{ mt: 1, minWidth: { xs: "250px", sm: "400px" }, width: "100%" }}>
                       <Typography

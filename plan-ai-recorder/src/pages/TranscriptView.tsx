@@ -24,6 +24,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 import type { Transcript, Task } from "../services/planAiApi";
 import ReactMarkdown from "react-markdown";
+import PostMeetingTasksPanel from "../components/PostMeetingTasksPanel";
 
 const MermaidImgRenderer = ({ tasks }: { tasks: Task[] }) => {
   if (!tasks || tasks.length === 0) return null;
@@ -317,7 +318,13 @@ const TranscriptView: React.FC = () => {
       transcript?.metadata?.processingStatus === "PROCESSING" ||
       transcript?.metadata?.processingStatus === "EXTRACTING_TASKS";
 
-    if (isProcessing) {
+    const hasPendingPostMeetingTask =
+      transcript?.metadata?.postMeetingTasks &&
+      Object.values(transcript.metadata.postMeetingTasks).some(
+        (t) => t?.status === "PENDING",
+      );
+
+    if (isProcessing || hasPendingPostMeetingTask) {
       timeoutId = setTimeout(() => {
         void fetchTranscript(true);
       }, 3000);
@@ -994,6 +1001,13 @@ const TranscriptView: React.FC = () => {
                 {tabValue === "diagram" && transcript.tasks && (
                   <MermaidImgRenderer tasks={transcript.tasks} />
                 )}
+
+                <PostMeetingTasksPanel
+                  api={api}
+                  transcriptId={transcript.id}
+                  tasks={transcript.metadata?.postMeetingTasks}
+                  onAfterRetry={() => void fetchTranscript(true)}
+                />
               </>
             ) : (
               <>

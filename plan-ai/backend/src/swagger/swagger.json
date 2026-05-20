@@ -1851,6 +1851,27 @@
 				"type": "object",
 				"additionalProperties": false
 			},
+			"TranscriptContextSummary": {
+				"properties": {
+					"id": {
+						"type": "string"
+					},
+					"name": {
+						"type": "string"
+					},
+					"color": {
+						"type": "string",
+						"nullable": true
+					}
+				},
+				"required": [
+					"id",
+					"name",
+					"color"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
 			"StandaloneTranscriptResponse": {
 				"properties": {
 					"id": {
@@ -1953,6 +1974,20 @@
 						},
 						"type": "array"
 					},
+					"contextIds": {
+						"items": {
+							"type": "string"
+						},
+						"type": "array",
+						"description": "IDs of contexts attached to this transcript."
+					},
+					"contexts": {
+						"items": {
+							"$ref": "#/components/schemas/TranscriptContextSummary"
+						},
+						"type": "array",
+						"description": "Resolved context summaries (id + name + color). Empty when not enriched by the caller."
+					},
 					"chatThread": {
 						"properties": {
 							"messages": {
@@ -2010,7 +2045,9 @@
 					"recordedAt",
 					"metadata",
 					"createdAt",
-					"updatedAt"
+					"updatedAt",
+					"contextIds",
+					"contexts"
 				],
 				"type": "object",
 				"additionalProperties": false
@@ -6481,7 +6518,7 @@
 	},
 	"info": {
 		"title": "backend",
-		"version": "2.4.0",
+		"version": "2.5.0",
 		"license": {
 			"name": "PolyForm-Noncommercial-1.0.0"
 		},

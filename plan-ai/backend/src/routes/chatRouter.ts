@@ -76,6 +76,47 @@ router.post(
           toolsUsed.push("Plan AI Graph Power");
         }
 
+        // 2a. Also pull transcripts attached to any of the selected contexts so
+        // the chat can reason over recorded meetings, not just uploaded files.
+        try {
+          const attachedTranscripts = await prisma.transcript.findMany({
+            where: {
+              workspaceId,
+              contextIds: { hasSome: thread.contextIds },
+            },
+            select: {
+              id: true,
+              title: true,
+              summary: true,
+              transcript: true,
+              recordedAt: true,
+            },
+            orderBy: { createdAt: "desc" },
+            take: 20, // cap to avoid blowing the context window
+          });
+
+          if (attachedTranscripts.length > 0) {
+            const blocks = attachedTranscripts.map((t) => {
+              const heading = `## Meeting: ${t.title || "Untitled"}${
+                t.recordedAt ? ` (${new Date(t.recordedAt).toISOString().slice(0, 10)})` : ""
+              }`;
+              const body = t.summary?.trim()
+                ? t.summary
+                : (t.transcript ?? "").slice(0, 4000); // truncate raw transcript fallback
+              return `${heading}\n${body}`;
+            });
+            const transcriptsSection = `\n\nRelevant Meeting Transcripts (attached to selected contexts):\n${blocks.join(
+              "\n\n---\n\n",
+            )}`;
+            contextText = contextText
+              ? `${contextText}\n\n---\n\n${transcriptsSection.trim()}`
+              : transcriptsSection.trim();
+            toolsUsed.push(`${attachedTranscripts.length} Meeting Transcripts`);
+          }
+        } catch (err) {
+          logger.warn("Failed to enrich chat context with attached transcripts", err);
+        }
+
         // 2b. Check for MCP tools availability (memory, search, codebase)
         if (mcpClientService.isAvailable) {
           // Check if we should pass repo context for codebase queries

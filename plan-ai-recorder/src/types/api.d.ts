@@ -2710,6 +2710,11 @@ export interface components {
             /** @description Per-step status of fire-and-forget effects kicked off after a transcript is processed */
             postMeetingTasks?: components["schemas"]["PostMeetingTasksRecord"];
         };
+        TranscriptContextSummary: {
+            id: string;
+            name: string;
+            color: string | null;
+        };
         StandaloneTranscriptResponse: {
             id: string;
             projectId: string | null;
@@ -2738,6 +2743,10 @@ export interface components {
             updatedAt: string;
             tasks?: components["schemas"]["TaskResponse"][];
             documents?: components["schemas"]["DocDocumentResponse"][];
+            /** @description IDs of contexts attached to this transcript. */
+            contextIds: string[];
+            /** @description Resolved context summaries (id + name + color). Empty when not enriched by the caller. */
+            contexts: components["schemas"]["TranscriptContextSummary"][];
             chatThread?: {
                 messages: {
                     /** Format: date-time */

@@ -59,6 +59,9 @@ app.use(
 
 // Add route logging middleware before registering routes
 app.use((req, res, next) => {
+  if (process.env.ENV === "local") {
+    console.debug(`Request received: ${req.method} ${req.path}`);
+  }
   console.debug(`Request received: ${req.method} ${req.path}`);
   next();
 });
@@ -149,8 +152,14 @@ app.use((err: unknown, req: express.Request, res: express.Response, next: expres
   }
 
   // Handle plain object errors thrown by BaseWorkspaceController (e.g. { status: 400, message: "..." })
-  if (typeof err === "object" && err !== null && !Array.isArray(err) && "status" in err && "message" in err) {
-    const errObj = err as { status: number, message: string };
+  if (
+    typeof err === "object" &&
+    err !== null &&
+    !Array.isArray(err) &&
+    "status" in err &&
+    "message" in err
+  ) {
+    const errObj = err as { status: number; message: string };
     console.warn(`[Controller Error] ${errObj.status}: ${errObj.message}`);
     res.status(errObj.status).json({ message: errObj.message });
     return;

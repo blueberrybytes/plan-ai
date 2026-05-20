@@ -707,6 +707,16 @@ const models: TsoaRoute.Models = {
         "additionalProperties": false,
     },
     // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "TranscriptContextSummary": {
+        "dataType": "refObject",
+        "properties": {
+            "id": {"dataType":"string","required":true},
+            "name": {"dataType":"string","required":true},
+            "color": {"dataType":"union","subSchemas":[{"dataType":"string"},{"dataType":"enum","enums":[null]}],"required":true},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
     "StandaloneTranscriptResponse": {
         "dataType": "refObject",
         "properties": {
@@ -729,6 +739,8 @@ const models: TsoaRoute.Models = {
             "updatedAt": {"dataType":"datetime","required":true},
             "tasks": {"dataType":"array","array":{"dataType":"refObject","ref":"TaskResponse"}},
             "documents": {"dataType":"array","array":{"dataType":"refObject","ref":"DocDocumentResponse"}},
+            "contextIds": {"dataType":"array","array":{"dataType":"string"},"required":true},
+            "contexts": {"dataType":"array","array":{"dataType":"refObject","ref":"TranscriptContextSummary"},"required":true},
             "chatThread": {"dataType":"union","subSchemas":[{"dataType":"nestedObjectLiteral","nestedProperties":{"messages":{"dataType":"array","array":{"dataType":"nestedObjectLiteral","nestedProperties":{"createdAt":{"dataType":"datetime","required":true},"content":{"dataType":"string","required":true},"role":{"dataType":"union","subSchemas":[{"dataType":"enum","enums":["USER"]},{"dataType":"enum","enums":["ASSISTANT"]}],"required":true}}},"required":true},"title":{"dataType":"string","required":true},"id":{"dataType":"string","required":true}}},{"dataType":"enum","enums":[null]}]},
         },
         "additionalProperties": false,
