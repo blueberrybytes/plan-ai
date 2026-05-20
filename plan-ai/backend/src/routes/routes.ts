@@ -814,6 +814,11 @@ const models: TsoaRoute.Models = {
         "type": {"dataType":"nestedObjectLiteral","nestedProperties":{"message":{"dataType":"string"},"data":{"dataType":"union","subSchemas":[{"dataType":"nestedObjectLiteral","nestedProperties":{"success":{"dataType":"boolean","required":true}}},{"dataType":"enum","enums":[null]}],"required":true},"status":{"dataType":"double","required":true}},"validators":{}},
     },
     // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "PostMeetingTaskKind": {
+        "dataType": "refAlias",
+        "type": {"dataType":"union","subSchemas":[{"dataType":"enum","enums":["jira"]},{"dataType":"enum","enums":["linear"]},{"dataType":"enum","enums":["trello"]},{"dataType":"enum","enums":["notion"]},{"dataType":"enum","enums":["asana"]},{"dataType":"enum","enums":["googleDrive"]},{"dataType":"enum","enums":["oneDrive"]},{"dataType":"enum","enums":["doc"]},{"dataType":"enum","enums":["slides"]}],"validators":{}},
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
     "TaskMetadata": {
         "dataType": "refObject",
         "properties": {
@@ -3657,6 +3662,39 @@ export function RegisterRoutes(app: Router,opts?:{multer?:ReturnType<typeof mult
 
               await templateService.apiHandler({
                 methodName: 'reprocessTranscript',
+                controller,
+                response,
+                next,
+                validatedArgs,
+                successStatus: undefined,
+              });
+            } catch (err) {
+                return next(err);
+            }
+        });
+        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+        const argsTranscriptsController_retryPostMeetingTask: Record<string, TsoaRoute.ParameterSchema> = {
+                request: {"in":"request","name":"request","required":true,"dataType":"object"},
+                id: {"in":"path","name":"id","required":true,"dataType":"string"},
+                kind: {"in":"path","name":"kind","required":true,"ref":"PostMeetingTaskKind"},
+        };
+        app.post('/api/transcripts/:id/post-meeting-tasks/:kind/retry',
+            authenticateMiddleware([{"ClientLevel":[]}]),
+            ...(fetchMiddlewares<RequestHandler>(TranscriptsController)),
+            ...(fetchMiddlewares<RequestHandler>(TranscriptsController.prototype.retryPostMeetingTask)),
+
+            async function TranscriptsController_retryPostMeetingTask(request: ExRequest, response: ExResponse, next: any) {
+
+            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+
+            let validatedArgs: any[] = [];
+            try {
+                validatedArgs = templateService.getValidatedArgs({ args: argsTranscriptsController_retryPostMeetingTask, request, response });
+
+                const controller = new TranscriptsController();
+
+              await templateService.apiHandler({
+                methodName: 'retryPostMeetingTask',
                 controller,
                 response,
                 next,

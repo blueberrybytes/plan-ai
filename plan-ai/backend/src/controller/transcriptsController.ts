@@ -28,7 +28,10 @@ import { mapTaskResponse, type TaskResponse } from "./projectsModelController";
 import { transcriptGenerationQueue } from "../queue/transcriptGenerationQueue";
 import { firebaseAdmin } from "../firebase/firebaseAdmin";
 import { DocDocumentResponse } from "./docController";
-import { TranscriptMetadata } from "../services/transcriptMetadataTypes";
+import {
+  TranscriptMetadata,
+  type PostMeetingTaskKind,
+} from "../services/transcriptMetadataTypes";
 
 interface StandaloneTranscriptResponse {
   id: string;
@@ -655,6 +658,42 @@ export class TranscriptsController extends BaseWorkspaceController {
       status: 200,
       data: this.mapTranscriptResponse(updated),
     };
+  }
+
+  /**
+   * Retry a single failed post-meeting task (Jira sync, Google Drive export,
+   * doc generation, etc.) without rerunning the entire transcript pipeline.
+   * Returns immediately; the caller observes the status transition via
+   * `metadata.postMeetingTasks.{kind}` on the next transcript poll.
+   */
+  @Post("{id}/post-meeting-tasks/{kind}/retry")
+  @Security("ClientLevel")
+  public async retryPostMeetingTask(
+    @Request() request: AuthenticatedRequest,
+    @Path() id: string,
+    @Path() kind: PostMeetingTaskKind,
+  ): Promise<ApiResponse<{ success: boolean }>> {
+    const { user, workspaceId } = await this.getAuthorizedWorkspaceAccess(request);
+
+    const existing = await transcriptCrudService.getTranscriptForWorkspace(workspaceId, id);
+    if (!existing) {
+      this.setStatus(404);
+      throw { status: 404, message: "Transcript not found" };
+    }
+
+    try {
+      await projectTranscriptService.retryPostMeetingTask(workspaceId, user.id, id, kind);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg === "ALREADY_PENDING") {
+        this.setStatus(409);
+        throw { status: 409, message: "This post-meeting task is already in progress" };
+      }
+      this.setStatus(500);
+      throw { status: 500, message: msg };
+    }
+
+    return { status: 200, data: { success: true } };
   }
 
   @Delete("{id}")

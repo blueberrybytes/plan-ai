@@ -629,7 +629,10 @@ const ProjectTranscriptDetail: React.FC = () => {
               </Card>
             )}
 
-            <PostMeetingTasksPanel tasks={(transcript.metadata as any)?.postMeetingTasks} />
+            <PostMeetingTasksPanel
+              tasks={(transcript.metadata as any)?.postMeetingTasks}
+              transcriptId={transcript.id}
+            />
 
             {transcript.chatThread && transcript.chatThread.messages.length > 0 && (
               <Card variant="outlined">

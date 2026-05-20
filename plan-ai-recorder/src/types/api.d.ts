@@ -541,6 +541,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/transcripts/{id}/post-meeting-tasks/{kind}/retry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description Retry a single failed post-meeting task (Jira sync, Google Drive export,
+         *     doc generation, etc.) without rerunning the entire transcript pipeline.
+         *     Returns immediately; the caller observes the status transition via
+         *     `metadata.postMeetingTasks.{kind}` on the next transcript poll.
+         */
+        post: operations["RetryPostMeetingTask"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/tasks/metadata-types": {
         parameters: {
             query?: never;
@@ -2800,6 +2822,8 @@ export interface components {
             /** Format: double */
             status: number;
         };
+        /** @enum {string} */
+        PostMeetingTaskKind: "jira" | "linear" | "trello" | "notion" | "asana" | "googleDrive" | "oneDrive" | "doc" | "slides";
         TaskMetadata: {
             jira?: {
                 url: string;
@@ -5333,6 +5357,29 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ApiResponse_StandaloneTranscriptResponse_"];
+                };
+            };
+        };
+    };
+    RetryPostMeetingTask: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                kind: components["schemas"]["PostMeetingTaskKind"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse__success-boolean__"];
                 };
             };
         };

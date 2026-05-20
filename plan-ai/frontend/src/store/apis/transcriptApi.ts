@@ -43,8 +43,36 @@ export const transcriptApi = createApi({
       }),
       invalidatesTags: ["Transcript"],
     }),
+    retryPostMeetingTask: builder.mutation<
+      { success: boolean },
+      {
+        transcriptId: string;
+        kind:
+          | "jira"
+          | "linear"
+          | "trello"
+          | "notion"
+          | "asana"
+          | "googleDrive"
+          | "oneDrive"
+          | "doc"
+          | "slides";
+      }
+    >({
+      query: ({ transcriptId, kind }) => ({
+        url: `/api/transcripts/${transcriptId}/post-meeting-tasks/${kind}/retry`,
+        method: "POST",
+      }),
+      invalidatesTags: (_result, _error, { transcriptId }) => [
+        { type: "Transcript", id: transcriptId },
+      ],
+    }),
   }),
 });
 
-export const { useListGlobalTranscriptsQuery, useGetTranscriptQuery, useDeleteTranscriptMutation } =
-  transcriptApi;
+export const {
+  useListGlobalTranscriptsQuery,
+  useGetTranscriptQuery,
+  useDeleteTranscriptMutation,
+  useRetryPostMeetingTaskMutation,
+} = transcriptApi;

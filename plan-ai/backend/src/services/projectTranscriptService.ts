@@ -1342,6 +1342,138 @@ ${content}`;
   }
 
   /**
+   * Re-run a single post-meeting side effect (sync, export, generate) for a
+   * transcript whose original attempt failed. The caller (controller) is
+   * responsible for auth — this method assumes access has been verified.
+   *
+   * Fires the work as a non-awaited promise; the status transition is
+   * observable via `metadata.postMeetingTasks.{kind}` on the next poll.
+   */
+  public async retryPostMeetingTask(
+    workspaceId: string,
+    userId: string,
+    transcriptId: string,
+    kind: PostMeetingTaskKind,
+  ): Promise<void> {
+    const transcript = await prisma.transcript.findUnique({ where: { id: transcriptId } });
+    if (!transcript) throw new Error("Transcript not found");
+
+    const existingTasks = (transcript.metadata as { postMeetingTasks?: PostMeetingTasksRecord })
+      ?.postMeetingTasks;
+    if (existingTasks?.[kind]?.status === "PENDING") {
+      throw new Error("ALREADY_PENDING");
+    }
+
+    const links = await prisma.taskTranscriptLink.findMany({
+      where: { transcriptId },
+      include: { task: true },
+    });
+    const tasks: Task[] = links.map((l) => l.task);
+
+    // Optimistically set PENDING so the UI reflects it immediately
+    await this.setPostMeetingTaskStatus(transcriptId, kind, { status: "PENDING" });
+
+    const fireAndForget = (work: () => Promise<unknown>, label: string) => {
+      work().catch((err) => {
+        logger.warn(`Retry of post-meeting task ${kind} (${label}) errored`, err);
+      });
+    };
+
+    if (kind === "jira" || kind === "linear" || kind === "trello" || kind === "notion" || kind === "asana") {
+      fireAndForget(
+        () =>
+          this.autoSyncTasks(workspaceId, transcript, tasks, {
+            syncToJira: kind === "jira",
+            syncToLinear: kind === "linear",
+            syncToTrello: kind === "trello",
+            syncToNotion: kind === "notion",
+            syncToAsana: kind === "asana",
+          }),
+        "autoSyncTasks",
+      );
+      return;
+    }
+
+    if (kind === "googleDrive" || kind === "oneDrive") {
+      // Reconstruct a minimal TranscriptAnalysis from persisted DB state.
+      // Only `title`, `summary`, and `tasks` are read by autoExportDocument.
+      const minimalAnalysis = {
+        language: "en",
+        title: transcript.title ?? "Meeting Summary",
+        summary: transcript.summary ?? "",
+        tasks: tasks.map((t) => ({
+          title: t.title,
+          description: t.description ?? undefined,
+          acceptanceCriteria:
+            ((t.metadata as Record<string, unknown> | null)?.acceptanceCriteria as
+              | string
+              | undefined) ?? undefined,
+        })),
+      } as unknown as TranscriptAnalysis;
+
+      fireAndForget(
+        () =>
+          this.autoExportDocument(workspaceId, transcript, minimalAnalysis, {
+            exportToGoogleDrive: kind === "googleDrive",
+            exportToOneDrive: kind === "oneDrive",
+          }),
+        "autoExportDocument",
+      );
+      return;
+    }
+
+    if (kind === "doc") {
+      fireAndForget(async () => {
+        try {
+          const doc = await docGenerationService.startGeneration(userId, workspaceId, {
+            title: transcript.title || "Meeting Document",
+            prompt: `Generate a comprehensive meeting document based on the following transcript summary and extracted tasks. Ensure the language and style are highly corporate, formal, and professional.`,
+            transcriptIds: [transcriptId],
+            contextIds: [],
+          });
+          await this.setPostMeetingTaskStatus(transcriptId, "doc", {
+            status: "OK",
+            url: `/docs/view/${doc.id}`,
+          });
+        } catch (err) {
+          await this.setPostMeetingTaskStatus(transcriptId, "doc", {
+            status: "FAILED",
+            error: err instanceof Error ? err.message : String(err),
+          });
+        }
+      }, "doc generation");
+      return;
+    }
+
+    if (kind === "slides") {
+      fireAndForget(async () => {
+        try {
+          const pres = await slideGenerationService.startPresentationGeneration(
+            userId,
+            workspaceId,
+            undefined,
+            undefined,
+            [],
+            [transcriptId],
+            `Create a presentation summarizing the key points, decisions, and action items from the meeting.`,
+            transcript.title || "Meeting Slides",
+          );
+          await this.setPostMeetingTaskStatus(transcriptId, "slides", {
+            status: "OK",
+            url: `/presentations/${pres.id}`,
+          });
+        } catch (err) {
+          await this.setPostMeetingTaskStatus(transcriptId, "slides", {
+            status: "FAILED",
+            error: err instanceof Error ? err.message : String(err),
+          });
+        }
+      }, "slides generation");
+      return;
+    }
+  }
+
+  /**
    * Persist the outcome of a single fire-and-forget post-meeting task to the
    * transcript's `metadata.postMeetingTasks.{kind}`. Best-effort: failures to
    * write status never bubble up — the side effect itself is what matters.

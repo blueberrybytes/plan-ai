@@ -2,6 +2,7 @@ import React from "react";
 import {
   Alert,
   Box,
+  Button,
   Card,
   CardContent,
   CircularProgress,
@@ -16,7 +17,9 @@ import {
   HourglassEmpty as PendingIcon,
   RemoveCircleOutline as SkippedIcon,
   OpenInNew as OpenIcon,
+  Refresh as RetryIcon,
 } from "@mui/icons-material";
+import { useRetryPostMeetingTaskMutation } from "../../store/apis/transcriptApi";
 
 type PostMeetingTaskKind =
   | "jira"
@@ -96,11 +99,19 @@ function summaryText(kind: PostMeetingTaskKind, entry: PostMeetingTaskStatus): s
 
 interface Props {
   tasks?: PostMeetingTasksRecord;
+  /** Transcript ID — required to enable per-row Retry buttons on failed rows. */
+  transcriptId?: string;
   /** Base URL prefix for internal resource links (doc, slides). External URLs are used as-is. */
   internalBaseUrl?: string;
 }
 
-export const PostMeetingTasksPanel: React.FC<Props> = ({ tasks, internalBaseUrl = "" }) => {
+export const PostMeetingTasksPanel: React.FC<Props> = ({
+  tasks,
+  transcriptId,
+  internalBaseUrl = "",
+}) => {
+  const [retry, { isLoading: isRetrying, originalArgs }] = useRetryPostMeetingTaskMutation();
+
   if (!tasks) return null;
   const entries = ORDER.filter((kind) => tasks[kind])
     .map((kind) => [kind, tasks[kind] as PostMeetingTaskStatus] as const);
@@ -169,6 +180,23 @@ export const PostMeetingTasksPanel: React.FC<Props> = ({ tasks, internalBaseUrl 
                   >
                     Open <OpenIcon sx={{ fontSize: "0.95rem" }} />
                   </Link>
+                )}
+                {entry.status === "FAILED" && transcriptId && (
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    color="warning"
+                    startIcon={<RetryIcon sx={{ fontSize: "0.95rem" }} />}
+                    disabled={
+                      isRetrying && originalArgs?.transcriptId === transcriptId && originalArgs?.kind === kind
+                    }
+                    onClick={() => {
+                      retry({ transcriptId, kind });
+                    }}
+                    sx={{ fontSize: "0.7rem", py: 0.25, minWidth: 0 }}
+                  >
+                    Retry
+                  </Button>
                 )}
               </Box>
             );
