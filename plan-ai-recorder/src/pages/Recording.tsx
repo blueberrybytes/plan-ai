@@ -651,240 +651,141 @@ const Recording: React.FC = () => {
           overflowX: "hidden",
           gap: 3,
           p: 4,
+          pt: 3,
           pb: 12,
         }}
       >
         <Typography variant="h6">Recording stopped</Typography>
-        <Typography variant="body2" color="text.secondary">
-          Would you like to assign this recording to an existing Project to
-          auto-generate tasks there?
+        <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', maxWidth: 400 }}>
+          Configure how you want this recording processed before saving.
         </Typography>
 
-        <FormControl sx={{ minWidth: 240, mb: 2 }}>
-          <InputLabel shrink>Project (Optional)</InputLabel>
-          <Select
-            value={selectedProjectId}
-            label="Project (Optional)"
-            onChange={(e) => setSelectedProjectId(e.target.value)}
-            displayEmpty
-          >
-            <MenuItem value="">
-              <em>Create new project for me</em>
-            </MenuItem>
-            {projects.map((p) => (
-              <MenuItem key={p.id} value={p.id}>
-                {p.title}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
+        {/* ── Group 1: Project & Task Strategy ── */}
+        <Box sx={{ width: '100%', maxWidth: 480, p: 2, border: '1px solid rgba(255,255,255,0.1)', borderRadius: 2, bgcolor: 'background.paper' }}>
+          <Typography variant="overline" sx={{ fontWeight: 700, letterSpacing: 1, color: 'text.secondary', display: 'block', mb: 1.5 }}>
+            Project & Task Strategy
+          </Typography>
+          <Stack spacing={2}>
+            <FormControl fullWidth size="small">
+              <InputLabel shrink>Project (Optional)</InputLabel>
+              <Select
+                value={selectedProjectId}
+                label="Project (Optional)"
+                onChange={(e) => setSelectedProjectId(e.target.value)}
+                displayEmpty
+              >
+                <MenuItem value="">
+                  <em>Create new project for me</em>
+                </MenuItem>
+                {projects.map((p) => (
+                  <MenuItem key={p.id} value={p.id}>
+                    {p.title}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
 
+            <FormControl fullWidth size="small">
+              <InputLabel shrink>Agile Task Generation</InputLabel>
+              <Select
+                value={taskStrategy}
+                label="Agile Task Generation"
+                onChange={(e) => setTaskStrategy(e.target.value as "AUTO" | "SINGLE_TICKET" | "SPECIFIC_COUNT")}
+                displayEmpty
+              >
+                <MenuItem value="AUTO">AI Slice & Dice (1 Epic + Auto Sub-tasks)</MenuItem>
+                <MenuItem value="SINGLE_TICKET">Force 1 Mega-Ticket</MenuItem>
+                <MenuItem value="SPECIFIC_COUNT">Specific fixed number of tasks</MenuItem>
+              </Select>
+            </FormControl>
 
+            {taskStrategy === "SPECIFIC_COUNT" && (
+              <TextField
+                fullWidth
+                size="small"
+                label="Number of Tasks"
+                type="number"
+                value={taskCount}
+                onChange={(e) => setTaskCount(Math.max(1, parseInt(e.target.value) || 1))}
+                inputProps={{ min: 1, max: 20 }}
+              />
+            )}
+          </Stack>
+        </Box>
 
-        <FormControl sx={{ minWidth: 240, mt: 1 }}>
-          <InputLabel shrink>AI Model</InputLabel>
-          <Select
-            value={modelKey}
-            label="AI Model"
-            onChange={(e) => setModelKey(e.target.value)}
-            displayEmpty
-          >
-            <MenuItem value="">
-              <em>Default Platform Model</em>
-            </MenuItem>
-            {aiModels.map((m) => (
-              <MenuItem key={m.key} value={m.key}>
-                {m.name}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-
-        <FormControl sx={{ minWidth: 240, mt: 1 }}>
-          <InputLabel shrink>Agile Task Generation</InputLabel>
-          <Select
-            value={taskStrategy}
-            label="Agile Task Generation"
-            onChange={(e) => setTaskStrategy(e.target.value as any)}
-            displayEmpty
-          >
-            <MenuItem value="AUTO">AI Slice & Dice (1 Epic + Auto Sub-tasks)</MenuItem>
-            <MenuItem value="SINGLE_TICKET">Force 1 Mega-Ticket</MenuItem>
-            <MenuItem value="SPECIFIC_COUNT">Specific fixed number of tasks</MenuItem>
-          </Select>
-        </FormControl>
-        
-        {taskStrategy === "SPECIFIC_COUNT" && (
-          <TextField
-            sx={{ minWidth: 240, mt: 1 }}
-            label="Number of Tasks"
-            type="number"
-            value={taskCount}
-            onChange={(e) => setTaskCount(Math.max(1, parseInt(e.target.value) || 1))}
-            inputProps={{ min: 1, max: 20 }}
-          />
+        {/* ── Group 2: Sync to Integrations ── */}
+        {integrations.some((i) => i.status === "CONNECTED") && (
+          <Box sx={{ width: '100%', maxWidth: 480, p: 2, border: '1px solid rgba(255,255,255,0.1)', borderRadius: 2, bgcolor: 'background.paper' }}>
+            <Typography variant="overline" sx={{ fontWeight: 700, letterSpacing: 1, color: 'text.secondary', display: 'block', mb: 1 }}>
+              Sync to Integrations
+            </Typography>
+            <FormGroup sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 0.5 }}>
+              {integrations.some((i) => i.provider === "JIRA" && i.status === "CONNECTED") && (
+                <FormControlLabel
+                  control={<Checkbox size="small" checked={syncToJira} onChange={(e) => setSyncToJira(e.target.checked)} />}
+                  label={<Typography variant="body2">Jira</Typography>}
+                />
+              )}
+              {integrations.some((i) => i.provider === "LINEAR" && i.status === "CONNECTED") && (
+                <FormControlLabel
+                  control={<Checkbox size="small" checked={syncToLinear} onChange={(e) => setSyncToLinear(e.target.checked)} />}
+                  label={<Typography variant="body2">Linear</Typography>}
+                />
+              )}
+              {integrations.some((i) => i.provider === "TRELLO" && i.status === "CONNECTED") && (
+                <FormControlLabel
+                  control={<Checkbox size="small" checked={syncToTrello} onChange={(e) => setSyncToTrello(e.target.checked)} />}
+                  label={<Typography variant="body2">Trello</Typography>}
+                />
+              )}
+              {integrations.some((i) => i.provider === "NOTION" && i.status === "CONNECTED") && (
+                <FormControlLabel
+                  control={<Checkbox size="small" checked={syncToNotion} onChange={(e) => setSyncToNotion(e.target.checked)} />}
+                  label={<Typography variant="body2">Notion</Typography>}
+                />
+              )}
+              {integrations.some((i) => i.provider === "ASANA" && i.status === "CONNECTED") && (
+                <FormControlLabel
+                  control={<Checkbox size="small" checked={syncToAsana} onChange={(e) => setSyncToAsana(e.target.checked)} />}
+                  label={<Typography variant="body2">Asana</Typography>}
+                />
+              )}
+              {integrations.find((i) => i.provider === "GOOGLE_DRIVE" && i.status === "CONNECTED") && (
+                <FormControlLabel
+                  control={<Checkbox size="small" checked={exportToGoogleDrive} onChange={(e) => setExportToGoogleDrive(e.target.checked)} />}
+                  label={<Typography variant="body2">Google Drive</Typography>}
+                />
+              )}
+              {integrations.find((i) => i.provider === "ONEDRIVE" && i.status === "CONNECTED") && (
+                <FormControlLabel
+                  control={<Checkbox size="small" checked={exportToOneDrive} onChange={(e) => setExportToOneDrive(e.target.checked)} />}
+                  label={<Typography variant="body2">OneDrive</Typography>}
+                />
+              )}
+            </FormGroup>
+          </Box>
         )}
 
-        {/* Hid complexity level for now */}
-        {false && (
-          <FormControl sx={{ minWidth: 240, mt: 1 }}>
-            <InputLabel shrink>Complexity Level</InputLabel>
-            <Select
-              value={complexityLevel}
-              label="Complexity Level"
-              onChange={(e) => setComplexityLevel(e.target.value)}
-              displayEmpty
-            >
-              <MenuItem value="">
-                <em>Default</em>
-              </MenuItem>
-              <MenuItem value="Beginner">Basic / Simple</MenuItem>
-              <MenuItem value="Intermediate">Intermediate</MenuItem>
-              <MenuItem value="Advanced">Advanced / Technical</MenuItem>
-              <MenuItem value="Native">Expert / Academic</MenuItem>
-            </Select>
-          </FormControl>
-        )}
+        {/* ── Group 3: Generate Assets ── */}
+        <Box sx={{ width: '100%', maxWidth: 480, p: 2, border: '1px solid rgba(255,255,255,0.1)', borderRadius: 2, bgcolor: 'background.paper' }}>
+          <Typography variant="overline" sx={{ fontWeight: 700, letterSpacing: 1, color: 'text.secondary', display: 'block', mb: 1 }}>
+            Generate Assets
+          </Typography>
+          <FormGroup sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
+            <FormControlLabel
+              control={<Checkbox size="small" checked={createDoc} onChange={(e) => setCreateDoc(e.target.checked)} />}
+              label={<Typography variant="body2">📄 Document</Typography>}
+            />
+            <FormControlLabel
+              control={<Checkbox size="small" checked={createSlides} onChange={(e) => setCreateSlides(e.target.checked)} />}
+              label={<Typography variant="body2">📊 Slides</Typography>}
+            />
+          </FormGroup>
+        </Box>
 
-        <FormGroup sx={{ mt: 1 }}>
-          {integrations.some((i) => i.provider === "JIRA" && i.status === "CONNECTED") && (
-            <FormControlLabel
-              control={
-                <Checkbox
-                  checked={syncToJira}
-                  onChange={(e) => setSyncToJira(e.target.checked)}
-                />
-              }
-              label={
-                <Typography variant="body2">
-                  Sync generated tasks to Jira
-                </Typography>
-              }
-            />
-          )}
-          {integrations.some((i) => i.provider === "LINEAR" && i.status === "CONNECTED") && (
-            <FormControlLabel
-              control={
-                <Checkbox
-                  checked={syncToLinear}
-                  onChange={(e) => setSyncToLinear(e.target.checked)}
-                />
-              }
-              label={
-                <Typography variant="body2">
-                  Sync generated tasks to Linear
-                </Typography>
-              }
-            />
-          )}
-          {integrations.some((i) => i.provider === "TRELLO" && i.status === "CONNECTED") && (
-            <FormControlLabel
-              control={
-                <Checkbox
-                  checked={syncToTrello}
-                  onChange={(e) => setSyncToTrello(e.target.checked)}
-                />
-              }
-              label={
-                <Typography variant="body2">
-                  Sync generated tasks to Trello
-                </Typography>
-              }
-            />
-          )}
-          {integrations.some((i) => i.provider === "NOTION" && i.status === "CONNECTED") && (
-            <FormControlLabel
-              control={
-                <Checkbox
-                  checked={syncToNotion}
-                  onChange={(e) => setSyncToNotion(e.target.checked)}
-                />
-              }
-              label={
-                <Typography variant="body2">
-                  Sync generated tasks to Notion
-                </Typography>
-              }
-            />
-          )}
-          {integrations.some((i) => i.provider === "ASANA" && i.status === "CONNECTED") && (
-            <FormControlLabel
-              control={
-                <Checkbox
-                  checked={syncToAsana}
-                  onChange={(e) => setSyncToAsana(e.target.checked)}
-                />
-              }
-              label={
-                <Typography variant="body2">
-                  Sync generated tasks to Asana
-                </Typography>
-              }
-            />
-          )}
-          {integrations.find((i) => i.provider === "GOOGLE_DRIVE" && i.status === "CONNECTED") && (
-            <FormControlLabel
-              control={
-                <Checkbox
-                  checked={exportToGoogleDrive}
-                  onChange={(e) => setExportToGoogleDrive(e.target.checked)}
-                />
-              }
-              label={
-                <Typography variant="body2">
-                  Export transcript to Google Drive
-                </Typography>
-              }
-            />
-          )}
-          {integrations.find((i) => i.provider === "ONEDRIVE" && i.status === "CONNECTED") && (
-            <FormControlLabel
-              control={
-                <Checkbox
-                  checked={exportToOneDrive}
-                  onChange={(e) => setExportToOneDrive(e.target.checked)}
-                />
-              }
-              label={
-                <Typography variant="body2">
-                  Export transcript to OneDrive
-                </Typography>
-              }
-            />
-          )}
-        </FormGroup>
-
-        <FormGroup sx={{ mt: 1 }}>
-          <FormControlLabel
-            control={
-              <Checkbox
-                checked={createDoc}
-                onChange={(e) => setCreateDoc(e.target.checked)}
-              />
-            }
-            label={
-              <Typography variant="body2">
-                Generate a document
-              </Typography>
-            }
-          />
-          <FormControlLabel
-            control={
-              <Checkbox
-                checked={createSlides}
-                onChange={(e) => setCreateSlides(e.target.checked)}
-              />
-            }
-            label={
-              <Typography variant="body2">
-                Generate slides
-              </Typography>
-            }
-          />
-        </FormGroup>
-
-        <Stack direction="column" spacing={1.5} sx={{ mt: 2, alignItems: 'center' }}>
-          <Button variant="contained" onClick={() => handleSave(false)}>
+        {/* ── Actions ── */}
+        <Stack direction="column" spacing={1.5} sx={{ width: '100%', maxWidth: 480, mt: 1 }}>
+          <Button variant="contained" fullWidth onClick={() => handleSave(false)} sx={{ py: 1.5 }}>
             Save & Generate Summary and Tasks
           </Button>
           <Button

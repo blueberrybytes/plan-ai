@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { View, StyleSheet, ScrollView, Platform } from 'react-native';
+import { View, StyleSheet, ScrollView, Platform, Linking } from 'react-native';
 import { Text, useTheme, Card, IconButton, Chip, Divider } from 'react-native-paper';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Task } from '../../services/planAiApi';
@@ -135,6 +135,93 @@ export default function TaskDetailsScreen() {
             </View>
           </Card.Content>
         </Card>
+
+        {/* Integration Badges */}
+        {((task.metadata as Record<string, unknown> | null)?.jira ||
+          (task.metadata as Record<string, unknown> | null)?.linear ||
+          (task.metadata as Record<string, unknown> | null)?.trello ||
+          (task.metadata as Record<string, unknown> | null)?.notion ||
+          (task.metadata as Record<string, unknown> | null)?.asana) ? (
+          <Card style={[styles.card, { backgroundColor: theme.colors.surface }]} mode="elevated" elevation={1}>
+            <Card.Content>
+              <Text variant="titleMedium" style={{ fontWeight: 'bold', color: theme.colors.primary, marginBottom: 8 }}>
+                Integrations
+              </Text>
+              <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
+                {(task.metadata as Record<string, Record<string, string>> | null)?.jira ? (
+                  <Chip
+                    icon="jira"
+                    onPress={() => Linking.openURL((task.metadata as Record<string, Record<string, string>>).jira.url)}
+                  >
+                    {(task.metadata as Record<string, Record<string, string>>).jira.issueKey || 'Jira'}
+                  </Chip>
+                ) : null}
+                {(task.metadata as Record<string, Record<string, string>> | null)?.linear ? (
+                  <Chip
+                    icon="ray-start-arrow"
+                    onPress={() => Linking.openURL((task.metadata as Record<string, Record<string, string>>).linear.url)}
+                  >
+                    {(task.metadata as Record<string, Record<string, string>>).linear.identifier || 'Linear'}
+                  </Chip>
+                ) : null}
+                {(task.metadata as Record<string, Record<string, string>> | null)?.trello ? (
+                  <Chip
+                    icon="trello"
+                    onPress={() => Linking.openURL((task.metadata as Record<string, Record<string, string>>).trello.url)}
+                  >
+                    {(task.metadata as Record<string, Record<string, string>>).trello.shortLink || 'Trello'}
+                  </Chip>
+                ) : null}
+                {(task.metadata as Record<string, Record<string, string>> | null)?.notion ? (
+                  <Chip
+                    icon="notebook-outline"
+                    onPress={() => Linking.openURL((task.metadata as Record<string, Record<string, string>>).notion.url)}
+                  >
+                    Notion
+                  </Chip>
+                ) : null}
+                {(task.metadata as Record<string, Record<string, string>> | null)?.asana ? (
+                  <Chip
+                    icon="checkbox-marked-circle-outline"
+                    onPress={() => Linking.openURL((task.metadata as Record<string, Record<string, string>>).asana.url)}
+                  >
+                    Asana
+                  </Chip>
+                ) : null}
+              </View>
+            </Card.Content>
+          </Card>
+        ) : null}
+
+        {/* Generated Assets */}
+        {((task.metadata as Record<string, unknown> | null)?.publicDocUrl ||
+          (task.metadata as Record<string, unknown> | null)?.publicSlidesUrl) ? (
+          <Card style={[styles.card, { backgroundColor: theme.colors.surface }]} mode="elevated" elevation={1}>
+            <Card.Content>
+              <Text variant="titleMedium" style={{ fontWeight: 'bold', color: theme.colors.primary, marginBottom: 8 }}>
+                Generated Assets
+              </Text>
+              <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
+                {(task.metadata as Record<string, unknown> | null)?.publicDocUrl ? (
+                  <Chip
+                    icon="file-document-outline"
+                    onPress={() => Linking.openURL(String((task.metadata as Record<string, unknown>)?.publicDocUrl))}
+                  >
+                    Public Document
+                  </Chip>
+                ) : null}
+                {(task.metadata as Record<string, unknown> | null)?.publicSlidesUrl ? (
+                  <Chip
+                    icon="presentation"
+                    onPress={() => Linking.openURL(String((task.metadata as Record<string, unknown>)?.publicSlidesUrl))}
+                  >
+                    Public Slides
+                  </Chip>
+                ) : null}
+              </View>
+            </Card.Content>
+          </Card>
+        ) : null}
       </ScrollView>
     </View>
   );

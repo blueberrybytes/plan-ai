@@ -2386,6 +2386,12 @@
 							"taskGid"
 						],
 						"type": "object"
+					},
+					"publicDocUrl": {
+						"type": "string"
+					},
+					"publicSlidesUrl": {
+						"type": "string"
 					}
 				},
 				"type": "object",
