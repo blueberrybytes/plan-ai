@@ -188,7 +188,7 @@ export class DocGenerationService {
     logger.info(`Doc generation complete for ${docId}`);
   }
 
-  public async fixMermaidSyntax(brokenSyntax: string): Promise<string> {
+  public async fixMermaidSyntax(userId: string, workspaceId: string, brokenSyntax: string): Promise<string> {
     const model = getConfiguredModel();
     const prompt = `You are an expert at writing Mermaid.js diagrams. The following Mermaid syntax crashes the renderer due to syntax constraints, invalid characters, or formatting errors.
 Please fix it so it is completely valid Mermaid code.
@@ -217,8 +217,8 @@ If you return the exact same broken code without quotes around parentheses and a
     const { text, totalUsage } = await generateText({ model, prompt, temperature: 0.2, maxRetries: 3 });
 
     aiUsageService.logUsage({
-      userId: "system",
-      workspaceId: "system",
+      userId,
+      workspaceId,
       feature: "DOC",
       provider: "openrouter",
       model: DEFAULT_AI_MODEL,

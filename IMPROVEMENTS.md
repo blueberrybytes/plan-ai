@@ -156,3 +156,5 @@ Use latitude and longitude to place like Barcelona.
 ## 23 Sequence doc/slides generation before ticket sync
 **Problem:** `autoSyncTasks` fires concurrently with doc/slides generation, so the initial auto-created tickets (Jira, Linear, etc.) don't include the public doc/slides links — they only appear on manual re-sync.
 **Solution:** Restructure `processPendingTranscript` so that doc/slides generation runs first (awaited), then `autoSyncTasks` fires after metadata is populated. Trade-off: initial processing becomes slightly slower (sequential instead of parallel), but guarantees links are always on the ticket from the start.
+
+## 24 Plan AI should be connected to claude code so you can ask 

@@ -152,8 +152,8 @@ export class DocController extends BaseWorkspaceController {
     @Body() body: { brokenCode: string },
     @Request() request: AuthenticatedRequest,
   ): Promise<{ fixedCode: string }> {
-    await this.getAuthorizedWorkspaceAccess(request); // Just validate auth, we don't need user/workspaceId for fixing syntax.
-    const fixedCode = await docGenerationService.fixMermaidSyntax(body.brokenCode);
+    const { user, workspaceId } = await this.getAuthorizedWorkspaceAccess(request);
+    const fixedCode = await docGenerationService.fixMermaidSyntax(user.id, workspaceId, body.brokenCode);
     return { fixedCode };
   }
 }

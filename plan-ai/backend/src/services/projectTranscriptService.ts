@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import {
   Prisma,
   TaskPriority,
@@ -286,7 +287,6 @@ export class ProjectTranscriptService {
             globalSpeaker: `${speakerPrefix} ${w.speaker}`,
           })),
         }));
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } catch (err: any) {
         logger.error(`[Diarization] Failed for ${speakerPrefix}: ${err?.message ?? err}`);
         return [];
@@ -393,7 +393,6 @@ export class ProjectTranscriptService {
       }
 
       return null;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (e: any) {
       logger.error(`[Voice Biometrics] Identification failed: ${e?.message ?? e}`);
       return null;
@@ -1078,16 +1077,42 @@ ${finalContextSection}
 Transcript/Request:
 ${content}`;
 
-    try {
-      const { object, usage: totalUsage } = await generateObject({
-        model,
-        providerOptions: getFallbackProviderOptions(activeModel),
-        schema: transcriptAnalysisSchemaForGeneration,
-        prompt,
+    let object;
+    let totalUsage;
 
-        temperature: 0.2,
-        maxRetries: 3,
-      });
+    try {
+      let attempt = 0;
+      const maxManualRetries = 3;
+
+    while (attempt < maxManualRetries) {
+      try {
+        const result = await generateObject({
+          model,
+          providerOptions: getFallbackProviderOptions(activeModel),
+          schema: transcriptAnalysisSchemaForGeneration,
+          prompt,
+
+          temperature: 0.2,
+          maxRetries: 2,
+        });
+        object = result.object;
+        totalUsage = result.usage;
+        break;
+      } catch (error: any) {
+        attempt++;
+        const isSocketDisconnect = 
+          error?.name === "AI_APICallError" && 
+          error?.message?.includes("Failed to process successful response");
+          
+        if (isSocketDisconnect && attempt < maxManualRetries) {
+          logger.warn(`LLM API socket closed prematurely (attempt ${attempt}/${maxManualRetries}). Retrying...`);
+          await new Promise((resolve) => setTimeout(resolve, 2000 * attempt));
+          continue;
+        }
+        
+        throw error;
+      }
+    }
 
       if (totalUsage) {
         aiUsageService
