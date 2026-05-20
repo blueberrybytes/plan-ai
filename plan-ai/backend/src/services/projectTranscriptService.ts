@@ -561,6 +561,7 @@ export class ProjectTranscriptService {
       input.taskStrategy ?? undefined,
       input.taskCount ?? undefined,
       input.agenticInvestigation ?? true,
+      transcriptId,
     );
 
     const result = await prisma.$transaction(async (tx) => {
@@ -878,6 +879,8 @@ export class ProjectTranscriptService {
     taskStrategy?: "AUTO" | "SINGLE_TICKET" | "SPECIFIC_COUNT",
     taskCount?: number,
     agenticInvestigation: boolean = true,
+    /** Optional transcript id to exclude from the "previous meetings" lookup — the one being analyzed right now. */
+    excludeTranscriptId?: string,
   ): Promise<TranscriptAnalysis> {
     const activeModel = modelKey || DEFAULT_AI_MODEL;
     const model = await getWorkspaceModel(workspaceId, activeModel);
@@ -911,6 +914,49 @@ export class ProjectTranscriptService {
         }
       } catch (error) {
         logger.warn("Failed to retrieve dynamic context for transcript", error);
+      }
+
+      // Also include previous meetings attached to the same context(s) so task
+      // generation can reference prior decisions, action items, and history.
+      // Excludes the transcript currently being analyzed.
+      try {
+        const previousMeetings = await prisma.transcript.findMany({
+          where: {
+            workspaceId,
+            contextIds: { hasSome: contextIds },
+            ...(excludeTranscriptId ? { id: { not: excludeTranscriptId } } : {}),
+          },
+          select: {
+            id: true,
+            title: true,
+            summary: true,
+            transcript: true,
+            recordedAt: true,
+          },
+          orderBy: { createdAt: "desc" },
+          take: 10, // cap so we don't blow the context window
+        });
+
+        if (previousMeetings.length > 0) {
+          const blocks = previousMeetings.map((t) => {
+            const heading = `## Previous Meeting: ${t.title || "Untitled"}${
+              t.recordedAt ? ` (${new Date(t.recordedAt).toISOString().slice(0, 10)})` : ""
+            }`;
+            const body = t.summary?.trim()
+              ? t.summary
+              : (t.transcript ?? "").slice(0, 3000);
+            return `${heading}\n${body}`;
+          });
+          const previousSection = `\n\nPrevious Meetings on Selected Contexts (most recent first):\n${blocks.join(
+            "\n\n---\n\n",
+          )}\n`;
+          dynamicContext += previousSection;
+          logger.info(
+            `Included ${previousMeetings.length} previous meetings in task-generation context`,
+          );
+        }
+      } catch (error) {
+        logger.warn("Failed to retrieve previous meetings for task generation", error);
       }
     }
 
