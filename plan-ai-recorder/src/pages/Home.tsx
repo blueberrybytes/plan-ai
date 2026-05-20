@@ -549,9 +549,7 @@ const Home: React.FC = () => {
                                 </Tooltip>
                               )}
                               {t.metadata?.processingStatus !== "FAILED" && (() => {
-                                const postMeetingTasks =
-                                  (t.metadata as { postMeetingTasks?: Record<string, { status?: string; error?: string }> })
-                                    ?.postMeetingTasks;
+                                const postMeetingTasks = t.metadata?.postMeetingTasks;
                                 if (!postMeetingTasks) return null;
                                 const failed = Object.entries(postMeetingTasks).filter(
                                   ([, v]) => v?.status === "FAILED",

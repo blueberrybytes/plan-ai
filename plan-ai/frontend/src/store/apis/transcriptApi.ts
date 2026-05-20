@@ -47,16 +47,7 @@ export const transcriptApi = createApi({
       { success: boolean },
       {
         transcriptId: string;
-        kind:
-          | "jira"
-          | "linear"
-          | "trello"
-          | "notion"
-          | "asana"
-          | "googleDrive"
-          | "oneDrive"
-          | "doc"
-          | "slides";
+        kind: components["schemas"]["PostMeetingTaskKind"];
       }
     >({
       query: ({ transcriptId, kind }) => ({

@@ -20,27 +20,11 @@ import {
   Refresh as RetryIcon,
 } from "@mui/icons-material";
 import { useRetryPostMeetingTaskMutation } from "../../store/apis/transcriptApi";
+import type { components } from "../../types/api";
 
-type PostMeetingTaskKind =
-  | "jira"
-  | "linear"
-  | "trello"
-  | "notion"
-  | "asana"
-  | "googleDrive"
-  | "oneDrive"
-  | "doc"
-  | "slides";
-
-interface PostMeetingTaskStatus {
-  status: "PENDING" | "OK" | "FAILED" | "SKIPPED";
-  error?: string;
-  finishedAt?: string;
-  count?: number;
-  url?: string;
-}
-
-type PostMeetingTasksRecord = Partial<Record<PostMeetingTaskKind, PostMeetingTaskStatus>>;
+type PostMeetingTaskKind = components["schemas"]["PostMeetingTaskKind"];
+type PostMeetingTaskStatus = components["schemas"]["PostMeetingTaskStatus"];
+type PostMeetingTasksRecord = components["schemas"]["PostMeetingTasksRecord"];
 
 const LABELS: Record<PostMeetingTaskKind, string> = {
   jira: "Jira sync",

@@ -579,16 +579,7 @@ export const createPlanAiApi = (
 
     async retryPostMeetingTask(
       transcriptId: string,
-      kind:
-        | "jira"
-        | "linear"
-        | "trello"
-        | "notion"
-        | "asana"
-        | "googleDrive"
-        | "oneDrive"
-        | "doc"
-        | "slides",
+      kind: components["schemas"]["PostMeetingTaskKind"],
     ): Promise<{ success: boolean }> {
       const req = async (force: boolean) =>
         safeFetch(

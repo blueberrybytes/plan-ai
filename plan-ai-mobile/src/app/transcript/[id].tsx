@@ -29,6 +29,10 @@ import * as Sharing from "expo-sharing";
 import MermaidViewer from "../../components/MermaidViewer";
 import PostMeetingTasksPanel from "../../components/PostMeetingTasksPanel";
 import { Transcript } from "@/services/planAiApi";
+import type { components } from "@/types/api";
+
+type TranscriptMetadata = components["schemas"]["TranscriptMetadata"];
+
 
 const formatTimestamp = (seconds?: number | null) => {
   if (seconds == null) return "";
@@ -259,12 +263,7 @@ export default function TranscriptViewScreen() {
 
         <PostMeetingTasksPanel
           transcriptId={transcript.id}
-          tasks={
-            (transcript.metadata as { postMeetingTasks?: Record<string, never> })
-              ?.postMeetingTasks as React.ComponentProps<
-              typeof PostMeetingTasksPanel
-            >["tasks"]
-          }
+          tasks={(transcript.metadata as TranscriptMetadata | null)?.postMeetingTasks}
           onAfterRetry={refetchTranscript}
         />
       </View>

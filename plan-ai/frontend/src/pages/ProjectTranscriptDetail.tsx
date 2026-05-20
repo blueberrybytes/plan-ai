@@ -35,6 +35,9 @@ import ReactMarkdown from "react-markdown";
 import MermaidRenderer from "../components/common/MermaidRenderer";
 import { AiGraphTrace, ContextGraph } from "../components/project/ContextGraph";
 import PostMeetingTasksPanel from "../components/project/PostMeetingTasksPanel";
+import type { components } from "../types/api";
+
+type TranscriptMetadata = components["schemas"]["TranscriptMetadata"];
 
 const ChatMessageItem = ({ msg }: { msg: { role: string; content: string } }) => {
   const [copied, setCopied] = React.useState(false);
@@ -235,9 +238,7 @@ const ProjectTranscriptDetail: React.FC = () => {
   );
 
   React.useEffect(() => {
-    const meta = transcriptData?.data?.metadata as
-      | { processingStatus?: string; postMeetingTasks?: Record<string, { status?: string }> }
-      | undefined;
+    const meta = transcriptData?.data?.metadata as TranscriptMetadata | null | undefined;
     const status = meta?.processingStatus;
     const isPending = status === "PENDING" || status === "EXTRACTING_TASKS";
     const hasPendingPostMeetingTask =
@@ -630,7 +631,7 @@ const ProjectTranscriptDetail: React.FC = () => {
             )}
 
             <PostMeetingTasksPanel
-              tasks={(transcript.metadata as any)?.postMeetingTasks}
+              tasks={(transcript.metadata as TranscriptMetadata | null)?.postMeetingTasks}
               transcriptId={transcript.id}
             />
 
