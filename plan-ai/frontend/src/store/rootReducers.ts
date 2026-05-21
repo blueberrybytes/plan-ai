@@ -29,6 +29,7 @@ import { adminApi } from "./apis/adminApi";
 import { workspaceApi } from "./apis/workspaceApi";
 import { onboardingApi } from "./apis/onboardingApi";
 import { analyticsApi } from "./apis/analyticsApi";
+import { mcpApi } from "./apis/mcpApi";
 
 // Define the combined reducers
 const appReducers = combineReducers({
@@ -60,6 +61,7 @@ const appReducers = combineReducers({
   [workspaceApi.reducerPath]: workspaceApi.reducer,
   [onboardingApi.reducerPath]: onboardingApi.reducer,
   [analyticsApi.reducerPath]: analyticsApi.reducer,
+  [mcpApi.reducerPath]: mcpApi.reducer,
 });
 
 // Create a root reducer that can handle the reset action

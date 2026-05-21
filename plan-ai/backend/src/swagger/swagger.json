@@ -6309,6 +6309,101 @@
 				"type": "object",
 				"additionalProperties": false
 			},
+			"CreateMcpTokenResponse": {
+				"properties": {
+					"rawToken": {
+						"type": "string",
+						"description": "The raw token — shown ONCE, never retrievable again"
+					},
+					"id": {
+						"type": "string"
+					},
+					"name": {
+						"type": "string"
+					},
+					"prefix": {
+						"type": "string"
+					},
+					"workspaceId": {
+						"type": "string"
+					},
+					"createdAt": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"rawToken",
+					"id",
+					"name",
+					"prefix",
+					"workspaceId",
+					"createdAt"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"CreateMcpTokenRequest": {
+				"properties": {
+					"name": {
+						"type": "string",
+						"description": "A friendly label for this token, e.g. \"Claude Code - MacBook\""
+					},
+					"workspaceId": {
+						"type": "string",
+						"description": "The workspace ID to scope this token to"
+					}
+				},
+				"required": [
+					"name",
+					"workspaceId"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"ListMcpTokensResponse": {
+				"properties": {
+					"tokens": {
+						"items": {
+							"properties": {
+								"createdAt": {
+									"type": "string"
+								},
+								"lastUsedAt": {
+									"type": "string",
+									"nullable": true
+								},
+								"workspaceId": {
+									"type": "string"
+								},
+								"prefix": {
+									"type": "string"
+								},
+								"name": {
+									"type": "string"
+								},
+								"id": {
+									"type": "string"
+								}
+							},
+							"required": [
+								"createdAt",
+								"lastUsedAt",
+								"workspaceId",
+								"prefix",
+								"name",
+								"id"
+							],
+							"type": "object"
+						},
+						"type": "array"
+					}
+				},
+				"required": [
+					"tokens"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
 			"DiagramResponse": {
 				"properties": {
 					"id": {
@@ -13172,6 +13267,97 @@
 						}
 					}
 				}
+			}
+		},
+		"/api/mcp-tokens": {
+			"post": {
+				"operationId": "CreateToken",
+				"responses": {
+					"201": {
+						"description": "Token created",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/CreateMcpTokenResponse"
+								}
+							}
+						}
+					}
+				},
+				"description": "Create a new MCP personal access token scoped to a workspace.\nThe raw token is returned ONCE in the response and cannot be retrieved later.",
+				"tags": [
+					"MCP"
+				],
+				"security": [
+					{
+						"BearerAuth": []
+					}
+				],
+				"parameters": [],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/CreateMcpTokenRequest"
+							}
+						}
+					}
+				}
+			},
+			"get": {
+				"operationId": "ListTokens",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ListMcpTokensResponse"
+								}
+							}
+						}
+					}
+				},
+				"description": "List all MCP tokens for the current user (all workspaces).\nNever returns the raw token — only the prefix and metadata.",
+				"tags": [
+					"MCP"
+				],
+				"security": [
+					{
+						"BearerAuth": []
+					}
+				],
+				"parameters": []
+			}
+		},
+		"/api/mcp-tokens/{tokenId}": {
+			"delete": {
+				"operationId": "RevokeToken",
+				"responses": {
+					"204": {
+						"description": "Token revoked"
+					}
+				},
+				"description": "Revoke (delete) an MCP token by ID.\nOnly the owner can revoke their own tokens.",
+				"tags": [
+					"MCP"
+				],
+				"security": [
+					{
+						"BearerAuth": []
+					}
+				],
+				"parameters": [
+					{
+						"in": "path",
+						"name": "tokenId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				]
 			}
 		},
 		"/api/diagrams": {

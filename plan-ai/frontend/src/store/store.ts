@@ -30,6 +30,7 @@ import { adminApi } from "./apis/adminApi";
 import { workspaceApi } from "./apis/workspaceApi";
 import { onboardingApi } from "./apis/onboardingApi";
 import { analyticsApi } from "./apis/analyticsApi";
+import { mcpApi } from "./apis/mcpApi";
 
 const migrations = {
   1: (state: any) => {
@@ -88,6 +89,7 @@ const store = configureStore({
       workspaceApi.middleware,
       onboardingApi.middleware,
       analyticsApi.middleware,
+      mcpApi.middleware,
     ),
 });
 

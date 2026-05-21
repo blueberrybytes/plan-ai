@@ -13,6 +13,7 @@ import { RegisterRoutes } from "./routes/routes";
 import chatRouter from "./routes/chatRouter";
 import chatStreamingRouter from "./routes/chatStreamingRouter";
 import gitnexusRouter from "./routes/gitnexusRouter";
+import { mcpRouter } from "./routes/mcpRouter";
 import { initializeContextVectorStore } from "./vector/contextFileVectorService";
 import { setupAudioStream } from "./routes/audioStream";
 import { microsoftMobileStart, microsoftMobileCallback } from "./controller/sessionController";
@@ -93,6 +94,9 @@ app.use(gitnexusRouter);
 // Microsoft Mobile OAuth (not TSOA — these must redirect, not return JSON)
 app.get("/api/auth/microsoft/mobile-start", microsoftMobileStart);
 app.get("/api/auth/microsoft/mobile-callback", microsoftMobileCallback);
+
+// Plan AI MCP Server — outside /api to avoid TSOA middleware
+app.use("/mcp", mcpRouter);
 
 // Add a catch-all route for debugging
 app.use((req, res, next) => {

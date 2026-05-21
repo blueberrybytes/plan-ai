@@ -19,7 +19,6 @@ import {
   Tabs,
   Tooltip,
   Typography,
-  IconButton,
   TextField,
   useTheme,
 } from "@mui/material";
@@ -28,6 +27,8 @@ import AddIcon from "@mui/icons-material/Add";
 import BusinessIcon from "@mui/icons-material/Business";
 import PersonIcon from "@mui/icons-material/Person";
 import WarningAmberIcon from "@mui/icons-material/WarningAmber";
+import CodeIcon from "@mui/icons-material/Code";
+
 import githubSvg from "../icons/github.svg";
 import notionSvg from "../icons/notion.svg";
 import jiraSvg from "../icons/jira.svg";
@@ -43,6 +44,11 @@ import { selectUser } from "../store/slices/auth/authSelector";
 import { setToastMessage } from "../store/slices/app/appSlice";
 import { selectActiveWorkspaceId } from "../store/slices/app/appSelector";
 import { useGetMyWorkspacesQuery } from "../store/apis/workspaceApi";
+import {
+  useListMcpTokensQuery,
+  useCreateMcpTokenMutation,
+  useRevokeMcpTokenMutation,
+} from "../store/apis/mcpApi";
 import {
   IntegrationProviderType,
   useListIntegrationsQuery,
@@ -97,6 +103,8 @@ import { useTranslation } from "react-i18next";
 import { useGooglePicker } from "../hooks/useGooglePicker";
 import { useOneDrivePicker } from "../hooks/useOneDrivePicker";
 import { HowToConnectDialog, HowToProvider } from "../components/integrations/HowToConnectDialog";
+import McpPanel from "../components/integrations/McpPanel";
+import IconButton from "@mui/material/IconButton";
 
 const PROVIDER_TAB_PARAM = "provider";
 
@@ -111,7 +119,8 @@ type ProviderTabValue =
   | "google"
   | "notion"
   | "microsoft"
-  | "asana";
+  | "asana"
+  | "plan-ai-mcp";
 
 type ProviderConfig = {
   tabValue: ProviderTabValue;
@@ -235,6 +244,8 @@ const Integrations: React.FC = () => {
       return null;
     }
     const lower = value.toLowerCase();
+    // Handle the MCP tab which is not in PROVIDER_CONFIGS
+    if (lower === "plan-ai-mcp") return "plan-ai-mcp";
     const match = PROVIDER_CONFIGS.find((config) => config.tabValue.toLowerCase() === lower);
     return match?.tabValue ?? null;
   };
@@ -1098,6 +1109,10 @@ const Integrations: React.FC = () => {
                   (i) => i.provider === config.provider && i.status === "CONNECTED",
                 );
 
+                const hasError = integrations.some(
+                  (i) => i.provider === config.provider && i.status === "ERROR",
+                );
+
                 const hasWarning = false; // No database requirement for Notion anymore
 
                 let iconEl = null;
@@ -1155,7 +1170,7 @@ const Integrations: React.FC = () => {
                         <Typography variant="body2" sx={{ fontWeight: "inherit" }}>
                           {t(config.labelKey)}
                         </Typography>
-                        {isConnected && !hasWarning && (
+                        {isConnected && !hasWarning && !hasError && (
                           <Box
                             sx={{
                               width: 8,
@@ -1164,6 +1179,25 @@ const Integrations: React.FC = () => {
                               bgcolor: "success.main",
                             }}
                           />
+                        )}
+                        {hasError && (
+                          <Tooltip title="Action required: connection expired. Please reconnect.">
+                            <Box
+                              sx={{
+                                width: 8,
+                                height: 8,
+                                borderRadius: "50%",
+                                bgcolor: "error.main",
+                                boxShadow: "0 0 0 0 rgba(211,47,47,0.4)",
+                                animation: "mcpPulse 1.4s ease-in-out infinite",
+                                "@keyframes mcpPulse": {
+                                  "0%": { boxShadow: "0 0 0 0 rgba(211,47,47,0.45)" },
+                                  "70%": { boxShadow: "0 0 0 5px rgba(211,47,47,0)" },
+                                  "100%": { boxShadow: "0 0 0 0 rgba(211,47,47,0)" },
+                                },
+                              }}
+                            />
+                          </Tooltip>
                         )}
                         {hasWarning && (
                           <Tooltip title="Action required: No databases found">
@@ -1184,6 +1218,25 @@ const Integrations: React.FC = () => {
                   />
                 );
               })}
+
+              {/* Plan AI MCP tab */}
+              <Tab
+                value="plan-ai-mcp"
+                label={
+                  <Stack direction="row" alignItems="center" spacing={1}>
+                    <CodeIcon sx={{ fontSize: 16 }} />
+                    <Typography variant="body2" sx={{ fontWeight: "inherit" }}>
+                      Plan AI MCP
+                    </Typography>
+                    <Chip
+                      label="NEW"
+                      size="small"
+                      color="primary"
+                      sx={{ height: 18, fontSize: "0.65rem", fontWeight: "bold" }}
+                    />
+                  </Stack>
+                }
+              />
             </Tabs>
           </Box>
 
@@ -1221,6 +1274,10 @@ const Integrations: React.FC = () => {
           {PROVIDER_CONFIGS.filter((config) => config.tabValue === activeTab).map((config) => (
             <Box key={config.tabValue}>{renderProviderContent(config)}</Box>
           ))}
+
+          {activeTab === "plan-ai-mcp" && (
+            <McpPanel workspaceId={activeWorkspaceId ?? ""} />
+          )}
         </Stack>
       </Box>
       <HowToConnectDialog
@@ -2351,3 +2408,4 @@ const ConnectedIntegrationDetails: React.FC<{
 };
 
 export default Integrations;
+

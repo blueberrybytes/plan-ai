@@ -72,6 +72,8 @@ import { AccountController } from './../controller/accountController';
 // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
 import { WorkspaceController } from './../controller/WorkspaceController';
 // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+import { McpTokenController } from './../controller/McpTokenController';
+// WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
 import { DiagramController } from './../controller/DiagramController';
 // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
 import { PublicDiagramController } from './../controller/DiagramController';
@@ -2052,6 +2054,36 @@ const models: TsoaRoute.Models = {
             "deepgramKey": {"dataType":"union","subSchemas":[{"dataType":"string"},{"dataType":"enum","enums":[null]}]},
             "monthlyTokenLimit": {"dataType":"double"},
             "isCourtesy": {"dataType":"boolean"},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "CreateMcpTokenResponse": {
+        "dataType": "refObject",
+        "properties": {
+            "rawToken": {"dataType":"string","required":true},
+            "id": {"dataType":"string","required":true},
+            "name": {"dataType":"string","required":true},
+            "prefix": {"dataType":"string","required":true},
+            "workspaceId": {"dataType":"string","required":true},
+            "createdAt": {"dataType":"string","required":true},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "CreateMcpTokenRequest": {
+        "dataType": "refObject",
+        "properties": {
+            "name": {"dataType":"string","required":true},
+            "workspaceId": {"dataType":"string","required":true},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "ListMcpTokensResponse": {
+        "dataType": "refObject",
+        "properties": {
+            "tokens": {"dataType":"array","array":{"dataType":"nestedObjectLiteral","nestedProperties":{"createdAt":{"dataType":"string","required":true},"lastUsedAt":{"dataType":"union","subSchemas":[{"dataType":"string"},{"dataType":"enum","enums":[null]}],"required":true},"workspaceId":{"dataType":"string","required":true},"prefix":{"dataType":"string","required":true},"name":{"dataType":"string","required":true},"id":{"dataType":"string","required":true}}},"required":true},
         },
         "additionalProperties": false,
     },
@@ -7365,6 +7397,101 @@ export function RegisterRoutes(app: Router,opts?:{multer?:ReturnType<typeof mult
                 next,
                 validatedArgs,
                 successStatus: undefined,
+              });
+            } catch (err) {
+                return next(err);
+            }
+        });
+        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+        const argsMcpTokenController_createToken: Record<string, TsoaRoute.ParameterSchema> = {
+                req: {"in":"request","name":"req","required":true,"dataType":"object"},
+                body: {"in":"body","name":"body","required":true,"ref":"CreateMcpTokenRequest"},
+        };
+        app.post('/api/mcp-tokens',
+            authenticateMiddleware([{"BearerAuth":[]}]),
+            ...(fetchMiddlewares<RequestHandler>(McpTokenController)),
+            ...(fetchMiddlewares<RequestHandler>(McpTokenController.prototype.createToken)),
+
+            async function McpTokenController_createToken(request: ExRequest, response: ExResponse, next: any) {
+
+            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+
+            let validatedArgs: any[] = [];
+            try {
+                validatedArgs = templateService.getValidatedArgs({ args: argsMcpTokenController_createToken, request, response });
+
+                const controller = new McpTokenController();
+
+              await templateService.apiHandler({
+                methodName: 'createToken',
+                controller,
+                response,
+                next,
+                validatedArgs,
+                successStatus: 201,
+              });
+            } catch (err) {
+                return next(err);
+            }
+        });
+        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+        const argsMcpTokenController_listTokens: Record<string, TsoaRoute.ParameterSchema> = {
+                req: {"in":"request","name":"req","required":true,"dataType":"object"},
+        };
+        app.get('/api/mcp-tokens',
+            authenticateMiddleware([{"BearerAuth":[]}]),
+            ...(fetchMiddlewares<RequestHandler>(McpTokenController)),
+            ...(fetchMiddlewares<RequestHandler>(McpTokenController.prototype.listTokens)),
+
+            async function McpTokenController_listTokens(request: ExRequest, response: ExResponse, next: any) {
+
+            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+
+            let validatedArgs: any[] = [];
+            try {
+                validatedArgs = templateService.getValidatedArgs({ args: argsMcpTokenController_listTokens, request, response });
+
+                const controller = new McpTokenController();
+
+              await templateService.apiHandler({
+                methodName: 'listTokens',
+                controller,
+                response,
+                next,
+                validatedArgs,
+                successStatus: undefined,
+              });
+            } catch (err) {
+                return next(err);
+            }
+        });
+        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+        const argsMcpTokenController_revokeToken: Record<string, TsoaRoute.ParameterSchema> = {
+                req: {"in":"request","name":"req","required":true,"dataType":"object"},
+                tokenId: {"in":"path","name":"tokenId","required":true,"dataType":"string"},
+        };
+        app.delete('/api/mcp-tokens/:tokenId',
+            authenticateMiddleware([{"BearerAuth":[]}]),
+            ...(fetchMiddlewares<RequestHandler>(McpTokenController)),
+            ...(fetchMiddlewares<RequestHandler>(McpTokenController.prototype.revokeToken)),
+
+            async function McpTokenController_revokeToken(request: ExRequest, response: ExResponse, next: any) {
+
+            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+
+            let validatedArgs: any[] = [];
+            try {
+                validatedArgs = templateService.getValidatedArgs({ args: argsMcpTokenController_revokeToken, request, response });
+
+                const controller = new McpTokenController();
+
+              await templateService.apiHandler({
+                methodName: 'revokeToken',
+                controller,
+                response,
+                next,
+                validatedArgs,
+                successStatus: 204,
               });
             } catch (err) {
                 return next(err);

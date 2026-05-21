@@ -142,7 +142,9 @@ const AppThemeSelector: React.FC = () => {
   );
 };
 
+
 const Profile: React.FC = () => {
+
   const { t, i18n } = useTranslation();
   const dispatch = useDispatch();
   const user = useSelector(selectUser);
