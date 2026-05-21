@@ -13,6 +13,9 @@ import { AppThemeProvider, useAppTheme } from "../context/ThemeContext";
 import { AuthProvider } from "../context/AuthContext";
 
 import * as Sentry from "@sentry/react-native";
+import { initLoggerSink } from "../utils/loggerSink";
+
+initLoggerSink();
 
 Sentry.init({
   dsn: "https://4f6a512d6a5fc4c92e48309d5c92b861@o4511196762734592.ingest.us.sentry.io/4511254670737408",

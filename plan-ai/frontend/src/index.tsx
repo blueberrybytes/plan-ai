@@ -19,10 +19,13 @@ import "dayjs/locale/en"; // English locale
 import { clientLogger } from "./utils/clientLogger";
 import CustomThemeProvider from "./providers/CustomThemeProvider";
 import "./sentry/sentry";
+import { initLoggerSink } from "./utils/loggerSink";
 dayjs.extend(localizedFormat);
 dayjs.extend(utc);
 dayjs.extend(timezone);
 dayjs.extend(relativeTime);
+
+initLoggerSink();
 
 if (process.env.REACT_APP_MICROSOFT_CLARITY_ID) {
   Clarity.init(process.env.REACT_APP_MICROSOFT_CLARITY_ID);

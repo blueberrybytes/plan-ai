@@ -66,7 +66,16 @@ app.use((req, res, next) => {
   next();
 });
 
+// Disable browser caching for all API responses
+app.use((req, res, next) => {
+  res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+  res.setHeader("Pragma", "no-cache");
+  res.setHeader("Expires", "0");
+  next();
+});
+
 // Register TSOA routes (with role-based access control and increased upload limits)
+
 
 RegisterRoutes(app, {
   multer: multer({

@@ -28,6 +28,8 @@ import {
 import GoogleIcon from "@mui/icons-material/Google";
 import AppleIcon from "@mui/icons-material/Apple";
 import MicrosoftIcon from "../components/MicrosoftIcon";
+import BugReportIcon from "@mui/icons-material/BugReport";
+import { getLogSink } from "../utils/loggerSink";
 
 import { useDispatch, useSelector } from "react-redux";
 
@@ -617,6 +619,25 @@ const Profile: React.FC = () => {
             justifyContent: "flex-end",
           }}
         >
+          <Button
+            variant="outlined"
+            color="inherit"
+            startIcon={<BugReportIcon />}
+            onClick={() => {
+              const logs = getLogSink();
+              const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(logs, null, 2));
+              const downloadAnchorNode = document.createElement("a");
+              downloadAnchorNode.setAttribute("href", dataStr);
+              downloadAnchorNode.setAttribute("download", `plan-ai-debug-logs-${new Date().toISOString()}.json`);
+              document.body.appendChild(downloadAnchorNode);
+              downloadAnchorNode.click();
+              downloadAnchorNode.remove();
+            }}
+            sx={{ px: 3, borderRadius: 2 }}
+          >
+            Export Debug Logs
+          </Button>
+
           <Button
             variant="contained"
             color="primary"

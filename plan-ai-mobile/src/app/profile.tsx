@@ -1,5 +1,5 @@
-import React from "react";
-import { View, StyleSheet, ScrollView } from "react-native";
+import React, { useState, useEffect } from "react";
+import { Alert, View, StyleSheet, ScrollView } from "react-native";
 import {
   Text,
   Button,
@@ -16,10 +16,11 @@ import { useAuth } from "../context/AuthContext";
 import { useAppTheme } from "../context/ThemeContext";
 import { AppThemeName, THEMES } from "../theme/Theme";
 import { useRouter } from "expo-router";
-import { useState, useEffect } from "react";
-import { Alert } from "react-native";
 import { WorkspaceMemberResponse } from "../services/planAiApi";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import * as FileSystem from "expo-file-system/legacy";
+import * as Sharing from "expo-sharing";
+import { getLogSink } from "../utils/loggerSink";
 
 export default function ProfileScreen() {
   const theme = useTheme();
@@ -30,6 +31,7 @@ export default function ProfileScreen() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [currentMemberInfo, setCurrentMemberInfo] =
     useState<WorkspaceMemberResponse | null>(null);
+  const insets = useSafeAreaInsets();
 
   useEffect(() => {
     async function fetchMemberInfo() {
@@ -88,6 +90,29 @@ export default function ProfileScreen() {
     );
   };
 
+  const handleExportDebugLogs = async () => {
+    try {
+      const logs = getLogSink();
+      const logsStr = JSON.stringify(logs, null, 2);
+      const fileUri =
+        FileSystem.documentDirectory + `plan-ai-debug-logs-${Date.now()}.json`;
+      await FileSystem.writeAsStringAsync(fileUri, logsStr, {
+        encoding: FileSystem.EncodingType.UTF8,
+      });
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(fileUri);
+      } else {
+        Alert.alert(
+          "Sharing not available",
+          "Cannot export logs on this device.",
+        );
+      }
+    } catch (e) {
+      console.error("Failed to export debug logs", e);
+      Alert.alert("Export Failed", "Could not export debug logs.");
+    }
+  };
+
   if (!user) {
     return (
       <View style={[styles.container, { justifyContent: "center" }]}>
@@ -95,8 +120,6 @@ export default function ProfileScreen() {
       </View>
     );
   }
-
-  const insets = useSafeAreaInsets();
 
   return (
     <View
@@ -230,6 +253,20 @@ export default function ProfileScreen() {
         </Surface>
 
         <View style={styles.actionContainer}>
+          <Button
+            mode="outlined"
+            icon="bug"
+            textColor={theme.colors.onSurface}
+            style={[
+              styles.actionBtn,
+              { borderColor: theme.colors.outline, marginBottom: 8 },
+            ]}
+            onPress={handleExportDebugLogs}
+            contentStyle={{ paddingVertical: 4 }}
+          >
+            Export Debug Logs
+          </Button>
+
           <Button
             mode="contained"
             icon="logout"
