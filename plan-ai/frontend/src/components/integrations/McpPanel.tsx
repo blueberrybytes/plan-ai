@@ -10,20 +10,12 @@ import {
   DialogContent,
   DialogTitle,
   Divider,
-  FormControl,
   IconButton,
-  InputLabel,
   ListItem,
   ListItemText,
-  MenuItem,
   Paper,
-  Select,
   Stack,
-  Tab,
-  Tabs,
   TextField,
-  ToggleButton,
-  ToggleButtonGroup,
   Tooltip,
   Typography,
 } from "@mui/material";
@@ -51,76 +43,6 @@ const getBaseUrl = () => {
 };
 
 const MCP_SSE_ENDPOINT = `${getBaseUrl()}/mcp/sse`;
-
-const MCP_CONNECT_TABS = [
-  { label: "Claude Code", id: "claude-code" },
-  { label: "Claude Desktop", id: "claude-desktop" },
-  { label: "Cursor", id: "cursor" },
-];
-
-type OsId = "mac" | "windows" | "linux";
-
-const CLAUDE_DESKTOP_PATHS: Record<OsId, string> = {
-  mac: "~/Library/Application Support/Claude/claude_desktop_config.json",
-  windows: "%APPDATA%\\Claude\\claude_desktop_config.json",
-  linux: "~/.config/Claude/claude_desktop_config.json",
-};
-
-const CURSOR_PATHS: Record<OsId, string> = {
-  mac: "~/.cursor/mcp.json",
-  windows: "%USERPROFILE%\\.cursor\\mcp.json",
-  linux: "~/.cursor/mcp.json",
-};
-
-const CLAUDE_DESKTOP_STEPS = [
-  { icon: "1️⃣", text: "Open Claude Desktop" },
-  { icon: "2️⃣", text: 'Click "Claude" in the macOS menu bar → Settings…' },
-  { icon: "3️⃣", text: 'Go to the "Developer" tab' },
-  { icon: "4️⃣", text: 'Click "Edit Config" — it opens the JSON file directly' },
-  { icon: "5️⃣", text: "Paste the snippet above (merge into mcpServers if you already have others)" },
-  { icon: "6️⃣", text: "Save the file and fully quit + reopen Claude Desktop" },
-];
-
-const CURSOR_STEPS = [
-  { icon: "1️⃣", text: "Open Cursor" },
-  { icon: "2️⃣", text: "Press Cmd/Ctrl + Shift + P → type \"Cursor Settings\"" },
-  { icon: "3️⃣", text: 'Go to "Tools & Integrations" (or "Features → MCP")' },
-  { icon: "4️⃣", text: 'Click "Add new global MCP server" or edit the config file directly' },
-  { icon: "5️⃣", text: "Paste the snippet above and save" },
-];
-
-function getMcpConnectSnippet(tab: string, token: string): string {
-  switch (tab) {
-    case "claude-code":
-      return `claude mcp add plan-ai -- npx mcp-remote@latest \\\n  ${MCP_SSE_ENDPOINT} \\\n  --header "Authorization: Bearer ${token}"`;
-    case "claude-desktop":
-    case "cursor":
-      return JSON.stringify(
-        {
-          mcpServers: {
-            "plan-ai": {
-              command: "npx",
-              args: ["mcp-remote@latest", MCP_SSE_ENDPOINT],
-              env: { MCP_HEADER_AUTHORIZATION: `Bearer ${token}` },
-            },
-          },
-        },
-        null,
-        2,
-      );
-    default:
-      return "";
-  }
-}
-
-// ─── OS Picker ───────────────────────────────────────────────────────────────
-
-function detectOs(): OsId {
-  const ua = navigator.userAgent;
-  if (ua.includes("Win")) return "windows";
-  if (ua.includes("Mac")) return "mac";
-  return "linux";
-}
 
 // ─── Tool definitions ────────────────────────────────────────────────────────
 
@@ -157,96 +79,6 @@ const MCP_TOOLS = [
   },
 ];
 
-// ─── Step-by-step hint ───────────────────────────────────────────────────────
-
-interface SetupHintProps {
-  steps: { icon: string; text: string }[];
-  configPath: string;
-  os: OsId;
-  onOsChange: (os: OsId) => void;
-  onCopy: (text: string) => void;
-  copied: boolean;
-}
-
-const SetupHint: React.FC<SetupHintProps> = ({
-  steps,
-  configPath,
-  os,
-  onOsChange,
-  onCopy,
-  copied,
-}) => (
-  <Box
-    sx={(theme) => ({
-      mt: 1,
-      p: 2,
-      borderRadius: 2,
-      border: `1px solid ${theme.palette.divider}`,
-      bgcolor: "action.hover",
-    })}
-  >
-    <Stack spacing={2}>
-      {/* Steps */}
-      <Stack spacing={1}>
-        {steps.map((step) => (
-          <Stack key={step.icon} direction="row" spacing={1} alignItems="flex-start">
-            <Typography sx={{ fontSize: 14, lineHeight: 1.5, flexShrink: 0 }}>
-              {step.icon}
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              {step.text}
-            </Typography>
-          </Stack>
-        ))}
-      </Stack>
-
-      <Divider />
-
-      {/* Fallback: manual file path */}
-      <Stack spacing={1}>
-        <Stack direction="row" alignItems="center" justifyContent="space-between" flexWrap="wrap" gap={1}>
-          <Typography variant="caption" color="text.secondary" fontWeight={600}>
-            Or edit the config file directly:
-          </Typography>
-          <ToggleButtonGroup
-            size="small"
-            exclusive
-            value={os}
-            onChange={(_, v: OsId | null) => { if (v) onOsChange(v); }}
-            sx={{ "& .MuiToggleButton-root": { py: 0.25, px: 1, fontSize: 11, textTransform: "none" } }}
-          >
-            <ToggleButton value="mac">macOS</ToggleButton>
-            <ToggleButton value="windows">Windows</ToggleButton>
-            <ToggleButton value="linux">Linux</ToggleButton>
-          </ToggleButtonGroup>
-        </Stack>
-        <Stack direction="row" alignItems="center" spacing={1}>
-          <Box
-            component="code"
-            sx={{
-              flex: 1,
-              fontSize: 11,
-              fontFamily: "monospace",
-              bgcolor: "background.paper",
-              px: 1,
-              py: 0.5,
-              borderRadius: 1,
-              wordBreak: "break-all",
-            }}
-          >
-            {configPath}
-          </Box>
-          <Tooltip title={copied ? "Copied!" : "Copy path"}>
-            <IconButton size="small" onClick={() => onCopy(configPath)}>
-              <ContentCopyIcon sx={{ fontSize: 14 }} />
-            </IconButton>
-          </Tooltip>
-        </Stack>
-      </Stack>
-    </Stack>
-  </Box>
-);
-
 // ─── Component ────────────────────────────────────────────────────────────────
 
 interface McpPanelProps {
@@ -262,10 +94,8 @@ const McpPanel: React.FC<McpPanelProps> = ({ workspaceId }) => {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   // rawToken is only available right after creation — never stored after dialog closes
   const [rawToken, setRawToken] = useState<string | null>(null);
-  const [connectTabIdx, setConnectTabIdx] = useState(0);
   const [copied, setCopied] = useState(false);
   const [selectedTokenId, setSelectedTokenId] = useState<string>("");
-  const [os, setOs] = useState<OsId>(detectOs);
 
   const tokens = useMemo(() => tokensData?.tokens ?? [], [tokensData]);
 
@@ -275,8 +105,6 @@ const McpPanel: React.FC<McpPanelProps> = ({ workspaceId }) => {
       setSelectedTokenId(tokens[0].id);
     }
   }, [tokens, selectedTokenId]);
-
-  const selectedToken = tokens.find((t) => t.id === selectedTokenId);
 
   const handleCreate = async () => {
     if (!newTokenName.trim() || !workspaceId) return;
@@ -300,18 +128,6 @@ const McpPanel: React.FC<McpPanelProps> = ({ workspaceId }) => {
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
-
-  const currentTabId = MCP_CONNECT_TABS[connectTabIdx].id;
-
-  // Snippet in the main panel uses the token PREFIX as a visual label only.
-  // The REAL token copy happens inside the creation dialog.
-  const panelSnippet = getMcpConnectSnippet(
-    currentTabId,
-    selectedToken ? selectedToken.prefix + "…  ← replace with your full token" : "",
-  );
-
-  const claudeDesktopPath = CLAUDE_DESKTOP_PATHS[os];
-  const cursorPath = CURSOR_PATHS[os];
 
   return (
     <Paper elevation={2} sx={{ p: 3 }}>
@@ -423,119 +239,46 @@ const McpPanel: React.FC<McpPanelProps> = ({ workspaceId }) => {
 
           {tokens.length === 0 ? (
             <Alert severity="warning">
-              Create a token above to get your ready-to-paste connection snippet. The snippet will
-              include your real token so you can copy it in one click.
+              Create a token above to get started. Once created, you can download a Desktop Extension 
+              to install in Claude Desktop in just one click!
             </Alert>
           ) : (
-            <Stack spacing={2}>
-              {/* Token selector */}
-              <FormControl size="small" sx={{ maxWidth: 320 }}>
-                <InputLabel>Token</InputLabel>
-                <Select
-                  label="Token"
-                  value={selectedTokenId}
-                  onChange={(e) => setSelectedTokenId(e.target.value)}
-                >
-                  {tokens.map((t) => (
-                    <MenuItem key={t.id} value={t.id}>
-                      {t.name}
-                      <Typography
-                        component="span"
-                        variant="caption"
-                        color="text.secondary"
-                        sx={{ ml: 1, fontFamily: "monospace" }}
-                      >
-                        ({t.prefix}…)
-                      </Typography>
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-
+            <Stack spacing={3}>
               <Alert severity="info" sx={{ py: 0.5 }}>
                 Your full token was shown <strong>once</strong> when you created it. If you lost
-                it, revoke this one and create a new token — the snippet will include the real value
-                right after creation.
+                it, revoke this one and create a new token. You can instantly download a pre-configured 
+                extension right from the creation dialog!
               </Alert>
 
-              {/* Connect tabs */}
-              <Tabs
-                value={connectTabIdx}
-                onChange={(_, v: number) => setConnectTabIdx(v)}
-                sx={{ borderBottom: 1, borderColor: "divider" }}
-              >
-                {MCP_CONNECT_TABS.map((t) => (
-                  <Tab key={t.id} label={t.label} sx={{ textTransform: "none" }} />
-                ))}
-              </Tabs>
-
-              {/* Snippet block */}
-              <Box sx={{ position: "relative" }}>
-                <Box
-                  component="pre"
-                  sx={{
-                    bgcolor: "action.hover",
-                    borderRadius: 1.5,
-                    p: 2,
-                    pr: 6,
-                    fontSize: 12,
-                    fontFamily: "monospace",
-                    whiteSpace: "pre-wrap",
-                    wordBreak: "break-all",
-                    overflowX: "auto",
-                    m: 0,
-                  }}
-                >
-                  {panelSnippet}
-                </Box>
-                <Tooltip title={copied ? "Copied!" : "Copy"}>
-                  <IconButton
-                    size="small"
-                    onClick={() => handleCopy(panelSnippet)}
-                    sx={{ position: "absolute", top: 8, right: 8 }}
-                  >
-                    <ContentCopyIcon fontSize="small" />
-                  </IconButton>
-                </Tooltip>
-              </Box>
-
-              {/* Claude Code — just run the command, nothing extra needed */}
-              {currentTabId === "claude-code" && (
-                <Typography variant="caption" color="text.secondary">
-                  Run this command in your terminal. Claude Code will automatically pick up the new
-                  server on next launch.
+              <Box sx={{ p: 3, border: 1, borderColor: 'divider', borderRadius: 2, bgcolor: 'background.paper' }}>
+                <Typography variant="h6" gutterBottom>
+                  Connecting Claude Desktop
                 </Typography>
-              )}
-
-              {/* Claude Desktop — step-by-step guide + file path fallback */}
-              {currentTabId === "claude-desktop" && (
-                <>
-                  <Alert severity="info" sx={{ mb: 2 }}>
-                    <strong>Recommended: Desktop Extensions</strong><br/>
-                    When you create a new token, you can download a <code>.mcpb</code> extension file. Install it in Claude Desktop via <strong>Settings &gt; Extensions &gt; Advanced &gt; Install Extension...</strong>
-                  </Alert>
-                  <SetupHint
-                    steps={CLAUDE_DESKTOP_STEPS}
-                    configPath={claudeDesktopPath}
-                    os={os}
-                    onOsChange={setOs}
-                    onCopy={handleCopy}
-                    copied={copied}
-                  />
-                </>
-              )}
-
-              {/* Cursor — step-by-step guide + file path fallback */}
-              {currentTabId === "cursor" && (
-                <SetupHint
-                  steps={CURSOR_STEPS}
-                  configPath={cursorPath}
-                  os={os}
-                  onOsChange={setOs}
-                  onCopy={handleCopy}
-                  copied={copied}
-                />
-              )}
+                <Typography variant="body2" color="text.secondary" paragraph>
+                  The easiest way to connect Claude Desktop to Plan AI is by using a Desktop Extension bundle (<code>.mcpb</code>). 
+                  When you create a new token, click the <strong>Download Desktop Extension</strong> button.
+                </Typography>
+                
+                <Typography variant="subtitle2" gutterBottom sx={{ mt: 2 }}>
+                  Installation Steps:
+                </Typography>
+                <Stack spacing={1} sx={{ mt: 1 }}>
+                  {[
+                    "1. Open Claude Desktop",
+                    "2. Go to Settings (or Preferences on Mac)",
+                    "3. Select the 'Extensions' tab",
+                    "4. Go to 'Advanced' and click 'Install Extension...'",
+                    "5. Select the plan-ai.mcpb file you downloaded"
+                  ].map(step => (
+                    <Typography key={step} variant="body2" sx={{ ml: 1 }}>
+                      {step}
+                    </Typography>
+                  ))}
+                </Stack>
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 2, fontStyle: 'italic' }}>
+                  Note: Manual JSON configuration via <code>mcp-remote</code> is no longer supported as our server uses direct Bearer tokens for better security instead of OAuth. Support for Cursor and Claude Code is coming soon in our official NPM CLI package.
+                </Typography>
+              </Box>
             </Stack>
           )}
         </Box>
@@ -626,40 +369,6 @@ const McpPanel: React.FC<McpPanelProps> = ({ workspaceId }) => {
                   <IconButton
                     size="small"
                     onClick={() => handleCopy(rawToken)}
-                    sx={{ position: "absolute", top: 8, right: 8 }}
-                  >
-                    <ContentCopyIcon fontSize="small" />
-                  </IconButton>
-                </Tooltip>
-              </Box>
-
-              <Divider />
-
-              {/* Ready-to-paste snippet for Claude Code */}
-              <Typography variant="subtitle2" fontWeight={600}>
-                Or copy the ready-to-paste Claude Code command:
-              </Typography>
-              <Box sx={{ position: "relative" }}>
-                <Box
-                  component="pre"
-                  sx={{
-                    bgcolor: "action.hover",
-                    borderRadius: 1.5,
-                    p: 1.5,
-                    pr: 6,
-                    fontSize: 11,
-                    fontFamily: "monospace",
-                    whiteSpace: "pre-wrap",
-                    wordBreak: "break-all",
-                    m: 0,
-                  }}
-                >
-                  {getMcpConnectSnippet("claude-code", rawToken)}
-                </Box>
-                <Tooltip title={copied ? "Copied!" : "Copy command"}>
-                  <IconButton
-                    size="small"
-                    onClick={() => handleCopy(getMcpConnectSnippet("claude-code", rawToken))}
                     sx={{ position: "absolute", top: 8, right: 8 }}
                   >
                     <ContentCopyIcon fontSize="small" />
