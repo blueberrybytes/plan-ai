@@ -647,7 +647,24 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
         </Box>
       )}
 
-      <Box sx={{ p: 3, pb: 4, bgcolor: "background.paper", borderTop: 1, borderColor: "divider" }}>
+      <Box
+        sx={{ p: 3, pb: 4, bgcolor: "background.paper", borderTop: 1, borderColor: "divider" }}
+        onDragOver={(e) => {
+          e.preventDefault();
+        }}
+        onDrop={(e) => {
+          e.preventDefault();
+          if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+            void handleAttachFiles(e.dataTransfer.files);
+          }
+        }}
+        onPaste={(e) => {
+          if (e.clipboardData.files && e.clipboardData.files.length > 0) {
+            e.preventDefault();
+            void handleAttachFiles(e.clipboardData.files);
+          }
+        }}
+      >
         <Box
           sx={{
             mb: 2,
