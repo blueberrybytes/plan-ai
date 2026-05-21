@@ -284,7 +284,8 @@
       "copyResponse": "Copiar respuesta",
       "copyTable": "Copiar tabla",
       "copyCode": "Copiar código",
-      "copied": "¡Copiado!"
+      "copied": "¡Copiado!",
+      "attachFile": "Adjuntar imagen o PDF"
     },
     "messages": {
       "chatCreated": "Chat creado con éxito",

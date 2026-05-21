@@ -1559,6 +1559,17 @@ const models: TsoaRoute.Models = {
         "type": {"ref":"_36_Enums.ChatRole","validators":{}},
     },
     // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "ChatAttachment": {
+        "dataType": "refObject",
+        "properties": {
+            "url": {"dataType":"string","required":true},
+            "type": {"dataType":"string","required":true},
+            "name": {"dataType":"string","required":true},
+            "size": {"dataType":"double"},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
     "ChatMessage": {
         "dataType": "refObject",
         "properties": {
@@ -1566,6 +1577,7 @@ const models: TsoaRoute.Models = {
             "threadId": {"dataType":"string","required":true},
             "role": {"ref":"ChatRole","required":true},
             "content": {"dataType":"string","required":true},
+            "attachments": {"dataType":"union","subSchemas":[{"dataType":"array","array":{"dataType":"refObject","ref":"ChatAttachment"}},{"dataType":"enum","enums":[null]}]},
             "createdAt": {"dataType":"datetime","required":true},
         },
         "additionalProperties": false,
@@ -6199,6 +6211,45 @@ export function RegisterRoutes(app: Router,opts?:{multer?:ReturnType<typeof mult
 
               await templateService.apiHandler({
                 methodName: 'getThread',
+                controller,
+                response,
+                next,
+                validatedArgs,
+                successStatus: undefined,
+              });
+            } catch (err) {
+                return next(err);
+            }
+        });
+        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+        const argsChatController_uploadAttachment: Record<string, TsoaRoute.ParameterSchema> = {
+                threadId: {"in":"path","name":"threadId","required":true,"dataType":"string"},
+                request: {"in":"request","name":"request","required":true,"dataType":"object"},
+                file: {"in":"formData","name":"file","required":true,"dataType":"file"},
+        };
+        app.post('/api/chat/threads/:threadId/attachments',
+            authenticateMiddleware([{"ClientLevel":[]}]),
+            upload.fields([
+                {
+                    name: "file",
+                    maxCount: 1
+                }
+            ]),
+            ...(fetchMiddlewares<RequestHandler>(ChatController)),
+            ...(fetchMiddlewares<RequestHandler>(ChatController.prototype.uploadAttachment)),
+
+            async function ChatController_uploadAttachment(request: ExRequest, response: ExResponse, next: any) {
+
+            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+
+            let validatedArgs: any[] = [];
+            try {
+                validatedArgs = templateService.getValidatedArgs({ args: argsChatController_uploadAttachment, request, response });
+
+                const controller = new ChatController();
+
+              await templateService.apiHandler({
+                methodName: 'uploadAttachment',
                 controller,
                 response,
                 next,

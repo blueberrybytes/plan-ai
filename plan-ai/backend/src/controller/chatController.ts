@@ -1,5 +1,18 @@
 import { BaseWorkspaceController } from "./BaseWorkspaceController";
-import { Get, Post, Put, Delete, Route, Tags, Body, Path, Security, Request } from "tsoa";
+import {
+  Get,
+  Post,
+  Put,
+  Delete,
+  Route,
+  Tags,
+  Body,
+  Path,
+  Security,
+  Request,
+  UploadedFile,
+} from "tsoa";
+import { uploadChatAttachmentToFirebaseStorage } from "../firebase/firebaseStorage";
 import { type LiveChatHistoryItem, type ApiResponse } from "./controllerTypes";
 import { ChatRole } from "@prisma/client";
 import prisma from "../prisma/prismaClient";
@@ -16,11 +29,19 @@ import {
 import { mcpClientService } from "../services/mcpClientService";
 import { aiUsageService } from "../services/aiUsageService";
 
+export interface ChatAttachment {
+  url: string;
+  type: string;
+  name: string;
+  size?: number;
+}
+
 interface ChatMessage {
   id: string;
   threadId: string;
   role: ChatRole;
   content: string;
+  attachments?: ChatAttachment[] | null;
   createdAt: Date;
 }
 
@@ -168,7 +189,58 @@ export class ChatController extends BaseWorkspaceController {
         },
       },
     });
-    return { status: 200, data: thread };
+    return { status: 200, data: thread as unknown as ChatThread };
+  }
+
+  @Post("threads/{threadId}/attachments")
+  public async uploadAttachment(
+    @Path() threadId: string,
+    @Request() request: AuthenticatedRequest,
+    @UploadedFile("file") file: Express.Multer.File,
+  ): Promise<ChatAttachment> {
+    const { user } = await this.getAuthorizedWorkspaceAccess(request);
+
+    // Confirm the user actually owns the thread before uploading.
+    await prisma.chatThread.findFirstOrThrow({
+      where: { id: threadId, userId: user.id },
+    });
+
+    const ALLOWED_TYPES = [
+      "image/png",
+      "image/jpeg",
+      "image/jpg",
+      "image/webp",
+      "image/gif",
+      "application/pdf",
+    ];
+    if (!ALLOWED_TYPES.includes(file.mimetype)) {
+      this.setStatus(400);
+      throw {
+        status: 400,
+        message: `Unsupported attachment type: ${file.mimetype}. Allowed: images and PDFs.`,
+      };
+    }
+
+    const MAX_BYTES = 20 * 1024 * 1024;
+    if (file.size > MAX_BYTES) {
+      this.setStatus(400);
+      throw { status: 400, message: "Attachment too large (max 20MB)" };
+    }
+
+    const { publicUrl } = await uploadChatAttachmentToFirebaseStorage(
+      file.buffer,
+      user.id,
+      threadId,
+      file.originalname,
+      file.mimetype,
+    );
+
+    return {
+      url: publicUrl,
+      type: file.mimetype,
+      name: file.originalname,
+      size: file.size,
+    };
   }
 
   @Post("threads")
@@ -227,7 +299,7 @@ export class ChatController extends BaseWorkspaceController {
       include: { messages: true },
     });
 
-    return { status: 200, data: thread };
+    return { status: 200, data: thread as unknown as ChatThread };
   }
 
   @Put("threads/{threadId}")
@@ -453,8 +525,8 @@ CRITICAL RULES FOR MERMAID:
       return {
         status: 200,
         data: {
-          message: userMessage,
-          response: assistantMessage,
+          message: userMessage as unknown as ChatMessage,
+          response: assistantMessage as unknown as ChatMessage,
         },
       };
     } catch (error) {

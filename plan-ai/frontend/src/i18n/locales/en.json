@@ -284,7 +284,8 @@
       "copyResponse": "Copy response",
       "copyTable": "Copy table",
       "copyCode": "Copy code",
-      "copied": "Copied!"
+      "copied": "Copied!",
+      "attachFile": "Attach image or PDF"
     },
     "messages": {
       "chatCreated": "Chat created successfully",

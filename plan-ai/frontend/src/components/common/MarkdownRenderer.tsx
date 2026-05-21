@@ -10,7 +10,11 @@ import { Link as RouterLink } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import MermaidRenderer from "./MermaidRenderer";
 
-const CopyButton: React.FC<{ getText: () => string; title: string }> = ({ getText, title }) => {
+const CopyButton: React.FC<{
+  getText: () => string;
+  title: string;
+  position?: "top-right" | "bottom-right";
+}> = ({ getText, title, position = "top-right" }) => {
   const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
 
@@ -26,18 +30,18 @@ const CopyButton: React.FC<{ getText: () => string; title: string }> = ({ getTex
   };
 
   return (
-    <Tooltip title={copied ? t("chat.window.copied") : title}>
+    <Tooltip title={copied ? t("chat.window.copied") : title} placement="left">
       <IconButton
         size="small"
         onClick={handleCopy}
         sx={{
           position: "absolute",
-          top: 4,
-          right: 4,
-          zIndex: 1,
+          ...(position === "bottom-right" ? { bottom: 8, right: 8 } : { top: 8, right: 8 }),
+          zIndex: 2,
           bgcolor: "background.paper",
           border: 1,
           borderColor: "divider",
+          boxShadow: 1,
           "&:hover": { bgcolor: "action.hover" },
         }}
       >

@@ -3,11 +3,19 @@ import { createApi } from "@reduxjs/toolkit/query/react";
 import { baseQueryWithReauth } from "../../utils/baseQuery";
 import { components } from "../../types/api";
 
+export interface ChatAttachment {
+  url: string;
+  type: string;
+  name: string;
+  size?: number;
+}
+
 export interface ChatMessage {
   id: string;
   threadId: string;
   role: "USER" | "ASSISTANT";
   content: string;
+  attachments?: ChatAttachment[] | null;
   createdAt: string;
 }
 

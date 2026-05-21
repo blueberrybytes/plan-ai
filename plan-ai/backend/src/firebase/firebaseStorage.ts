@@ -4,6 +4,7 @@ import { logger } from "../utils/logger";
 
 const BUCKET = process.env.FIREBASE_STORAGE_BUCKET;
 const CONTEXT_PREFIX = "contexts";
+const CHAT_ATTACHMENT_PREFIX = "chat-attachments";
 
 function getBucket() {
   return firebaseAdmin.storage().bucket(BUCKET);
@@ -73,6 +74,34 @@ export async function uploadContextFileToFirebaseStorage(
   } catch (error) {
     logger.error("Error uploading context file to Firebase Storage:", error);
     throw new Error("Failed to upload context file to Firebase Storage");
+  }
+}
+
+export async function uploadChatAttachmentToFirebaseStorage(
+  fileBuffer: Buffer,
+  userId: string,
+  threadId: string,
+  originalFileName: string,
+  contentType: string,
+): Promise<{ storagePath: string; publicUrl: string }> {
+  try {
+    const bucket = getBucket();
+    const sanitizedFileName = sanitizeFileName(originalFileName || "file");
+    const storagePath = `${CHAT_ATTACHMENT_PREFIX}/${userId}/${threadId}/${uuidv4()}-${sanitizedFileName}`;
+    const file = bucket.file(storagePath);
+    await file.save(fileBuffer, {
+      metadata: {
+        contentType,
+        cacheControl: "public, max-age=86400",
+      },
+    });
+    await file.makePublic();
+    const publicUrl = `https://storage.googleapis.com/${bucket.name}/${storagePath}`;
+    logger.info(`Chat attachment uploaded successfully to ${publicUrl}`);
+    return { storagePath, publicUrl };
+  } catch (error) {
+    logger.error("Error uploading chat attachment to Firebase Storage:", error);
+    throw new Error("Failed to upload chat attachment to Firebase Storage");
   }
 }
 

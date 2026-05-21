@@ -21,10 +21,13 @@ import {
   ArrowBack,
   Download as DownloadIcon,
   Edit as EditIcon,
+  AttachFile as AttachFileIcon,
+  Close as CloseIcon,
+  PictureAsPdf as PdfIcon,
 } from "@mui/icons-material";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import { useTranslation } from "react-i18next";
-import { ChatMessage, ChatThread } from "../../store/apis/chatApi";
+import { ChatAttachment, ChatMessage, ChatThread } from "../../store/apis/chatApi";
 import AssistantMessageRenderer from "./AssistantMessageRenderer";
 import CitationChip from "./CitationChip";
 import { AiGraphTrace, ContextGraph } from "../project/ContextGraph";
@@ -71,6 +74,9 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
   const [optimisticMessages, setOptimisticMessages] = useState<ChatMessage[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [pendingAttachments, setPendingAttachments] = useState<ChatAttachment[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const userScrolledUp = useRef(false);
   const token = useSelector((state: RootState) => state.auth.user?.token);
@@ -122,10 +128,47 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
     userScrolledUp.current = distanceFromBottom > 80;
   };
 
+  const handleAttachFiles = async (files: FileList | null) => {
+    if (!files || files.length === 0 || !activeThread) return;
+    const baseUrl = (process.env.REACT_APP_API_BACKEND_URL || "").replace(/\/$/, "");
+    setIsUploading(true);
+    setErrorMsg(null);
+    try {
+      for (const file of Array.from(files)) {
+        const formData = new FormData();
+        formData.append("file", file);
+        const res = await fetch(
+          `${baseUrl}/api/chat/threads/${activeThread.id}/attachments`,
+          {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "x-workspace-id": activeWorkspaceId || "",
+            },
+            body: formData,
+          },
+        );
+        if (!res.ok) {
+          const errData = await res.json().catch(() => null);
+          throw new Error(errData?.message || `Failed to upload ${file.name}`);
+        }
+        const attachment = (await res.json()) as ChatAttachment;
+        setPendingAttachments((prev) => [...prev, attachment]);
+      }
+    } catch (error: any) {
+      setErrorMsg(error?.message || "Failed to upload attachment");
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
   const handleSend = async (customMsg?: string) => {
-    if (isStreaming || isSending) return;
+    if (isStreaming || isSending || isUploading) return;
     const trimmedInput = (customMsg || input).trim();
-    if (!trimmedInput || !activeThread) return;
+    if (!activeThread) return;
+    if (!trimmedInput && pendingAttachments.length === 0) return;
+    const attachmentsToSend = pendingAttachments;
 
     // 1. Optimistic User Message
     const userTempId = `temp-user-${Date.now()}`;
@@ -134,6 +177,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
       threadId: activeThread.id,
       role: "USER",
       content: trimmedInput,
+      attachments: attachmentsToSend.length > 0 ? attachmentsToSend : undefined,
       createdAt: new Date().toISOString(),
     };
 
@@ -149,6 +193,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
 
     setOptimisticMessages((prev) => [...prev, userMsg, aiMsg]);
     setInput("");
+    setPendingAttachments([]);
     setIsStreaming(true);
     setErrorMsg(null);
 
@@ -164,6 +209,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
         body: JSON.stringify({
           content: trimmedInput,
           modelKey: modelKey || undefined,
+          attachments: attachmentsToSend.length > 0 ? attachmentsToSend : undefined,
         }),
       });
 
@@ -391,6 +437,64 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
                   alignItems: "flex-start",
                 }}
               >
+                {msg.attachments && msg.attachments.length > 0 && (
+                  <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1, mb: contentToRender ? 1 : 0, width: "100%" }}>
+                    {msg.attachments.map((att, idx) => {
+                      const isImage = att.type.startsWith("image/");
+                      return isImage ? (
+                        <Box
+                          key={`${att.url}-${idx}`}
+                          component="a"
+                          href={att.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          sx={{
+                            display: "block",
+                            maxWidth: 220,
+                            maxHeight: 220,
+                            borderRadius: 1,
+                            overflow: "hidden",
+                            border: 1,
+                            borderColor: "divider",
+                          }}
+                        >
+                          <Box
+                            component="img"
+                            src={att.url}
+                            alt={att.name}
+                            sx={{ display: "block", maxWidth: "100%", maxHeight: 220 }}
+                          />
+                        </Box>
+                      ) : (
+                        <Box
+                          key={`${att.url}-${idx}`}
+                          component="a"
+                          href={att.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          sx={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 1,
+                            p: 1,
+                            border: 1,
+                            borderColor: "divider",
+                            borderRadius: 1,
+                            bgcolor: "background.default",
+                            textDecoration: "none",
+                            color: "text.primary",
+                            "&:hover": { bgcolor: "action.hover" },
+                          }}
+                        >
+                          <PdfIcon color="error" />
+                          <Typography variant="caption" sx={{ maxWidth: 180 }} noWrap>
+                            {att.name}
+                          </Typography>
+                        </Box>
+                      );
+                    })}
+                  </Box>
+                )}
                 <Box sx={{ display: "flex", width: "100%", gap: 1 }}>
                   <Box sx={{ flexGrow: 1, minWidth: 0, overflowX: "auto" }}>
                     {msg.role === "ASSISTANT" && !contentToRender && isStreaming ? (
@@ -590,7 +694,97 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
           </Box>
           <AiModelSelector value={modelKey} onChange={setModelKey} disabled={isStreaming} />
         </Box>
+        {pendingAttachments.length > 0 && (
+          <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1, mb: 1.5 }}>
+            {pendingAttachments.map((att, idx) => {
+              const isImage = att.type.startsWith("image/");
+              return (
+                <Box
+                  key={`${att.url}-${idx}`}
+                  sx={{
+                    position: "relative",
+                    width: 80,
+                    height: 80,
+                    border: 1,
+                    borderColor: "divider",
+                    borderRadius: 1,
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    bgcolor: "background.default",
+                    overflow: "hidden",
+                  }}
+                >
+                  {isImage ? (
+                    <Box
+                      component="img"
+                      src={att.url}
+                      alt={att.name}
+                      sx={{ width: "100%", height: "100%", objectFit: "cover" }}
+                    />
+                  ) : (
+                    <>
+                      <PdfIcon fontSize="large" color="error" />
+                      <Typography
+                        variant="caption"
+                        sx={{
+                          fontSize: "0.6rem",
+                          px: 0.5,
+                          textAlign: "center",
+                          width: "100%",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {att.name}
+                      </Typography>
+                    </>
+                  )}
+                  <IconButton
+                    size="small"
+                    onClick={() =>
+                      setPendingAttachments((prev) => prev.filter((_, i) => i !== idx))
+                    }
+                    sx={{
+                      position: "absolute",
+                      top: 2,
+                      right: 2,
+                      bgcolor: "background.paper",
+                      width: 18,
+                      height: 18,
+                      "&:hover": { bgcolor: "action.hover" },
+                    }}
+                  >
+                    <CloseIcon sx={{ fontSize: 12 }} />
+                  </IconButton>
+                </Box>
+              );
+            })}
+            {isUploading && <CircularProgress size={24} sx={{ alignSelf: "center" }} />}
+          </Box>
+        )}
         <Box sx={{ display: "flex", gap: 1, alignItems: "flex-end" }}>
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            hidden
+            accept="image/png,image/jpeg,image/jpg,image/webp,image/gif,application/pdf"
+            onChange={(e) => void handleAttachFiles(e.target.files)}
+          />
+          <Tooltip title={t("chat.window.attachFile") || "Attach image or PDF"}>
+            <span>
+              <IconButton
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isStreaming || isUploading}
+                sx={{ flexShrink: 0, mb: 0.5 }}
+              >
+                <AttachFileIcon />
+              </IconButton>
+            </span>
+          </Tooltip>
           <TextField
             fullWidth
             placeholder={t("chat.placeholders.typeMessage")}
@@ -599,7 +793,12 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault();
-                if (!isStreaming && !isSending && input.trim()) {
+                if (
+                  !isStreaming &&
+                  !isSending &&
+                  !isUploading &&
+                  (input.trim() || pendingAttachments.length > 0)
+                ) {
                   handleSend();
                 }
               }
@@ -610,7 +809,12 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
           <IconButton
             color="primary"
             onClick={() => handleSend()}
-            disabled={!input.trim() || isSending || isStreaming}
+            disabled={
+              (!input.trim() && pendingAttachments.length === 0) ||
+              isSending ||
+              isStreaming ||
+              isUploading
+            }
             sx={{ flexShrink: 0, mb: 0.5 }}
           >
             <SendIcon />

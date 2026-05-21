@@ -392,12 +392,13 @@ model ChatThread {
 }
 
 model ChatMessage {
-  id        String     @id @default(cuid())
-  threadId  String
-  role      ChatRole
-  content   String
-  createdAt DateTime   @default(now())
-  thread    ChatThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  id          String     @id @default(cuid())
+  threadId    String
+  role        ChatRole
+  content     String
+  attachments Json?
+  createdAt   DateTime   @default(now())
+  thread      ChatThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
 
   @@index([threadId])
 }

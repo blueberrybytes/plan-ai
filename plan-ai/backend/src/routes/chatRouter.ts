@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { Router } from "express";
-import { streamText, stepCountIs, Output } from "ai";
+import { streamText, stepCountIs, Output, type ModelMessage } from "ai";
 import { z } from "zod";
 import {
   getConfiguredModel,
@@ -23,7 +23,11 @@ router.post(
   authenticateUser,
   async (req: AuthenticatedRequest, res) => {
     const { threadId } = req.params;
-    const { content, modelKey } = req.body;
+    const { content, modelKey, attachments } = req.body as {
+      content: string;
+      modelKey?: string;
+      attachments?: Array<{ url: string; type: string; name: string; size?: number }>;
+    };
 
     if (!req.user) {
       return res.status(401).json({ message: "Unauthorized" });
@@ -53,12 +57,16 @@ router.post(
         },
       });
 
-      // 1. Save User Message
+      // 1. Save User Message (with optional image/PDF attachments)
       await prisma.chatMessage.create({
         data: {
           threadId,
           role: "USER",
           content,
+          attachments:
+            attachments && attachments.length > 0
+              ? (attachments as unknown as import("@prisma/client").Prisma.InputJsonValue)
+              : undefined,
         },
       });
 
@@ -164,9 +172,36 @@ Context:
 ${contextText}
 `;
 
-      const messages = [
-        { role: "system" as const, content: systemPrompt },
-        ...thread.messages.map((m) => {
+      type AttachmentRef = { url: string; type: string; name: string; size?: number };
+
+      // Build a multimodal user message for the LLM when an attachment is
+      // present. Falls back to plain text content otherwise.
+      const buildUserMessage = (
+        text: string,
+        atts?: AttachmentRef[] | null,
+      ): ModelMessage => {
+        if (!atts || atts.length === 0) {
+          return { role: "user", content: text };
+        }
+        const parts: Array<
+          | { type: "text"; text: string }
+          | { type: "image"; image: URL }
+          | { type: "file"; data: URL; mediaType: string }
+        > = [];
+        if (text) parts.push({ type: "text", text });
+        for (const a of atts) {
+          if (a.type.startsWith("image/")) {
+            parts.push({ type: "image", image: new URL(a.url) });
+          } else if (a.type === "application/pdf") {
+            parts.push({ type: "file", data: new URL(a.url), mediaType: a.type });
+          }
+        }
+        return { role: "user", content: parts };
+      };
+
+      const messages: ModelMessage[] = [
+        { role: "system", content: systemPrompt },
+        ...thread.messages.map<ModelMessage>((m) => {
           let cleanContent = m.content;
           if (m.role === "ASSISTANT") {
             try {
@@ -179,12 +214,13 @@ ${contextText}
               cleanContent = cleanContent.split("---CITATIONS---")[0].trim();
             }
           }
-          return {
-            role: m.role.toLowerCase() as "user" | "assistant",
-            content: cleanContent,
-          };
+          if (m.role === "USER") {
+            const pastAttachments = (m.attachments ?? null) as AttachmentRef[] | null;
+            return buildUserMessage(cleanContent, pastAttachments);
+          }
+          return { role: "assistant", content: cleanContent };
         }),
-        { role: "user" as const, content },
+        buildUserMessage(content, attachments),
       ];
 
       const requestedModelKey = modelKey && modelKey.length > 0 ? modelKey : DEFAULT_AI_MODEL;

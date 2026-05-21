@@ -4496,6 +4496,30 @@
 			"ChatRole": {
 				"$ref": "#/components/schemas/_36_Enums.ChatRole"
 			},
+			"ChatAttachment": {
+				"properties": {
+					"url": {
+						"type": "string"
+					},
+					"type": {
+						"type": "string"
+					},
+					"name": {
+						"type": "string"
+					},
+					"size": {
+						"type": "number",
+						"format": "double"
+					}
+				},
+				"required": [
+					"url",
+					"type",
+					"name"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
 			"ChatMessage": {
 				"properties": {
 					"id": {
@@ -4509,6 +4533,13 @@
 					},
 					"content": {
 						"type": "string"
+					},
+					"attachments": {
+						"items": {
+							"$ref": "#/components/schemas/ChatAttachment"
+						},
+						"type": "array",
+						"nullable": true
 					},
 					"createdAt": {
 						"type": "string",
@@ -11992,6 +12023,60 @@
 						}
 					}
 				]
+			}
+		},
+		"/api/chat/threads/{threadId}/attachments": {
+			"post": {
+				"operationId": "UploadAttachment",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ChatAttachment"
+								}
+							}
+						}
+					}
+				},
+				"tags": [
+					"Chat"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": [
+					{
+						"in": "path",
+						"name": "threadId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"multipart/form-data": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"file": {
+										"type": "string",
+										"format": "binary"
+									}
+								},
+								"required": [
+									"file"
+								]
+							}
+						}
+					}
+				}
 			}
 		},
 		"/api/chat/threads/{threadId}/messages": {

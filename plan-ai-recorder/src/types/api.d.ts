@@ -1674,6 +1674,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/chat/threads/{threadId}/attachments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["UploadAttachment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/chat/threads/{threadId}/messages": {
         parameters: {
             query?: never;
@@ -3436,11 +3452,19 @@ export interface components {
         /** @enum {string} */
         "_36_Enums.ChatRole": "USER" | "ASSISTANT";
         ChatRole: components["schemas"]["_36_Enums.ChatRole"];
+        ChatAttachment: {
+            url: string;
+            type: string;
+            name: string;
+            /** Format: double */
+            size?: number;
+        };
         ChatMessage: {
             id: string;
             threadId: string;
             role: components["schemas"]["ChatRole"];
             content: string;
+            attachments?: components["schemas"]["ChatAttachment"][] | null;
             /** Format: date-time */
             createdAt: string;
         };
@@ -7369,6 +7393,35 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ApiResponse__success-boolean__"];
+                };
+            };
+        };
+    };
+    UploadAttachment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                threadId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    file: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChatAttachment"];
                 };
             };
         };
