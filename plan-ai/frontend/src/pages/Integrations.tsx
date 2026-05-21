@@ -1188,13 +1188,6 @@ const Integrations: React.FC = () => {
                                 height: 8,
                                 borderRadius: "50%",
                                 bgcolor: "error.main",
-                                boxShadow: "0 0 0 0 rgba(211,47,47,0.4)",
-                                animation: "mcpPulse 1.4s ease-in-out infinite",
-                                "@keyframes mcpPulse": {
-                                  "0%": { boxShadow: "0 0 0 0 rgba(211,47,47,0.45)" },
-                                  "70%": { boxShadow: "0 0 0 5px rgba(211,47,47,0)" },
-                                  "100%": { boxShadow: "0 0 0 0 rgba(211,47,47,0)" },
-                                },
                               }}
                             />
                           </Tooltip>

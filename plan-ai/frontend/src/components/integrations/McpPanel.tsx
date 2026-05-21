@@ -30,6 +30,7 @@ import {
 import AddIcon from "@mui/icons-material/Add";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
+import DownloadIcon from "@mui/icons-material/Download";
 import TokenIcon from "@mui/icons-material/Token";
 import LockIcon from "@mui/icons-material/Lock";
 import {
@@ -37,6 +38,7 @@ import {
   useCreateMcpTokenMutation,
   useRevokeMcpTokenMutation,
 } from "../../store/apis/mcpApi";
+import { downloadMcpExtension } from "../../utils/downloadMcpExtension";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -507,14 +509,20 @@ const McpPanel: React.FC<McpPanelProps> = ({ workspaceId }) => {
 
               {/* Claude Desktop — step-by-step guide + file path fallback */}
               {currentTabId === "claude-desktop" && (
-                <SetupHint
-                  steps={CLAUDE_DESKTOP_STEPS}
-                  configPath={claudeDesktopPath}
-                  os={os}
-                  onOsChange={setOs}
-                  onCopy={handleCopy}
-                  copied={copied}
-                />
+                <>
+                  <Alert severity="info" sx={{ mb: 2 }}>
+                    <strong>Recommended: Desktop Extensions</strong><br/>
+                    When you create a new token, you can download a <code>.mcpb</code> extension file. Install it in Claude Desktop via <strong>Settings &gt; Extensions &gt; Advanced &gt; Install Extension...</strong>
+                  </Alert>
+                  <SetupHint
+                    steps={CLAUDE_DESKTOP_STEPS}
+                    configPath={claudeDesktopPath}
+                    os={os}
+                    onOsChange={setOs}
+                    onCopy={handleCopy}
+                    copied={copied}
+                  />
+                </>
               )}
 
               {/* Cursor — step-by-step guide + file path fallback */}
@@ -658,6 +666,21 @@ const McpPanel: React.FC<McpPanelProps> = ({ workspaceId }) => {
                   </IconButton>
                 </Tooltip>
               </Box>
+
+              <Divider />
+
+              <Typography variant="subtitle2" fontWeight={600}>
+                Claude Desktop Extension (.mcpb):
+              </Typography>
+              <Button
+                variant="outlined"
+                color="primary"
+                startIcon={<DownloadIcon />}
+                onClick={() => downloadMcpExtension(rawToken, MCP_SSE_ENDPOINT)}
+                sx={{ width: "fit-content" }}
+              >
+                Download Desktop Extension
+              </Button>
             </Stack>
           ) : (
             <Stack spacing={2} sx={{ pt: 1 }}>
