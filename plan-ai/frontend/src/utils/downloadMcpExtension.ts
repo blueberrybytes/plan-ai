@@ -31,20 +31,23 @@ export const downloadMcpExtension = async (token: string, endpoint: string) => {
 // Standalone StdIO to SSE Proxy for Plan AI MCP
 // Connects to the SSE endpoint and forwards JSON-RPC messages
 
-const endpoint = "${endpoint}";
 const token = "${token}";
+const endpoint = "${endpoint}".replace("localhost", "127.0.0.1");
 
-const fs = require('fs');
-function logDebug(msg) {
-  try { fs.appendFileSync('/tmp/plan-ai-mcp.log', new Date().toISOString() + ' [MCP Proxy] ' + msg + '\\n'); } catch (e) {}
+// Ensure errors flush to stderr before exiting
+function fatalError(err) {
+  console.error("FATAL ERROR:", err?.stack || err);
+  setTimeout(() => process.exit(1), 200);
 }
+
+process.on('uncaughtException', fatalError);
+process.on('unhandledRejection', fatalError);
 
 let postUrl = null;
 const messageQueue = [];
 
 async function start() {
   try {
-    logDebug("Starting proxy script, connecting to: " + endpoint);
     const response = await fetch(endpoint, {
       headers: {
         "Authorization": "Bearer " + token
@@ -52,11 +55,9 @@ async function start() {
     });
 
     if (!response.ok) {
-      logDebug(\`Failed to connect to SSE: HTTP \${response.status} \${response.statusText}\`);
-      console.error(\`Failed to connect to SSE: HTTP \${response.status} \${response.statusText}\`);
-      process.exit(1);
+      fatalError(\`Failed to connect to SSE: HTTP \${response.status} \${response.statusText}\`);
+      return;
     }
-    logDebug("Connected to SSE stream successfully.");
 
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
@@ -71,9 +72,7 @@ async function start() {
 
     rl.on('line', async (line) => {
       if (!line.trim()) return;
-      logDebug("Received line from stdin: " + line);
       if (!postUrl) {
-        logDebug("postUrl not ready, queuing message.");
         messageQueue.push(line);
       } else {
         await sendMessage(line);
@@ -82,16 +81,13 @@ async function start() {
 
     async function sendMessage(msg) {
       try {
-        logDebug("Sending POST message to: " + postUrl);
-        const res = await fetch(postUrl, {
+        await fetch(postUrl, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: msg
         });
-        logDebug("POST result status: " + res.status);
       } catch (err) {
-        logDebug("Failed to send message: " + err.message);
-        console.error("Failed to send message:", err);
+        fatalError(err);
       }
     }
 
@@ -100,10 +96,7 @@ async function start() {
     
     while (true) {
       const { done, value } = await reader.read();
-      if (done) {
-        logDebug("SSE stream reader returned done: true");
-        break;
-      }
+      if (done) break;
       buffer += decoder.decode(value, { stream: true });
       const lines = buffer.split('\\n');
       buffer = lines.pop() || "";
@@ -113,16 +106,12 @@ async function start() {
           if (eventData.length > 0) {
             const dataStr = eventData.join('\\n');
             if (eventType === 'endpoint') {
-              postUrl = new URL(dataStr, endpoint).toString();
-              logDebug("Received endpoint event, postUrl set to: " + postUrl);
+              postUrl = new URL(dataStr, endpoint).toString().replace("localhost", "127.0.0.1");
               // Flush queue
               while (messageQueue.length > 0) {
-                const queuedMsg = messageQueue.shift();
-                logDebug("Flushing queued message");
-                await sendMessage(queuedMsg);
+                await sendMessage(messageQueue.shift());
               }
             } else {
-              logDebug("Writing JSON-RPC response to stdout: " + dataStr);
               // Write JSON-RPC response to stdout
               process.stdout.write(dataStr + "\\n");
             }
@@ -138,11 +127,7 @@ async function start() {
       }
     }
   } catch (error) {
-    logDebug("SSE connection error: " + error.stack);
-    console.error("SSE connection error:", error);
-    process.exit(1);
-  } finally {
-    logDebug("Proxy script start() function finished. Exiting naturally.");
+    fatalError(error);
   }
 }
 
