@@ -24,6 +24,7 @@ import {
   AttachFile as AttachFileIcon,
   Close as CloseIcon,
   PictureAsPdf as PdfIcon,
+  InsertDriveFile as FileIcon,
 } from "@mui/icons-material";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import { useTranslation } from "react-i18next";
@@ -486,7 +487,11 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
                             "&:hover": { bgcolor: "action.hover" },
                           }}
                         >
-                          <PdfIcon color="error" />
+                          {att.type === "application/pdf" ? (
+                            <PdfIcon color="error" />
+                          ) : (
+                            <FileIcon color="action" />
+                          )}
                           <Typography variant="caption" sx={{ maxWidth: 180 }} noWrap>
                             {att.name}
                           </Typography>
@@ -742,7 +747,11 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
                     />
                   ) : (
                     <>
-                      <PdfIcon fontSize="large" color="error" />
+                      {att.type === "application/pdf" ? (
+                        <PdfIcon fontSize="large" color="error" />
+                      ) : (
+                        <FileIcon fontSize="large" color="action" />
+                      )}
                       <Typography
                         variant="caption"
                         sx={{
@@ -788,10 +797,10 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
             type="file"
             multiple
             hidden
-            accept="image/png,image/jpeg,image/jpg,image/webp,image/gif,application/pdf"
+            accept="image/png,image/jpeg,image/jpg,image/webp,image/gif,application/pdf,text/csv,text/plain,text/markdown,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/json"
             onChange={(e) => void handleAttachFiles(e.target.files)}
           />
-          <Tooltip title={t("chat.window.attachFile") || "Attach image or PDF"}>
+          <Tooltip title={t("chat.window.attachFile") || "Attach files"}>
             <span>
               <IconButton
                 onClick={() => fileInputRef.current?.click()}

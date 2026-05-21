@@ -212,12 +212,20 @@ export class ChatController extends BaseWorkspaceController {
       "image/webp",
       "image/gif",
       "application/pdf",
+      "text/csv",
+      "text/plain",
+      "text/markdown",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "application/vnd.ms-excel",
+      "application/msword",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "application/json",
     ];
     if (!ALLOWED_TYPES.includes(file.mimetype)) {
       this.setStatus(400);
       throw {
         status: 400,
-        message: `Unsupported attachment type: ${file.mimetype}. Allowed: images and PDFs.`,
+        message: `Unsupported attachment type: ${file.mimetype}. Allowed: images, PDFs, CSV, TXT, MD, Excel, Word, JSON.`,
       };
     }
 
