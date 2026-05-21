@@ -40,7 +40,15 @@ import {
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
-const MCP_SSE_ENDPOINT = "https://api.plan-ai.blueberrybytes.com/mcp/sse";
+const getBaseUrl = () => {
+  const envUrl = process.env.REACT_APP_API_BACKEND_URL;
+  if (envUrl) {
+    return envUrl.replace(/\/$/, "");
+  }
+  return window.location.origin;
+};
+
+const MCP_SSE_ENDPOINT = `${getBaseUrl()}/mcp/sse`;
 
 const MCP_CONNECT_TABS = [
   { label: "Claude Code", id: "claude-code" },

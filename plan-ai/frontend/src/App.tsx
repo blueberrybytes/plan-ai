@@ -56,6 +56,7 @@ import Onboarding from "./pages/Onboarding";
 import PendingReview from "./pages/PendingReview";
 import AdminPptxPreview from "./pages/AdminPptxPreview";
 import AdminEmails from "./pages/AdminEmails";
+import AdminMcp from "./pages/AdminMcp";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import "./App.css";
 import "./i18n";
@@ -155,6 +156,7 @@ const AppContent: React.FC = () => {
           <Route path="/admin/pricing" element={<AiPricing />} />
           <Route path="/admin/pptx-preview" element={<AdminPptxPreview />} />
           <Route path="/admin/emails" element={<AdminEmails />} />
+          <Route path="/admin/mcp" element={<AdminMcp />} />
           <Route path="/team" element={<WorkspaceTeam />} />
           <Route path="/team/users/:targetUserId/usage" element={<AiUsage />} />
           <Route path="/onboarding" element={<Onboarding />} />
