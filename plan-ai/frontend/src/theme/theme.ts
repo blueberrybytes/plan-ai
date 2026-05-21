@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { alpha, createTheme, ThemeOptions, darken, lighten } from "@mui/material/styles";
 
 declare module "@mui/material/styles" {
@@ -76,14 +77,14 @@ export const baseThemeOptions: ThemeOptions = {
       main: alpha("#a78bfa", 0.5),
     },
     background: {
-      default: "#0F141E", // Softer deep slate black
-      paper: "#181F2E", // Elevated sleek dark slate
+      default: "#000000", // Pure black for max contrast
+      paper: "#18181B", // Zinc-900 panel
     },
     text: {
       primary: "#f8fafc",
       secondary: "#94a3b8",
     },
-    divider: "rgba(255, 255, 255, 0.08)",
+    divider: "rgba(255, 255, 255, 0.05)",
     success: {
       main: "#10B981",
       light: "#34D399",
@@ -167,13 +168,13 @@ export const baseThemeOptions: ThemeOptions = {
     },
   },
   shape: {
-    borderRadius: 12,
+    borderRadius: 16,
   },
   components: {
     MuiCssBaseline: {
       styleOverrides: {
         body: {
-          backgroundColor: "#0F141E",
+          backgroundColor: "#000000",
           color: "#f8fafc",
           scrollbarColor: "rgba(255, 255, 255, 0.1) transparent",
           "&::-webkit-scrollbar": {
@@ -190,8 +191,8 @@ export const baseThemeOptions: ThemeOptions = {
       styleOverrides: {
         root: {
           backgroundImage: "none",
-          backgroundColor: "#181F2E",
-          border: "1px solid rgba(255, 255, 255, 0.08)",
+          backgroundColor: "#18181B",
+          border: "1px solid rgba(255, 255, 255, 0.05)",
         },
         elevation1: {
           boxShadow: "0 4px 20px rgba(0, 0, 0, 0.4)",
@@ -201,27 +202,23 @@ export const baseThemeOptions: ThemeOptions = {
     MuiDrawer: {
       styleOverrides: {
         paper: {
-          backgroundColor: "#0F141E",
-          borderRight: "1px solid rgba(255, 255, 255, 0.08)",
+          backgroundColor: "#000000",
+          borderRight: "1px solid rgba(255, 255, 255, 0.05)",
         },
       },
     },
     MuiButton: {
       styleOverrides: {
         root: ({ theme }) => ({
-          borderRadius: "10px",
+          borderRadius: "100px",
           padding: "8px 20px",
           fontWeight: 600,
-          transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
-          "&:hover": {
-            transform: "translateY(-1px)",
-            boxShadow: `0 4px 12px ${alpha(theme.palette.primary.main, 0.2)}`,
-          },
+          transition: "all 0.2s ease",
         }),
         containedPrimary: ({ theme }) => ({
-          background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${darken(theme.palette.primary.main, 0.2)} 100%)`,
+          backgroundColor: theme.palette.primary.main,
           "&:hover": {
-            background: `linear-gradient(135deg, ${lighten(theme.palette.primary.main, 0.1)} 0%, ${theme.palette.primary.main} 100%)`,
+            backgroundColor: lighten(theme.palette.primary.main, 0.1),
           },
         }),
         outlined: {
@@ -236,16 +233,13 @@ export const baseThemeOptions: ThemeOptions = {
     MuiCard: {
       styleOverrides: {
         root: {
-          borderRadius: "16px",
-          backgroundColor: "rgba(24, 31, 46, 0.7)",
-          backdropFilter: "blur(12px)",
-          border: "1px solid rgba(255, 255, 255, 0.08)",
-          boxShadow: "0 8px 32px rgba(0, 0, 0, 0.2)",
-          transition: "all 0.3s ease",
+          borderRadius: "20px",
+          backgroundColor: "#18181B",
+          border: "1px solid rgba(255, 255, 255, 0.05)",
+          boxShadow: "0 4px 12px rgba(0, 0, 0, 0.1)",
+          transition: "all 0.2s ease",
           "&:hover": {
-            borderColor: "rgba(255, 255, 255, 0.15)",
-            transform: "scale(1.01)",
-            boxShadow: "0 12px 48px rgba(0, 0, 0, 0.3)",
+            borderColor: "rgba(255, 255, 255, 0.1)",
           },
         },
       },
@@ -299,10 +293,10 @@ export const baseThemeOptions: ThemeOptions = {
     MuiDialog: {
       styleOverrides: {
         paper: {
-          borderRadius: "20px",
-          backgroundColor: "#181F2E",
+          borderRadius: "24px",
+          backgroundColor: "#18181B",
           backgroundImage: "none",
-          border: "1px solid rgba(255, 255, 255, 0.1)",
+          border: "1px solid rgba(255, 255, 255, 0.05)",
           boxShadow: "0 24px 64px rgba(0, 0, 0, 0.5)",
         },
       },
@@ -310,7 +304,7 @@ export const baseThemeOptions: ThemeOptions = {
     MuiDivider: {
       styleOverrides: {
         root: {
-          borderColor: "rgba(255, 255, 255, 0.06)",
+          borderColor: "rgba(255, 255, 255, 0.05)",
         },
       },
     },

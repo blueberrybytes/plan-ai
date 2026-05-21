@@ -201,6 +201,8 @@ const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children, fullHeight = fa
           flexGrow: 1,
           minHeight: 0,
           bgcolor: "background.default",
+          p: 1.5,
+          gap: 1.5,
         }}
       >
         <Box
@@ -208,9 +210,10 @@ const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children, fullHeight = fa
           sx={{
             width: isCollapsed ? 80 : 264,
             flexShrink: 0,
-            borderRight: "1px solid",
-            borderColor: "rgba(255, 255, 255, 0.08)",
-            bgcolor: "background.default",
+            bgcolor: "background.paper",
+            borderRadius: "20px",
+            border: "1px solid",
+            borderColor: "rgba(255, 255, 255, 0.05)",
             display: "flex",
             flexDirection: "column",
             py: 3,
@@ -779,18 +782,10 @@ const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children, fullHeight = fa
             minWidth: 0,
             height: "100%",
             overflow: fullHeight ? "hidden" : "auto",
-            bgcolor: "background.default",
+            bgcolor: "background.paper",
+            borderRadius: "20px",
+            border: "1px solid rgba(255, 255, 255, 0.05)",
             position: "relative",
-            "&::before": {
-              content: '""',
-              position: "absolute",
-              top: 0,
-              left: 0,
-              right: 0,
-              height: "1px",
-              background:
-                "linear-gradient(90deg, rgba(67, 97, 238, 0) 0%, rgba(67, 97, 238, 0.1) 50%, rgba(67, 97, 238, 0) 100%)",
-            },
           }}
         >
           {/* Ambient orbs — decorative only, pointer-events:none */}
