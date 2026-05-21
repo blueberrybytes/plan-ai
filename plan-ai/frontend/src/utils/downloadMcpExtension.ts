@@ -34,11 +34,17 @@ export const downloadMcpExtension = async (token: string, endpoint: string) => {
 const endpoint = "${endpoint}";
 const token = "${token}";
 
+const fs = require('fs');
+function logDebug(msg) {
+  try { fs.appendFileSync('/tmp/plan-ai-mcp.log', new Date().toISOString() + ' [MCP Proxy] ' + msg + '\\n'); } catch (e) {}
+}
+
 let postUrl = null;
 const messageQueue = [];
 
 async function start() {
   try {
+    logDebug("Starting proxy script, connecting to: " + endpoint);
     const response = await fetch(endpoint, {
       headers: {
         "Authorization": "Bearer " + token
@@ -46,9 +52,11 @@ async function start() {
     });
 
     if (!response.ok) {
+      logDebug(\`Failed to connect to SSE: HTTP \${response.status} \${response.statusText}\`);
       console.error(\`Failed to connect to SSE: HTTP \${response.status} \${response.statusText}\`);
       process.exit(1);
     }
+    logDebug("Connected to SSE stream successfully.");
 
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
@@ -63,7 +71,9 @@ async function start() {
 
     rl.on('line', async (line) => {
       if (!line.trim()) return;
+      logDebug("Received line from stdin: " + line);
       if (!postUrl) {
+        logDebug("postUrl not ready, queuing message.");
         messageQueue.push(line);
       } else {
         await sendMessage(line);
@@ -72,12 +82,15 @@ async function start() {
 
     async function sendMessage(msg) {
       try {
-        await fetch(postUrl, {
+        logDebug("Sending POST message to: " + postUrl);
+        const res = await fetch(postUrl, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: msg
         });
+        logDebug("POST result status: " + res.status);
       } catch (err) {
+        logDebug("Failed to send message: " + err.message);
         console.error("Failed to send message:", err);
       }
     }
@@ -87,7 +100,10 @@ async function start() {
     
     while (true) {
       const { done, value } = await reader.read();
-      if (done) break;
+      if (done) {
+        logDebug("SSE stream reader returned done: true");
+        break;
+      }
       buffer += decoder.decode(value, { stream: true });
       const lines = buffer.split('\\n');
       buffer = lines.pop() || "";
@@ -98,11 +114,15 @@ async function start() {
             const dataStr = eventData.join('\\n');
             if (eventType === 'endpoint') {
               postUrl = new URL(dataStr, endpoint).toString();
+              logDebug("Received endpoint event, postUrl set to: " + postUrl);
               // Flush queue
               while (messageQueue.length > 0) {
-                await sendMessage(messageQueue.shift());
+                const queuedMsg = messageQueue.shift();
+                logDebug("Flushing queued message");
+                await sendMessage(queuedMsg);
               }
             } else {
+              logDebug("Writing JSON-RPC response to stdout: " + dataStr);
               // Write JSON-RPC response to stdout
               process.stdout.write(dataStr + "\\n");
             }
@@ -118,8 +138,11 @@ async function start() {
       }
     }
   } catch (error) {
+    logDebug("SSE connection error: " + error.stack);
     console.error("SSE connection error:", error);
     process.exit(1);
+  } finally {
+    logDebug("Proxy script start() function finished. Exiting naturally.");
   }
 }
 
