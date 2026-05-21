@@ -180,7 +180,7 @@ const Chat: React.FC = () => {
 
   return (
     <SidebarLayout fullHeight>
-      <Box sx={{ display: "flex", height: "100%" }}>
+      <Box sx={{ display: "flex", height: "100%", width: "100%", minWidth: 0, overflow: "hidden" }}>
         <ChatSidebar
           threads={threads ?? []}
           selectedThreadId={selectedThreadId}

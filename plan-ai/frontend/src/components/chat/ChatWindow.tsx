@@ -260,9 +260,11 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
     <Box
       sx={{
         flexGrow: 1,
+        minWidth: 0,
         display: { xs: !activeThread ? "none" : "flex", md: "flex" },
         flexDirection: "column",
         bgcolor: "background.default",
+        overflow: "hidden",
       }}
     >
       <AppBar
@@ -305,7 +307,11 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
         </Toolbar>
       </AppBar>
 
-      <Box sx={{ flexGrow: 1, p: 2, overflowY: "auto" }} ref={scrollRef} onScroll={handleScroll}>
+      <Box
+        sx={{ flexGrow: 1, minWidth: 0, p: 2, overflowY: "auto", overflowX: "hidden" }}
+        ref={scrollRef}
+        onScroll={handleScroll}
+      >
         {allMessages.map((msg) => {
           let contentToRender = msg.content;
           let citations: Array<{ filename: string; lines: string }> = [];

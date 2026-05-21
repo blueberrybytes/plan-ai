@@ -25,6 +25,7 @@ import { useAuth } from "../hooks/useAuth";
 import type { Transcript, Task } from "../services/planAiApi";
 import ReactMarkdown from "react-markdown";
 import PostMeetingTasksPanel from "../components/PostMeetingTasksPanel";
+import SyncBadges from "../components/SyncBadges";
 
 const MermaidImgRenderer = ({ tasks }: { tasks: Task[] }) => {
   if (!tasks || tasks.length === 0) return null;
@@ -608,8 +609,9 @@ const TranscriptView: React.FC = () => {
               </Alert>
             ) : transcript.summary ? (
               <>
+                <SyncBadges tasks={transcript.metadata?.postMeetingTasks} />
                 {transcript.metadata?.processingStatus === "EXTRACTING_TASKS" && (
-                  <Alert severity="info" sx={{ mb: 2 }}>
+                  <Alert severity="info" sx={{ mb: 2, mt: 2 }}>
                     🤖 AI is currently extracting tasks from this transcript in the background. They will appear here shortly!
                   </Alert>
                 )}
@@ -664,6 +666,20 @@ const TranscriptView: React.FC = () => {
                         sx={{ fontWeight: 600 }}
                       />
                     )}
+                  {(() => {
+                    const pt = transcript.metadata?.postMeetingTasks;
+                    const hasErrors =
+                      transcript.metadata?.errorMessage ||
+                      (pt && Object.values(pt).some((s) => s?.status === "FAILED"));
+                    return hasErrors ? (
+                      <Tab
+                        label="Errors"
+                        value="errors"
+                        sx={{ fontWeight: 600, color: "error.main" }}
+                      />
+                    ) : null;
+                  })()}
+                  <Tab label="Metadata" value="metadata" sx={{ fontWeight: 600 }} />
                 </Tabs>
 
                 {tabValue === "summary" && (
@@ -1000,6 +1016,70 @@ const TranscriptView: React.FC = () => {
 
                 {tabValue === "diagram" && transcript.tasks && (
                   <MermaidImgRenderer tasks={transcript.tasks} />
+                )}
+
+                {tabValue === "errors" && (
+                  <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
+                    {transcript.metadata?.errorMessage && (
+                      <Alert severity="error">
+                        <strong>Processing error:</strong> {transcript.metadata.errorMessage}
+                      </Alert>
+                    )}
+                    {(() => {
+                      const pt = transcript.metadata?.postMeetingTasks;
+                      if (!pt) return null;
+                      return Object.entries(pt)
+                        .filter(([, s]) => s?.status === "FAILED")
+                        .map(([kind, status]) => (
+                          <Alert key={kind} severity="error">
+                            <strong>{kind} sync failed:</strong>{" "}
+                            {status?.error || "Unknown error"}
+                          </Alert>
+                        ));
+                    })()}
+                  </Box>
+                )}
+
+                {tabValue === "metadata" && (
+                  <Box
+                    sx={{
+                      position: "relative",
+                      p: 2,
+                      bgcolor: "background.paper",
+                      borderRadius: 1,
+                      border: "1px solid",
+                      borderColor: "divider",
+                      maxHeight: 600,
+                      overflow: "auto",
+                    }}
+                  >
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      startIcon={<CopyIcon />}
+                      onClick={() =>
+                        navigator.clipboard.writeText(
+                          JSON.stringify(transcript.metadata ?? {}, null, 2),
+                        )
+                      }
+                      sx={{ position: "absolute", top: 8, right: 8 }}
+                    >
+                      Copy JSON
+                    </Button>
+                    <Box
+                      component="pre"
+                      sx={{
+                        m: 0,
+                        mt: 4,
+                        fontSize: "0.8rem",
+                        fontFamily: "monospace",
+                        whiteSpace: "pre-wrap",
+                        wordBreak: "break-word",
+                      }}
+                    >
+                      {JSON.stringify(transcript.metadata ?? {}, null, 2)}
+                    </Box>
+                  </Box>
                 )}
 
                 <PostMeetingTasksPanel

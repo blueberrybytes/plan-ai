@@ -32,6 +32,7 @@ import { useDispatch } from "react-redux";
 import { setToastMessage } from "../store/slices/app/appSlice";
 import ReactMarkdown from "react-markdown";
 import MermaidRenderer from "../components/common/MermaidRenderer";
+import SyncBadges from "../components/recording/SyncBadges";
 import { exportMarkdownToDocx } from "../utils/docxExport";
 import { jsPDF } from "jspdf";
 
@@ -489,7 +490,9 @@ const RecordingDetail: React.FC = () => {
           </Stack>
         </Stack>
 
-        <Divider sx={{ mb: 4 }} />
+        <SyncBadges tasks={transcript.data?.metadata?.postMeetingTasks} />
+
+        <Divider sx={{ mb: 4, mt: 2 }} />
 
         {/* Content */}
         <Card elevation={0} sx={{ border: 1, borderColor: "divider" }}>
@@ -552,6 +555,16 @@ const RecordingDetail: React.FC = () => {
                   {transcript.data.chatThread && transcript.data.chatThread.messages.length > 0 && (
                     <Tab label="Live Chat" value="chat" sx={{ fontWeight: 600 }} />
                   )}
+                  {(() => {
+                    const pt = transcript.data?.metadata?.postMeetingTasks;
+                    const hasErrors =
+                      transcript.data?.metadata?.errorMessage ||
+                      (pt && Object.values(pt).some((s) => s?.status === "FAILED"));
+                    return hasErrors ? (
+                      <Tab label="Errors" value="errors" sx={{ fontWeight: 600, color: "error.main" }} />
+                    ) : null;
+                  })()}
+                  <Tab label="Metadata" value="metadata" sx={{ fontWeight: 600 }} />
                 </Tabs>
 
                 {tabValue === "summary" && (
@@ -637,6 +650,69 @@ const RecordingDetail: React.FC = () => {
                     {transcript.data.chatThread.messages.map((msg, idx) => (
                       <ChatMessageItem key={idx} msg={msg} />
                     ))}
+                  </Box>
+                )}
+
+                {tabValue === "errors" && (
+                  <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
+                    {transcript.data?.metadata?.errorMessage && (
+                      <Alert severity="error">
+                        <strong>Processing error:</strong> {transcript.data.metadata.errorMessage}
+                      </Alert>
+                    )}
+                    {(() => {
+                      const pt = transcript.data?.metadata?.postMeetingTasks;
+                      if (!pt) return null;
+                      return Object.entries(pt)
+                        .filter(([, s]) => s?.status === "FAILED")
+                        .map(([kind, status]) => (
+                          <Alert key={kind} severity="error">
+                            <strong>{kind} sync failed:</strong> {status?.error || "Unknown error"}
+                          </Alert>
+                        ));
+                    })()}
+                  </Box>
+                )}
+
+                {tabValue === "metadata" && (
+                  <Box
+                    sx={{
+                      position: "relative",
+                      p: 2,
+                      bgcolor: "background.paper",
+                      borderRadius: 2,
+                      border: "1px solid",
+                      borderColor: "divider",
+                      maxHeight: 600,
+                      overflow: "auto",
+                    }}
+                  >
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      startIcon={<CopyIcon />}
+                      onClick={() =>
+                        navigator.clipboard.writeText(
+                          JSON.stringify(transcript.data?.metadata ?? {}, null, 2),
+                        )
+                      }
+                      sx={{ position: "absolute", top: 8, right: 8 }}
+                    >
+                      Copy JSON
+                    </Button>
+                    <Box
+                      component="pre"
+                      sx={{
+                        m: 0,
+                        mt: 4,
+                        fontSize: "0.8rem",
+                        fontFamily: "monospace",
+                        whiteSpace: "pre-wrap",
+                        wordBreak: "break-word",
+                      }}
+                    >
+                      {JSON.stringify(transcript.data?.metadata ?? {}, null, 2)}
+                    </Box>
                   </Box>
                 )}
               </>

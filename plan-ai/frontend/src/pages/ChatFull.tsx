@@ -97,7 +97,7 @@ const ChatFull: React.FC = () => {
   const messages = threadData?.messages ?? [];
 
   return (
-    <Box sx={{ height: "100vh", display: "flex", flexDirection: "column" }}>
+    <Box sx={{ height: "100vh", display: "flex", flexDirection: "column", minWidth: 0, overflow: "hidden" }}>
       <ChatWindow
         activeThread={activeThreadWithDetails}
         messages={messages}

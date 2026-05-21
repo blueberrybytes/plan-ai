@@ -20,6 +20,7 @@ import {
   SegmentedButtons,
   Button,
   Menu,
+  Chip,
 } from "react-native-paper";
 import { useAuth } from "@/context/AuthContext";
 import Markdown from "react-native-markdown-display";
@@ -735,6 +736,67 @@ export default function TranscriptViewScreen() {
         </View>
       ) : (
         <View style={styles.content}>
+          {(() => {
+            const meta = transcript?.metadata as TranscriptMetadata | null | undefined;
+            const pt = meta?.postMeetingTasks;
+            if (!pt) return null;
+            const LABELS: Record<string, string> = {
+              jira: "Jira",
+              linear: "Linear",
+              trello: "Trello",
+              notion: "Notion",
+              asana: "Asana",
+              googleDrive: "Drive",
+              oneDrive: "OneDrive",
+              doc: "Doc",
+              slides: "Slides",
+            };
+            const entries = Object.entries(pt).filter(([, s]) => s !== undefined);
+            if (entries.length === 0) return null;
+            return (
+              <View style={styles.badgesContainer}>
+                {entries.map(([kind, status]) => {
+                  const color =
+                    status?.status === "OK"
+                      ? "#2e7d32"
+                      : status?.status === "FAILED"
+                        ? "#d32f2f"
+                        : status?.status === "PENDING"
+                          ? "#ed6c02"
+                          : theme.colors.outline;
+                  const icon =
+                    status?.status === "OK"
+                      ? "check-circle-outline"
+                      : status?.status === "FAILED"
+                        ? "alert-circle-outline"
+                        : status?.status === "PENDING"
+                          ? "timer-sand"
+                          : "minus-circle-outline";
+                  return (
+                    <Chip
+                      key={kind}
+                      icon={icon}
+                      compact
+                      mode="outlined"
+                      onPress={
+                        status?.url
+                          ? () => status.url && Linking.openURL(status.url)
+                          : undefined
+                      }
+                      style={{
+                        borderColor: color,
+                        marginRight: 4,
+                        marginBottom: 4,
+                      }}
+                      textStyle={{ color, fontSize: 11 }}
+                    >
+                      {LABELS[kind] || kind}
+                    </Chip>
+                  );
+                })}
+              </View>
+            );
+          })()}
           <View style={styles.segmentContainer}>
             <SegmentedButtons
               value={activeTab}
@@ -746,6 +808,15 @@ export default function TranscriptViewScreen() {
                   : []),
                 ...(transcript?.metadata?.keyPoints && transcript.metadata.keyPoints.length > 0 ? [{ value: "keypoints", label: "Points" }] : []),
                 { value: "utterances", label: "Transcript" },
+                ...(() => {
+                  const meta = transcript?.metadata as TranscriptMetadata | null | undefined;
+                  const pt = meta?.postMeetingTasks;
+                  const hasErrors =
+                    meta?.errorMessage ||
+                    (pt && Object.values(pt).some((s) => s?.status === "FAILED"));
+                  return hasErrors ? [{ value: "errors", label: "Errors" }] : [];
+                })(),
+                { value: "metadata", label: "Meta" },
               ]}
             />
           </View>
@@ -754,6 +825,86 @@ export default function TranscriptViewScreen() {
             {activeTab === "documents" && renderDocumentsTab()}
             {activeTab === "keypoints" && renderKeyPointsTab()}
             {activeTab === "utterances" && renderUtterancesTab()}
+            {activeTab === "errors" && (
+              <View style={{ gap: 12, paddingBottom: 40 }}>
+                {(transcript?.metadata as TranscriptMetadata | null)?.errorMessage && (
+                  <Surface
+                    style={{
+                      padding: 12,
+                      backgroundColor: theme.colors.errorContainer,
+                      borderRadius: 8,
+                    }}
+                    elevation={0}
+                  >
+                    <Text style={{ color: theme.colors.onErrorContainer, fontWeight: "bold" }}>
+                      Processing error
+                    </Text>
+                    <Text style={{ color: theme.colors.onErrorContainer, marginTop: 4 }}>
+                      {(transcript?.metadata as TranscriptMetadata).errorMessage}
+                    </Text>
+                  </Surface>
+                )}
+                {(() => {
+                  const pt = (transcript?.metadata as TranscriptMetadata | null)
+                    ?.postMeetingTasks;
+                  if (!pt) return null;
+                  return Object.entries(pt)
+                    .filter(([, s]) => s?.status === "FAILED")
+                    .map(([kind, status]) => (
+                      <Surface
+                        key={kind}
+                        style={{
+                          padding: 12,
+                          backgroundColor: theme.colors.errorContainer,
+                          borderRadius: 8,
+                        }}
+                        elevation={0}
+                      >
+                        <Text style={{ color: theme.colors.onErrorContainer, fontWeight: "bold" }}>
+                          {kind} sync failed
+                        </Text>
+                        <Text style={{ color: theme.colors.onErrorContainer, marginTop: 4 }}>
+                          {status?.error || "Unknown error"}
+                        </Text>
+                      </Surface>
+                    ));
+                })()}
+              </View>
+            )}
+            {activeTab === "metadata" && (
+              <Surface
+                style={{
+                  padding: 12,
+                  marginBottom: 40,
+                  backgroundColor: theme.colors.surfaceVariant,
+                  borderRadius: 8,
+                }}
+                elevation={0}
+              >
+                <Button
+                  mode="outlined"
+                  compact
+                  icon="content-copy"
+                  onPress={() =>
+                    Clipboard.setStringAsync(
+                      JSON.stringify(transcript?.metadata ?? {}, null, 2),
+                    )
+                  }
+                  style={{ alignSelf: "flex-start", marginBottom: 8 }}
+                >
+                  Copy JSON
+                </Button>
+                <Text
+                  style={{
+                    fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace",
+                    fontSize: 11,
+                    color: theme.colors.onSurfaceVariant,
+                  }}
+                >
+                  {JSON.stringify(transcript?.metadata ?? {}, null, 2)}
+                </Text>
+              </Surface>
+            )}
           </ScrollView>
         </View>
       )}
@@ -783,6 +934,12 @@ const styles = StyleSheet.create({
   },
   segmentContainer: {
     padding: 16,
+  },
+  badgesContainer: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    paddingHorizontal: 16,
+    paddingTop: 12,
   },
   scrollContent: {
     paddingHorizontal: 16,

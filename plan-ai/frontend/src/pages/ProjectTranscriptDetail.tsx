@@ -593,6 +593,21 @@ const ProjectTranscriptDetail: React.FC = () => {
                             sx={{ fontWeight: 600 }}
                           />
                         )}
+                        {(() => {
+                          const meta = transcript.metadata as TranscriptMetadata | null;
+                          const pt = meta?.postMeetingTasks;
+                          const hasErrors =
+                            meta?.errorMessage ||
+                            (pt && Object.values(pt).some((s) => s?.status === "FAILED"));
+                          return hasErrors ? (
+                            <Tab
+                              label="Errors"
+                              value="errors"
+                              sx={{ fontWeight: 600, color: "error.main" }}
+                            />
+                          ) : null;
+                        })()}
+                        <Tab label="Metadata" value="metadata" sx={{ fontWeight: 600 }} />
                       </Tabs>
                     </Box>
 
@@ -623,6 +638,59 @@ const ProjectTranscriptDetail: React.FC = () => {
                         }}
                       >
                         <MermaidRenderer chart={generatedChart} />
+                      </Box>
+                    )}
+
+                    {tabValue === "errors" && (
+                      <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5, mt: 2 }}>
+                        {(transcript.metadata as TranscriptMetadata | null)?.errorMessage && (
+                          <Alert severity="error">
+                            <strong>Processing error:</strong>{" "}
+                            {(transcript.metadata as TranscriptMetadata).errorMessage}
+                          </Alert>
+                        )}
+                        {(() => {
+                          const pt = (transcript.metadata as TranscriptMetadata | null)
+                            ?.postMeetingTasks;
+                          if (!pt) return null;
+                          return Object.entries(pt)
+                            .filter(([, s]) => s?.status === "FAILED")
+                            .map(([kind, status]) => (
+                              <Alert key={kind} severity="error">
+                                <strong>{kind} sync failed:</strong>{" "}
+                                {status?.error || "Unknown error"}
+                              </Alert>
+                            ));
+                        })()}
+                      </Box>
+                    )}
+
+                    {tabValue === "metadata" && (
+                      <Box
+                        sx={{
+                          mt: 2,
+                          position: "relative",
+                          p: 2,
+                          bgcolor: "background.paper",
+                          borderRadius: 2,
+                          border: "1px solid",
+                          borderColor: "divider",
+                          maxHeight: 600,
+                          overflow: "auto",
+                        }}
+                      >
+                        <Box
+                          component="pre"
+                          sx={{
+                            m: 0,
+                            fontSize: "0.8rem",
+                            fontFamily: "monospace",
+                            whiteSpace: "pre-wrap",
+                            wordBreak: "break-word",
+                          }}
+                        >
+                          {JSON.stringify(transcript.metadata ?? {}, null, 2)}
+                        </Box>
                       </Box>
                     )}
                   </Stack>
