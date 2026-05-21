@@ -208,7 +208,7 @@ const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children, fullHeight = fa
         <Box
           component="aside"
           sx={{
-            width: isCollapsed ? 80 : 220,
+            width: isCollapsed ? 64 : 180,
             flexShrink: 0,
             bgcolor: "background.paper",
             borderRadius: "20px",
@@ -233,10 +233,9 @@ const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children, fullHeight = fa
               gap: 1,
               px: isCollapsed ? 0 : 0.5,
               mb: 1,
-              justifyContent: isCollapsed ? "center" : "space-between",
+              justifyContent: isCollapsed ? "center" : "flex-end",
             }}
           >
-            {!isCollapsed && <WorkspaceSwitcher />}
             <Tooltip
               title={
                 isCollapsed
@@ -257,7 +256,7 @@ const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children, fullHeight = fa
               </IconButton>
             </Tooltip>
           </Box>
-          {isCollapsed && <WorkspaceSwitcher />}
+
 
           {!isCollapsed && activeWorkspaceId && (
             <Box

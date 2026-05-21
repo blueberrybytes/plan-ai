@@ -112,6 +112,7 @@
     "react-helmet-async": "^2.0.5",
     "react-i18next": "^15.4.0",
     "react-image-gallery": "^1.4.0",
+    "react-json-view": "^1.21.3",
     "react-konva": "18",
     "react-markdown": "^10.1.0",
     "react-pdf": "^10.0.1",

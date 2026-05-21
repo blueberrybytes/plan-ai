@@ -10,6 +10,7 @@ import {
   Share,
   Linking,
 } from "react-native";
+import JSONTree from "react-native-json-tree";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import {
   Text,
@@ -894,15 +895,14 @@ export default function TranscriptViewScreen() {
                 >
                   Copy JSON
                 </Button>
-                <Text
-                  style={{
-                    fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace",
-                    fontSize: 11,
-                    color: theme.colors.onSurfaceVariant,
-                  }}
-                >
-                  {JSON.stringify(transcript?.metadata ?? {}, null, 2)}
-                </Text>
+                <ScrollView horizontal style={{ marginTop: 8 }}>
+                  <JSONTree 
+                    data={transcript?.metadata ?? {}} 
+                    theme="monokai" 
+                    invertTheme={false}
+                    hideRoot
+                  />
+                </ScrollView>
               </Surface>
             )}
           </ScrollView>

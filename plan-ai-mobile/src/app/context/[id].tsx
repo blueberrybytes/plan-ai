@@ -7,6 +7,7 @@ import {
   Alert,
   Linking,
 } from "react-native";
+import JSONTree from "react-native-json-tree";
 import {
   Text,
   IconButton,
@@ -15,7 +16,6 @@ import {
   Card,
   Avatar,
   FAB,
-  Divider,
   Portal,
   Dialog,
   Button,
@@ -147,12 +147,6 @@ export default function ContextDetailScreen() {
 
   const renderMetadata = (metadata: unknown) => {
     if (!metadata) return null;
-    let displayData = "";
-    try {
-      displayData = JSON.stringify(metadata, null, 2);
-    } catch {
-      displayData = String(metadata);
-    }
     return (
       <View
         style={[
@@ -166,15 +160,14 @@ export default function ContextDetailScreen() {
         >
           Diagnostic Metadata
         </Text>
-        <Text
-          style={{
-            fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace",
-            color: theme.colors.onSurfaceVariant,
-            fontSize: 12,
-          }}
-        >
-          {displayData}
-        </Text>
+        <ScrollView horizontal>
+          <JSONTree 
+            data={(metadata as Record<string, unknown>) || {}} 
+            theme="monokai" 
+            invertTheme={false}
+            hideRoot
+          />
+        </ScrollView>
       </View>
     );
   };

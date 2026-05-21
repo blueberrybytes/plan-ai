@@ -32,6 +32,7 @@ import {
 import { useTranslation } from "react-i18next";
 import { ContentCopy as CopyIcon, Check as CheckIcon } from "@mui/icons-material";
 import ReactMarkdown from "react-markdown";
+import ReactJson from "react-json-view";
 import MermaidRenderer from "../components/common/MermaidRenderer";
 import { AiGraphTrace, ContextGraph } from "../components/project/ContextGraph";
 import PostMeetingTasksPanel from "../components/project/PostMeetingTasksPanel";
@@ -669,28 +670,22 @@ const ProjectTranscriptDetail: React.FC = () => {
                       <Box
                         sx={{
                           mt: 2,
-                          position: "relative",
                           p: 2,
                           bgcolor: "background.paper",
                           borderRadius: 2,
                           border: "1px solid",
                           borderColor: "divider",
-                          maxHeight: 600,
                           overflow: "auto",
                         }}
                       >
-                        <Box
-                          component="pre"
-                          sx={{
-                            m: 0,
-                            fontSize: "0.8rem",
-                            fontFamily: "monospace",
-                            whiteSpace: "pre-wrap",
-                            wordBreak: "break-word",
-                          }}
-                        >
-                          {JSON.stringify(transcript.metadata ?? {}, null, 2)}
-                        </Box>
+                        <ReactJson
+                          src={((transcript.metadata as Record<string, unknown>) || {})}
+                          collapsed={2}
+                          displayDataTypes={false}
+                          enableClipboard={false}
+                          name={false}
+                          style={{ backgroundColor: 'transparent', fontSize: '0.9rem' }}
+                        />
                       </Box>
                     )}
                   </Stack>
@@ -735,20 +730,21 @@ const ProjectTranscriptDetail: React.FC = () => {
                     {t("projectTranscriptDetail.sections.metadata")}
                   </Typography>
                   <Box
-                    component="pre"
                     sx={{
                       bgcolor: "background.paper",
                       p: 2,
                       borderRadius: 1,
                       overflowX: "auto",
-                      fontFamily: "monospace",
                     }}
                   >
-                    {prettyJson(
-                      transcript.metadata,
-                      t("projectTranscriptDetail.messages.noMetadata"),
-                      t("projectTranscriptDetail.messages.metadataError"),
-                    )}
+                    <ReactJson
+                      src={((transcript.metadata as Record<string, unknown>) || {})}
+                      collapsed={1}
+                      displayDataTypes={false}
+                      enableClipboard={false}
+                      name={false}
+                      style={{ backgroundColor: 'transparent', fontSize: '0.9rem' }}
+                    />
                   </Box>
                 </Stack>
               </CardContent>

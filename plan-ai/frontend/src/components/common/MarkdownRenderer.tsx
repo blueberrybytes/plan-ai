@@ -81,6 +81,8 @@ const TableWithCopy: React.FC<{ children: React.ReactNode; tableProps: Record<st
         position: "relative",
         my: 2,
         maxWidth: "100%",
+        display: "inline-block", // this helps the outer box wrap tightly around the inner scroll area
+        width: "100%",
       }}
     >
       <Box
@@ -88,7 +90,7 @@ const TableWithCopy: React.FC<{ children: React.ReactNode; tableProps: Record<st
         sx={{
           maxWidth: "100%",
           overflowX: "auto",
-          overscrollBehaviorX: "contain",
+          overscrollBehaviorX: "none",
           border: 1,
           borderColor: "divider",
           borderRadius: 1,

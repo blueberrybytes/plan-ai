@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback } from "react";
+import ReactJson from "react-json-view";
 import {
   Box,
   Typography,
@@ -1062,22 +1063,19 @@ const TranscriptView: React.FC = () => {
                           JSON.stringify(transcript.metadata ?? {}, null, 2),
                         )
                       }
-                      sx={{ position: "absolute", top: 8, right: 8 }}
+                      sx={{ position: "absolute", top: 8, right: 8, zIndex: 1 }}
                     >
                       Copy JSON
                     </Button>
-                    <Box
-                      component="pre"
-                      sx={{
-                        m: 0,
-                        mt: 4,
-                        fontSize: "0.8rem",
-                        fontFamily: "monospace",
-                        whiteSpace: "pre-wrap",
-                        wordBreak: "break-word",
-                      }}
-                    >
-                      {JSON.stringify(transcript.metadata ?? {}, null, 2)}
+                    <Box sx={{ mt: 4 }}>
+                      <ReactJson
+                        src={transcript.metadata ?? {}}
+                        collapsed={2}
+                        displayDataTypes={false}
+                        enableClipboard={false}
+                        name={false}
+                        style={{ backgroundColor: 'transparent', fontSize: '0.9rem' }}
+                      />
                     </Box>
                   </Box>
                 )}
