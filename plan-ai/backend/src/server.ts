@@ -63,7 +63,6 @@ app.use((req, res, next) => {
   if (process.env.ENV === "local") {
     console.debug(`Request received: ${req.method} ${req.path}`);
   }
-  console.debug(`Request received: ${req.method} ${req.path}`);
   next();
 });
 
