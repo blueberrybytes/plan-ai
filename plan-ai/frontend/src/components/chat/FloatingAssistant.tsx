@@ -47,7 +47,12 @@ export const FloatingAssistant: React.FC = () => {
   const anchorRef = useRef<HTMLButtonElement | null>(null);
   const token = useSelector((state: RootState) => state.auth.user?.token);
   const activeWorkspaceId = useSelector((state: RootState) => state.app.activeWorkspaceId);
-  const [modelKey, setModelKey] = useState<string | null>(null);
+  // Hydrate from localStorage synchronously so the selector doesn't flash "Auto Model"
+  // before the saved preference loads.
+  const [modelKey, setModelKey] = useState<string | null>(() => {
+    if (typeof window === "undefined") return null;
+    return localStorage.getItem("preferred_ai_model");
+  });
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [skillsOpen, setSkillsOpen] = useState(false);
 
@@ -68,6 +73,13 @@ export const FloatingAssistant: React.FC = () => {
       el.scrollTop = el.scrollHeight;
     }
   }, [messages, isOpen]);
+
+  // Re-sync model selection from localStorage when the popover opens — the
+  // user may have changed their preferred model elsewhere since last time.
+  useEffect(() => {
+    if (!isOpen || typeof window === "undefined") return;
+    setModelKey(localStorage.getItem("preferred_ai_model"));
+  }, [isOpen]);
 
   useEffect(() => {
     if (isStreaming) {

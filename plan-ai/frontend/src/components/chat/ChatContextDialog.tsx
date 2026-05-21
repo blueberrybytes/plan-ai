@@ -46,17 +46,24 @@ const ChatContextDialog: React.FC<ChatContextDialogProps> = ({
   const [title, setTitle] = useState(initialTitle);
   const [selectedContextIds, setSelectedContextIds] = useState<string[]>(initialSelectedContextIds);
   const [complexityLevel, setEnglishLevel] = useState<string>("");
-  const [modelKey, setModelKey] = useState<string | null>(null);
+  // Hydrate from localStorage synchronously to avoid the "Auto Model" flash.
+  const [modelKey, setModelKey] = useState<string | null>(() => {
+    if (typeof window === "undefined") return null;
+    return localStorage.getItem("preferred_ai_model");
+  });
   const { data: contextResponse } = useListContextsQuery();
   const contexts = contextResponse?.data?.contexts ?? [];
 
-  // Reset selection when dialog opens
+  // Reset selection when dialog opens. modelKey is re-read from localStorage so
+  // it reflects any change made in another chat surface since the last open.
   useEffect(() => {
     if (open) {
       setTitle(initialTitle);
       setSelectedContextIds(initialSelectedContextIds);
       setEnglishLevel("");
-      setModelKey(null);
+      if (typeof window !== "undefined") {
+        setModelKey(localStorage.getItem("preferred_ai_model"));
+      }
     }
   }, [open, initialTitle, initialSelectedContextIds]);
 

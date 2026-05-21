@@ -198,6 +198,7 @@ const Chat: React.FC = () => {
           onNewChat={handleNewChat}
           onRefetch={refetchThread}
           onBack={() => handleSelectThread(null)}
+          onEditChat={handleEditChat}
         />
 
         <ChatContextDialog

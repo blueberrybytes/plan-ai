@@ -5,6 +5,7 @@ import {
   ListItemButton,
   ListItemText,
   Button,
+  Chip,
   Divider,
   CircularProgress,
   Typography,
@@ -20,6 +21,7 @@ import { useTranslation } from "react-i18next";
 import { formatDistanceToNow } from "date-fns";
 import { IconButton, Tooltip } from "@mui/material";
 import { ChatThread } from "../../store/apis/chatApi";
+import { useListContextsQuery } from "../../store/apis/contextApi";
 
 interface ChatSidebarProps {
   threads: ChatThread[];
@@ -42,6 +44,8 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
 }) => {
   const { t } = useTranslation();
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const { data: contextResponse } = useListContextsQuery();
+  const allContexts = contextResponse?.data?.contexts ?? [];
 
   return (
     <Box
@@ -98,11 +102,47 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
             >
               <ListItemText
                 primary={thread.title}
-                secondary={formatDistanceToNow(new Date(thread.updatedAt), { addSuffix: true })}
+                secondary={
+                  <Box component="span" sx={{ display: "flex", flexDirection: "column", gap: 0.5, mt: 0.25 }}>
+                    {thread.contextIds && thread.contextIds.length > 0 && (
+                      <Box
+                        component="span"
+                        sx={{ display: "flex", flexWrap: "wrap", gap: 0.3 }}
+                      >
+                        {thread.contextIds.slice(0, 3).map((cid) => {
+                          const ctx = allContexts.find((c) => c.id === cid);
+                          return ctx ? (
+                            <Chip
+                              key={cid}
+                              label={ctx.name}
+                              size="small"
+                              variant="outlined"
+                              sx={{
+                                fontSize: "0.6rem",
+                                height: 18,
+                                maxWidth: 120,
+                                "& .MuiChip-label": { px: 0.75 },
+                              }}
+                            />
+                          ) : null;
+                        })}
+                        {thread.contextIds.length > 3 && (
+                          <Typography component="span" variant="caption" color="text.secondary">
+                            +{thread.contextIds.length - 3}
+                          </Typography>
+                        )}
+                      </Box>
+                    )}
+                    <Typography component="span" variant="caption" color="text.secondary">
+                      {formatDistanceToNow(new Date(thread.updatedAt), { addSuffix: true })}
+                    </Typography>
+                  </Box>
+                }
                 primaryTypographyProps={{
                   noWrap: true,
                   sx: { fontWeight: selectedThreadId === thread.id ? 600 : 400 },
                 }}
+                secondaryTypographyProps={{ component: "div" }}
               />
               <Box className="chat-actions" sx={{ ml: 1, gap: 0.5 }}>
                 <Tooltip title={t("chat.sidebar.edit") || "Edit"}>

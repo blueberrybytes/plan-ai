@@ -6,6 +6,8 @@ import {
   useListThreadsQuery,
   useGetThreadQuery,
   useCreateThreadMutation,
+  useUpdateThreadMutation,
+  ChatThread,
 } from "../store/apis/chatApi";
 import ChatWindow from "../components/chat/ChatWindow";
 import ChatContextDialog from "../components/chat/ChatContextDialog";
@@ -16,6 +18,8 @@ const ChatFull: React.FC = () => {
   const threadIdFromUrl = searchParams.get("chat");
   const [selectedThreadId, setSelectedThreadId] = useState<string | null>(threadIdFromUrl);
   const [isContextDialogOpen, setIsContextDialogOpen] = useState(false);
+  const [dialogMode, setDialogMode] = useState<"create" | "edit">("create");
+  const [editingThread, setEditingThread] = useState<ChatThread | null>(null);
 
   // Queries
   const { data: threads } = useListThreadsQuery();
@@ -25,6 +29,7 @@ const ChatFull: React.FC = () => {
 
   // Mutations
   const [createThread, { isLoading: isCreating }] = useCreateThreadMutation();
+  const [updateThread, { isLoading: isUpdating }] = useUpdateThreadMutation();
 
   const handleSelectThread = (id: string | null) => {
     setSelectedThreadId(id);
@@ -39,19 +44,42 @@ const ChatFull: React.FC = () => {
 
   const handleNewChat = () => {
     setSelectedThreadId(null);
+    setDialogMode("create");
+    setEditingThread(null);
     setIsContextDialogOpen(true);
   };
 
-  const handleStartChat = async (selectedContextIds: string[]) => {
+  const handleEditChat = (thread: ChatThread) => {
+    setDialogMode("edit");
+    setEditingThread(thread);
+    setIsContextDialogOpen(true);
+  };
+
+  const handleStartChat = async (
+    selectedContextIds: string[],
+    title?: string,
+    complexityLevel?: string,
+  ) => {
     try {
-      const newThread = await createThread({
-        title: t("chat.sidebar.newChat"),
-        contextIds: selectedContextIds,
-      }).unwrap();
-      handleSelectThread(newThread.id);
+      if (dialogMode === "edit" && editingThread) {
+        await updateThread({
+          threadId: editingThread.id,
+          title: title || editingThread.title,
+          contextIds: selectedContextIds,
+          complexityLevel,
+        }).unwrap();
+        await refetchThread();
+      } else {
+        const newThread = await createThread({
+          title: title || t("chat.sidebar.newChat"),
+          contextIds: selectedContextIds,
+          complexityLevel,
+        }).unwrap();
+        handleSelectThread(newThread.id);
+      }
       setIsContextDialogOpen(false);
     } catch (error) {
-      console.error("Failed to create chat", error);
+      console.error("Failed to save chat", error);
     }
   };
 
@@ -77,13 +105,17 @@ const ChatFull: React.FC = () => {
         onNewChat={handleNewChat}
         onRefetch={refetchThread}
         isFullScreen={true}
+        onEditChat={handleEditChat}
       />
 
       <ChatContextDialog
         open={isContextDialogOpen}
         onClose={() => setIsContextDialogOpen(false)}
         onStartChat={handleStartChat}
-        isLoading={isCreating}
+        isLoading={isCreating || isUpdating}
+        mode={dialogMode}
+        initialTitle={editingThread?.title || ""}
+        initialSelectedContextIds={editingThread?.contextIds || []}
       />
     </Box>
   );

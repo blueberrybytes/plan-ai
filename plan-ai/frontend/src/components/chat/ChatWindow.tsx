@@ -20,6 +20,7 @@ import {
   OpenInFull,
   ArrowBack,
   Download as DownloadIcon,
+  Edit as EditIcon,
 } from "@mui/icons-material";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import { useTranslation } from "react-i18next";
@@ -45,6 +46,7 @@ interface ChatWindowProps {
   onRefetch?: () => void;
   isFullScreen?: boolean;
   onBack?: () => void;
+  onEditChat?: (thread: ChatThread) => void;
 }
 
 const ChatWindow: React.FC<ChatWindowProps> = ({
@@ -55,11 +57,17 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
   onRefetch,
   isFullScreen = false,
   onBack,
+  onEditChat,
 }) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [input, setInput] = useState("");
-  const [modelKey, setModelKey] = useState<string | null>(null);
+  // Hydrate from localStorage synchronously so the selector doesn't flash "Auto Model"
+  // before the saved preference loads.
+  const [modelKey, setModelKey] = useState<string | null>(() => {
+    if (typeof window === "undefined") return null;
+    return localStorage.getItem("preferred_ai_model");
+  });
   const [optimisticMessages, setOptimisticMessages] = useState<ChatMessage[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -77,6 +85,14 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
   useEffect(() => {
     setOptimisticMessages([]);
   }, [activeThread?.id, messages.length]);
+
+  // Re-sync model selection from localStorage when the thread changes — the
+  // value may have been updated by another chat surface (FloatingAssistant,
+  // ChatContextDialog) while this window was idle.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    setModelKey(localStorage.getItem("preferred_ai_model"));
+  }, [activeThread?.id]);
 
   // Auto-scroll to bottom only when the user hasn't scrolled up manually.
   // When a new message is sent, always force-scroll to bottom.
@@ -270,10 +286,6 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
             {activeThread.title || t("chat.heading")}
           </Typography>
           <Box>
-            {activeThread.contextIds.map((cid) => {
-              const ctx = contexts.find((c) => c.id === cid);
-              return ctx ? <Chip key={cid} label={ctx.name} size="small" sx={{ mr: 1 }} /> : null;
-            })}
             {!isFullScreen && (
               <Tooltip title={t("chat.window.viewFullScreen")}>
                 <IconButton
@@ -526,7 +538,50 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
       )}
 
       <Box sx={{ p: 3, pb: 4, bgcolor: "background.paper", borderTop: 1, borderColor: "divider" }}>
-        <Box sx={{ mb: 2 }}>
+        <Box
+          sx={{
+            mb: 2,
+            display: "flex",
+            alignItems: "center",
+            gap: 1,
+            flexWrap: "wrap",
+            justifyContent: "flex-end",
+          }}
+        >
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              gap: 0.5,
+              flexWrap: "wrap",
+              flexGrow: 1,
+              minWidth: 0,
+            }}
+          >
+            {activeThread.contextIds.map((cid) => {
+              const ctx = contexts.find((c) => c.id === cid);
+              return ctx ? (
+                <Chip
+                  key={cid}
+                  label={ctx.name}
+                  size="small"
+                  variant="outlined"
+                  sx={{ fontSize: "0.7rem", height: 22 }}
+                />
+              ) : null;
+            })}
+            {onEditChat && (
+              <Tooltip title={t("chat.sidebar.edit") || "Edit contexts"}>
+                <IconButton
+                  size="small"
+                  onClick={() => onEditChat(activeThread)}
+                  sx={{ ml: 0.5 }}
+                >
+                  <EditIcon sx={{ fontSize: 16 }} />
+                </IconButton>
+              </Tooltip>
+            )}
+          </Box>
           <AiModelSelector value={modelKey} onChange={setModelKey} disabled={isStreaming} />
         </Box>
         <Box sx={{ display: "flex", gap: 1, alignItems: "flex-end" }}>
