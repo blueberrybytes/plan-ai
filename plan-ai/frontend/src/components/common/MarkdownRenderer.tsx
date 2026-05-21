@@ -77,28 +77,35 @@ const TableWithCopy: React.FC<{ children: React.ReactNode; tableProps: Record<st
 
   return (
     <Box
-      ref={wrapperRef}
       sx={{
         position: "relative",
         my: 2,
         maxWidth: "100%",
-        overflowX: "auto",
-        border: 1,
-        borderColor: "divider",
-        borderRadius: 1,
       }}
     >
-      <CopyButton getText={getTableText} title={t("chat.window.copyTable")} />
-      <table
-        {...tableProps}
-        style={{
-          borderCollapse: "collapse",
-          width: "max-content",
-          minWidth: "100%",
+      <Box
+        ref={wrapperRef}
+        sx={{
+          maxWidth: "100%",
+          overflowX: "auto",
+          overscrollBehaviorX: "contain",
+          border: 1,
+          borderColor: "divider",
+          borderRadius: 1,
         }}
       >
-        {children}
-      </table>
+        <table
+          {...tableProps}
+          style={{
+            borderCollapse: "collapse",
+            width: "max-content",
+            minWidth: "100%",
+          }}
+        >
+          {children}
+        </table>
+      </Box>
+      <CopyButton getText={getTableText} title={t("chat.window.copyTable")} position="bottom-right" />
     </Box>
   );
 };
@@ -247,18 +254,25 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
                   position: "relative",
                   my: 2,
                   maxWidth: "100%",
-                  overflowX: "auto",
-                  borderRadius: 1,
-                  "& > div, & pre": {
-                    m: "0 !important",
-                    borderRadius: 1,
-                  },
                 }}
               >
                 <CopyButton getText={() => codeText} title={t("chat.window.copyCode")} />
-                <Component style={vscDarkPlus} language={language} PreTag="div" {...props}>
-                  {codeText}
-                </Component>
+                <Box
+                  sx={{
+                    maxWidth: "100%",
+                    overflowX: "auto",
+                    overscrollBehaviorX: "contain",
+                    borderRadius: 1,
+                    "& > div, & pre": {
+                      m: "0 !important",
+                      borderRadius: 1,
+                    },
+                  }}
+                >
+                  <Component style={vscDarkPlus} language={language} PreTag="div" {...props}>
+                    {codeText}
+                  </Component>
+                </Box>
               </Box>
             );
           },
