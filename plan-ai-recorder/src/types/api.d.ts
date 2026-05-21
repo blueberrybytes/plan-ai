@@ -2152,6 +2152,50 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/mcp-tokens": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description List all MCP tokens for the current user (all workspaces).
+         *     Never returns the raw token — only the prefix and metadata.
+         */
+        get: operations["ListTokens"];
+        put?: never;
+        /**
+         * @description Create a new MCP personal access token scoped to a workspace.
+         *     The raw token is returned ONCE in the response and cannot be retrieved later.
+         */
+        post: operations["CreateToken"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/mcp-tokens/{tokenId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * @description Revoke (delete) an MCP token by ID.
+         *     Only the owner can revoke their own tokens.
+         */
+        delete: operations["RevokeToken"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/diagrams": {
         parameters: {
             query?: never;
@@ -3882,6 +3926,31 @@ export interface components {
             /** Format: double */
             monthlyTokenLimit?: number;
             isCourtesy?: boolean;
+        };
+        CreateMcpTokenResponse: {
+            /** @description The raw token — shown ONCE, never retrievable again */
+            rawToken: string;
+            id: string;
+            name: string;
+            prefix: string;
+            workspaceId: string;
+            createdAt: string;
+        };
+        CreateMcpTokenRequest: {
+            /** @description A friendly label for this token, e.g. "Claude Code - MacBook" */
+            name: string;
+            /** @description The workspace ID to scope this token to */
+            workspaceId: string;
+        };
+        ListMcpTokensResponse: {
+            tokens: {
+                createdAt: string;
+                lastUsedAt: string | null;
+                workspaceId: string;
+                prefix: string;
+                name: string;
+                id: string;
+            }[];
         };
         DiagramResponse: {
             id: string;
@@ -8089,6 +8158,70 @@ export interface operations {
                         success: boolean;
                     };
                 };
+            };
+        };
+    };
+    ListTokens: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ListMcpTokensResponse"];
+                };
+            };
+        };
+    };
+    CreateToken: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateMcpTokenRequest"];
+            };
+        };
+        responses: {
+            /** @description Token created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CreateMcpTokenResponse"];
+                };
+            };
+        };
+    };
+    RevokeToken: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tokenId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Token revoked */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

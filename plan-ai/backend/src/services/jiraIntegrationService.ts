@@ -56,6 +56,18 @@ const ATLASSIAN_AUDIENCE = "api.atlassian.com";
 const DEFAULT_CALLBACK_PATH = "/api/jira/callback";
 const DEFAULT_FRONTEND_REDIRECT_PATH = "/integrations?provider=jira";
 
+type JiraIssueType = {
+  id: string;
+  name: string;
+  subtask: boolean;
+};
+
+// In-memory cache of available Jira issue types per (workspace, project).
+// 5-minute TTL — Jira issue-type configuration rarely changes, but a short
+// TTL keeps us responsive to admin changes without restarting.
+const ISSUE_TYPE_CACHE_TTL_MS = 5 * 60 * 1000;
+const jiraIssueTypeCache = new Map<string, { types: JiraIssueType[]; expiresAt: number }>();
+
 class JiraIntegrationService {
   private readonly clientId = EnvUtils.get("JIRA_CLIENT_ID");
 
@@ -567,6 +579,90 @@ class JiraIntegrationService {
     console.log(`[jiraIntegrationService] update complete for workspace ${workspaceId}`);
   }
 
+  private async fetchProjectIssueTypes(
+    workspaceId: string,
+    projectId: string,
+    cleanUrl: string,
+    headers: Record<string, string>,
+  ): Promise<JiraIssueType[]> {
+    const cacheKey = `${workspaceId}:${projectId}`;
+    const cached = jiraIssueTypeCache.get(cacheKey);
+    if (cached && cached.expiresAt > Date.now()) {
+      return cached.types;
+    }
+
+    const url = `${cleanUrl}/rest/api/3/issuetype/project?projectId=${encodeURIComponent(projectId)}`;
+    const response = await fetch(url, { headers });
+    if (!response.ok) {
+      logger.warn("Failed to fetch Jira issue types — caching empty list", {
+        status: response.status,
+        projectId,
+      });
+      const empty: JiraIssueType[] = [];
+      jiraIssueTypeCache.set(cacheKey, {
+        types: empty,
+        expiresAt: Date.now() + ISSUE_TYPE_CACHE_TTL_MS,
+      });
+      return empty;
+    }
+
+    const raw = (await response.json()) as Array<{
+      id: string;
+      name: string;
+      subtask?: boolean;
+    }>;
+    const types: JiraIssueType[] = raw.map((it) => ({
+      id: it.id,
+      name: it.name,
+      subtask: Boolean(it.subtask),
+    }));
+    jiraIssueTypeCache.set(cacheKey, {
+      types,
+      expiresAt: Date.now() + ISSUE_TYPE_CACHE_TTL_MS,
+    });
+    return types;
+  }
+
+  private pickJiraIssueType(
+    taskType: string | null | undefined,
+    available: JiraIssueType[],
+    isSubtask: boolean,
+  ): JiraIssueType | null {
+    if (available.length === 0) return null;
+
+    // Subtasks must use a subtask-flagged issue type; top-level tasks must not.
+    const pool = available.filter((it) => it.subtask === isSubtask);
+    const fallbackPool = pool.length > 0 ? pool : available;
+
+    const desired =
+      taskType === "BUG"
+        ? "bug"
+        : taskType === "STORY"
+          ? "story"
+          : taskType === "EPIC"
+            ? "epic"
+            : "task";
+
+    const exact = fallbackPool.find((it) => it.name.toLowerCase() === desired);
+    if (exact) return exact;
+
+    // Common alternative names by locale / Jira project template.
+    const alternativesByDesired: Record<string, string[]> = {
+      task: ["tarea", "item", "issue", "ticket", "to-do", "todo"],
+      bug: ["defect", "error", "fault", "issue", "incidencia"],
+      story: ["user story", "feature", "requirement", "historia"],
+      epic: ["initiative", "theme"],
+    };
+    const alts = alternativesByDesired[desired] || [];
+    for (const alt of alts) {
+      const altMatch = fallbackPool.find((it) => it.name.toLowerCase() === alt);
+      if (altMatch) return altMatch;
+    }
+
+    // Last-resort fallback: first available in the correct pool.
+    return fallbackPool[0];
+  }
+
   public async createJiraIssue(
     workspaceId: string,
     taskId: string,
@@ -680,61 +776,83 @@ class JiraIntegrationService {
       labels.push(sanitizedProjectName);
     }
 
-    const payload: Record<string, unknown> = {
-      fields: {
-        project: { id: projectId },
-        summary: (
-          `[📁 ${task.project.title}] ` + (task.title || `Extracted Task ${task.id}`)
-        ).substring(0, 250),
-        labels,
-        duedate: task.dueDate ? new Date(task.dueDate).toISOString().split("T")[0] : undefined,
-        description: {
-          type: "doc",
-          version: 1,
-          content:
-            documentContent.length > 0
-              ? documentContent
-              : [
-                  {
-                    type: "paragraph",
-                    content: [{ type: "text", text: "Generated via Blueberry Plan AI" }],
-                  },
-                ],
+    const buildPayload = (issueType: JiraIssueType): Record<string, unknown> => {
+      const payload: Record<string, unknown> = {
+        fields: {
+          project: { id: projectId },
+          summary: (
+            `[📁 ${task.project.title}] ` + (task.title || `Extracted Task ${task.id}`)
+          ).substring(0, 250),
+          labels,
+          duedate: task.dueDate ? new Date(task.dueDate).toISOString().split("T")[0] : undefined,
+          description: {
+            type: "doc",
+            version: 1,
+            content:
+              documentContent.length > 0
+                ? documentContent
+                : [
+                    {
+                      type: "paragraph",
+                      content: [{ type: "text", text: "Generated via Blueberry Plan AI" }],
+                    },
+                  ],
+          },
+          issuetype: { id: issueType.id },
         },
-        issuetype: {
-          name:
-            task.type === "BUG"
-              ? "Bug"
-              : task.type === "STORY"
-                ? "Story"
-                : task.type === "EPIC"
-                  ? "Epic"
-                  : "Task",
-        },
-      },
+      };
+      if (jiraParentId) {
+        (payload.fields as Record<string, unknown>).parent = { id: jiraParentId };
+      }
+      return payload;
     };
 
-    if (jiraParentId) {
-      (payload.fields as Record<string, unknown>).parent = { id: jiraParentId };
+    const postIssue = async (
+      issueTypes: JiraIssueType[],
+    ): Promise<{ ok: true; data: { id: string; key: string } } | { ok: false; status: number; body: string }> => {
+      const issueType = this.pickJiraIssueType(task.type, issueTypes, Boolean(jiraParentId));
+      if (!issueType) {
+        throw new Error(`No Jira issue types available for project ${projectId}`);
+      }
+      const response = await fetch(`${cleanUrl}/rest/api/3/issue`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(buildPayload(issueType)),
+      });
+      const responseText = await response.text();
+      if (!response.ok) {
+        return { ok: false, status: response.status, body: responseText };
+      }
+      return { ok: true, data: JSON.parse(responseText) };
+    };
+
+    let issueTypes = await this.fetchProjectIssueTypes(workspaceId, projectId, cleanUrl, headers);
+    let result = await postIssue(issueTypes);
+
+    // If Jira rejects the issue type (e.g. cache stale after a config change),
+    // invalidate the cache and retry once with a fresh discovery.
+    if (!result.ok && result.status === 400 && result.body.includes("issuetype")) {
+      logger.warn("Jira rejected issuetype — refreshing cache and retrying once", {
+        projectId,
+        body: result.body,
+      });
+      jiraIssueTypeCache.delete(`${workspaceId}:${projectId}`);
+      issueTypes = await this.fetchProjectIssueTypes(workspaceId, projectId, cleanUrl, headers);
+      result = await postIssue(issueTypes);
     }
 
-    const response = await fetch(`${cleanUrl}/rest/api/3/issue`, {
-      method: "POST",
-      headers,
-      body: JSON.stringify(payload),
-    });
-
-    const responseText = await response.text();
-    if (!response.ok) {
-      logger.error("Failed to create Jira issue", { status: response.status, body: responseText });
+    if (!result.ok) {
+      logger.error("Failed to create Jira issue", {
+        status: result.status,
+        body: result.body,
+      });
       throw new Error("Jira issue creation failed");
     }
 
-    const data = JSON.parse(responseText);
     return {
-      issueId: data.id,
-      issueKey: data.key,
-      url: `${cleanUrl}/browse/${data.key}`,
+      issueId: result.data.id,
+      issueKey: result.data.key,
+      url: `${cleanUrl}/browse/${result.data.key}`,
     };
   }
 

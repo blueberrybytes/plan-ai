@@ -22,7 +22,6 @@ import {
 import AddIcon from "@mui/icons-material/Add";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
-import DownloadIcon from "@mui/icons-material/Download";
 import TokenIcon from "@mui/icons-material/Token";
 import LockIcon from "@mui/icons-material/Lock";
 import {
@@ -30,7 +29,6 @@ import {
   useCreateMcpTokenMutation,
   useRevokeMcpTokenMutation,
 } from "../../store/apis/mcpApi";
-import { downloadMcpExtension } from "../../utils/downloadMcpExtension";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -50,32 +48,38 @@ const MCP_TOOLS = [
   {
     name: "get_recent_meetings",
     emoji: "🎙️",
-    description: "Lists your latest meetings with title, date, duration, and which project they belong to.",
+    description:
+      "Lists your latest meetings with title, date, duration, and which project they belong to.",
   },
   {
     name: "get_meeting_detail",
     emoji: "📋",
-    description: "Fetches the full transcript, summary, and linked tasks for a specific meeting by ID.",
+    description:
+      "Fetches the full transcript, summary, and linked tasks for a specific meeting by ID.",
   },
   {
     name: "search_meetings",
     emoji: "🔍",
-    description: "Full-text search across meeting titles, summaries, and transcripts using any keyword or phrase.",
+    description:
+      "Full-text search across meeting titles, summaries, and transcripts using any keyword or phrase.",
   },
   {
     name: "get_projects",
     emoji: "📁",
-    description: "Returns all projects in your workspace with their status, meeting count, and task count.",
+    description:
+      "Returns all projects in your workspace with their status, meeting count, and task count.",
   },
   {
     name: "get_tasks",
     emoji: "✅",
-    description: "Lists tasks filtered by status (Todo, In Progress, Done…) or by a specific project.",
+    description:
+      "Lists tasks filtered by status (Todo, In Progress, Done…) or by a specific project.",
   },
   {
     name: "search_tasks",
     emoji: "🎯",
-    description: "Searches task titles and descriptions for a keyword — useful for finding action items.",
+    description:
+      "Searches task titles and descriptions for a keyword — useful for finding action items.",
   },
 ];
 
@@ -140,8 +144,8 @@ const McpPanel: React.FC<McpPanelProps> = ({ workspaceId }) => {
           </Stack>
           <Typography variant="body1" color="text.secondary">
             Connect AI coding tools like Claude Code, Claude Desktop, or Cursor directly to your
-            Plan AI workspace. Once connected, you can ask questions about your meetings, tasks,
-            and projects in natural language — without leaving your editor.
+            Plan AI workspace. Once connected, you can ask questions about your meetings, tasks, and
+            projects in natural language — without leaving your editor.
           </Typography>
         </Box>
 
@@ -239,26 +243,34 @@ const McpPanel: React.FC<McpPanelProps> = ({ workspaceId }) => {
 
           {tokens.length === 0 ? (
             <Alert severity="warning">
-              Create a token above to get started. Once created, you can download a Desktop Extension 
-              to install in Claude Desktop in just one click!
+              Create a token above to get started. Once created, you can download a Desktop
+              Extension to install in Claude Desktop in just one click!
             </Alert>
           ) : (
             <Stack spacing={3}>
               <Alert severity="info" sx={{ py: 0.5 }}>
-                Your full token was shown <strong>once</strong> when you created it. If you lost
-                it, revoke this one and create a new token. You can instantly download a pre-configured 
+                Your full token was shown <strong>once</strong> when you created it. If you lost it,
+                revoke this one and create a new token. You can instantly download a pre-configured
                 extension right from the creation dialog!
               </Alert>
 
-              <Box sx={{ p: 3, border: 1, borderColor: 'divider', borderRadius: 2, bgcolor: 'background.paper' }}>
+              <Box
+                sx={{
+                  p: 3,
+                  border: 1,
+                  borderColor: "divider",
+                  borderRadius: 2,
+                  bgcolor: "background.paper",
+                }}
+              >
                 <Typography variant="h6" gutterBottom>
                   Connecting Claude Desktop
                 </Typography>
                 <Typography variant="body2" color="text.secondary" paragraph>
-                  The easiest way to connect Claude Desktop to Plan AI is by using a Desktop Extension bundle (<code>.mcpb</code>). 
-                  When you create a new token, click the <strong>Download Desktop Extension</strong> button.
+                  To connect your remote Plan AI workspace, you need to add a small bridge
+                  configuration to your <code>claude_desktop_config.json</code> file.
                 </Typography>
-                
+
                 <Typography variant="subtitle2" gutterBottom sx={{ mt: 2 }}>
                   Installation Steps:
                 </Typography>
@@ -266,17 +278,44 @@ const McpPanel: React.FC<McpPanelProps> = ({ workspaceId }) => {
                   {[
                     "1. Open Claude Desktop",
                     "2. Go to Settings (or Preferences on Mac)",
-                    "3. Select the 'Extensions' tab",
-                    "4. Go to 'Advanced' and click 'Install Extension...'",
-                    "5. Select the plan-ai.mcpb file you downloaded"
-                  ].map(step => (
+                    "3. Select the 'Developer' tab and click 'Edit Config'",
+                    "4. Add the following snippet to your mcpServers block:",
+                  ].map((step) => (
                     <Typography key={step} variant="body2" sx={{ ml: 1 }}>
                       {step}
                     </Typography>
                   ))}
                 </Stack>
-                <Typography variant="body2" color="text.secondary" sx={{ mt: 2, fontStyle: 'italic' }}>
-                  Note: Manual JSON configuration via <code>mcp-remote</code> is no longer supported as our server uses direct Bearer tokens for better security instead of OAuth. Support for Cursor and Claude Code is coming soon in our official NPM CLI package.
+                <Box
+                  component="pre"
+                  sx={{
+                    bgcolor: "action.hover",
+                    borderRadius: 1.5,
+                    p: 2,
+                    fontSize: 12,
+                    fontFamily: "monospace",
+                    overflowX: "auto",
+                    mt: 2,
+                  }}
+                >
+                  {`"plan-ai": {
+  "command": "npx",
+  "args": [
+    "-y",
+    "@cloudmcp/connect",
+    "--url",
+    "${MCP_SSE_ENDPOINT}",
+    "--header",
+    "Authorization: Bearer YOUR_TOKEN_HERE"
+  ]
+}`}
+                </Box>
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  sx={{ mt: 2, fontStyle: "italic" }}
+                >
+                  Note: Make sure to replace YOUR_TOKEN_HERE with the token you generated above.
                 </Typography>
               </Box>
             </Stack>
@@ -314,9 +353,7 @@ const McpPanel: React.FC<McpPanelProps> = ({ workspaceId }) => {
                   "&:hover": { borderColor: "primary.main" },
                 })}
               >
-                <Box sx={{ fontSize: 20, lineHeight: 1, mt: 0.2, flexShrink: 0 }}>
-                  {tool.emoji}
-                </Box>
+                <Box sx={{ fontSize: 20, lineHeight: 1, mt: 0.2, flexShrink: 0 }}>{tool.emoji}</Box>
                 <Box>
                   <Typography
                     variant="caption"
@@ -377,19 +414,38 @@ const McpPanel: React.FC<McpPanelProps> = ({ workspaceId }) => {
               </Box>
 
               <Divider />
-
               <Typography variant="subtitle2" fontWeight={600}>
-                Claude Desktop Extension (.mcpb):
+                Claude Desktop Config Snippet:
               </Typography>
-              <Button
-                variant="outlined"
-                color="primary"
-                startIcon={<DownloadIcon />}
-                onClick={() => downloadMcpExtension(rawToken, MCP_SSE_ENDPOINT)}
-                sx={{ width: "fit-content" }}
+              <Typography variant="body2" color="text.secondary">
+                Paste this into your <code>claude_desktop_config.json</code> file to connect your
+                workspace automatically:
+              </Typography>
+              <Box
+                component="pre"
+                sx={{
+                  bgcolor: "action.hover",
+                  borderRadius: 1.5,
+                  p: 2,
+                  fontSize: 12,
+                  fontFamily: "monospace",
+                  overflowX: "auto",
+                  mt: 1,
+                  mb: 0,
+                }}
               >
-                Download Desktop Extension
-              </Button>
+                {`"plan-ai": {
+  "command": "npx",
+  "args": [
+    "-y",
+    "@cloudmcp/connect",
+    "--url",
+    "${MCP_SSE_ENDPOINT}",
+    "--header",
+    "Authorization: Bearer ${rawToken}"
+  ]
+}`}
+              </Box>
             </Stack>
           ) : (
             <Stack spacing={2} sx={{ pt: 1 }}>

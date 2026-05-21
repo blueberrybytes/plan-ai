@@ -385,16 +385,16 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
                       />
                     )}
                   </Box>
-                  {contentToRender && (
-                    <Tooltip title="Copy to clipboard">
+                  {contentToRender && msg.role === "USER" && (
+                    <Tooltip title={t("chat.window.copyResponse")}>
                       <IconButton
                         onClick={() => navigator.clipboard.writeText(contentToRender)}
                         size="small"
                         sx={{
                           alignSelf: "flex-start",
-                          opacity: 0.5,
+                          opacity: 0.7,
                           "&:hover": { opacity: 1 },
-                          color: msg.role === "USER" ? "inherit" : "action.active",
+                          color: "inherit",
                           mt: -1,
                           mr: -1,
                         }}
@@ -452,7 +452,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
                   </Box>
                 )}
 
-                {(latencyMs || toolsUsed.length > 0) && (
+                {msg.role === "ASSISTANT" && contentToRender && (
                   <Box
                     sx={{
                       mt: 1,
@@ -465,16 +465,35 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
                       flexWrap: "wrap",
                     }}
                   >
+                    <Tooltip title={t("chat.window.copyResponse")}>
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        startIcon={<ContentCopyIcon fontSize="small" />}
+                        onClick={() => navigator.clipboard.writeText(contentToRender)}
+                        sx={{
+                          minWidth: 0,
+                          py: 0.25,
+                          px: 1,
+                          fontSize: "0.7rem",
+                          textTransform: "none",
+                          color: "text.secondary",
+                          borderColor: "divider",
+                        }}
+                      >
+                        {t("chat.window.copyResponse")}
+                      </Button>
+                    </Tooltip>
                     {latencyMs && (
                       <Typography variant="caption" color="text.secondary">
                         ⏱️ {(latencyMs / 1000).toFixed(1)}s
                       </Typography>
                     )}
                     {toolsUsed.length > 0 &&
-                      toolsUsed.map((t) => (
+                      toolsUsed.map((toolName) => (
                         <Chip
-                          key={t}
-                          label={t}
+                          key={toolName}
+                          label={toolName}
                           size="small"
                           variant="outlined"
                           sx={{

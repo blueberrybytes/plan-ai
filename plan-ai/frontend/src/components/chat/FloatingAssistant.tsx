@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import {
   Box,
+  Button,
   Fab,
   Popover,
   Typography,
@@ -295,11 +296,12 @@ export const FloatingAssistant: React.FC = () => {
                     color: m.role === "user" ? "primary.contrastText" : "text.primary",
                     borderRadius: 2,
                     display: "flex",
-                    flexDirection: "row",
-                    alignItems: "flex-start",
+                    flexDirection: "column",
+                    alignItems: "stretch",
                     gap: 1,
                   }}
                 >
+                  <Box sx={{ display: "flex", flexDirection: "row", alignItems: "flex-start", gap: 1, minWidth: 0 }}>
                   <Box sx={{ flexGrow: 1, minWidth: 0, overflowX: "auto" }}>
                     {!m.content &&
                     (!m.parts || m.parts.length === 0) &&
@@ -362,8 +364,8 @@ export const FloatingAssistant: React.FC = () => {
                       </Box>
                     )}
                   </Box>
-                  {m.content && (
-                    <Tooltip title="Copy to clipboard">
+                  {m.content && m.role === "user" && (
+                    <Tooltip title="Copy">
                       <IconButton
                         onClick={() => {
                           navigator.clipboard.writeText(m.content);
@@ -371,9 +373,9 @@ export const FloatingAssistant: React.FC = () => {
                         size="small"
                         sx={{
                           alignSelf: "flex-start",
-                          opacity: 0.5,
+                          opacity: 0.7,
                           "&:hover": { opacity: 1 },
-                          color: m.role === "user" ? "inherit" : "action.active",
+                          color: "inherit",
                           mt: -0.5,
                           mr: -0.5,
                         }}
@@ -381,6 +383,34 @@ export const FloatingAssistant: React.FC = () => {
                         <ContentCopyIcon fontSize="small" />
                       </IconButton>
                     </Tooltip>
+                  )}
+                  </Box>
+                  {m.content && m.role === "assistant" && (
+                    <Box
+                      sx={{
+                        mt: 0.5,
+                        pt: 0.5,
+                        borderTop: 1,
+                        borderColor: "divider",
+                        display: "flex",
+                      }}
+                    >
+                      <Button
+                        size="small"
+                        variant="text"
+                        startIcon={<ContentCopyIcon fontSize="small" />}
+                        onClick={() => navigator.clipboard.writeText(m.content)}
+                        sx={{
+                          py: 0,
+                          px: 1,
+                          fontSize: "0.7rem",
+                          textTransform: "none",
+                          color: "text.secondary",
+                        }}
+                      >
+                        Copy
+                      </Button>
+                    </Box>
                   )}
                 </Paper>
               </Box>

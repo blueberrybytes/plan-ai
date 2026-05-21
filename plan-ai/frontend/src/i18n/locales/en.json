@@ -280,7 +280,11 @@
     },
     "window": {
       "viewFullScreen": "View full screen",
-      "exportChat": "Export chat history"
+      "exportChat": "Export chat history",
+      "copyResponse": "Copy response",
+      "copyTable": "Copy table",
+      "copyCode": "Copy code",
+      "copied": "Copied!"
     },
     "messages": {
       "chatCreated": "Chat created successfully",

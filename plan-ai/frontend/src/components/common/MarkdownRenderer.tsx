@@ -1,11 +1,103 @@
-import React from "react";
-import { Box, SxProps } from "@mui/material";
+import React, { useRef, useState } from "react";
+import { Box, IconButton, SxProps, Tooltip } from "@mui/material";
+import ContentCopyIcon from "@mui/icons-material/ContentCopy";
+import CheckIcon from "@mui/icons-material/Check";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
 import { Link as RouterLink } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import MermaidRenderer from "./MermaidRenderer";
+
+const CopyButton: React.FC<{ getText: () => string; title: string }> = ({ getText, title }) => {
+  const { t } = useTranslation();
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.stopPropagation();
+    try {
+      await navigator.clipboard.writeText(getText());
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      // Clipboard API failed (e.g. insecure context) — silently ignore.
+    }
+  };
+
+  return (
+    <Tooltip title={copied ? t("chat.window.copied") : title}>
+      <IconButton
+        size="small"
+        onClick={handleCopy}
+        sx={{
+          position: "absolute",
+          top: 4,
+          right: 4,
+          zIndex: 1,
+          bgcolor: "background.paper",
+          border: 1,
+          borderColor: "divider",
+          "&:hover": { bgcolor: "action.hover" },
+        }}
+      >
+        {copied ? (
+          <CheckIcon fontSize="small" color="success" />
+        ) : (
+          <ContentCopyIcon fontSize="small" />
+        )}
+      </IconButton>
+    </Tooltip>
+  );
+};
+
+const TableWithCopy: React.FC<{ children: React.ReactNode; tableProps: Record<string, unknown> }> = ({
+  children,
+  tableProps,
+}) => {
+  const { t } = useTranslation();
+  const wrapperRef = useRef<HTMLDivElement>(null);
+
+  const getTableText = () => {
+    const tableEl = wrapperRef.current?.querySelector("table");
+    if (!tableEl) return "";
+    const rows = Array.from(tableEl.querySelectorAll("tr"));
+    return rows
+      .map((row) =>
+        Array.from(row.querySelectorAll("th, td"))
+          .map((cell) => (cell.textContent || "").trim().replace(/[\t\n\r]+/g, " "))
+          .join("\t"),
+      )
+      .join("\n");
+  };
+
+  return (
+    <Box
+      ref={wrapperRef}
+      sx={{
+        position: "relative",
+        my: 2,
+        maxWidth: "100%",
+        overflowX: "auto",
+        border: 1,
+        borderColor: "divider",
+        borderRadius: 1,
+      }}
+    >
+      <CopyButton getText={getTableText} title={t("chat.window.copyTable")} />
+      <table
+        {...tableProps}
+        style={{
+          borderCollapse: "collapse",
+          width: "max-content",
+          minWidth: "100%",
+        }}
+      >
+        {children}
+      </table>
+    </Box>
+  );
+};
 
 interface MarkdownRendererProps {
   content: string;
@@ -32,18 +124,18 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
   isFixing,
   isStreaming,
 }) => {
+  const { t } = useTranslation();
   return (
     <Box
       sx={{
-        "& table": {
-          borderCollapse: "collapse",
-          width: "100%",
-          my: 2,
-        },
+        maxWidth: "100%",
+        minWidth: 0,
+        overflow: "hidden",
         "& th, & td": {
           border: 1,
           borderColor: "divider",
           p: 1,
+          whiteSpace: "nowrap",
         },
         "& h1, & h2, & h3, & h4, & h5, & h6": {
           color: theme?.primaryColor || "primary.main",
@@ -71,11 +163,9 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
         "& strong": {
           color: theme?.primaryColor || "primary.light",
         },
-        "& pre": {
-          m: 0,
-          p: 0,
-          bgcolor: "transparent !important",
-          overflowX: "auto",
+        "& p, & li": {
+          overflowWrap: "anywhere",
+          wordBreak: "break-word",
         },
         "& .mermaid-container": {
           my: 4,
@@ -94,6 +184,10 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
         remarkPlugins={[remarkGfm]}
         components={{
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          table: ({ children, ...props }: any) => (
+            <TableWithCopy tableProps={props}>{children}</TableWithCopy>
+          ),
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           code({ className, children, ...props }: any) {
             const match = /language-(\w+)/.exec(className || "");
             const isInline = !match;
@@ -101,7 +195,7 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
 
             if (language === "mermaid") {
               const chart = String(children).replace(/\n$/, "");
-              
+
               if (isStreaming) {
                 // Return plain text while streaming to prevent aggressive mermaid re-renders crashing
                 return (
@@ -134,14 +228,34 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
 
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const Component = SyntaxHighlighter as any;
-            return !isInline ? (
-              <Component style={vscDarkPlus} language={language} PreTag="div" {...props}>
-                {String(children).replace(/\n$/, "")}
-              </Component>
-            ) : (
-              <code className={className} {...props}>
-                {children}
-              </code>
+            if (isInline) {
+              return (
+                <code className={className} {...props}>
+                  {children}
+                </code>
+              );
+            }
+
+            const codeText = String(children).replace(/\n$/, "");
+            return (
+              <Box
+                sx={{
+                  position: "relative",
+                  my: 2,
+                  maxWidth: "100%",
+                  overflowX: "auto",
+                  borderRadius: 1,
+                  "& > div, & pre": {
+                    m: "0 !important",
+                    borderRadius: 1,
+                  },
+                }}
+              >
+                <CopyButton getText={() => codeText} title={t("chat.window.copyCode")} />
+                <Component style={vscDarkPlus} language={language} PreTag="div" {...props}>
+                  {codeText}
+                </Component>
+              </Box>
             );
           },
           // eslint-disable-next-line @typescript-eslint/no-explicit-any

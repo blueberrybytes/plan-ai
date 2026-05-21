@@ -130,12 +130,26 @@ const Home: React.FC = () => {
     }
   }, [token, activeWorkspaceId, debouncedSearch, api]);
 
+  const loadContexts = useCallback(() => {
+    if (!api) return;
+    api.listContexts().then(setContexts).catch(console.error);
+  }, [api]);
+
   useEffect(() => {
     void fetchData(false);
-    if (api) {
-      api.listContexts().then(setContexts).catch(console.error);
-    }
-  }, [fetchData, api]);
+    loadContexts();
+  }, [fetchData, loadContexts]);
+
+  // Refetch contexts when the recorder window regains focus, so deletions
+  // performed on the web app or another device show up immediately.
+  useEffect(() => {
+    const handleFocus = () => {
+      loadContexts();
+      void fetchData(true);
+    };
+    window.addEventListener("focus", handleFocus);
+    return () => window.removeEventListener("focus", handleFocus);
+  }, [loadContexts, fetchData]);
 
   // Poll for updates if any transcript is pending/generating
   useEffect(() => {

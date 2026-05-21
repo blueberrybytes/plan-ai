@@ -55,6 +55,7 @@ model Workspace {
   aiUsageLogs    AiUsageLog[]
   chatThreads    ChatThread[]
   invitations    WorkspaceInvitation[]
+  mcpTokens      McpToken[]
 }
 
 model WorkspaceMember {
@@ -144,6 +145,7 @@ model User {
   desktopAuthCodes     DesktopAuthCode[]
   aiUsageLogs          AiUsageLog[]
   workspaceMembers     WorkspaceMember[]
+  mcpTokens            McpToken[]
 }
 
 model DesktopAuthCode {
@@ -156,6 +158,24 @@ model DesktopAuthCode {
 
   @@index([code])
   @@index([userId])
+}
+
+model McpToken {
+  id          String    @id @default(cuid())
+  userId      String
+  workspaceId String
+  name        String
+  tokenHash   String    @unique
+  prefix      String
+  lastUsedAt  DateTime?
+  createdAt   DateTime  @default(now())
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([workspaceId])
+  @@index([tokenHash])
 }
 
 model UserIntegration {

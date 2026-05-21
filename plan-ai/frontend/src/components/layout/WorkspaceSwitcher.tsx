@@ -89,7 +89,7 @@ const WorkspaceSwitcher: React.FC = () => {
   }
 
   return (
-    <Box sx={{ px: 2, mb: 1, mt: 1 }}>
+    <Box sx={{ flexGrow: 1, minWidth: 0 }}>
       <Select
         value={activeWorkspaceId || activeWorkspace.id}
         onChange={handleChange}

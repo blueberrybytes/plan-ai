@@ -505,12 +505,25 @@ const Recording: React.FC = () => {
   }, [phase, api]);
 
   // Load contexts immediately so they can be selected during recording for Live Chat
+  const loadContexts = useCallback(() => {
+    if (!api) return;
+    api.listContexts().then(setContexts).catch(console.error);
+  }, [api]);
+
   useEffect(() => {
     if (api) {
-      api.listContexts().then(setContexts).catch(console.error);
+      loadContexts();
       api.listAiModels().then(setAiModels).catch(console.error);
     }
-  }, [api]);
+  }, [api, loadContexts]);
+
+  // Refetch contexts when the recorder window regains focus, so deletions
+  // made on the web app are reflected without restarting.
+  useEffect(() => {
+    const handleFocus = () => loadContexts();
+    window.addEventListener("focus", handleFocus);
+    return () => window.removeEventListener("focus", handleFocus);
+  }, [loadContexts]);
 
   // Live Summary Polling Loop (Every 15 seconds, mapped to 1s UI ticks)
   useEffect(() => {

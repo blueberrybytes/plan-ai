@@ -30,7 +30,7 @@ import {
 } from "react-native-paper";
 import Markdown from "react-native-markdown-display";
 import LiveAudioStream from "react-native-live-audio-stream";
-import { useRouter } from "expo-router";
+import { useRouter, useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import {
@@ -533,6 +533,18 @@ export default function RecordScreen() {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isRecording]);
+
+  // Refetch contexts when the screen regains focus, so deletions on the web
+  // app are reflected without restarting the mobile app.
+  useFocusEffect(
+    useCallback(() => {
+      if (phase === "setup") {
+        api.listContexts()
+          .then((ctxs) => setContexts(ctxs as Context[]))
+          .catch(() => {});
+      }
+    }, [phase, api]),
+  );
 
   useEffect(() => {
     if (phase === "setup") {

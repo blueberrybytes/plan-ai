@@ -29,7 +29,32 @@ export interface UpdateDocInput {
   isPublic?: boolean;
 }
 
+// Titles set by upstream code paths that don't know the final content yet —
+// safe to overwrite with a content-derived title once generation completes.
+const PLACEHOLDER_DOC_TITLES = new Set([
+  "Generating Transcript...",
+  "Untitled Document",
+  "AI Generated Document",
+  "Meeting Document",
+]);
+
 export class DocGenerationService {
+  /**
+   * Pull a human-readable title from the first markdown heading of the
+   * generated content. Returns null if nothing usable is found.
+   */
+  private deriveTitleFromContent(content: string): string | null {
+    if (!content) return null;
+    // Match the first ATX-style heading (#, ##, ###, …). Stops at the newline.
+    const match = content.match(/^\s*#{1,6}\s+(.+?)\s*$/m);
+    if (!match) return null;
+    const cleaned = match[1]
+      .replace(/[*_`]/g, "") // strip basic markdown emphasis
+      .trim();
+    if (!cleaned) return null;
+    return cleaned.slice(0, 200);
+  }
+
   public async startGeneration(
     userId: string,
     workspaceId: string,
@@ -165,9 +190,27 @@ export class DocGenerationService {
       }
     }
 
+    // Replace placeholder titles ("Generating Transcript...", "AI Generated
+     // Document", etc) with the actual title from the generated content. Users
+     // who picked a real title themselves are preserved.
+    const currentDoc = await prisma.docDocument.findUnique({
+      where: { id: docId },
+      select: { title: true },
+    });
+    const derivedTitle = this.deriveTitleFromContent(fullContent);
+    const shouldUpdateTitle = Boolean(
+      derivedTitle &&
+        currentDoc &&
+        (!currentDoc.title || PLACEHOLDER_DOC_TITLES.has(currentDoc.title)),
+    );
+
     await prisma.docDocument.update({
       where: { id: docId },
-      data: { content: fullContent, status: "DRAFT" },
+      data: {
+        content: fullContent,
+        status: "DRAFT",
+        ...(shouldUpdateTitle && derivedTitle ? { title: derivedTitle } : {}),
+      },
     });
 
     try {

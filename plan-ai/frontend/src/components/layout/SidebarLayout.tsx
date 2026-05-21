@@ -41,7 +41,7 @@ import {
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { selectAvatar, selectUser, selectUserDb } from "../../store/slices/auth/authSelector";
-import { useBrandIdentity } from "../../hooks/useBrandIdentity";
+
 import { selectSidebarCollapsed } from "../../store/slices/app/appSelector";
 import { toggleSidebar } from "../../store/slices/app/appSlice";
 import { selectActiveWorkspaceId } from "../../store/slices/app/appSelector";
@@ -118,7 +118,7 @@ const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children, fullHeight = fa
   const user = useSelector(selectUser);
   const userDb = useSelector(selectUserDb);
   const avatar = useSelector(selectAvatar);
-  const { logoSrc, logoAlt, productName, brandKey } = useBrandIdentity();
+
   const isCollapsed = useSelector(selectSidebarCollapsed);
   const activeWorkspaceId = useSelector(selectActiveWorkspaceId);
   const { t } = useTranslation();
@@ -208,7 +208,7 @@ const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children, fullHeight = fa
         <Box
           component="aside"
           sx={{
-            width: isCollapsed ? 80 : 264,
+            width: isCollapsed ? 80 : 220,
             flexShrink: 0,
             bgcolor: "background.paper",
             borderRadius: "20px",
@@ -230,40 +230,13 @@ const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children, fullHeight = fa
             sx={{
               display: "flex",
               alignItems: "center",
-              gap: isCollapsed ? 0 : 1.5,
-              px: 1,
-              minHeight: 48,
+              gap: 1,
+              px: isCollapsed ? 0 : 0.5,
+              mb: 1,
               justifyContent: isCollapsed ? "center" : "space-between",
             }}
           >
-            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-              {!isCollapsed && (
-                <img
-                  src={logoSrc}
-                  alt={logoAlt}
-                  style={{
-                    height: brandKey === "housegroup" ? 22 : 32,
-                    filter: "brightness(1.2)",
-                    maxWidth: "100%",
-                  }}
-                />
-              )}
-              {!isCollapsed && brandKey !== "housegroup" ? (
-                <Typography
-                  variant="h6"
-                  sx={{
-                    fontWeight: 800,
-                    letterSpacing: "-0.5px",
-                    background: (theme) =>
-                      `linear-gradient(90deg, ${theme.palette.text.primary} 0%, ${theme.palette.text.secondary} 100%)`,
-                    WebkitBackgroundClip: "text",
-                    WebkitTextFillColor: "transparent",
-                  }}
-                >
-                  {productName}
-                </Typography>
-              ) : null}
-            </Box>
+            {!isCollapsed && <WorkspaceSwitcher />}
             <Tooltip
               title={
                 isCollapsed
@@ -274,14 +247,17 @@ const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children, fullHeight = fa
               <IconButton
                 onClick={handleToggleCollapse}
                 size="small"
-                sx={{ color: "text.secondary" }}
+                sx={{ 
+                  color: "text.secondary", 
+                  bgcolor: isCollapsed ? "transparent" : "rgba(255, 255, 255, 0.03)",
+                  "&:hover": { bgcolor: "rgba(255, 255, 255, 0.08)" }
+                }}
               >
                 {isCollapsed ? <ChevronRightIcon /> : <ChevronLeftIcon />}
               </IconButton>
             </Tooltip>
           </Box>
-
-          <WorkspaceSwitcher />
+          {isCollapsed && <WorkspaceSwitcher />}
 
           {!isCollapsed && activeWorkspaceId && (
             <Box
