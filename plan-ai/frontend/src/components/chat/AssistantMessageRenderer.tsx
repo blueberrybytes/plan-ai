@@ -1,8 +1,13 @@
-import React, { useState } from "react";
-import { Box, Card, CardContent, Typography, Button, CircularProgress } from "@mui/material";
+import React, { useEffect, useRef, useState } from "react";
+import { Box, Card, CardContent, Typography, Button, CircularProgress, Link } from "@mui/material";
 import MarkdownRenderer from "../common/MarkdownRenderer";
-import { CheckCircleOutline, DescriptionOutlined } from "@mui/icons-material";
+import {
+  CheckCircleOutline,
+  DescriptionOutlined,
+  OpenInNew as OpenInNewIcon,
+} from "@mui/icons-material";
 import { useSelector } from "react-redux";
+import { useNavigate, Link as RouterLink } from "react-router-dom";
 import { RootState } from "../../store/store";
 
 interface AssistantMessageRendererProps {
@@ -11,6 +16,9 @@ interface AssistantMessageRendererProps {
   isStreaming?: boolean;
 }
 
+// Match: [UI:NAVIGATE path="/slides/create"]
+const NAVIGATE_MARKER_RE = /\[UI:NAVIGATE\s+path="([^"]+)"\]/;
+
 export const AssistantMessageRenderer: React.FC<AssistantMessageRendererProps> = ({
   content,
   onSendMessage,
@@ -18,6 +26,25 @@ export const AssistantMessageRenderer: React.FC<AssistantMessageRendererProps> =
 }) => {
   const [isTyping, setIsTyping] = useState(false);
   const token = useSelector((state: RootState) => state.auth.user?.token);
+  const navigate = useNavigate();
+
+  // ── Navigation marker handling ────────────────────────────────────────
+  // The backend emits [UI:NAVIGATE path="..."] when the assistant calls the
+  // `navigate` tool. We:
+  //   1. Wait until streaming has finished to avoid jumping mid-response.
+  //   2. Track which content string we've already auto-navigated for so we
+  //      don't re-navigate on re-render.
+  //   3. Replace the raw marker in-text with a friendly chip linking to the
+  //      destination, so the user can click again if they bounce back.
+  const navigateMatch = content.match(NAVIGATE_MARKER_RE);
+  const navigatedForContent = useRef<string | null>(null);
+  useEffect(() => {
+    if (!navigateMatch) return;
+    if (isStreaming) return; // wait for the full text to settle
+    if (navigatedForContent.current === content) return;
+    navigatedForContent.current = content;
+    navigate(navigateMatch[1]);
+  }, [content, isStreaming, navigate, navigateMatch]);
 
   // Regex looking for: [UI:CONFIRM_DOC purpose="X" recordingId="Y" recordingName="Z" contextId="A" contextName="B"]
   const confirmMatch = content.match(
@@ -251,6 +278,35 @@ export const AssistantMessageRenderer: React.FC<AssistantMessageRendererProps> =
             </Box>
           </CardContent>
         </Card>
+      </Box>
+    );
+  }
+
+  // If the message contains a navigation marker, strip it from the markdown
+  // and append a friendly clickable chip the user can re-trigger.
+  if (navigateMatch) {
+    const cleanContent = content.replace(NAVIGATE_MARKER_RE, "").trim();
+    const path = navigateMatch[1];
+    return (
+      <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+        {cleanContent && <MarkdownRenderer content={cleanContent} isStreaming={isStreaming} />}
+        <Link
+          component={RouterLink}
+          to={path}
+          sx={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 0.5,
+            fontSize: "0.8rem",
+            alignSelf: "flex-start",
+            textDecoration: "none",
+            color: "primary.main",
+            "&:hover": { textDecoration: "underline" },
+          }}
+        >
+          <OpenInNewIcon sx={{ fontSize: 14 }} />
+          Open {path}
+        </Link>
       </Box>
     );
   }

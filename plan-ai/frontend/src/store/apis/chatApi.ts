@@ -23,7 +23,10 @@ export interface ChatThread {
   id: string;
   userId: string;
   title: string;
+  /** Legacy field: internal context IDs (1:1 with projects). UI should prefer projectIds. */
   contextIds: string[];
+  /** User-facing project IDs the chat references (resolved from contextIds on the backend). */
+  projectIds?: string[];
   complexityLevel?: string | null;
   createdAt: string;
   updatedAt: string;
@@ -60,7 +63,14 @@ export const chatApi = createApi({
     }),
     createThread: builder.mutation<
       ChatThread,
-      { title?: string; contextIds: string[]; complexityLevel?: string }
+      {
+        title?: string;
+        /** Preferred: user-facing project IDs. Backend resolves to contexts. */
+        projectIds?: string[];
+        /** Legacy: direct context IDs. */
+        contextIds?: string[];
+        complexityLevel?: string;
+      }
     >({
       query: (body) => ({
         url: "/api/chat/threads",
@@ -88,7 +98,15 @@ export const chatApi = createApi({
     }),
     updateThread: builder.mutation<
       ChatThread,
-      { threadId: string; title?: string; contextIds?: string[]; complexityLevel?: string }
+      {
+        threadId: string;
+        title?: string;
+        /** Preferred: user-facing project IDs. */
+        projectIds?: string[];
+        /** Legacy: direct context IDs. */
+        contextIds?: string[];
+        complexityLevel?: string;
+      }
     >({
       query: ({ threadId, ...body }) => ({
         url: `/api/chat/threads/${threadId}`,

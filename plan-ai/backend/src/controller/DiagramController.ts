@@ -16,13 +16,17 @@ import prisma from "../prisma/prismaClient";
 import type { DiagramType } from "@prisma/client";
 import { AuthenticatedRequest } from "../middleware/authMiddleware";
 import { diagramGenerationService } from "../services/diagramGenerationService";
+import { mergeProjectAndContextIds } from "../services/projectContextResolver";
 
 export interface CreateDiagramRequest {
   title: string;
   prompt: string;
   type: "AUTO" | "FLOWCHART" | "SEQUENCE" | "GANTT" | "MINDMAP" | "CLASS" | "ER" | "ARCHITECTURE";
   themeId?: string;
+  /** Legacy: direct context IDs. Prefer `projectIds`. */
   contextIds?: string[];
+  /** Preferred: user-facing project IDs. Backend resolves to contextIds. */
+  projectIds?: string[];
   transcriptIds?: string[];
   isManual?: boolean;
 }
@@ -131,6 +135,8 @@ export class DiagramController extends BaseWorkspaceController {
   ): Promise<DiagramResponse> {
     const { user, workspaceId } = await this.getAuthorizedWorkspaceAccess(request);
 
+    const contextIds = await mergeProjectAndContextIds(body.projectIds, body.contextIds);
+
     let initialSyntax = `%% ${body.title} - ${body.type}\n`;
     if (body.type === "FLOWCHART") initialSyntax += "flowchart TD\n";
     if (body.type === "ARCHITECTURE") initialSyntax += "architecture-beta\n";
@@ -147,7 +153,7 @@ export class DiagramController extends BaseWorkspaceController {
         prompt: body.prompt,
         type: body.type as DiagramType,
         themeId: body.themeId || null,
-        contextIds: body.contextIds || [],
+        contextIds,
         transcriptIds: body.transcriptIds || [],
         mermaidCode: initialSyntax,
         status: body.isManual ? "DRAFT" : "GENERATING",
@@ -163,7 +169,7 @@ export class DiagramController extends BaseWorkspaceController {
           workspaceId,
           prompt: body.prompt,
           type: body.type,
-          contextIds: body.contextIds || [],
+          contextIds,
           transcriptIds: body.transcriptIds || [],
         })
         .catch(console.error);

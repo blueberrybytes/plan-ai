@@ -272,11 +272,11 @@
       "delete": "Eliminar"
     },
     "dialog": {
-      "title": "Seleccionar Contextos",
-      "description": "Elige qué contextos debe referenciar la IA para este chat.",
-      "placeholder": "Seleccionar contextos",
-      "noContexts": "Aún no has creado contextos. Los contextos permiten a la IA responder basándose en tus documentos.",
-      "createContext": "Crea tu primer Contexto"
+      "title": "Seleccionar Projects",
+      "description": "Elige qué Projects debe referenciar la IA para este chat. La IA usará los archivos adjuntos al Project como contexto.",
+      "placeholder": "Seleccionar projects",
+      "noProjects": "Aún no has creado Projects. Los Projects organizan tu trabajo y permiten que la IA referencie tus archivos.",
+      "createProject": "Crea tu primer Project"
     },
     "window": {
       "viewFullScreen": "Ver en pantalla completa",
@@ -707,7 +707,7 @@
       "dashboard": "Panel de Control",
       "team": "Equipo de Trabajo",
       "chat": "Chat",
-      "sessions": "Proyectos y Tareas",
+      "sessions": "Proyectos",
       "contexts": "Biblioteca",
       "docs": "Documentos",
       "presentations": "Presentaciones",

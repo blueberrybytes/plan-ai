@@ -17,6 +17,7 @@ import {
   Refresh as RefreshIcon,
   FolderOutlined as FolderIcon,
   ChevronRight as ChevronRightIcon,
+  AttachFile as AttachFileIcon,
 } from "@mui/icons-material";
 import SidebarLayout from "../components/layout/SidebarLayout";
 import {
@@ -329,9 +330,30 @@ const Projects: React.FC = () => {
                     color: "inherit",
                   }}
                 >
-                  <Typography variant="subtitle2" fontWeight={600} noWrap>
-                    {project.title}
-                  </Typography>
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+                    <Typography variant="subtitle2" fontWeight={600} noWrap>
+                      {project.title}
+                    </Typography>
+                    {project.hasFiles && (
+                      <Tooltip
+                        title={`${project.fileCount} file${project.fileCount === 1 ? "" : "s"}`}
+                      >
+                        <Box
+                          component="span"
+                          sx={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 0.25,
+                            color: "text.secondary",
+                            fontSize: "0.7rem",
+                          }}
+                        >
+                          <AttachFileIcon sx={{ fontSize: 14 }} />
+                          {project.fileCount}
+                        </Box>
+                      </Tooltip>
+                    )}
+                  </Box>
                   {project.description ? (
                     <Typography
                       variant="caption"

@@ -158,8 +158,28 @@ export function setupAudioStream(server: Server) {
       const url = new URL(req.url || "", `http://${req.headers.host}`);
       const token = url.searchParams.get("token");
       const language = url.searchParams.get("language") || "multi";
-      const contextIdsParam = url.searchParams.get("contextIds");
-      console.log("[DEBUG WS] parsed URL parameters", Boolean(token), language, contextIdsParam);
+      let contextIdsParam = url.searchParams.get("contextIds");
+      const projectIdsParam = url.searchParams.get("projectIds");
+      console.log(
+        "[DEBUG WS] parsed URL parameters",
+        Boolean(token),
+        language,
+        contextIdsParam,
+        projectIdsParam,
+      );
+
+      // If only projectIds was provided (post Context-hidden refactor), resolve
+      // to the paired contextIds so we can still pull keyword hints.
+      if (!contextIdsParam && projectIdsParam) {
+        const projectIds = projectIdsParam.split(",").filter(Boolean);
+        const ctxRows = await prisma.context.findMany({
+          where: { projectId: { in: projectIds } },
+          select: { id: true },
+        });
+        if (ctxRows.length > 0) {
+          contextIdsParam = ctxRows.map((c) => c.id).join(",");
+        }
+      }
 
       if (!token) {
         ws.send(JSON.stringify({ type: "error", message: "Unauthorized: Missing token" }));
@@ -243,8 +263,13 @@ export function setupAudioStream(server: Server) {
         });
         
         if (allKeywords.size > 0) {
-          keyterms = Array.from(allKeywords);
-          console.log(`[DEBUG WS] Loaded ${keyterms.length} keyterms from contexts.`);
+          // Deepgram Nova-3 caps keyterms at 100; cap defensively so a
+          // huge project with many files doesn't break the WS handshake.
+          const DEEPGRAM_KEYTERM_LIMIT = 100;
+          keyterms = Array.from(allKeywords).slice(0, DEEPGRAM_KEYTERM_LIMIT);
+          console.log(
+            `[DEBUG WS] Loaded ${keyterms.length} keyterms from contexts (of ${allKeywords.size} available).`,
+          );
         }
       }
 

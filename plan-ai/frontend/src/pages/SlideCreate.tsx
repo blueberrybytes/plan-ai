@@ -25,7 +25,7 @@ import SlideRenderer from "../components/slides/SlideRenderer";
 import { SLIDE_TYPES } from "../components/slides/slideTypes";
 import { useGeneratePresentationMutation } from "../store/apis/slideApi";
 import { useGetBrandThemesQuery, BrandThemeResponse } from "../store/apis/brandThemeApi";
-import { useListContextsQuery } from "../store/apis/contextApi";
+import { useListProjectsQuery } from "../store/apis/projectApi";
 import { useListGlobalTranscriptsQuery } from "../store/apis/transcriptApi";
 import AiModelSelector from "../components/common/AiModelSelector";
 
@@ -42,12 +42,12 @@ const SlideCreate: React.FC = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { data: themes = [] } = useGetBrandThemesQuery();
-  const { data: contextsData } = useListContextsQuery();
+  const { data: projectsData } = useListProjectsQuery(undefined);
   const { data: transcriptsData } = useListGlobalTranscriptsQuery({});
   const [generatePresentation, { isLoading }] = useGeneratePresentationMutation();
 
   const [selectedThemeId, setSelectedThemeId] = useState("");
-  const [selectedContextIds, setSelectedContextIds] = useState<string[]>([]);
+  const [selectedProjectIds, setSelectedProjectIds] = useState<string[]>([]);
   const [selectedTranscriptIds, setSelectedTranscriptIds] = useState<string[]>([]);
   const [prompt, setPrompt] = useState("");
   const [title, setTitle] = useState("");
@@ -69,12 +69,12 @@ const SlideCreate: React.FC = () => {
     return () => clearInterval(interval);
   }, [isLoading]);
 
-  const contexts = contextsData?.data?.contexts ?? [];
+  const projects = projectsData?.data?.projects ?? [];
   const transcriptList = transcriptsData?.data?.transcripts ?? [];
   const selectedTheme = themes.find((t) => t.id === selectedThemeId);
 
   const handleGenerate = async () => {
-    if (!prompt.trim() && selectedContextIds.length === 0 && selectedTranscriptIds.length === 0) return;
+    if (!prompt.trim() && selectedProjectIds.length === 0 && selectedTranscriptIds.length === 0) return;
     try {
       setError(null);
       const enrichedPrompt = [
@@ -84,7 +84,7 @@ const SlideCreate: React.FC = () => {
       ].join("");
       const result = await generatePresentation({
         themeId: selectedThemeId || undefined,
-        contextIds: selectedContextIds,
+        projectIds: selectedProjectIds,
         transcriptIds: selectedTranscriptIds,
         prompt: enrichedPrompt,
         title: title || undefined,
@@ -172,34 +172,34 @@ const SlideCreate: React.FC = () => {
             ))}
           </TextField>
 
-          {/* Context multi-select (optional) */}
+          {/* Project multi-select (optional) — provides knowledge sources */}
           <TextField
             select
-            label={t("slides.create.selectContexts")}
+            label="Projects (knowledge sources)"
             fullWidth
-            value={selectedContextIds}
+            value={selectedProjectIds}
             onChange={(e) => {
               const val = e.target.value;
-              setSelectedContextIds(typeof val === "string" ? val.split(",") : (val as string[]));
+              setSelectedProjectIds(typeof val === "string" ? val.split(",") : (val as string[]));
             }}
             SelectProps={{
               multiple: true,
               renderValue: (selected) => (
                 <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
                   {(selected as string[]).map((id) => {
-                    const ctx = contexts.find((c: { id: string }) => c.id === id);
-                    return <Chip key={id} label={ctx?.name || id} size="small" />;
+                    const proj = projects.find((p: { id: string }) => p.id === id);
+                    return <Chip key={id} label={proj?.title || id} size="small" />;
                   })}
                 </Box>
               ),
             }}
-            helperText={t("slides.create.contextsHelper")}
+            helperText="Files from selected projects will be used as context."
             sx={{ mb: 3 }}
           >
-            {contexts.map((ctx: { id: string; name: string }) => (
-              <MenuItem key={ctx.id} value={ctx.id}>
-                <Checkbox checked={selectedContextIds.includes(ctx.id)} size="small" />
-                <ListItemText primary={ctx.name} />
+            {projects.map((proj: { id: string; title: string }) => (
+              <MenuItem key={proj.id} value={proj.id}>
+                <Checkbox checked={selectedProjectIds.includes(proj.id)} size="small" />
+                <ListItemText primary={proj.title} />
               </MenuItem>
             ))}
           </TextField>
@@ -309,7 +309,7 @@ const SlideCreate: React.FC = () => {
             size="large"
             startIcon={isLoading ? <CircularProgress size={18} /> : <AutoAwesomeIcon />}
             onClick={handleGenerate}
-            disabled={(!prompt.trim() && selectedContextIds.length === 0 && selectedTranscriptIds.length === 0) || isLoading}
+            disabled={(!prompt.trim() && selectedProjectIds.length === 0 && selectedTranscriptIds.length === 0) || isLoading}
           >
             {isLoading ? t("slides.create.generating") : t("slides.create.generate")}
           </Button>

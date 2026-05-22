@@ -185,6 +185,20 @@ export const contextApi = createApi({
         { type: "Context" as const, id: contextId },
       ],
     }),
+    updateContextKeywords: builder.mutation<
+      ApiResponseContextResponse,
+      { contextId: string; keywords: string[] }
+    >({
+      query: ({ contextId, keywords }) => ({
+        url: `/api/contexts/${contextId}/keywords`,
+        method: "PUT",
+        body: { keywords },
+      }),
+      invalidatesTags: (result, error, { contextId }) => [
+        { type: "Context" as const, id: "LIST" },
+        { type: "Context" as const, id: contextId },
+      ],
+    }),
   }),
 });
 
@@ -201,4 +215,5 @@ export const {
   useImportFromOneDriveMutation,
   useImportFromWebsiteMutation,
   useRetryContextFileMutation,
+  useUpdateContextKeywordsMutation,
 } = contextApi;

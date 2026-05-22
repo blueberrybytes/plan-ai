@@ -272,6 +272,9 @@ const models: TsoaRoute.Models = {
             "metadata": {"dataType":"union","subSchemas":[{"ref":"TsoaJsonObject"},{"dataType":"enum","enums":[null]}],"required":true},
             "createdAt": {"dataType":"datetime","required":true},
             "updatedAt": {"dataType":"datetime","required":true},
+            "contextId": {"dataType":"union","subSchemas":[{"dataType":"string"},{"dataType":"enum","enums":[null]}],"required":true},
+            "hasFiles": {"dataType":"boolean","required":true},
+            "fileCount": {"dataType":"double","required":true},
         },
         "additionalProperties": false,
     },
@@ -654,6 +657,7 @@ const models: TsoaRoute.Models = {
             "title": {"dataType":"string","required":true},
             "prompt": {"dataType":"string"},
             "contextIds": {"dataType":"array","array":{"dataType":"string"}},
+            "projectIds": {"dataType":"array","array":{"dataType":"string"}},
             "transcriptIds": {"dataType":"array","array":{"dataType":"string"}},
             "themeId": {"dataType":"string"},
             "isBlank": {"dataType":"boolean"},
@@ -1103,7 +1107,8 @@ const models: TsoaRoute.Models = {
         "properties": {
             "templateId": {"dataType":"string"},
             "themeId": {"dataType":"string"},
-            "contextIds": {"dataType":"array","array":{"dataType":"string"},"required":true},
+            "contextIds": {"dataType":"array","array":{"dataType":"string"}},
+            "projectIds": {"dataType":"array","array":{"dataType":"string"}},
             "transcriptIds": {"dataType":"array","array":{"dataType":"string"}},
             "prompt": {"dataType":"string","required":true},
             "title": {"dataType":"string"},
@@ -1590,6 +1595,7 @@ const models: TsoaRoute.Models = {
             "userId": {"dataType":"string","required":true},
             "title": {"dataType":"string","required":true},
             "contextIds": {"dataType":"array","array":{"dataType":"string"},"required":true},
+            "projectIds": {"dataType":"array","array":{"dataType":"string"}},
             "complexityLevel": {"dataType":"union","subSchemas":[{"dataType":"string"},{"dataType":"enum","enums":[null]}]},
             "createdAt": {"dataType":"datetime","required":true},
             "updatedAt": {"dataType":"datetime","required":true},
@@ -1612,7 +1618,8 @@ const models: TsoaRoute.Models = {
         "dataType": "refObject",
         "properties": {
             "title": {"dataType":"string"},
-            "contextIds": {"dataType":"array","array":{"dataType":"string"},"required":true},
+            "contextIds": {"dataType":"array","array":{"dataType":"string"}},
+            "projectIds": {"dataType":"array","array":{"dataType":"string"}},
             "complexityLevel": {"dataType":"string"},
         },
         "additionalProperties": false,
@@ -1660,6 +1667,7 @@ const models: TsoaRoute.Models = {
             "content": {"dataType":"string","required":true},
             "liveTranscript": {"dataType":"string","required":true},
             "contextIds": {"dataType":"array","array":{"dataType":"string"}},
+            "projectIds": {"dataType":"array","array":{"dataType":"string"}},
             "history": {"dataType":"array","array":{"dataType":"refObject","ref":"LiveChatHistoryItem"}},
             "modelKey": {"dataType":"string"},
             "complexityLevel": {"dataType":"string"},
@@ -1686,6 +1694,7 @@ const models: TsoaRoute.Models = {
             "liveTranscript": {"dataType":"string","required":true},
             "previousSummary": {"dataType":"string"},
             "contextIds": {"dataType":"array","array":{"dataType":"string"}},
+            "projectIds": {"dataType":"array","array":{"dataType":"string"}},
             "modelKey": {"dataType":"string"},
         },
         "additionalProperties": false,
@@ -2134,6 +2143,7 @@ const models: TsoaRoute.Models = {
             "type": {"dataType":"union","subSchemas":[{"dataType":"enum","enums":["AUTO"]},{"dataType":"enum","enums":["FLOWCHART"]},{"dataType":"enum","enums":["SEQUENCE"]},{"dataType":"enum","enums":["GANTT"]},{"dataType":"enum","enums":["MINDMAP"]},{"dataType":"enum","enums":["CLASS"]},{"dataType":"enum","enums":["ER"]},{"dataType":"enum","enums":["ARCHITECTURE"]}],"required":true},
             "themeId": {"dataType":"string"},
             "contextIds": {"dataType":"array","array":{"dataType":"string"}},
+            "projectIds": {"dataType":"array","array":{"dataType":"string"}},
             "transcriptIds": {"dataType":"array","array":{"dataType":"string"}},
             "isManual": {"dataType":"boolean"},
         },
@@ -3367,6 +3377,7 @@ export function RegisterRoutes(app: Router,opts?:{multer?:ReturnType<typeof mult
                 request: {"in":"request","name":"request","required":true,"dataType":"object"},
                 file: {"in":"formData","name":"file","required":true,"dataType":"file"},
                 contextIds: {"in":"formData","name":"contextIds","dataType":"string"},
+                projectIds: {"in":"formData","name":"projectIds","dataType":"string"},
                 transcriptIds: {"in":"formData","name":"transcriptIds","dataType":"string"},
                 themeId: {"in":"formData","name":"themeId","dataType":"string"},
         };
@@ -3507,6 +3518,8 @@ export function RegisterRoutes(app: Router,opts?:{multer?:ReturnType<typeof mult
                 pageSize: {"default":20,"in":"query","name":"pageSize","dataType":"double"},
                 source: {"in":"query","name":"source","ref":"TranscriptSource"},
                 q: {"in":"query","name":"q","dataType":"string"},
+                sentiment: {"in":"query","name":"sentiment","dataType":"string"},
+                dateFilter: {"in":"query","name":"dateFilter","dataType":"string"},
         };
         app.get('/api/transcripts',
             authenticateMiddleware([{"ClientLevel":[]}]),
@@ -5859,6 +5872,39 @@ export function RegisterRoutes(app: Router,opts?:{multer?:ReturnType<typeof mult
             }
         });
         // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+        const argsContextController_updateContextKeywords: Record<string, TsoaRoute.ParameterSchema> = {
+                request: {"in":"request","name":"request","required":true,"dataType":"object"},
+                contextId: {"in":"path","name":"contextId","required":true,"dataType":"string"},
+                body: {"in":"body","name":"body","required":true,"dataType":"nestedObjectLiteral","nestedProperties":{"keywords":{"dataType":"array","array":{"dataType":"string"},"required":true}}},
+        };
+        app.put('/api/contexts/:contextId/keywords',
+            authenticateMiddleware([{"ClientLevel":[]}]),
+            ...(fetchMiddlewares<RequestHandler>(ContextController)),
+            ...(fetchMiddlewares<RequestHandler>(ContextController.prototype.updateContextKeywords)),
+
+            async function ContextController_updateContextKeywords(request: ExRequest, response: ExResponse, next: any) {
+
+            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+
+            let validatedArgs: any[] = [];
+            try {
+                validatedArgs = templateService.getValidatedArgs({ args: argsContextController_updateContextKeywords, request, response });
+
+                const controller = new ContextController();
+
+              await templateService.apiHandler({
+                methodName: 'updateContextKeywords',
+                controller,
+                response,
+                next,
+                validatedArgs,
+                successStatus: undefined,
+              });
+            } catch (err) {
+                return next(err);
+            }
+        });
+        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
         const argsContextController_connectGithubRepository: Record<string, TsoaRoute.ParameterSchema> = {
                 request: {"in":"request","name":"request","required":true,"dataType":"object"},
                 contextId: {"in":"path","name":"contextId","required":true,"dataType":"string"},
@@ -6261,6 +6307,44 @@ export function RegisterRoutes(app: Router,opts?:{multer?:ReturnType<typeof mult
             }
         });
         // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+        const argsChatController_uploadAssistantAttachment: Record<string, TsoaRoute.ParameterSchema> = {
+                request: {"in":"request","name":"request","required":true,"dataType":"object"},
+                file: {"in":"formData","name":"file","required":true,"dataType":"file"},
+        };
+        app.post('/api/chat/attachments',
+            authenticateMiddleware([{"ClientLevel":[]}]),
+            upload.fields([
+                {
+                    name: "file",
+                    maxCount: 1
+                }
+            ]),
+            ...(fetchMiddlewares<RequestHandler>(ChatController)),
+            ...(fetchMiddlewares<RequestHandler>(ChatController.prototype.uploadAssistantAttachment)),
+
+            async function ChatController_uploadAssistantAttachment(request: ExRequest, response: ExResponse, next: any) {
+
+            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+
+            let validatedArgs: any[] = [];
+            try {
+                validatedArgs = templateService.getValidatedArgs({ args: argsChatController_uploadAssistantAttachment, request, response });
+
+                const controller = new ChatController();
+
+              await templateService.apiHandler({
+                methodName: 'uploadAssistantAttachment',
+                controller,
+                response,
+                next,
+                validatedArgs,
+                successStatus: undefined,
+              });
+            } catch (err) {
+                return next(err);
+            }
+        });
+        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
         const argsChatController_createThread: Record<string, TsoaRoute.ParameterSchema> = {
                 body: {"in":"body","name":"body","required":true,"ref":"CreateThreadRequest"},
                 request: {"in":"request","name":"request","required":true,"dataType":"object"},
@@ -6295,7 +6379,7 @@ export function RegisterRoutes(app: Router,opts?:{multer?:ReturnType<typeof mult
         // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
         const argsChatController_updateThread: Record<string, TsoaRoute.ParameterSchema> = {
                 threadId: {"in":"path","name":"threadId","required":true,"dataType":"string"},
-                body: {"in":"body","name":"body","required":true,"dataType":"nestedObjectLiteral","nestedProperties":{"complexityLevel":{"dataType":"string"},"contextIds":{"dataType":"array","array":{"dataType":"string"}},"title":{"dataType":"string"}}},
+                body: {"in":"body","name":"body","required":true,"dataType":"nestedObjectLiteral","nestedProperties":{"complexityLevel":{"dataType":"string"},"projectIds":{"dataType":"array","array":{"dataType":"string"}},"contextIds":{"dataType":"array","array":{"dataType":"string"}},"title":{"dataType":"string"}}},
                 request: {"in":"request","name":"request","required":true,"dataType":"object"},
         };
         app.put('/api/chat/threads/:threadId',

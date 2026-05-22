@@ -15,7 +15,8 @@ export const streamAssistantMessage = async (
   messages: AssistantMessage[],
   onChunk: (chunk: string) => void,
   onDone: () => void,
-  onError: (err: any) => void
+  onError: (err: any) => void,
+  projectId?: string,
 ) => {
   try {
     const url = `${BASE_URL}/api/chat/assistant/stream`;
@@ -29,7 +30,8 @@ export const streamAssistantMessage = async (
           role: m.role,
           content: m.content,
           parts: [{ type: 'text', text: m.content }]
-        })) 
+        })),
+        projectId: projectId || undefined,
       }),
       // @ts-ignore - needed for react native fetch streaming
       reactNative: { textStreaming: true }

@@ -14,6 +14,7 @@ import {
   Tooltip,
   TextField,
   InputAdornment,
+  MenuItem,
 } from "@mui/material";
 import {
   Delete as DeleteIcon,
@@ -40,6 +41,8 @@ const Recordings: React.FC = () => {
   const [page, setPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [dateFilter, setDateFilter] = useState("all_dates");
+  const [sentimentFilter, setSentimentFilter] = useState("all_sentiments");
 
   React.useEffect(() => {
     const handler = setTimeout(() => {
@@ -86,7 +89,25 @@ const Recordings: React.FC = () => {
     );
   }
 
-  const transcripts = data?.data?.transcripts || [];
+  let transcripts = data?.data?.transcripts || [];
+
+  if (sentimentFilter !== "all_sentiments") {
+    transcripts = transcripts.filter((t: components["schemas"]["StandaloneTranscriptResponse"]) => t.sentiment === sentimentFilter);
+  }
+  
+  if (dateFilter !== "all_dates") {
+    const now = new Date();
+    transcripts = transcripts.filter((t: components["schemas"]["StandaloneTranscriptResponse"]) => {
+      const d = t.recordedAt ? new Date(t.recordedAt) : new Date(t.createdAt);
+      if (dateFilter === "today") {
+         return d.toDateString() === now.toDateString();
+      } else if (dateFilter === "week") {
+         const diff = now.getTime() - d.getTime();
+         return diff <= 7 * 24 * 60 * 60 * 1000; // 7 days
+      }
+      return true;
+    });
+  }
 
   return (
     <SidebarLayout>
@@ -95,26 +116,26 @@ const Recordings: React.FC = () => {
           title={t("sidebarLayout.nav.recordings")}
           subtitle={t("recordings.subtitle")}
           icon={<MicIcon />}
-          actions={
-            <Tooltip title={isFetching ? "Refreshing..." : "Refresh"}>
-              <span>
-                <IconButton
-                  onClick={() => refetch()}
-                  disabled={isLoading || isFetching}
-                  size="small"
-                >
-                  {isFetching ? (
-                    <CircularProgress size={20} color="inherit" />
-                  ) : (
-                    <RefreshIcon fontSize="small" />
-                  )}
-                </IconButton>
-              </span>
-            </Tooltip>
-          }
         />
 
-        <Box sx={{ mb: 4, display: "flex", justifyContent: "flex-end" }}>
+        <Box sx={{ mb: 4, display: "flex", alignItems: "center", gap: 2, flexWrap: "wrap" }}>
+          <Tooltip title={isFetching ? "Refreshing..." : "Refresh"}>
+            <span>
+              <IconButton
+                onClick={() => refetch()}
+                disabled={isLoading || isFetching}
+                size="small"
+                sx={{ border: "1px solid", borderColor: "divider", borderRadius: 1, p: 1 }}
+              >
+                {isFetching ? (
+                  <CircularProgress size={20} color="inherit" />
+                ) : (
+                  <RefreshIcon fontSize="small" />
+                )}
+              </IconButton>
+            </span>
+          </Tooltip>
+
           <TextField
             placeholder={t("common.search", "Search recordings...")}
             variant="outlined"
@@ -130,6 +151,32 @@ const Recordings: React.FC = () => {
             }}
             sx={{ width: { xs: "100%", sm: 300 } }}
           />
+
+          <Box sx={{ display: "flex", gap: 2, alignItems: "center" }}>
+            <TextField
+              select
+              size="small"
+              value={dateFilter}
+              onChange={(e) => setDateFilter(e.target.value)}
+              sx={{ width: 140 }}
+            >
+              <MenuItem value="all_dates">All Dates</MenuItem>
+              <MenuItem value="today">Today</MenuItem>
+              <MenuItem value="week">This Week</MenuItem>
+            </TextField>
+            <TextField
+              select
+              size="small"
+              value={sentimentFilter}
+              onChange={(e) => setSentimentFilter(e.target.value)}
+              sx={{ width: 160 }}
+            >
+              <MenuItem value="all_sentiments">All Sentiments</MenuItem>
+              <MenuItem value="POSITIVE">Positive</MenuItem>
+              <MenuItem value="MIXED">Mixed</MenuItem>
+              <MenuItem value="NEGATIVE">Negative</MenuItem>
+            </TextField>
+          </Box>
         </Box>
 
         {transcripts.length === 0 ? (

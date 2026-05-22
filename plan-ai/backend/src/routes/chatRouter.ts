@@ -387,10 +387,9 @@ router.post("/assistant/stream", authenticateUser, async (req: AuthenticatedRequ
       return res.status(404).json({ message: "User not found" });
     }
 
-    const { messages } = req.body;
+    const { messages, projectId } = req.body as { messages: unknown; projectId?: string };
 
     console.log("[ChatRouter] Assistant Stream requested with DB user:", user.id);
-    console.log("[ChatRouter] Incoming body messages:", JSON.stringify(messages, null, 2));
 
     if (!messages || !Array.isArray(messages)) {
       return res.status(400).json({ message: "Invalid messages format" });
@@ -407,6 +406,7 @@ router.post("/assistant/stream", authenticateUser, async (req: AuthenticatedRequ
       user.id,
       workspaceId,
       modelKey as string,
+      projectId,
     );
 
     res.setHeader("Content-Type", "text/plain; charset=utf-8");
@@ -420,6 +420,14 @@ router.post("/assistant/stream", authenticateUser, async (req: AuthenticatedRequ
         res.write(
           `\n\n[UI:CONFIRM_DOC purpose="${input.purpose || ""}" recordingId="${input.recordingId || ""}" contextId="${input.contextId || ""}"]\n\n`,
         );
+      } else if (part.type === "tool-call" && part.toolName === "navigate") {
+        // The model just decided to take the user somewhere — emit a marker
+        // the frontend parses and routes to. Without this, the model says
+        // "I've navigated you to X" but nothing actually happens.
+        const input = part.input as { path?: string };
+        if (input.path) {
+          res.write(`\n\n[UI:NAVIGATE path="${input.path}"]\n\n`);
+        }
       }
     }
     console.log("[ChatRouter] Finished streaming text, ending response.");

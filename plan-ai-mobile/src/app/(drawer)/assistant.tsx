@@ -5,6 +5,7 @@ import {
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
+  Pressable,
 } from "react-native";
 import {
   Text,
@@ -15,6 +16,9 @@ import {
   Avatar,
   ActivityIndicator,
   IconButton,
+  Menu,
+  Chip,
+  Divider,
 } from "react-native-paper";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
@@ -22,6 +26,7 @@ import {
   AssistantMessage,
 } from "../../services/assistantApi";
 import { planAiApi, useAuth } from "../../context/AuthContext";
+import type { Project } from "../../services/planAiApi";
 import { useNavigation, router } from "expo-router";
 import { ScreenHeader } from "../../components/ScreenHeader";
 import Markdown from "react-native-markdown-display";
@@ -51,6 +56,17 @@ export default function AssistantScreen() {
 
   const [isDictating, setIsDictating] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
+
+  // ── Project focus state ──────────────────────────────────────────────────
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [selectedProjectId, setSelectedProjectId] = useState<string>("");
+  const [projectMenuVisible, setProjectMenuVisible] = useState(false);
+
+  useEffect(() => {
+    planAiApi.listProjects().then(setProjects).catch(() => setProjects([]));
+  }, []);
+
+  const focusedProject = projects.find((p) => p.id === selectedProjectId);
 
   // Real-time dictation states
   const wsRef = useRef<WebSocket | null>(null);
@@ -209,6 +225,7 @@ export default function AssistantScreen() {
             return res;
           });
         },
+        selectedProjectId || undefined,
       );
     } catch (err) {
       setIsTyping(false);
@@ -553,6 +570,81 @@ export default function AssistantScreen() {
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
       <ScreenHeader title="Assistant" showProfile={false} />
+
+      {/* Project focus selector */}
+      <View
+        style={{
+          flexDirection: "row",
+          alignItems: "center",
+          paddingHorizontal: 16,
+          paddingVertical: 8,
+          borderBottomWidth: StyleSheet.hairlineWidth,
+          borderBottomColor: theme.colors.outlineVariant,
+          backgroundColor: theme.colors.surface,
+          gap: 8,
+        }}
+      >
+        <Avatar.Icon
+          size={24}
+          icon="folder-outline"
+          style={{ backgroundColor: "transparent" }}
+          color={theme.colors.onSurfaceVariant}
+        />
+        <Text variant="labelSmall" style={{ color: theme.colors.onSurfaceVariant }}>
+          Focus:
+        </Text>
+        <Menu
+          visible={projectMenuVisible}
+          onDismiss={() => setProjectMenuVisible(false)}
+          anchor={
+            <Pressable onPress={() => setProjectMenuVisible(true)}>
+              <Chip
+                icon={selectedProjectId ? "folder" : "folder-outline"}
+                compact
+                mode="outlined"
+                onPress={() => setProjectMenuVisible(true)}
+              >
+                {focusedProject?.title || "All projects"}
+              </Chip>
+            </Pressable>
+          }
+          anchorPosition="bottom"
+          contentStyle={{ maxHeight: 300 }}
+        >
+          <Menu.Item
+            title="All projects (workspace-wide)"
+            leadingIcon="folder-multiple-outline"
+            onPress={() => {
+              setSelectedProjectId("");
+              setProjectMenuVisible(false);
+            }}
+          />
+          <Divider />
+          {projects.map((p) => (
+            <Menu.Item
+              key={p.id}
+              title={p.title}
+              leadingIcon={p.id === selectedProjectId ? "check" : "folder-outline"}
+              onPress={() => {
+                setSelectedProjectId(p.id);
+                setProjectMenuVisible(false);
+              }}
+            />
+          ))}
+        </Menu>
+        <View style={{ flex: 1 }} />
+        {selectedProjectId ? (
+          <Chip
+            compact
+            mode="flat"
+            onClose={() => setSelectedProjectId("")}
+            style={{ backgroundColor: theme.colors.primaryContainer }}
+            textStyle={{ fontSize: 10, color: theme.colors.onPrimaryContainer }}
+          >
+            Scoped to {focusedProject?.title}
+          </Chip>
+        ) : null}
+      </View>
 
       <ScrollView
         ref={scrollViewRef}

@@ -18,7 +18,6 @@ import {
 import {
   //Dashboard as DashboardIcon,
   ViewKanban as ViewKanbanIcon,
-  Folder as FolderIcon,
   Person as PersonIcon,
   ChevronLeft as ChevronLeftIcon,
   ChevronRight as ChevronRightIcon,
@@ -43,7 +42,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { selectAvatar, selectUser, selectUserDb } from "../../store/slices/auth/authSelector";
 
 import { selectSidebarCollapsed } from "../../store/slices/app/appSelector";
-import { toggleSidebar } from "../../store/slices/app/appSlice";
+import { toggleSidebar, setActiveWorkspaceId } from "../../store/slices/app/appSlice";
 import { selectActiveWorkspaceId } from "../../store/slices/app/appSelector";
 import WorkspaceSwitcher from "./WorkspaceSwitcher";
 import { CircularProgress, LinearProgress } from "@mui/material";
@@ -79,11 +78,6 @@ const coreNavItems: NavItem[] = [
 ];
 
 const libraryNavItems: NavItem[] = [
-  {
-    labelKey: "sidebarLayout.nav.contexts",
-    path: "/contexts",
-    icon: <FolderIcon fontSize="small" />,
-  },
   {
     labelKey: "sidebarLayout.nav.integrations",
     path: "/integrations",
@@ -130,7 +124,13 @@ const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children, fullHeight = fa
     { skip: !activeWorkspaceId, refetchOnFocus: true, pollingInterval: 10000 },
   );
 
-  const { data: workspaces } = useGetMyWorkspacesQuery(undefined, { skip: !activeWorkspaceId });
+  const { data: workspaces } = useGetMyWorkspacesQuery();
+  
+  React.useEffect(() => {
+    if (workspaces && workspaces.length > 0 && !activeWorkspaceId) {
+      dispatch(setActiveWorkspaceId(workspaces[0].id));
+    }
+  }, [workspaces, activeWorkspaceId, dispatch]);
   const activeWorkspace = React.useMemo(
     () => workspaces?.find((w) => w.id === activeWorkspaceId),
     [workspaces, activeWorkspaceId],
@@ -208,7 +208,7 @@ const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children, fullHeight = fa
         <Box
           component="aside"
           sx={{
-            width: isCollapsed ? 64 : 180,
+            width: isCollapsed ? 64 : 200,
             flexShrink: 0,
             bgcolor: "background.paper",
             borderRadius: "20px",
@@ -230,12 +230,17 @@ const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children, fullHeight = fa
             sx={{
               display: "flex",
               alignItems: "center",
-              gap: 1,
+              gap: 0.5,
               px: isCollapsed ? 0 : 0.5,
               mb: 1,
-              justifyContent: isCollapsed ? "center" : "flex-end",
+              justifyContent: isCollapsed ? "center" : "flex-start",
             }}
           >
+            {!isCollapsed && (
+              <Box sx={{ flex: 1, minWidth: 0 }}>
+                <WorkspaceSwitcher />
+              </Box>
+            )}
             <Tooltip
               title={
                 isCollapsed
@@ -247,8 +252,8 @@ const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children, fullHeight = fa
                 onClick={handleToggleCollapse}
                 size="small"
                 sx={{ 
-                  color: "text.secondary", 
-                  bgcolor: isCollapsed ? "transparent" : "rgba(255, 255, 255, 0.03)",
+                  color: "text.secondary",
+                  flexShrink: 0,
                   "&:hover": { bgcolor: "rgba(255, 255, 255, 0.08)" }
                 }}
               >
@@ -256,7 +261,6 @@ const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children, fullHeight = fa
               </IconButton>
             </Tooltip>
           </Box>
-
 
           {!isCollapsed && activeWorkspaceId && (
             <Box

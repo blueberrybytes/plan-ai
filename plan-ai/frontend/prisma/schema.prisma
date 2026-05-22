@@ -234,6 +234,7 @@ model Project {
   transcripts Transcript[]
   user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   aiUsageLogs AiUsageLog[]
+  context     Context?
 
   @@index([userId])
   @@index([workspaceId])
@@ -348,13 +349,18 @@ model Context {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   workspaceId String
+  // 1:1 link to Project. Nullable during migration; after backfill every Context
+  // should have a projectId. Project ⇄ Context is auto-created on project create.
+  projectId   String?  @unique
 
   workspace Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   files     ContextFile[]
+  project   Project?      @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@index([userId, name])
   @@index([workspaceId])
+  @@index([projectId])
 }
 
 model ContextFile {

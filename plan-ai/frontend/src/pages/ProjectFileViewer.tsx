@@ -4,6 +4,7 @@ import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import SidebarLayout from "../components/layout/SidebarLayout";
 import { useNavigate, useParams } from "react-router-dom";
+import { useGetProjectQuery } from "../store/apis/projectApi";
 import { useGetContextQuery } from "../store/apis/contextApi";
 import { useTranslation } from "react-i18next";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
@@ -13,17 +14,27 @@ import { RootState } from "../store/store";
 import MarkdownRenderer from "../components/common/MarkdownRenderer";
 import CsvRenderer from "../components/common/CsvRenderer";
 
-const ContextFileViewer: React.FC = () => {
-  const { contextId, fileId } = useParams<{ contextId: string; fileId: string }>();
+const ProjectFileViewer: React.FC = () => {
+  const { projectId, fileId } = useParams<{ projectId: string; fileId: string }>();
   const navigate = useNavigate();
   const { t } = useTranslation();
+  
   const token = useSelector((state: RootState) => state.auth.user?.token);
   const activeWorkspaceId = useSelector((state: RootState) => state.app.activeWorkspaceId);
-  const { data, isLoading, error } = useGetContextQuery(contextId ?? "", {
+  
+  // First get the project to find the contextId
+  const { data: projectData, isLoading: isProjectLoading, error: projectError } = useGetProjectQuery(projectId ?? "", {
+    skip: !projectId,
+  });
+  const project = projectData?.data ?? null;
+  const contextId = project?.contextId;
+
+  // Then get the context details to find the specific file
+  const { data: contextData, isLoading: isContextLoading, error: contextError } = useGetContextQuery(contextId ?? "", {
     skip: !contextId,
   });
 
-  const context = data?.data ?? null;
+  const context = contextData?.data ?? null;
   const file = context?.files.find((f) => f.id === fileId);
 
   const [textContent, setTextContent] = React.useState<string | null>(null);
@@ -198,6 +209,9 @@ const ContextFileViewer: React.FC = () => {
     );
   };
 
+  const isLoadingTotal = isProjectLoading || isContextLoading;
+  const isErrorTotal = projectError || contextError;
+
   return (
     <SidebarLayout fullHeight>
       <Box sx={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
@@ -214,8 +228,8 @@ const ContextFileViewer: React.FC = () => {
           }}
         >
           <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-            <Tooltip title="Back to Context">
-              <IconButton onClick={() => navigate(`/contexts/${contextId}`)}>
+            <Tooltip title="Back to Project">
+              <IconButton onClick={() => navigate(`/projects/${projectId}`)}>
                 <ArrowBackIcon />
               </IconButton>
             </Tooltip>
@@ -246,13 +260,13 @@ const ContextFileViewer: React.FC = () => {
 
         {/* Viewer Canvas */}
         <Box sx={{ flex: 1, overflowY: "auto", bgcolor: "background.default", p: 4 }}>
-          {isLoading ? (
+          {isLoadingTotal ? (
             <Box sx={{ display: "flex", justifyContent: "center", mt: 10 }}>
               <CircularProgress />
             </Box>
-          ) : error || !context ? (
+          ) : isErrorTotal || !project || !context ? (
             <Alert severity="error">
-              {t("contexts.messages.contextError", "Failed to load context.")}
+              {t("projectDetails.messages.fileViewerError", "Failed to load project context or file.")}
             </Alert>
           ) : (
             renderContent()
@@ -263,4 +277,4 @@ const ContextFileViewer: React.FC = () => {
   );
 };
 
-export default ContextFileViewer;
+export default ProjectFileViewer;

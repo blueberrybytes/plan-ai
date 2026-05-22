@@ -8,6 +8,7 @@ import {
 import { streamText, generateText, stepCountIs } from "ai";
 import prisma from "../prisma/prismaClient";
 import { queryContexts } from "../vector/contextFileVectorService";
+import { mergeProjectAndContextIds } from "./projectContextResolver";
 import { logger } from "../utils/logger";
 import { aiUsageService } from "./aiUsageService";
 import { getPersonaInstructions } from "./personaService";
@@ -16,7 +17,10 @@ import { mcpClientService } from "./mcpClientService";
 export interface CreateDocInput {
   title: string;
   prompt?: string;
+  /** Legacy: direct context IDs. Prefer `projectIds`. */
   contextIds?: string[];
+  /** User-facing project IDs; backend resolves to contextIds at generation time. */
+  projectIds?: string[];
   transcriptIds?: string[];
   themeId?: string;
   isBlank?: boolean;
@@ -60,6 +64,13 @@ export class DocGenerationService {
     workspaceId: string,
     input: CreateDocInput,
   ): Promise<DocDocument & { theme: BrandTheme | null }> {
+    // Resolve user-facing projectIds → internal contextIds and merge with any
+    // direct contextIds the caller passed.
+    const resolvedContextIds = await mergeProjectAndContextIds(
+      input.projectIds,
+      input.contextIds,
+    );
+
     const doc = await prisma.docDocument.create({
       data: {
         userId,
@@ -67,7 +78,7 @@ export class DocGenerationService {
         title: input.title,
         content: input.isBlank ? `# ${input.title}\n\n## Subtitle\n\nAdd your content here...` : "",
         status: input.isBlank ? "DRAFT" : "GENERATING",
-        contextIds: input.contextIds ?? [],
+        contextIds: resolvedContextIds,
         transcriptIds: input.transcriptIds ?? [],
         themeId: input.themeId ?? null,
         prompt: input.prompt ?? "",
@@ -77,7 +88,8 @@ export class DocGenerationService {
 
     // Fire-and-forget background generation
     if (!input.isBlank) {
-      this.generateBackground(userId, workspaceId, doc.id, input).catch((err) => {
+      const resolvedInput = { ...input, contextIds: resolvedContextIds };
+      this.generateBackground(userId, workspaceId, doc.id, resolvedInput).catch((err) => {
         logger.error(`Doc generation failed for ${doc.id}`, err);
         prisma.docDocument
           .update({ where: { id: doc.id }, data: { status: "FAILED" } })

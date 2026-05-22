@@ -272,11 +272,11 @@
       "delete": "Delete"
     },
     "dialog": {
-      "title": "Select Contexts",
-      "description": "Choose which contexts the AI should reference for this chat.",
-      "placeholder": "Select contexts",
-      "noContexts": "You haven't created any contexts yet. Contexts allow the AI to answer based on your documents.",
-      "createContext": "Create your first Context"
+      "title": "Select Projects",
+      "description": "Choose which projects the AI should reference for this chat. The AI will use the files attached to each selected project as context.",
+      "placeholder": "Select projects",
+      "noProjects": "You haven't created any projects yet. Projects organize your work and let the AI reference your files.",
+      "createProject": "Create your first Project"
     },
     "window": {
       "viewFullScreen": "View full screen",
@@ -713,7 +713,7 @@
       "dashboard": "Dashboard",
       "analytics": "Analytics",
       "team": "Workspace Team",
-      "sessions": "Projects & Tasks",
+      "sessions": "Projects",
       "chat": "Chat",
       "contexts": "Contexts",
       "slides": "Slides",

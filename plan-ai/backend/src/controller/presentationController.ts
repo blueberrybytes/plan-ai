@@ -5,11 +5,15 @@ import prisma from "../prisma/prismaClient";
 import { type AuthenticatedRequest } from "../middleware/authMiddleware";
 import { type TsoaJsonObject } from "./controllerTypes";
 import { slideGenerationService } from "../services/slideGenerationService";
+import { mergeProjectAndContextIds } from "../services/projectContextResolver";
 
 interface GeneratePresentationRequest {
   templateId?: string;
   themeId?: string;
-  contextIds: string[];
+  /** Legacy: direct context IDs. Prefer `projectIds`. */
+  contextIds?: string[];
+  /** Preferred: user-facing project IDs. Backend resolves to contextIds. */
+  projectIds?: string[];
   transcriptIds?: string[];
   prompt: string;
   title?: string;
@@ -80,12 +84,14 @@ export class PresentationController extends BaseWorkspaceController {
   ): Promise<PresentationResponse> {
     const { user, workspaceId } = await this.getAuthorizedWorkspaceAccess(request);
 
+    const contextIds = await mergeProjectAndContextIds(body.projectIds, body.contextIds);
+
     const presentation = await slideGenerationService.startPresentationGeneration(
       user.id,
       workspaceId,
       body.templateId,
       body.themeId,
-      body.contextIds,
+      contextIds,
       body.transcriptIds || [],
       body.prompt,
       body.title,

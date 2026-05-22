@@ -15,14 +15,18 @@ import {
 } from "@mui/material";
 import { Link as RouterLink } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { useListContextsQuery } from "../../store/apis/contextApi";
+import { useListProjectsQuery } from "../../store/apis/projectApi";
 import AiModelSelector from "../common/AiModelSelector";
 
 interface ChatContextDialogProps {
   open: boolean;
   onClose: () => void;
+  /**
+   * Receives projectIds (1:1 with the Context that each Project owns
+   * internally). Backend translates projectIds → contextIds before storing.
+   */
   onStartChat: (
-    selectedContextIds: string[],
+    selectedProjectIds: string[],
     title?: string,
     complexityLevel?: string,
     modelKey?: string | null,
@@ -30,7 +34,7 @@ interface ChatContextDialogProps {
   isLoading?: boolean;
   mode?: "create" | "edit";
   initialTitle?: string;
-  initialSelectedContextIds?: string[];
+  initialSelectedProjectIds?: string[];
 }
 
 const ChatContextDialog: React.FC<ChatContextDialogProps> = ({
@@ -40,45 +44,46 @@ const ChatContextDialog: React.FC<ChatContextDialogProps> = ({
   isLoading = false,
   mode = "create",
   initialTitle = "",
-  initialSelectedContextIds = [],
+  initialSelectedProjectIds = [],
 }) => {
   const { t } = useTranslation();
   const [title, setTitle] = useState(initialTitle);
-  const [selectedContextIds, setSelectedContextIds] = useState<string[]>(initialSelectedContextIds);
+  const [selectedProjectIds, setSelectedProjectIds] =
+    useState<string[]>(initialSelectedProjectIds);
   const [complexityLevel, setEnglishLevel] = useState<string>("");
   // Hydrate from localStorage synchronously to avoid the "Auto Model" flash.
   const [modelKey, setModelKey] = useState<string | null>(() => {
     if (typeof window === "undefined") return null;
     return localStorage.getItem("preferred_ai_model");
   });
-  const { data: contextResponse } = useListContextsQuery();
-  const contexts = contextResponse?.data?.contexts ?? [];
+  const { data: projectsResponse } = useListProjectsQuery(undefined);
+  const projects = projectsResponse?.data?.projects ?? [];
 
   // Reset selection when dialog opens. modelKey is re-read from localStorage so
   // it reflects any change made in another chat surface since the last open.
   useEffect(() => {
     if (open) {
       setTitle(initialTitle);
-      setSelectedContextIds(initialSelectedContextIds);
+      setSelectedProjectIds(initialSelectedProjectIds);
       setEnglishLevel("");
       if (typeof window !== "undefined") {
         setModelKey(localStorage.getItem("preferred_ai_model"));
       }
     }
-  }, [open, initialTitle, initialSelectedContextIds]);
+  }, [open, initialTitle, initialSelectedProjectIds]);
 
-  const handleToggleContext = (id: string) => {
-    const newSelection = selectedContextIds.includes(id)
-      ? selectedContextIds.filter((cid) => cid !== id)
-      : [...selectedContextIds, id];
-    setSelectedContextIds(newSelection);
+  const handleToggleProject = (id: string) => {
+    const newSelection = selectedProjectIds.includes(id)
+      ? selectedProjectIds.filter((pid) => pid !== id)
+      : [...selectedProjectIds, id];
+    setSelectedProjectIds(newSelection);
   };
 
   const handleStart = () => {
-    onStartChat(selectedContextIds, title, complexityLevel, modelKey);
+    onStartChat(selectedProjectIds, title, complexityLevel, modelKey);
   };
 
-  const isStartDisabled = isLoading || selectedContextIds.length === 0;
+  const isStartDisabled = isLoading || selectedProjectIds.length === 0;
 
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
@@ -121,34 +126,34 @@ const ChatContextDialog: React.FC<ChatContextDialogProps> = ({
           {t("chat.dialog.description")}
         </Typography>
 
-        {contexts.length === 0 ? (
+        {projects.length === 0 ? (
           <Box sx={{ textAlign: "center", py: 3 }}>
             <Typography variant="body1" color="text.secondary" paragraph>
-              {t("chat.dialog.noContexts")}
+              {t("chat.dialog.noProjects") || "You don't have any projects yet."}
             </Typography>
             <Button
               component={RouterLink}
-              to="/contexts"
+              to="/projects"
               variant="contained"
               color="primary"
               onClick={onClose}
             >
-              {t("chat.dialog.createContext")}
+              {t("chat.dialog.createProject") || "Create your first Project"}
             </Button>
           </Box>
         ) : (
           <List sx={{ maxHeight: 300, overflowY: "auto" }}>
-            {contexts.map((ctx) => (
-              <ListItemButton key={ctx.id} onClick={() => handleToggleContext(ctx.id)}>
+            {projects.map((proj) => (
+              <ListItemButton key={proj.id} onClick={() => handleToggleProject(proj.id)}>
                 <FormControlLabel
                   control={
                     <Checkbox
-                      checked={selectedContextIds.includes(ctx.id)}
-                      onChange={() => handleToggleContext(ctx.id)}
+                      checked={selectedProjectIds.includes(proj.id)}
+                      onChange={() => handleToggleProject(proj.id)}
                       onClick={(e) => e.stopPropagation()} // Prevent double toggle
                     />
                   }
-                  label={ctx.name}
+                  label={proj.title}
                   sx={{ width: "100%", mr: 0 }}
                 />
               </ListItemButton>
@@ -158,7 +163,7 @@ const ChatContextDialog: React.FC<ChatContextDialogProps> = ({
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose}>{t("chat.buttons.cancel")}</Button>
-        {contexts.length > 0 && (
+        {projects.length > 0 && (
           <Button onClick={handleStart} variant="contained" disabled={isStartDisabled}>
             {mode === "create" ? t("chat.buttons.start") : t("common.buttons.save") || "Save"}
           </Button>

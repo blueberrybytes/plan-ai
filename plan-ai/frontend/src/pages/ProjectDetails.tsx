@@ -39,6 +39,9 @@ import { setToastMessage } from "../store/slices/app/appSlice";
 import { useTranslation } from "react-i18next";
 import ProjectTaskFormDialog from "../components/project/ProjectTaskFormDialog";
 import ProjectTaskBoard from "../components/project/ProjectTaskBoard";
+import ProjectFilesTab from "../components/project/ProjectFilesTab";
+import ProjectKeywordsTab from "../components/project/ProjectKeywordsTab";
+import AssistantChatPanel from "../components/chat/AssistantChatPanel";
 import ProjectTaskDependencyDiagram from "../components/project/ProjectTaskDependencyDiagram";
 import ProjectTaskGantt from "../components/project/ProjectTaskGantt";
 import ProjectExportDialog, { type ExportFormat } from "../components/project/ProjectExportDialog";
@@ -103,13 +106,13 @@ const ProjectDetails: React.FC = () => {
   );
 
   const [searchParams, setSearchParams] = useSearchParams();
-  const VALID_TABS = ["board", "diagram", "timeline", "canvas"] as const;
+  const VALID_TABS = ["board", "diagram", "timeline", "canvas", "files", "keywords", "assistant"] as const;
   type TabValue = (typeof VALID_TABS)[number];
   const rawTab = searchParams.get("tab");
   // If no ?tab= in URL, fall back to the user's stored preference
   const activeTab: TabValue = VALID_TABS.includes(rawTab as TabValue)
     ? (rawTab as TabValue)
-    : defaultProjectView;
+    : (defaultProjectView as TabValue);
 
   const setActiveTab = (value: TabValue) => {
     setSearchParams(
@@ -422,6 +425,16 @@ const ProjectDetails: React.FC = () => {
                   </Button>
                 </Tooltip>
               ))}
+              <Tooltip title={t("projectDetails.buttons.export")}>
+                <IconButton onClick={() => setIsExportDialogOpen(true)} size="small" color="secondary">
+                  <FileDownloadOutlined />
+                </IconButton>
+              </Tooltip>
+              <Tooltip title={t("projectDetails.buttons.moreInfo")}>
+                <IconButton component={RouterLink} to={`/projects/${projectId}/info`} size="small">
+                  <InfoOutlined />
+                </IconButton>
+              </Tooltip>
               <Tooltip title={t("projectDetails.buttons.refresh")}>
                 <span>
                   <IconButton onClick={() => refetch()} disabled={isFetching} size="small">
@@ -429,55 +442,19 @@ const ProjectDetails: React.FC = () => {
                   </IconButton>
                 </span>
               </Tooltip>
+              <Button
+                variant="contained"
+                color="primary"
+                startIcon={<AddCircleOutline />}
+                onClick={() => setIsTranscriptDialogOpen(true)}
+              >
+                {t("projectDetails.buttons.addTranscript")}
+              </Button>
             </Stack>
           </Stack>
 
-          <Box
-            sx={{
-              borderRadius: 2,
-              border: "1px solid",
-              borderColor: "divider",
-              bgcolor: "background.paper",
-              px: { xs: 2, md: 3 },
-              py: { xs: 1.5, md: 2 },
-            }}
-          >
-            <Stack
-              direction={{ xs: "column", sm: "row" }}
-              spacing={{ xs: 1.5, sm: 2 }}
-              alignItems={{ xs: "flex-start", sm: "center" }}
-              justifyContent="space-between"
-            >
-              <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-                {t("projectDetails.sections.actions")}
-              </Typography>
-              <Stack direction="row" spacing={1.5} flexWrap="wrap">
-                <Button
-                  component={RouterLink}
-                  to={`/projects/${projectId}/info`}
-                  variant="contained"
-                  startIcon={<InfoOutlined />}
-                >
-                  {t("projectDetails.buttons.moreInfo")}
-                </Button>
-                <Button
-                  variant="outlined"
-                  startIcon={<AddCircleOutline />}
-                  onClick={() => setIsTranscriptDialogOpen(true)}
-                >
-                  {t("projectDetails.buttons.addTranscript")}
-                </Button>
-                <Button
-                  variant="outlined"
-                  color="secondary"
-                  startIcon={<FileDownloadOutlined />}
-                  onClick={() => setIsExportDialogOpen(true)}
-                >
-                  {t("projectDetails.buttons.export")}
-                </Button>
-              </Stack>
-            </Stack>
-          </Box>
+
+
 
           {isLoading ? (
             <Box sx={{ display: "flex", justifyContent: "center", mt: 8 }}>
@@ -550,18 +527,52 @@ const ProjectDetails: React.FC = () => {
 
                     <Tabs
                       value={activeTab}
-                      onChange={(_, value: "board" | "diagram" | "timeline" | "canvas") =>
-                        setActiveTab(value)
-                      }
+                      onChange={(_, value: TabValue) => setActiveTab(value)}
                       aria-label={t("projectDetails.tabs.aria")}
                     >
+                      <Tab label="Files" value="files" />
+                      <Tab label="Keywords" value="keywords" />
                       <Tab label={t("projectDetails.tabs.board")} value="board" />
                       <Tab label={t("projectDetails.tabs.diagram")} value="diagram" />
                       <Tab label={t("projectDetails.tabs.timeline")} value="timeline" />
                       <Tab label="Canvas" value="canvas" />
+                      <Tab label="Assistant" value="assistant" />
                     </Tabs>
 
-                    {isTasksLoading ? (
+                    {activeTab === "assistant" ? (
+                      projectId ? (
+                        <Box
+                          sx={{
+                            height: { xs: "70vh", md: "75vh" },
+                            mx: -3,
+                            mb: -3,
+                            borderTop: 1,
+                            borderColor: "divider",
+                          }}
+                        >
+                          <AssistantChatPanel
+                            lockedProjectId={projectId}
+                            storageKey={`local:project_assistant_${projectId}`}
+                          />
+                        </Box>
+                      ) : null
+                    ) : activeTab === "files" ? (
+                      session?.contextId ? (
+                        <ProjectFilesTab projectId={projectId} contextId={session.contextId} />
+                      ) : (
+                        <Alert severity="warning">
+                          This project has no files store yet. Please refresh the page.
+                        </Alert>
+                      )
+                    ) : activeTab === "keywords" ? (
+                      session?.contextId ? (
+                        <ProjectKeywordsTab contextId={session.contextId} />
+                      ) : (
+                        <Alert severity="warning">
+                          This project has no context yet. Please refresh the page.
+                        </Alert>
+                      )
+                    ) : isTasksLoading ? (
                       <Box
                         sx={{
                           display: "flex",

@@ -121,17 +121,8 @@ export default function DrawerLayout() {
           )
         }} 
       />
-      <Drawer.Screen 
-        name="contexts" 
-        options={{ 
-          title: 'Contexts',
-          drawerIcon: ({ color, size }: { color: string; size: number }) => (
-            <MaterialCommunityIcons name="bookshelf" color={color} size={size} />
-          )
-        }} 
-      />
-      <Drawer.Screen 
-        name="docs" 
+      <Drawer.Screen
+        name="docs"
         options={{ 
           title: 'Docs',
           drawerIcon: ({ color, size }: { color: string; size: number }) => (

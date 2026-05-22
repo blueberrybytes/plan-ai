@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import React, { useEffect } from "react";
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { HelmetProvider, Helmet } from "react-helmet-async";
 import { Provider, useDispatch, useSelector } from "react-redux";
 import { PersistGate } from "redux-persist/integration/react";
@@ -21,8 +21,7 @@ import Projects from "./pages/Projects";
 import ProjectInfo from "./pages/ProjectInfo";
 import WorkspaceTeam from "./pages/WorkspaceTeam";
 import ProjectTranscriptDetail from "./pages/ProjectTranscriptDetail";
-import Contexts from "./pages/Contexts";
-import ContextFileViewer from "./pages/ContextFileViewer";
+import ProjectFileViewer from "./pages/ProjectFileViewer";
 import Recordings from "./pages/Recordings";
 import RecordingDetail from "./pages/RecordingDetail";
 import ProjectDetails from "./pages/ProjectDetails";
@@ -65,7 +64,7 @@ import { setUserDb } from "./store/slices/auth/authSlice";
 import AuthenticatedRoute from "./routes/AuthenticatedRoute";
 import UnauthenticatedRoute from "./routes/UnauthenticatedRoute";
 import store, { persistor } from "./store/store";
-import FloatingAssistant from "./components/chat/FloatingAssistant";
+//import FloatingAssistant from "./components/chat/FloatingAssistant";
 
 // Internal component that handles API calls after auth is initialized
 const AppContent: React.FC = () => {
@@ -119,9 +118,11 @@ const AppContent: React.FC = () => {
             path="/projects/:projectId/info/transcripts/:transcriptId"
             element={<ProjectTranscriptDetail />}
           />
-          <Route path="/contexts" element={<Contexts />} />
-          <Route path="/contexts/:contextId" element={<Contexts />} />
-          <Route path="/contexts/:contextId/files/:fileId" element={<ContextFileViewer />} />
+          {/* Legacy: /contexts/* now redirects to /projects. The Context concept is
+              hidden in the UI. ContextFileViewer is still reachable for direct file links. */}
+          <Route path="/contexts" element={<Navigate to="/projects" replace />} />
+          <Route path="/contexts/:contextId" element={<Navigate to="/projects" replace />} />
+          <Route path="/projects/:projectId/files/:fileId" element={<ProjectFileViewer />} />
           <Route path="/recordings" element={<Recordings />} />
           <Route path="/recordings/:recordingId" element={<RecordingDetail />} />
           <Route path="/profile" element={<Profile />} />
@@ -168,7 +169,7 @@ const AppContent: React.FC = () => {
       </Routes>
 
       {/* Global AI Assistant Floating Action Button */}
-      <FloatingAssistant />
+      {/*<FloatingAssistant /> */}
     </>
   );
 };

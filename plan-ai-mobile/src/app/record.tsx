@@ -373,6 +373,7 @@ export default function RecordScreen() {
                 selectedContextIdsRef.current?.length > 0
                   ? selectedContextIdsRef.current
                   : undefined,
+              projectIds: selectedProjectId ? [selectedProjectId] : undefined,
               previousSummary: prevSummary || undefined,
             })
             .then((newSummary) => {
@@ -424,6 +425,7 @@ export default function RecordScreen() {
           selectedContextIdsRef.current?.length > 0
             ? selectedContextIdsRef.current
             : undefined,
+        projectIds: selectedProjectId ? [selectedProjectId] : undefined,
         history: chatHistory,
       });
 
@@ -610,7 +612,11 @@ export default function RecordScreen() {
     if (isConnectingWs) return;
     setIsConnectingWs(true);
     try {
-      const ws = await api.startAudioStream(language, selectedContextIds);
+      const ws = await api.startAudioStream(
+        language,
+        selectedContextIds,
+        selectedProjectId ? [selectedProjectId] : undefined,
+      );
       wsRef.current = ws;
 
       ws.onopen = () => {
@@ -1122,34 +1128,8 @@ export default function RecordScreen() {
               </ScrollView>
             </View>
 
-            <View>
-              <Text
-                variant="labelLarge"
-                style={{ marginBottom: 8, opacity: 0.7 }}
-              >
-                Background Contexts (Improves Transcription)
-              </Text>
-              {contexts.length === 0 ? (
-                <Text style={{ opacity: 0.5 }}>No contexts available.</Text>
-              ) : (
-                <View
-                  style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}
-                >
-                  {contexts.map((c) => (
-                    <Chip
-                      key={c.id}
-                      selected={selectedContextIds.includes(c.id)}
-                      onPress={() => toggleContext(c.id)}
-                      mode={
-                        selectedContextIds.includes(c.id) ? "flat" : "outlined"
-                      }
-                    >
-                      {c.name}
-                    </Chip>
-                  ))}
-                </View>
-              )}
-            </View>
+            {/* Background Contexts section removed — the selected Project's
+                files (its internal Context) now provide the AI context. */}
           </ScrollView>
         )}
 

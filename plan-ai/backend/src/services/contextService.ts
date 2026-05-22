@@ -71,6 +71,30 @@ class ContextService {
     return this.getContextForWorkspace(workspaceId, created.id);
   }
 
+  /**
+   * Create the 1:1 Context paired with a newly-created Project.
+   * Designed to be called inside a Prisma transaction (`tx` overrides the
+   * default client) so Project + Context are created atomically.
+   */
+  public async createContextForProject(
+    userId: string,
+    workspaceId: string,
+    projectId: string,
+    projectTitle: string,
+    tx: Prisma.TransactionClient | typeof prisma = prisma,
+  ): Promise<{ id: string }> {
+    return tx.context.create({
+      data: {
+        userId,
+        workspaceId,
+        projectId,
+        name: projectTitle.slice(0, 120),
+        metadata: { createdFromProject: true },
+      },
+      select: { id: true },
+    });
+  }
+
   public async updateContextForWorkspace(
     workspaceId: string,
     contextId: string,

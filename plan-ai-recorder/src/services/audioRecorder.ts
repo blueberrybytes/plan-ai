@@ -563,7 +563,11 @@ export class AudioRecorder {
   }
   private async initializeWebSocket(): Promise<void> {
     const config = loadConfig();
-    this.ws = await this.options.api.startAudioStream(config?.language, config?.contextIds);
+    this.ws = await this.options.api.startAudioStream(
+      config?.language,
+      config?.contextIds,
+      config?.projectIds,
+    );
 
     if (this.ws) {
       this.ws.onmessage = (event) => {

@@ -15,7 +15,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import SidebarLayout from "../components/layout/SidebarLayout";
 import { useCreateDiagramMutation, CreateDiagramRequest } from "../store/apis/diagramApi";
 import { useGetBrandThemesQuery } from "../store/apis/brandThemeApi";
-import { useListContextsQuery } from "../store/apis/contextApi";
+import { useListProjectsQuery } from "../store/apis/projectApi";
 import { useListGlobalTranscriptsQuery } from "../store/apis/transcriptApi";
 import { DIAGRAM_TYPES } from "../components/diagrams/diagramTypes";
 import MermaidRenderer from "../components/common/MermaidRenderer";
@@ -29,7 +29,7 @@ const DiagramCreate: React.FC = () => {
   const [title, setTitle] = useState("");
   const [themeId, setThemeId] = useState("");
   const [prompt, setPrompt] = useState("");
-  const [contextIds, setContextIds] = useState<string[]>([]);
+  const [projectIds, setProjectIds] = useState<string[]>([]);
   const [transcriptIds, setTranscriptIds] = useState<string[]>([]);
   const [isManual, setIsManual] = useState<boolean>(false);
 
@@ -43,17 +43,17 @@ const DiagramCreate: React.FC = () => {
   }, [location.search]);
 
   const [createDiagram, { isLoading }] = useCreateDiagramMutation();
-  const { data: contextsData } = useListContextsQuery();
+  const { data: projectsData } = useListProjectsQuery(undefined);
   const { data: transcriptsData } = useListGlobalTranscriptsQuery({});
   const { data: themes = [] } = useGetBrandThemesQuery();
 
-  const contexts = contextsData?.data?.contexts || [];
+  const projects = projectsData?.data?.projects || [];
   const transcriptList = transcriptsData?.data?.transcripts || [];
 
   const handleSubmit = async () => {
     if (
       !type ||
-      (!isManual && !prompt.trim() && contextIds.length === 0 && transcriptIds.length === 0)
+      (!isManual && !prompt.trim() && projectIds.length === 0 && transcriptIds.length === 0)
     )
       return;
 
@@ -62,7 +62,7 @@ const DiagramCreate: React.FC = () => {
       prompt: isManual ? "" : prompt,
       type: type as CreateDiagramRequest["type"],
       themeId: themeId || undefined,
-      contextIds: isManual ? [] : contextIds,
+      projectIds: isManual ? [] : projectIds,
       transcriptIds: isManual ? [] : transcriptIds,
       isManual,
     });
@@ -74,7 +74,7 @@ const DiagramCreate: React.FC = () => {
 
   const isFormValid = () => {
     if (!type) return false;
-    if (!isManual && !prompt.trim() && contextIds.length === 0 && transcriptIds.length === 0)
+    if (!isManual && !prompt.trim() && projectIds.length === 0 && transcriptIds.length === 0)
       return false;
     return true;
   };
@@ -191,22 +191,22 @@ const DiagramCreate: React.FC = () => {
                   multiline
                   rows={4}
                   fullWidth
-                  required={contextIds.length === 0 && transcriptIds.length === 0}
+                  required={projectIds.length === 0 && transcriptIds.length === 0}
                   placeholder="Describe what the AI should map out..."
                 />
                 <Autocomplete
                   multiple
-                  options={contexts}
-                  getOptionLabel={(o) => o.name}
-                  value={contexts.filter((c) => contextIds.includes(c.id))}
-                  onChange={(_, selected) => setContextIds(selected.map((s) => s.id))}
+                  options={projects}
+                  getOptionLabel={(o) => o.title}
+                  value={projects.filter((p) => projectIds.includes(p.id))}
+                  onChange={(_, selected) => setProjectIds(selected.map((s) => s.id))}
                   renderTags={(value, getTagProps) =>
                     value.map((opt, index) => (
-                      <Chip label={opt.name} {...getTagProps({ index })} key={opt.id} />
+                      <Chip label={opt.title} {...getTagProps({ index })} key={opt.id} />
                     ))
                   }
                   renderInput={(params) => (
-                    <TextField {...params} label="Contexts (PDFs, Source Code)" />
+                    <TextField {...params} label="Projects (knowledge sources)" />
                   )}
                 />
                 <Autocomplete

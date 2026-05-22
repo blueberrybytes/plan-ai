@@ -13,6 +13,8 @@ export interface TranscriptListOptions {
   page?: number;
   pageSize?: number;
   workspaceId: string;
+  sentiment?: string;
+  dateFilter?: string;
 }
 
 export interface CreateTranscriptInput {
@@ -76,18 +78,36 @@ export class TranscriptCrudService {
     const pageSize = Math.min(Math.max(options.pageSize ?? 20, 1), 100);
     const skip = (page - 1) * pageSize;
 
+    const andConditions: Prisma.TranscriptWhereInput[] = [];
+
+    if (options.query && options.query.trim().length > 0) {
+      andConditions.push({
+        OR: [
+          { title: { contains: options.query, mode: "insensitive" } },
+          { summary: { contains: options.query, mode: "insensitive" } },
+        ],
+      });
+    }
+
+    if (options.dateFilter === "today") {
+      const startOfDay = new Date();
+      startOfDay.setHours(0, 0, 0, 0);
+      andConditions.push({
+        createdAt: { gte: startOfDay },
+      });
+    } else if (options.dateFilter === "week") {
+      const lastWeek = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+      andConditions.push({
+        createdAt: { gte: lastWeek },
+      });
+    }
+
     const where: Prisma.TranscriptWhereInput = {
       workspaceId: options.workspaceId,
       ...(options.projectId !== undefined ? { projectId: options.projectId } : {}),
       ...(options.source ? { source: options.source } : {}),
-      ...(options.query && options.query.trim().length > 0
-        ? {
-            OR: [
-              { title: { contains: options.query, mode: "insensitive" } },
-              { summary: { contains: options.query, mode: "insensitive" } },
-            ],
-          }
-        : {}),
+      ...(options.sentiment && options.sentiment !== "all_sentiments" ? { sentiment: options.sentiment } : {}),
+      ...(andConditions.length > 0 ? { AND: andConditions } : {}),
     };
 
     const [transcripts, total] = await Promise.all([

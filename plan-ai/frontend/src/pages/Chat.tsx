@@ -80,7 +80,7 @@ const Chat: React.FC = () => {
   };
 
   const handleSaveChat = async (
-    selectedContextIds: string[],
+    selectedProjectIds: string[],
     title?: string,
     complexityLevel?: string,
   ) => {
@@ -88,7 +88,7 @@ const Chat: React.FC = () => {
       if (dialogMode === "create") {
         const newThread = await createThread({
           title: title || t("chat.sidebar.newChat"),
-          contextIds: selectedContextIds,
+          projectIds: selectedProjectIds,
           complexityLevel,
         }).unwrap();
         handleSelectThread(newThread.id);
@@ -102,8 +102,8 @@ const Chat: React.FC = () => {
         await updateThread({
           threadId: editingThread.id,
           title: title || editingThread.title,
-          contextIds: selectedContextIds,
-          complexityLevel, // Assuming update support is added or kept optional
+          projectIds: selectedProjectIds,
+          complexityLevel,
         }).unwrap();
         dispatch(
           setToastMessage({
@@ -208,7 +208,7 @@ const Chat: React.FC = () => {
           isLoading={isCreating || isUpdating}
           mode={dialogMode}
           initialTitle={editingThread?.title || ""}
-          initialSelectedContextIds={editingThread?.contextIds || []}
+          initialSelectedProjectIds={editingThread?.projectIds || []}
         />
 
         <ConfirmDeletionDialog

@@ -28,7 +28,7 @@ import { useTranslation } from "react-i18next";
 import SidebarLayout from "../components/layout/SidebarLayout";
 import { useCreateDocMutation, useImportDocMutation } from "../store/apis/docApi";
 import { useGetBrandThemesQuery } from "../store/apis/brandThemeApi";
-import { useListContextsQuery } from "../store/apis/contextApi";
+import { useListProjectsQuery } from "../store/apis/projectApi";
 import { useListGlobalTranscriptsQuery } from "../store/apis/transcriptApi";
 
 const STEPS = ["docs.create.steps.content", "docs.create.steps.sources", "docs.create.steps.theme"];
@@ -39,7 +39,7 @@ const DocCreate: React.FC = () => {
   const [activeStep, setActiveStep] = useState(0);
   const [title, setTitle] = useState("");
   const [prompt, setPrompt] = useState("");
-  const [contextIds, setContextIds] = useState<string[]>([]);
+  const [projectIds, setProjectIds] = useState<string[]>([]);
   const [transcriptIds, setTranscriptIds] = useState<string[]>([]);
   const [themeId, setThemeId] = useState("");
   const [mode, setMode] = useState<"prompt" | "import" | "blank">("prompt");
@@ -49,10 +49,10 @@ const DocCreate: React.FC = () => {
   const [importDoc, { isLoading: isImporting }] = useImportDocMutation();
   const isLoading = isCreating || isImporting;
   const { data: themes = [] } = useGetBrandThemesQuery();
-  const { data: contextsData } = useListContextsQuery();
+  const { data: projectsData } = useListProjectsQuery(undefined);
   const { data: transcriptsData } = useListGlobalTranscriptsQuery({});
 
-  const contexts = contextsData?.data?.contexts ?? [];
+  const projects = projectsData?.data?.projects ?? [];
   const transcriptList = transcriptsData?.data?.transcripts ?? [];
 
   const handleSubmit = async () => {
@@ -63,7 +63,7 @@ const DocCreate: React.FC = () => {
         title: title || "Untitled Document",
         prompt: mode === "prompt" ? prompt : undefined,
         isBlank: mode === "blank",
-        contextIds,
+        projectIds,
         transcriptIds,
         themeId: themeId || undefined,
       });
@@ -71,7 +71,7 @@ const DocCreate: React.FC = () => {
       if (!file) return;
       const formData = new FormData();
       formData.append("file", file);
-      if (contextIds.length > 0) formData.append("contextIds", JSON.stringify(contextIds));
+      if (projectIds.length > 0) formData.append("projectIds", JSON.stringify(projectIds));
       if (transcriptIds.length > 0) formData.append("transcriptIds", JSON.stringify(transcriptIds));
       if (themeId) formData.append("themeId", themeId);
 
@@ -205,17 +205,17 @@ const DocCreate: React.FC = () => {
             </Typography>
             <Autocomplete
               multiple
-              options={contexts}
-              getOptionLabel={(o) => o.name}
-              value={contexts.filter((c) => contextIds.includes(c.id))}
-              onChange={(_, selected) => setContextIds(selected.map((s: { id: string }) => s.id))}
+              options={projects}
+              getOptionLabel={(o) => o.title}
+              value={projects.filter((p) => projectIds.includes(p.id))}
+              onChange={(_, selected) => setProjectIds(selected.map((s: { id: string }) => s.id))}
               renderTags={(value, getTagProps) =>
                 value.map((opt, index) => (
-                  <Chip label={opt.name} {...getTagProps({ index })} key={opt.id} />
+                  <Chip label={opt.title} {...getTagProps({ index })} key={opt.id} />
                 ))
               }
               renderInput={(params) => (
-                <TextField {...params} label={t("docs.create.contextsLabel")} />
+                <TextField {...params} label="Projects (knowledge sources)" />
               )}
             />
             <Autocomplete

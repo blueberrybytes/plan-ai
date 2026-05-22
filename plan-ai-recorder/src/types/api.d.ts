@@ -1514,6 +1514,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/contexts/{contextId}/keywords": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["UpdateContextKeywords"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/contexts/{contextId}/github": {
         parameters: {
             query?: never;
@@ -1684,6 +1700,27 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["UploadAttachment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/chat/attachments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description Threadless attachment upload, used by the workspace-level assistant
+         *     (Home + Project Assistant tab). Files live under a "workspace" namespace
+         *     scoped to the user, since these chats don't have a thread row.
+         */
+        post: operations["UploadAssistantAttachment"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2413,6 +2450,15 @@ export interface components {
             createdAt: string;
             /** Format: date-time */
             updatedAt: string;
+            /** @description ID of the 1:1 paired Context. Used by frontend to call file endpoints. */
+            contextId: string | null;
+            /** @description True if the paired Context has at least one file uploaded. */
+            hasFiles: boolean;
+            /**
+             * Format: double
+             * @description Number of files in the paired Context.
+             */
+            fileCount: number;
         };
         ProjectListResponse: {
             projects: components["schemas"]["ProjectResponse"][];
@@ -2712,7 +2758,10 @@ export interface components {
         CreateDocInput: {
             title: string;
             prompt?: string;
+            /** @description Legacy: direct context IDs. Prefer `projectIds`. */
             contextIds?: string[];
+            /** @description User-facing project IDs; backend resolves to contextIds at generation time. */
+            projectIds?: string[];
             transcriptIds?: string[];
             themeId?: string;
             isBlank?: boolean;
@@ -3137,7 +3186,10 @@ export interface components {
         GeneratePresentationRequest: {
             templateId?: string;
             themeId?: string;
-            contextIds: string[];
+            /** @description Legacy: direct context IDs. Prefer `projectIds`. */
+            contextIds?: string[];
+            /** @description Preferred: user-facing project IDs. Backend resolves to contextIds. */
+            projectIds?: string[];
             transcriptIds?: string[];
             prompt: string;
             title?: string;
@@ -3473,6 +3525,8 @@ export interface components {
             userId: string;
             title: string;
             contextIds: string[];
+            /** @description User-facing project IDs (1:1 with contextIds). Resolved by the backend. */
+            projectIds?: string[];
             complexityLevel?: string | null;
             /** Format: date-time */
             createdAt: string;
@@ -3494,7 +3548,10 @@ export interface components {
         };
         CreateThreadRequest: {
             title?: string;
-            contextIds: string[];
+            /** @description Legacy: direct context IDs. Prefer `projectIds`. */
+            contextIds?: string[];
+            /** @description Preferred user-facing path: project IDs are resolved to contextIds internally. */
+            projectIds?: string[];
             complexityLevel?: string;
         };
         SendMessageResponse: {
@@ -3523,7 +3580,10 @@ export interface components {
         LiveChatMessageRequest: {
             content: string;
             liveTranscript: string;
+            /** @description Legacy: direct context IDs. Prefer `projectIds`. */
             contextIds?: string[];
+            /** @description Preferred: user-facing project IDs (auto-resolved to contextIds). */
+            projectIds?: string[];
             history?: components["schemas"]["LiveChatHistoryItem"][];
             modelKey?: string;
             complexityLevel?: string;
@@ -3540,7 +3600,10 @@ export interface components {
         LiveSummaryRequest: {
             liveTranscript: string;
             previousSummary?: string;
+            /** @description Legacy: direct context IDs. Prefer `projectIds`. */
             contextIds?: string[];
+            /** @description Preferred: user-facing project IDs. */
+            projectIds?: string[];
             modelKey?: string;
         };
         BrandThemeResponse: {
@@ -4009,7 +4072,10 @@ export interface components {
             /** @enum {string} */
             type: "AUTO" | "FLOWCHART" | "SEQUENCE" | "GANTT" | "MINDMAP" | "CLASS" | "ER" | "ARCHITECTURE";
             themeId?: string;
+            /** @description Legacy: direct context IDs. Prefer `projectIds`. */
             contextIds?: string[];
+            /** @description Preferred: user-facing project IDs. Backend resolves to contextIds. */
+            projectIds?: string[];
             transcriptIds?: string[];
             isManual?: boolean;
         };
@@ -5227,6 +5293,7 @@ export interface operations {
                     /** Format: binary */
                     file: string;
                     contextIds?: string;
+                    projectIds?: string;
                     transcriptIds?: string;
                     themeId?: string;
                 };
@@ -5279,6 +5346,8 @@ export interface operations {
                 pageSize?: number;
                 source?: components["schemas"]["TranscriptSource"];
                 q?: string;
+                sentiment?: string;
+                dateFilter?: string;
             };
             header?: never;
             path?: never;
@@ -7075,6 +7144,34 @@ export interface operations {
             };
         };
     };
+    UpdateContextKeywords: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                contextId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    keywords: string[];
+                };
+            };
+        };
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_ContextResponse_"];
+                };
+            };
+        };
+    };
     ConnectGithubRepository: {
         parameters: {
             query?: never;
@@ -7358,6 +7455,7 @@ export interface operations {
             content: {
                 "application/json": {
                     complexityLevel?: string;
+                    projectIds?: string[];
                     contextIds?: string[];
                     title?: string;
                 };
@@ -7404,6 +7502,33 @@ export interface operations {
             path: {
                 threadId: string;
             };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    file: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChatAttachment"];
+                };
+            };
+        };
+    };
+    UploadAssistantAttachment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
             cookie?: never;
         };
         requestBody: {

@@ -33,7 +33,7 @@ import {
 } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
-import type { Transcript, Context } from "../services/planAiApi";
+import type { Transcript, Project } from "../services/planAiApi";
 import type { DesktopSource } from "../types/electron";
 import { AudioLevelMonitor } from "../components/AudioLevelMonitor";
 import { saveConfig, type RecordingConfig } from "../utils/recorderConfig";
@@ -66,8 +66,8 @@ const Home: React.FC = () => {
     return saved && saved !== "default" ? saved : "default";
   });
 
-  const [contexts, setContexts] = useState<Context[]>([]);
-  const [selectedContextId, setSelectedContextId] = useState<string>("");
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [selectedProjectId, setSelectedProjectId] = useState<string>("");
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState("");
@@ -130,26 +130,26 @@ const Home: React.FC = () => {
     }
   }, [token, activeWorkspaceId, debouncedSearch, api]);
 
-  const loadContexts = useCallback(() => {
+  const loadProjects = useCallback(() => {
     if (!api) return;
-    api.listContexts().then(setContexts).catch(console.error);
+    api.listProjects().then(setProjects).catch(console.error);
   }, [api]);
 
   useEffect(() => {
     void fetchData(false);
-    loadContexts();
-  }, [fetchData, loadContexts]);
+    loadProjects();
+  }, [fetchData, loadProjects]);
 
-  // Refetch contexts when the recorder window regains focus, so deletions
-  // performed on the web app or another device show up immediately.
+  // Refetch projects when the recorder window regains focus, so deletions /
+  // additions performed on the web app show up immediately.
   useEffect(() => {
     const handleFocus = () => {
-      loadContexts();
+      loadProjects();
       void fetchData(true);
     };
     window.addEventListener("focus", handleFocus);
     return () => window.removeEventListener("focus", handleFocus);
-  }, [loadContexts, fetchData]);
+  }, [loadProjects, fetchData]);
 
   // Poll for updates if any transcript is pending/generating
   useEffect(() => {
@@ -328,11 +328,11 @@ const Home: React.FC = () => {
   }, [systemSourceId]);
 
   const handleStartRecording = () => {
-    const config: RecordingConfig = { 
-      systemSourceId, 
-      language, 
+    const config: RecordingConfig = {
+      systemSourceId,
+      language,
       micDeviceId,
-      contextIds: selectedContextId ? [selectedContextId] : undefined 
+      projectIds: selectedProjectId ? [selectedProjectId] : undefined,
     };
     saveConfig(config);
     navigate(`/recording`);
@@ -937,19 +937,21 @@ const Home: React.FC = () => {
               fullWidth
               size="small"
               sx={{ mt: 2, bgcolor: "rgba(255,255,255,0.05)" }}
-              label="Context (Optional)"
-              value={selectedContextId || "none"}
-              onChange={(e) => setSelectedContextId(e.target.value === "none" ? "" : e.target.value)}
+              label="Project (Optional)"
+              value={selectedProjectId || "none"}
+              onChange={(e) =>
+                setSelectedProjectId(e.target.value === "none" ? "" : e.target.value)
+              }
               InputProps={{
-                sx: { fontSize: "0.8rem" }
+                sx: { fontSize: "0.8rem" },
               }}
             >
               <MenuItem value="none" sx={{ fontSize: "0.8rem" }}>
                 <em>None (Use default keywords)</em>
               </MenuItem>
-              {contexts.map((c) => (
-                <MenuItem key={c.id} value={c.id} sx={{ fontSize: "0.8rem" }}>
-                  {c.name}
+              {projects.map((p) => (
+                <MenuItem key={p.id} value={p.id} sx={{ fontSize: "0.8rem" }}>
+                  {p.title}
                 </MenuItem>
               ))}
             </TextField>

@@ -192,7 +192,11 @@ const Recording: React.FC = () => {
   const [blobs, setBlobs] = useState<{ micBlob?: Blob; sysBlob?: Blob }>({});
 
   const [projects, setProjects] = useState<Project[]>([]);
-  const [selectedProjectId, setSelectedProjectId] = useState<string>("");
+  const [selectedProjectId, setSelectedProjectId] = useState<string>(() => {
+    const config = loadConfig();
+    if (config?.projectIds && config.projectIds.length > 0) return config.projectIds[0];
+    return "";
+  });
 
   const [contexts, setContexts] = useState<Context[]>([]);
   const [selectedContextId, setSelectedContextId] = useState<string>(() => {
@@ -269,6 +273,7 @@ const Recording: React.FC = () => {
         content: msg,
         liveTranscript: fullTranscript + combinedDelta,
         contextIds: selectedContextId ? [selectedContextId] : undefined,
+        projectIds: selectedProjectId ? [selectedProjectId] : undefined,
         history: chatHistory,
         modelKey: modelKey || undefined,
         complexityLevel: complexityLevel || undefined,
@@ -406,6 +411,8 @@ const Recording: React.FC = () => {
         content: fullPayload,
         recordedAt: new Date().toISOString(),
         projectId: targetProjectId,
+        // contextIds intentionally not passed — backend resolves from projectId
+        // (the project's paired Context) when omitted.
         contextIds: selectedContextId ? [selectedContextId] : undefined,
         chatHistory: chatHistory.length > 0 ? chatHistory : undefined,
         modelKey: modelKey || undefined,
@@ -555,6 +562,9 @@ const Recording: React.FC = () => {
                   liveTranscript: fullPayload,
                   contextIds: selectedContextId
                     ? [selectedContextId]
+                    : undefined,
+                  projectIds: selectedProjectId
+                    ? [selectedProjectId]
                     : undefined,
                   modelKey: modelKey || undefined,
                   previousSummary: prevSummary || undefined,

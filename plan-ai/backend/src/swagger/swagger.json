@@ -516,6 +516,20 @@
 					"updatedAt": {
 						"type": "string",
 						"format": "date-time"
+					},
+					"contextId": {
+						"type": "string",
+						"nullable": true,
+						"description": "ID of the 1:1 paired Context. Used by frontend to call file endpoints."
+					},
+					"hasFiles": {
+						"type": "boolean",
+						"description": "True if the paired Context has at least one file uploaded."
+					},
+					"fileCount": {
+						"type": "number",
+						"format": "double",
+						"description": "Number of files in the paired Context."
 					}
 				},
 				"required": [
@@ -527,7 +541,10 @@
 					"endedAt",
 					"metadata",
 					"createdAt",
-					"updatedAt"
+					"updatedAt",
+					"contextId",
+					"hasFiles",
+					"fileCount"
 				],
 				"type": "object",
 				"additionalProperties": false
@@ -1678,7 +1695,15 @@
 						"items": {
 							"type": "string"
 						},
-						"type": "array"
+						"type": "array",
+						"description": "Legacy: direct context IDs. Prefer `projectIds`."
+					},
+					"projectIds": {
+						"items": {
+							"type": "string"
+						},
+						"type": "array",
+						"description": "User-facing project IDs; backend resolves to contextIds at generation time."
 					},
 					"transcriptIds": {
 						"items": {
@@ -3285,7 +3310,15 @@
 						"items": {
 							"type": "string"
 						},
-						"type": "array"
+						"type": "array",
+						"description": "Legacy: direct context IDs. Prefer `projectIds`."
+					},
+					"projectIds": {
+						"items": {
+							"type": "string"
+						},
+						"type": "array",
+						"description": "Preferred: user-facing project IDs. Backend resolves to contextIds."
 					},
 					"transcriptIds": {
 						"items": {
@@ -3308,7 +3341,6 @@
 					}
 				},
 				"required": [
-					"contextIds",
 					"prompt"
 				],
 				"type": "object",
@@ -4573,6 +4605,13 @@
 						},
 						"type": "array"
 					},
+					"projectIds": {
+						"items": {
+							"type": "string"
+						},
+						"type": "array",
+						"description": "User-facing project IDs (1:1 with contextIds). Resolved by the backend."
+					},
 					"complexityLevel": {
 						"type": "string",
 						"nullable": true
@@ -4659,15 +4698,20 @@
 						"items": {
 							"type": "string"
 						},
-						"type": "array"
+						"type": "array",
+						"description": "Legacy: direct context IDs. Prefer `projectIds`."
+					},
+					"projectIds": {
+						"items": {
+							"type": "string"
+						},
+						"type": "array",
+						"description": "Preferred user-facing path: project IDs are resolved to contextIds internally."
 					},
 					"complexityLevel": {
 						"type": "string"
 					}
 				},
-				"required": [
-					"contextIds"
-				],
 				"type": "object",
 				"additionalProperties": false
 			},
@@ -4774,7 +4818,15 @@
 						"items": {
 							"type": "string"
 						},
-						"type": "array"
+						"type": "array",
+						"description": "Legacy: direct context IDs. Prefer `projectIds`."
+					},
+					"projectIds": {
+						"items": {
+							"type": "string"
+						},
+						"type": "array",
+						"description": "Preferred: user-facing project IDs (auto-resolved to contextIds)."
 					},
 					"history": {
 						"items": {
@@ -4844,7 +4896,15 @@
 						"items": {
 							"type": "string"
 						},
-						"type": "array"
+						"type": "array",
+						"description": "Legacy: direct context IDs. Prefer `projectIds`."
+					},
+					"projectIds": {
+						"items": {
+							"type": "string"
+						},
+						"type": "array",
+						"description": "Preferred: user-facing project IDs."
 					},
 					"modelKey": {
 						"type": "string"
@@ -6578,7 +6638,15 @@
 						"items": {
 							"type": "string"
 						},
-						"type": "array"
+						"type": "array",
+						"description": "Legacy: direct context IDs. Prefer `projectIds`."
+					},
+					"projectIds": {
+						"items": {
+							"type": "string"
+						},
+						"type": "array",
+						"description": "Preferred: user-facing project IDs. Backend resolves to contextIds."
 					},
 					"transcriptIds": {
 						"items": {
@@ -6644,7 +6712,7 @@
 	},
 	"info": {
 		"title": "backend",
-		"version": "2.6.0",
+		"version": "3.0.0",
 		"license": {
 			"name": "PolyForm-Noncommercial-1.0.0"
 		},
@@ -8561,6 +8629,9 @@
 									"contextIds": {
 										"type": "string"
 									},
+									"projectIds": {
+										"type": "string"
+									},
 									"transcriptIds": {
 										"type": "string"
 									},
@@ -8684,6 +8755,22 @@
 					{
 						"in": "query",
 						"name": "q",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"in": "query",
+						"name": "sentiment",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"in": "query",
+						"name": "dateFilter",
 						"required": false,
 						"schema": {
 							"type": "string"
@@ -11461,6 +11548,62 @@
 				]
 			}
 		},
+		"/api/contexts/{contextId}/keywords": {
+			"put": {
+				"operationId": "UpdateContextKeywords",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiResponse_ContextResponse_"
+								}
+							}
+						}
+					}
+				},
+				"tags": [
+					"Contexts"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": [
+					{
+						"in": "path",
+						"name": "contextId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"properties": {
+									"keywords": {
+										"items": {
+											"type": "string"
+										},
+										"type": "array"
+									}
+								},
+								"required": [
+									"keywords"
+								],
+								"type": "object"
+							}
+						}
+					}
+				}
+			}
+		},
 		"/api/contexts/{contextId}/github": {
 			"post": {
 				"operationId": "ConnectGithubRepository",
@@ -11975,6 +12118,12 @@
 									"complexityLevel": {
 										"type": "string"
 									},
+									"projectIds": {
+										"items": {
+											"type": "string"
+										},
+										"type": "array"
+									},
 									"contextIds": {
 										"items": {
 											"type": "string"
@@ -12058,6 +12207,52 @@
 						}
 					}
 				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"multipart/form-data": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"file": {
+										"type": "string",
+										"format": "binary"
+									}
+								},
+								"required": [
+									"file"
+								]
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/chat/attachments": {
+			"post": {
+				"operationId": "UploadAssistantAttachment",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ChatAttachment"
+								}
+							}
+						}
+					}
+				},
+				"description": "Threadless attachment upload, used by the workspace-level assistant\n(Home + Project Assistant tab). Files live under a \"workspace\" namespace\nscoped to the user, since these chats don't have a thread row.",
+				"tags": [
+					"Chat"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": [],
 				"requestBody": {
 					"required": true,
 					"content": {

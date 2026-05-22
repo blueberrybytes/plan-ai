@@ -74,11 +74,23 @@ export const contextDocumentWorker = new Worker<ContextDocumentJobPayload>(
       const model = await getWorkspaceModel(workspaceId, FAST_AI_MODEL);
 
       // 1. Setup Keyword Extraction Promise
-      const keywordPrompt = `Extract up to 10 of the most unique, specific, and important domain-specific terms, acronyms, jargon, or product names from this document. 
-Do NOT include generic English words. We need these for a Speech-To-Text dictionary to help recognize unique terminology.
+      const keywordPrompt = `You are a Speech-To-Text dictionary builder. Extract up to 25 of the most important terms from this document that would be difficult for a speech recognition engine to transcribe correctly without prior knowledge.
+
+Focus on:
+- **People names** (first, last, or full names)
+- **Company and brand names** (e.g. "Figma", "Stripe", "Vercel")
+- **Product names** (e.g. "ChatGPT", "BigQuery", "Kubernetes")
+- **Acronyms and abbreviations** (e.g. "RBAC", "OKR", "gRPC", "CI/CD")
+- **Technical jargon and domain-specific terms** (e.g. "microservices", "idempotent", "WebSocket")
+- **Project or feature names** specific to this organization
+- **Uncommon proper nouns** (cities, tools, libraries, frameworks)
+
+Do NOT include:
+- Common English words (e.g. "meeting", "project", "team")
+- Generic programming terms that any transcriber would know (e.g. "function", "variable")
 
 Document text snippet:
-${rawText.slice(0, 10000)}`;
+${rawText.slice(0, 12000)}`;
 
       const keywordsPromise = generateText({
         model,

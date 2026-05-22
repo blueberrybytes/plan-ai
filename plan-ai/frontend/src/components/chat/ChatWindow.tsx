@@ -33,7 +33,7 @@ import AssistantMessageRenderer from "./AssistantMessageRenderer";
 import CitationChip from "./CitationChip";
 import { AiGraphTrace, ContextGraph } from "../project/ContextGraph";
 import ThinkingIndicator from "./ThinkingIndicator";
-import { useListContextsQuery } from "../../store/apis/contextApi";
+import { useListProjectsQuery } from "../../store/apis/projectApi";
 import { useSelector } from "react-redux";
 import { RootState } from "../../store/store";
 import { useNavigate } from "react-router-dom";
@@ -84,8 +84,8 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
   const activeWorkspaceId = useSelector((state: RootState) => state.app.activeWorkspaceId);
 
   // Fetch contexts here to display chips only
-  const { data: contextResponse } = useListContextsQuery();
-  const contexts = contextResponse?.data?.contexts ?? [];
+  const { data: projectsResponse } = useListProjectsQuery(undefined);
+  const projects = projectsResponse?.data?.projects ?? [];
 
   // Reset optimistic messages when the thread changes or new real messages arrive.
   // We do NOT clear on `!isStreaming` to prevent UI blinking while waiting for the network refetch.
@@ -690,12 +690,12 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
               minWidth: 0,
             }}
           >
-            {activeThread.contextIds.map((cid) => {
-              const ctx = contexts.find((c) => c.id === cid);
-              return ctx ? (
+            {(activeThread.projectIds ?? []).map((pid) => {
+              const proj = projects.find((p) => p.id === pid);
+              return proj ? (
                 <Chip
-                  key={cid}
-                  label={ctx.name}
+                  key={pid}
+                  label={proj.title}
                   size="small"
                   variant="outlined"
                   sx={{ fontSize: "0.7rem", height: 22 }}

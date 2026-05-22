@@ -21,7 +21,7 @@ import { useTranslation } from "react-i18next";
 import { formatDistanceToNow } from "date-fns";
 import { IconButton, Tooltip } from "@mui/material";
 import { ChatThread } from "../../store/apis/chatApi";
-import { useListContextsQuery } from "../../store/apis/contextApi";
+import { useListProjectsQuery } from "../../store/apis/projectApi";
 
 interface ChatSidebarProps {
   threads: ChatThread[];
@@ -44,8 +44,8 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
 }) => {
   const { t } = useTranslation();
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const { data: contextResponse } = useListContextsQuery();
-  const allContexts = contextResponse?.data?.contexts ?? [];
+  const { data: projectsResponse } = useListProjectsQuery(undefined);
+  const allProjects = projectsResponse?.data?.projects ?? [];
 
   return (
     <Box
@@ -104,17 +104,17 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
                 primary={thread.title}
                 secondary={
                   <Box component="span" sx={{ display: "flex", flexDirection: "column", gap: 0.5, mt: 0.25 }}>
-                    {thread.contextIds && thread.contextIds.length > 0 && (
+                    {thread.projectIds && thread.projectIds.length > 0 && (
                       <Box
                         component="span"
                         sx={{ display: "flex", flexWrap: "wrap", gap: 0.3 }}
                       >
-                        {thread.contextIds.slice(0, 3).map((cid) => {
-                          const ctx = allContexts.find((c) => c.id === cid);
-                          return ctx ? (
+                        {thread.projectIds.slice(0, 3).map((pid) => {
+                          const proj = allProjects.find((p) => p.id === pid);
+                          return proj ? (
                             <Chip
-                              key={cid}
-                              label={ctx.name}
+                              key={pid}
+                              label={proj.title}
                               size="small"
                               variant="outlined"
                               sx={{
@@ -126,9 +126,9 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
                             />
                           ) : null;
                         })}
-                        {thread.contextIds.length > 3 && (
+                        {thread.projectIds.length > 3 && (
                           <Typography component="span" variant="caption" color="text.secondary">
-                            +{thread.contextIds.length - 3}
+                            +{thread.projectIds.length - 3}
                           </Typography>
                         )}
                       </Box>

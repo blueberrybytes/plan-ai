@@ -26,7 +26,7 @@ interface WebScrapeDialogProps {
 const WebScrapeDialog: React.FC<WebScrapeDialogProps> = ({ open, onClose, contextId }) => {
   const dispatch = useDispatch();
   const [url, setUrl] = useState("");
-  const [maxPages, setMaxPages] = useState<number>(15);
+  const [maxPages, setMaxPages] = useState<number>(10);
   const [errorText, setErrorText] = useState<string | null>(null);
 
   const [importFromWebsite, { isLoading }] = useImportFromWebsiteMutation();
@@ -126,7 +126,6 @@ const WebScrapeDialog: React.FC<WebScrapeDialogProps> = ({ open, onClose, contex
               { value: 1, label: "1" },
               { value: 5, label: "5" },
               { value: 10, label: "10" },
-              { value: 15, label: "15" },
               { value: 20, label: "20" },
             ]}
             min={1}

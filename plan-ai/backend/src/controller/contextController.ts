@@ -27,7 +27,6 @@ import {
   getContextFileContentFromFirebaseStorage,
 } from "../firebase/firebaseStorage";
 import {
-  indexContextFileVectors,
   removeContextFileVectors,
   removeContextVectors,
 } from "../vector/contextFileVectorService";
@@ -208,6 +207,35 @@ export class ContextController extends BaseWorkspaceController {
     return {
       status: 200,
       message: "Context updated",
+      data: this.mapContextResponse(context),
+    };
+  }
+
+  @Put("{contextId}/keywords")
+  @Security("ClientLevel")
+  public async updateContextKeywords(
+    @Request() request: AuthenticatedRequest,
+    @Path() contextId: string,
+    @Body() body: { keywords: string[] },
+  ): Promise<ApiResponse<ContextResponse>> {
+    const { workspaceId } = await this.getAuthorizedWorkspaceAccess(request);
+
+    // Ensure context belongs to workspace
+    await contextService.getContextForWorkspace(workspaceId, contextId);
+
+    // Deduplicate and clean
+    const uniqueKeywords = Array.from(new Set(body.keywords.map((k) => k.trim()).filter(Boolean)));
+
+    await prisma.context.update({
+      where: { id: contextId },
+      data: { keywords: uniqueKeywords },
+    });
+
+    const context = await contextService.getContextForWorkspace(workspaceId, contextId);
+
+    return {
+      status: 200,
+      message: "Keywords updated",
       data: this.mapContextResponse(context),
     };
   }
@@ -696,22 +724,22 @@ export class ContextController extends BaseWorkspaceController {
       throw { status: 400, message: "Could not extract any content from the provided URL" };
     }
 
-    // 1. Aggregate all scraped pages into one massive text blocks
+    // 1. Aggregate all scraped pages into one massive markdown document
     let aggregatedText = "";
     const scrapedUrls: string[] = [];
 
     for (const page of scrapedPages) {
-      aggregatedText += `--- Start of Page: ${page.title} ---\nSource URL: ${page.url}\n\n${page.content}\n\n`;
+      aggregatedText += `# ${page.title}\n**Source URL:** [${page.url}](${page.url})\n\n${page.content}\n\n---\n\n`;
       scrapedUrls.push(page.url);
     }
 
     try {
       const buffer = Buffer.from(aggregatedText, "utf-8");
-      const finalMimeType = "text/plain";
+      const finalMimeType = "text/markdown";
 
       const parsedUrl = new URL(body.url);
       const hostName = parsedUrl.hostname.replace(/[^a-z0-9]/gi, "_").toLowerCase();
-      const fileName = `website_scrape_${hostName}.txt`;
+      const fileName = `website_scrape_${hostName}.md`;
 
       const { storagePath, publicUrl } = await uploadContextFileToFirebaseStorage(
         buffer,
@@ -729,17 +757,20 @@ export class ContextController extends BaseWorkspaceController {
         metadata: { source: "WEBSITE_SCRAPE", urls: scrapedUrls, rootUrl: body.url, publicUrl },
       });
 
-      await indexContextFileVectors({
-        contextId,
-        fileId: contextFile.id,
-        fileName: fileName,
-        mimeType: finalMimeType,
-        file: {
-          buffer,
-          mimetype: finalMimeType,
-          originalname: fileName,
-        } as Express.Multer.File,
-      });
+      // Queue the document worker — extracts keywords + indexes vectors. We
+      // intentionally use the same queue as PDF/file upload so the website
+      // scrape's product/brand terms end up in Context.keywords (used by
+      // Deepgram during meeting recording).
+      await contextDocumentQueue.add(
+        "process-pdf-llm",
+        {
+          contextId,
+          fileId: contextFile.id,
+          userId: user.id,
+          workspaceId,
+        },
+        { jobId: `context-doc-${contextFile.id}-${Date.now()}` },
+      );
     } catch (error) {
       console.error(`Failed to ingest aggregated website data for ${body.url}`, error);
       this.setStatus(500);

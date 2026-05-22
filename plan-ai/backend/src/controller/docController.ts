@@ -94,6 +94,7 @@ export class DocController extends BaseWorkspaceController {
     @Request() request: AuthenticatedRequest,
     @UploadedFile("file") file: Express.Multer.File,
     @FormField() contextIds?: string,
+    @FormField() projectIds?: string,
     @FormField() transcriptIds?: string,
     @FormField() themeId?: string,
   ): Promise<DocDocumentResponse> {
@@ -104,6 +105,7 @@ export class DocController extends BaseWorkspaceController {
 
     // Parse arrays
     const parsedContextIds = contextIds ? JSON.parse(contextIds) : [];
+    const parsedProjectIds = projectIds ? JSON.parse(projectIds) : [];
     const parsedTranscriptIds = transcriptIds ? JSON.parse(transcriptIds) : [];
 
     // Fallback title to original file name
@@ -117,6 +119,7 @@ export class DocController extends BaseWorkspaceController {
       title,
       prompt,
       contextIds: parsedContextIds,
+      projectIds: parsedProjectIds,
       transcriptIds: parsedTranscriptIds,
       themeId,
     }) as unknown as Promise<DocDocumentResponse>;

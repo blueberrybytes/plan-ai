@@ -2,7 +2,10 @@ export interface RecordingConfig {
   systemSourceId: string | null;
   language?: string;
   micDeviceId?: string;
+  /** Legacy: direct context IDs. Prefer `projectIds`. */
   contextIds?: string[];
+  /** User-facing project IDs. Backend resolves to internal contextIds. */
+  projectIds?: string[];
 }
 
 const CONFIG_KEY = "recorder-config";

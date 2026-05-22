@@ -21,6 +21,7 @@ import { logger } from "../utils/logger";
 import prisma from "../prisma/prismaClient";
 import { queryContexts, getFullContextPayloads } from "../vector/contextFileVectorService";
 import { aiContextRouter } from "./aiContextRouter";
+import { resolveProjectIdsToContextIds } from "./projectContextResolver";
 import { IntegrationProvider, IntegrationStatus } from "@prisma/client";
 import { jiraIntegrationService } from "./jiraIntegrationService";
 import { linearIntegrationService } from "./linearIntegrationService";
@@ -318,6 +319,14 @@ export class ProjectTranscriptService {
         ? { processingStatus: "PENDING" }
         : { ...(input.metadata as Record<string, unknown>), processingStatus: "PENDING" };
 
+    // Auto-derive contextIds from the projectId if the caller didn't supply
+    // any. After the Context→Project refactor most callers only know the
+    // project; the project's paired Context is what feeds RAG and AI tasks.
+    let contextIds = input.contextIds ?? [];
+    if (contextIds.length === 0 && input.projectId) {
+      contextIds = await resolveProjectIdsToContextIds([input.projectId]);
+    }
+
     const transcript = await prisma.transcript.create({
       data: {
         userId: input.userId,
@@ -329,6 +338,7 @@ export class ProjectTranscriptService {
         summary: null,
         transcript: input.content,
         recordedAt: input.recordedAt ?? null,
+        contextIds,
         metadata: finalMetadata as unknown as Prisma.JsonObject,
       },
     });

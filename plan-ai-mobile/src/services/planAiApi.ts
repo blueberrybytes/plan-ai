@@ -391,7 +391,11 @@ export const createPlanAiApi = (
       return handleResponseWithRetry<{ text: string }>(res, () => req(true)).then((d) => d.text);
     },
 
-    async startAudioStream(language?: string, contextIds?: string[]): Promise<WebSocket> {
+    async startAudioStream(
+      language?: string,
+      contextIds?: string[],
+      projectIds?: string[],
+    ): Promise<WebSocket> {
       const token = await getToken(false);
       if (!token) throw new Error("No auth token available");
 
@@ -404,6 +408,9 @@ export const createPlanAiApi = (
       }
       if (contextIds && contextIds.length > 0) {
         wsUrl.searchParams.set("contextIds", contextIds.join(","));
+      }
+      if (projectIds && projectIds.length > 0) {
+        wsUrl.searchParams.set("projectIds", projectIds.join(","));
       }
 
       const wsId = getWorkspaceId();
@@ -598,6 +605,7 @@ export const createPlanAiApi = (
       content: string;
       liveTranscript: string;
       contextIds?: string[];
+      projectIds?: string[];
       history?: { role: "user" | "assistant"; content: string }[];
       modelKey?: string;
       complexityLevel?: string;
@@ -617,6 +625,7 @@ export const createPlanAiApi = (
       liveTranscript: string;
       previousSummary?: string;
       contextIds?: string[];
+      projectIds?: string[];
       modelKey?: string;
     }): Promise<string> {
       const req = async (force: boolean) =>

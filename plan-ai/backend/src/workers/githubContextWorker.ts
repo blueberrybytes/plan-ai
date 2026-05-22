@@ -14,6 +14,7 @@ import path from "path";
 import * as tar from "tar";
 import { uploadContextFileToFirebaseStorage } from "../firebase/firebaseStorage";
 import { contextService } from "../services/contextService";
+import { contextDocumentQueue } from "../queue/contextDocumentQueue";
 
 const execAsync = util.promisify(exec);
 const prisma = new PrismaClient();
@@ -125,18 +126,39 @@ export const githubContextWorker = new Worker<GithubContextJobPayload>(
         );
 
         // Attach to database so it shows up in UI files list
-        await contextService.attachFileToContext(context.workspaceId, contextId, {
-          bucketPath: storagePath,
-          fileName: `GitHub: ${githubRepoId}`,
-          mimeType: "application/xml",
-          sizeBytes: Buffer.byteLength(xmlText, "utf-8"),
-          metadata: {
-            publicUrl,
-            source: "GITHUB_SYNC",
-            repo: githubRepoId,
-            branch: job.data.branch || "HEAD",
+        const attachedFile = await contextService.attachFileToContext(
+          context.workspaceId,
+          contextId,
+          {
+            bucketPath: storagePath,
+            fileName: `GitHub: ${githubRepoId}`,
+            mimeType: "application/xml",
+            sizeBytes: Buffer.byteLength(xmlText, "utf-8"),
+            metadata: {
+              publicUrl,
+              source: "GITHUB_SYNC",
+              repo: githubRepoId,
+              branch: job.data.branch || "HEAD",
+            },
           },
-        });
+        );
+
+        // Queue keyword extraction so this repo's domain terms (product
+        // names, function names, framework jargon) land in Context.keywords —
+        // critical so Deepgram gets keyterm hints when recording a meeting
+        // about this project.
+        await contextDocumentQueue
+          .add(
+            "process-pdf-llm",
+            {
+              contextId,
+              fileId: attachedFile.id,
+              userId: context.userId,
+              workspaceId: context.workspaceId,
+            },
+            { jobId: `context-doc-${attachedFile.id}-${Date.now()}` },
+          )
+          .catch((err) => logger.warn("Failed to queue keyword extraction for github file", err));
 
         const meta =
           typeof context.metadata === "object" && context.metadata

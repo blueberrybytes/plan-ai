@@ -24,6 +24,7 @@ import {
 } from "../services/transcriptCrudService";
 import { type TaskWithRelations } from "../services/taskCrudService";
 import { projectTranscriptService } from "../services/projectTranscriptService";
+import { resolveProjectIdsToContextIds } from "../services/projectContextResolver";
 import { mapTaskResponse, type TaskResponse } from "./projectsModelController";
 import { transcriptGenerationQueue } from "../queue/transcriptGenerationQueue";
 import { firebaseAdmin } from "../firebase/firebaseAdmin";
@@ -207,9 +208,11 @@ export class TranscriptsController extends BaseWorkspaceController {
     @Query() pageSize = 20,
     @Query() source?: TranscriptSource,
     @Query() q?: string,
+    @Query() sentiment?: string,
+    @Query() dateFilter?: string,
   ): Promise<ApiResponse<StandaloneTranscriptListResponse>> {
     const { user, workspaceId } = await this.getAuthorizedWorkspaceAccess(request);
-    const options: TranscriptListOptions = { workspaceId, page, pageSize, source, query: q };
+    const options: TranscriptListOptions = { workspaceId, page, pageSize, source, query: q, sentiment, dateFilter };
 
     const result = await transcriptCrudService.listTranscriptsForUser(user.id, options);
     const contextsByTranscript = await this.enrichTranscriptsWithContexts(
@@ -327,9 +330,16 @@ export class TranscriptsController extends BaseWorkspaceController {
     );
 
     // Parse JSON arrays which arrived as strings in formData
-    const contextIdsArray = contextIds ? JSON.parse(contextIds) : [];
+    let contextIdsArray: string[] = contextIds ? JSON.parse(contextIds) : [];
     const chatHistoryArray = chatHistory ? JSON.parse(chatHistory) : [];
     const locationObj = location ? JSON.parse(location) : undefined;
+
+    // If the client only sent a projectId (mobile / recorder after the Context
+    // refactor), auto-derive the project's paired contextId so AI generation,
+    // RAG queries, and downstream chat see the project's files.
+    if (contextIdsArray.length === 0 && projectId) {
+      contextIdsArray = await resolveProjectIdsToContextIds([projectId]);
+    }
 
     // Optional Firebase Upload logic inline (if files exist)
     let rawMicUrl: string | undefined;
@@ -530,6 +540,7 @@ export class TranscriptsController extends BaseWorkspaceController {
           title: body.title ?? undefined,
           source: body.source ?? TranscriptSource.MANUAL,
           recordedAt: body.recordedAt ?? null,
+          contextIds: body.contextIds,
           metadata: {
             ...(body.metadata as Record<string, unknown> || {}),
             generationOptions,
@@ -538,7 +549,7 @@ export class TranscriptsController extends BaseWorkspaceController {
 
         transcript = pendingResult.transcript;
 
-        // Push to BullMQ Worker
+        // Push to BullMQ Worker. Use resolved contextIds from transcript row.
         await transcriptGenerationQueue.add("generate-transcript", {
           transcriptId: transcript.id,
           workspaceId,
@@ -547,6 +558,7 @@ export class TranscriptsController extends BaseWorkspaceController {
           content: body.content,
           source: body.source ?? TranscriptSource.MANUAL,
           ...generationOptions,
+          contextIds: transcript.contextIds,
         });
 
         // Save Chat History for both Standalone and Project-linked transcripts
@@ -557,7 +569,7 @@ export class TranscriptsController extends BaseWorkspaceController {
               workspaceId,
               title: transcript.title || "Live Meeting Chat",
               transcriptId: transcript.id,
-              contextIds: body.contextIds || [],
+              contextIds: transcript.contextIds,
               messages: {
                 create: body.chatHistory.map((m) => ({
                   role: m.role.toUpperCase() as "USER" | "ASSISTANT",

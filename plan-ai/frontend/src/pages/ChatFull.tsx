@@ -56,7 +56,7 @@ const ChatFull: React.FC = () => {
   };
 
   const handleStartChat = async (
-    selectedContextIds: string[],
+    selectedProjectIds: string[],
     title?: string,
     complexityLevel?: string,
   ) => {
@@ -65,14 +65,14 @@ const ChatFull: React.FC = () => {
         await updateThread({
           threadId: editingThread.id,
           title: title || editingThread.title,
-          contextIds: selectedContextIds,
+          projectIds: selectedProjectIds,
           complexityLevel,
         }).unwrap();
         await refetchThread();
       } else {
         const newThread = await createThread({
           title: title || t("chat.sidebar.newChat"),
-          contextIds: selectedContextIds,
+          projectIds: selectedProjectIds,
           complexityLevel,
         }).unwrap();
         handleSelectThread(newThread.id);
@@ -115,7 +115,7 @@ const ChatFull: React.FC = () => {
         isLoading={isCreating || isUpdating}
         mode={dialogMode}
         initialTitle={editingThread?.title || ""}
-        initialSelectedContextIds={editingThread?.contextIds || []}
+        initialSelectedProjectIds={editingThread?.projectIds || []}
       />
     </Box>
   );

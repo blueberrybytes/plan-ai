@@ -44,6 +44,9 @@ import {
 import { transcriptGenerationQueue } from "../queue/transcriptGenerationQueue";
 import { extractTextFromUpload, isSupportedUploadMimeType } from "../utils/documentTextExtractor";
 import { aiTaskCoachService } from "../services/aiTaskCoachService";
+import { contextService } from "../services/contextService";
+import { deleteContextFileFromFirebaseStorage } from "../firebase/firebaseStorage";
+import { removeContextVectors } from "../vector/contextFileVectorService";
 
 interface ProjectResponse {
   id: string;
@@ -55,6 +58,12 @@ interface ProjectResponse {
   metadata: TsoaJsonObject | null;
   createdAt: Date;
   updatedAt: Date;
+  /** ID of the 1:1 paired Context. Used by frontend to call file endpoints. */
+  contextId: string | null;
+  /** True if the paired Context has at least one file uploaded. */
+  hasFiles: boolean;
+  /** Number of files in the paired Context. */
+  fileCount: number;
 }
 
 interface ProjectListResponse {
@@ -296,6 +305,9 @@ export class ProjectsModelController extends BaseWorkspaceController {
         orderBy: { createdAt: "desc" },
         skip,
         take,
+        include: {
+          context: { select: { id: true, _count: { select: { files: true } } } },
+        },
       }),
       prisma.project.count({ where: whereClause }),
     ]);
@@ -303,7 +315,7 @@ export class ProjectsModelController extends BaseWorkspaceController {
     return {
       status: 200,
       data: {
-        projects: sessions.map(this.mapProjectResponse),
+        projects: sessions.map((s) => this.mapProjectResponse(s)),
         total,
       },
     };
@@ -475,12 +487,14 @@ export class ProjectsModelController extends BaseWorkspaceController {
           : undefined),
       source: TranscriptSource.UPLOAD,
       recordedAt: recordedAtDate ?? null,
+      contextIds: contextIds,
       metadata: metadataValue,
     });
 
     const transcript = pendingResult.transcript;
 
-    // Push to BullMQ Worker
+    // Push to BullMQ Worker. Use resolved contextIds from the transcript row
+    // (createPendingTranscript falls back to the project's paired context).
     await transcriptGenerationQueue.add("generate-transcript", {
       transcriptId: transcript.id,
       projectId: projectId,
@@ -488,7 +502,7 @@ export class ProjectsModelController extends BaseWorkspaceController {
       userId: user.id,
       content: content,
       source: TranscriptSource.UPLOAD,
-      contextIds: contextIds,
+      contextIds: transcript.contextIds,
       persona: persona,
       objective: objective,
       complexityLevel,
@@ -576,8 +590,6 @@ export class ProjectsModelController extends BaseWorkspaceController {
       throw { status: 400, message: "Selected recording has no transcript content" };
     }
 
-    const contextPrompt = await this.buildContextPrompt(user.id, body.contextIds ?? []);
-
     const pendingResult = await projectTranscriptService.createPendingTranscript({
       projectId,
       userId: user.id,
@@ -586,6 +598,7 @@ export class ProjectsModelController extends BaseWorkspaceController {
       title: sourceTranscript.title ?? undefined,
       source: sourceTranscript.source,
       recordedAt: sourceTranscript.recordedAt,
+      contextIds: body.contextIds,
       metadata:
         sourceTranscript.metadata === null
           ? null
@@ -593,8 +606,12 @@ export class ProjectsModelController extends BaseWorkspaceController {
     });
 
     const transcript = pendingResult.transcript;
+    // Use the resolved contextIds for the context prompt so the AI gets the
+    // project's keywords even when the caller didn't pass any.
+    const contextPrompt = await this.buildContextPrompt(user.id, transcript.contextIds);
 
-    // Push to BullMQ Worker
+    // Push to BullMQ Worker. Use the contextIds resolved during createPendingTranscript
+    // (which auto-falls back to the project's paired contextId when none provided).
     await transcriptGenerationQueue.add("generate-transcript", {
       transcriptId: transcript.id,
       projectId: projectId,
@@ -602,7 +619,7 @@ export class ProjectsModelController extends BaseWorkspaceController {
       userId: user.id,
       content: sourceTranscript.transcript,
       source: sourceTranscript.source,
-      contextIds: body.contextIds,
+      contextIds: transcript.contextIds,
       persona: body.persona,
       objective: body.objective,
       complexityLevel: body.complexityLevel,
@@ -916,18 +933,36 @@ export class ProjectsModelController extends BaseWorkspaceController {
   ): Promise<ApiResponse<ProjectResponse>> {
     const { user, workspaceId } = await this.getAuthorizedWorkspaceAccess(request);
 
-    const project = await prisma.project.create({
-      data: {
-        userId: user.id,
-        workspaceId: workspaceId,
-        title: body.title,
-        description: body.description,
-        status: body.status ?? ProjectStatus.ACTIVE,
-        startedAt: body.startedAt ?? new Date(),
-        ...(body.metadata === undefined
-          ? {}
-          : { metadata: (body.metadata as Prisma.InputJsonValue) ?? Prisma.JsonNull }),
-      },
+    // Project + 1:1 Context are created atomically. The Context backs the
+    // user-facing "Files" tab on the project.
+    const project = await prisma.$transaction(async (tx) => {
+      const created = await tx.project.create({
+        data: {
+          userId: user.id,
+          workspaceId: workspaceId,
+          title: body.title,
+          description: body.description,
+          status: body.status ?? ProjectStatus.ACTIVE,
+          startedAt: body.startedAt ?? new Date(),
+          ...(body.metadata === undefined
+            ? {}
+            : { metadata: (body.metadata as Prisma.InputJsonValue) ?? Prisma.JsonNull }),
+        },
+      });
+      await contextService.createContextForProject(
+        user.id,
+        workspaceId,
+        created.id,
+        created.title,
+        tx,
+      );
+      // Re-fetch with context relation so mapProjectResponse can populate contextId.
+      return tx.project.findUniqueOrThrow({
+        where: { id: created.id },
+        include: {
+          context: { select: { id: true, _count: { select: { files: true } } } },
+        },
+      });
     });
 
     return {
@@ -974,8 +1009,41 @@ export class ProjectsModelController extends BaseWorkspaceController {
     @Request() request: AuthenticatedRequest,
     @Path() projectId: string,
   ): Promise<ApiResponse<null>> {
-    const { workspaceId } = await this.getAuthorizedWorkspaceAccess(request);
-    await this.getProjectForWorkspace(request, projectId, workspaceId);
+    const { user, workspaceId } = await this.getAuthorizedWorkspaceAccess(request);
+    const project = await this.getProjectForWorkspace(request, projectId, workspaceId);
+
+    // Clean up the 1:1 paired Context first — Firebase Storage files and Qdrant
+    // vectors are NOT cascaded by Prisma. Without this, deleting a Project
+    // leaves orphan files in the bucket and stale vectors in the index.
+    const contextId = (project as unknown as { context?: { id: string } | null }).context?.id;
+    if (contextId) {
+      try {
+        const { storagePaths } = await contextService.deleteContextForWorkspace(
+          workspaceId,
+          contextId,
+        );
+        for (const path of storagePaths) {
+          try {
+            await deleteContextFileFromFirebaseStorage(path, user.id);
+          } catch (error) {
+            logger.warn("Failed to remove project file from storage", error);
+          }
+        }
+        try {
+          await removeContextVectors(contextId);
+        } catch (error) {
+          logger.warn("Failed to remove project context vectors", error);
+        }
+      } catch (error) {
+        // If the context lookup/delete fails for any reason (race condition,
+        // already deleted, etc.) we still proceed with project deletion.
+        logger.warn(`Project cleanup: failed to clean paired context ${contextId}`, error);
+      }
+    }
+
+    // At this point Context (and ContextFile rows) are gone via the call above.
+    // The Project row still exists — delete it now. Cascade rules handle any
+    // remaining child rows (tasks, transcripts, etc).
     await prisma.project.delete({ where: { id: projectId } });
 
     return {
@@ -1013,12 +1081,14 @@ export class ProjectsModelController extends BaseWorkspaceController {
       title: body.title,
       source: body.source ?? "WEB",
       recordedAt: body.recordedAt ?? null,
+      contextIds: body.contextIds,
       metadata: body.metadata === undefined ? undefined : (body.metadata as Prisma.InputJsonValue),
     });
 
     const transcript = pendingResult.transcript;
 
-    // Push to BullMQ Worker
+    // Push to BullMQ Worker. Use resolved contextIds from the transcript row
+    // (createPendingTranscript falls back to the project's paired context).
     await transcriptGenerationQueue.add("generate-transcript", {
       transcriptId: transcript.id,
       projectId: projectId,
@@ -1026,7 +1096,7 @@ export class ProjectsModelController extends BaseWorkspaceController {
       workspaceId: workspaceId,
       content: body.content ?? "",
       source: body.source ?? "WEB",
-      contextIds: body.contextIds,
+      contextIds: transcript.contextIds,
       persona: body.persona,
       objective: body.objective,
       complexityLevel: body.complexityLevel,
@@ -1058,6 +1128,9 @@ export class ProjectsModelController extends BaseWorkspaceController {
         id: projectId,
         workspaceId: workspaceId,
       },
+      include: {
+        context: { select: { id: true, _count: { select: { files: true } } } },
+      },
     });
 
     if (!project) {
@@ -1078,7 +1151,9 @@ export class ProjectsModelController extends BaseWorkspaceController {
     metadata: TsoaJsonObject | null;
     createdAt: Date;
     updatedAt: Date;
+    context?: { id: string; _count?: { files: number } } | null;
   }): ProjectResponse {
+    const fileCount = project.context?._count?.files ?? 0;
     return {
       id: project.id,
       title: project.title,
@@ -1089,6 +1164,9 @@ export class ProjectsModelController extends BaseWorkspaceController {
       metadata: project.metadata,
       createdAt: project.createdAt,
       updatedAt: project.updatedAt,
+      contextId: project.context?.id ?? null,
+      hasFiles: fileCount > 0,
+      fileCount,
     };
   }
 
