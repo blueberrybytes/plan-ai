@@ -32,9 +32,9 @@ const steps = [
     icon: (color: string) => <AutoAwesomeIcon sx={{ fontSize: 100, color, mb: 4 }} />,
   },
   {
-    title: "The Power of Contexts",
+    title: "Projects & Knowledge",
     description:
-      "Contexts are the secret weapon of Plan AI. Think of them as dedicated brains for your projects. You can feed them with PDFs, text documents, meeting transcripts, or even connect entire GitHub repositories. This gives the AI laser-focused knowledge on your specific subject.",
+      "Each project in Plan AI has its own knowledge base. You can feed it with PDFs, text documents, meeting transcripts, website content, or even connect entire GitHub repositories. This gives the AI laser-focused knowledge on your specific subject, improving everything from transcription accuracy to task generation.",
     icon: (color: string) => <FolderSpecialIcon sx={{ fontSize: 100, color, mb: 4 }} />,
   },
   {
