@@ -81,10 +81,10 @@ We've written marketing copy that targets these three explicitly. If you recogni
 
 ## Ready?
 
-If your team fits the ICP, the fastest way in is:
+If your team fits the ICP, here's how to get started:
 
-1. [Start a free trial](https://plan-ai.blueberrybytes.com) — 60 minutes free recording, BYOK only
-2. Record one standup, see what it produces
-3. If it lands, [pick a paid tier](/getting-started/introduction#pricing) — €6/seat BYOK or €29/seat managed
+1. **Choose your plan** — BYOK (€6/seat/month) or Managed (€29/seat/month). Most teams pick Managed.
+2. **Record one standup**, see what it produces
+3. **Iterate** — the AI gets smarter as it learns your codebase and team patterns
 
-If you're still unsure whether you're our customer, [book a 15-minute demo](mailto:hello@blueberrybytes.com?subject=Plan%20AI%20demo) and we'll tell you honestly. We'd rather refuse a bad-fit customer than churn them in month two.
+Not sure if you're our customer? [Book a 15-minute demo](mailto:hello@blueberrybytes.com?subject=Plan%20AI%20demo%20request) and we'll tell you honestly. We'd rather refuse a bad-fit customer than churn them in month two.

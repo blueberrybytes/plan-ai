@@ -33,7 +33,6 @@ interface PricingTier {
 // in the Stripe dashboard. The structure is intentionally minimal so a non-
 // developer can swap a URL string.
 const TIERS: PricingTier[] = [
-  { key: "solo", track: "both", href: null, ctaKey: "ctaStart" },
   { key: "proByok", track: "byok", href: "https://buy.stripe.com/REPLACE_PRO_BYOK", ctaKey: "ctaBuy" },
   { key: "proManaged", track: "managed", href: "https://buy.stripe.com/REPLACE_PRO_MANAGED", ctaKey: "ctaBuy", highlight: true },
   { key: "businessByok", track: "byok", href: "https://buy.stripe.com/REPLACE_BUSINESS_BYOK", ctaKey: "ctaBuy" },

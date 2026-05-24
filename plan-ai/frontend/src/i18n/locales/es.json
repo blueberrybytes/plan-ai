@@ -1230,5 +1230,92 @@
     "teamSetup": "Crea tu Workspace",
     "teamSubtitle": "Nombra tu espacio de trabajo y elige el estilo de marca para tus presentaciones generadas.",
     "finish": "Completar Configuración"
+  },
+  "landingPage": {
+    "pricing": {
+      "heading": "Precios Transparentes",
+      "subheading": "Sin costos ocultos. Paga solo lo que uses. Todos los planes incluyen inteligencia code-aware de GitNexus.",
+      "perSeatMonth": "/usuario/mes",
+      "mostPopular": "La mayoría elige este plan",
+      "ctaStart": "Prueba Gratis",
+      "ctaBuy": "Suscribirse",
+      "ctaContact": "Contactar Ventas",
+      "byokLabel": "BYOK",
+      "byokDescription": "Trae tus propias claves de OpenRouter + Deepgram",
+      "managedLabel": "Managed",
+      "managedDescription": "Nosotros gestionamos infraestructura, claves y soporte",
+      "tiers": {
+        "proByok": {
+          "name": "Pro",
+          "price": "€6",
+          "tagline": "Para equipos pequeños",
+          "features": [
+            "Grabaciones y transcripciones ilimitadas",
+            "Generación de tareas code-aware",
+            "Integración GitNexus",
+            "Sincronización con Jira, Linear, Trello",
+            "1–50 usuarios",
+            "Soporte comunitario"
+          ]
+        },
+        "proManaged": {
+          "name": "Pro",
+          "price": "€29",
+          "tagline": "La mayoría elige este plan",
+          "features": [
+            "Grabaciones y transcripciones ilimitadas",
+            "Generación de tareas code-aware",
+            "Integración GitNexus",
+            "Sincronización con Jira, Linear, Trello",
+            "1–50 usuarios",
+            "Soporte por email",
+            "Infraestructura gestionada"
+          ]
+        },
+        "businessByok": {
+          "name": "Business",
+          "price": "€14",
+          "tagline": "Para equipos en crecimiento",
+          "features": [
+            "Grabaciones y transcripciones ilimitadas",
+            "Análisis code-aware avanzado",
+            "GitNexus + grafos personalizados",
+            "Todas las integraciones",
+            "50–500 usuarios",
+            "Soporte por Slack",
+            "Facturación personalizada"
+          ]
+        },
+        "businessManaged": {
+          "name": "Business",
+          "price": "€65",
+          "tagline": "Premium gestionado",
+          "features": [
+            "Grabaciones y transcripciones ilimitadas",
+            "Análisis code-aware avanzado",
+            "GitNexus + grafos personalizados",
+            "Todas las integraciones",
+            "50–500 usuarios",
+            "Soporte dedicado",
+            "Infraestructura gestionada",
+            "Registros de auditoría"
+          ]
+        },
+        "enterprise": {
+          "name": "Enterprise",
+          "price": "Personalizado",
+          "tagline": "Para 500+ usuarios",
+          "features": [
+            "Todo lo de Business",
+            "Auto-alojado o on-prem",
+            "Cumplimiento SOC 2 Type II",
+            "SLA y soporte personalizado",
+            "500+ usuarios",
+            "Integraciones personalizadas",
+            "Infraestructura dedicada"
+          ]
+        }
+      }
+    }
   }
 }
