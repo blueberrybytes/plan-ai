@@ -2,13 +2,16 @@
 layout: home
 hero:
   name: "Plan AI"
-  text: "The Bot-Free AI Context Engine"
-  tagline: "Stop burning thousands on TPM overhead. Turn your engineering meetings into perfectly scoped Jira tickets, architecture diagrams, and system docs—automatically."
+  text: "Standups in. Jira tickets out."
+  tagline: "The AI meeting assistant for software teams. Record your engineering meetings, understand your codebase via a code graph, and ship proper tickets, specs, and architecture diagrams — automatically."
   image:
     src: /logos/android-chrome-512x512.png
     alt: Plan AI
   actions:
     - theme: brand
+      text: Who is this for?
+      link: /getting-started/who-its-for
+    - theme: alt
       text: Get Started
       link: /getting-started/introduction
     - theme: alt
@@ -16,22 +19,22 @@ hero:
       link: https://github.com/blueberrybytes/plan-ai
 features:
   - title: Bot-Free Native Recording
-    details: Securely record locally via our native macOS and Windows apps. Never invite a creepy bot to your client Zoom calls again.
+    details: Native macOS, Windows, iOS and Android recorders. Your client calls stay on your machine, not on a Fathom server. Zoom, Meet, and in-person — all covered.
     icon: 🎙️
-  - title: Bring Your Own Key (BYOK)
-    details: Complete privacy and wholesale AI pricing. Plug in your OpenRouter and Deepgram keys to avoid SaaS markup and token taxes.
-    icon: 🔑
-  - title: 1-Click Ticket Generation
-    details: Connect to Jira, Linear, Trello, or Notion. Import from Google Drive, export to OneDrive. Automatically generate perfectly scoped technical tasks with exact acceptance criteria.
+  - title: Code-Aware Ticket Generation
+    details: Plan AI reads your repo graph via GitNexus before writing a ticket. Properly scoped tickets with acceptance criteria, story points, and links to real files in your codebase.
     icon: 🎫
-  - title: Automated System Docs
-    details: Stop writing documentation manually. Plan AI extracts architectural decisions and system changes directly from your engineering standups.
+  - title: Bring Your Own Key (BYOK)
+    details: €6/seat with your OpenRouter + Deepgram keys, or €29/seat fully managed. No hidden token taxes, no per-message anxiety.
+    icon: 🔑
+  - title: Automated Specs & Docs
+    details: Plan AI extracts architectural decisions, system changes, and acceptance criteria from your engineering standups and design reviews — ready to share with clients or paste into Notion.
     icon: 📄
-  - title: Context-Aware Chat
-    details: Instantly query an LLM that actually understands your business. The chat is fully grounded in your provided codebase and past meetings.
+  - title: Codebase + Meeting RAG
+    details: Ask "why did we build it this way?" and get a real answer grounded in past standups, design reviews, and the current state of your code. Connect GitHub, internal docs, anything.
     icon: 💬
-  - title: Open Core Architecture
-    details: Built on a robust, type-safe monorepo. Self-host it on your own infrastructure or use our managed B2B service for zero hassle.
+  - title: Open Core, Self-Hostable
+    details: Built on a type-safe TypeScript monorepo. Self-host it on your own infrastructure or use our managed cloud. Same product either way.
     icon: 🏗️
 ---
 

@@ -498,80 +498,170 @@
       "signUp": "Registrarse"
     },
     "hero": {
-      "badge": "El motor de IA sin bots para transformar reuniones en tickets",
-      "title": "De reuniones privadas a tickets de Jira en segundos.",
-      "subtitle": "Sin bots intrusivos en tus llamadas. Graba localmente de forma segura y deja que Plan AI transforme tus conversaciones en tickets de Jira o Linear perfectamente definidos al instante.",
-      "cta": "Registrarse Gratis",
-      "ctaSecondary": "Iniciar sesión"
+      "badge": "Hecho para agencias de software y equipos de ingeniería",
+      "title": "Standups dentro. Tickets de Jira fuera.",
+      "subtitle": "El asistente de IA para reuniones de equipos de software. Plan AI graba tus reuniones de ingeniería, entiende tu codebase y genera tickets, especificaciones y diagramas de arquitectura listos para ejecutar — automáticamente. No es para reuniones de ventas. Es para el equipo que escribe el código.",
+      "cta": "Empezar gratis",
+      "ctaSecondary": "Reservar demo de 15 min"
     },
     "stats": {
-      "faster": "Ahorradas por TPM",
-      "aiPowered": "Privacidad de Datos",
-      "manualWork": "Contexto perdido"
+      "faster": "Horas/semana ahorradas en specs",
+      "aiPowered": "Tickets conscientes del código",
+      "manualWork": "Bots en tus llamadas"
     },
     "features": {
-      "heading": "Automatiza la creación de tu backlog",
-      "subheading": "Olvídate de redactar tickets a mano. Plan AI está diseñado para equipos técnicos que necesitan transformar discusiones en tareas de software accionables y con alcance perfecto.",
+      "heading": "Reuniones de ingeniería sin el impuesto de escribir specs",
+      "subheading": "Plan AI está diseñado para agencias de software y equipos de producto que convierten conversaciones en trabajo entregable. Tickets reales, specs reales, diagramas reales — informados por tu código real.",
       "items": {
         "transcript": {
           "title": "Grabación Sin Bots",
-          "description": "Sin bots extraños uniéndose a tu Zoom. Usa nuestra grabadora nativa local para capturar audio de forma segura y privada."
+          "description": "Grabadoras nativas para macOS, Windows, iOS y Android. Tus llamadas con clientes se quedan en tu máquina, no en los servidores de Fathom. Zoom, Meet, presenciales — todo cubierto."
         },
         "tasks": {
-          "title": "Sincronización Instantánea con Jira y Linear",
-          "description": "Genera tareas técnicas bien definidas con criterios de aceptación y envíalas directamente a tus tableros de seguimiento."
+          "title": "Tickets Reales en Jira y Linear",
+          "description": "No bullets points. Tickets correctamente definidos con criterios de aceptación, story points, dependencias y enlaces a los archivos exactos de tu repo."
         },
         "boards": {
-          "title": "Contexto Técnico",
-          "description": "No solo resumimos. Extraemos especificaciones técnicas, requisitos de API y dependencias a partir de tus conversaciones."
+          "title": "Specs Conscientes del Código",
+          "description": "Plan AI lee tu grafo de repositorio vía GitNexus antes de escribir un ticket. Referencia símbolos reales, archivos reales, flujos de ejecución reales — sin alucinaciones de IA."
         },
         "slides": {
-          "title": "Reportes para Clientes",
-          "description": "Genera presentaciones profesionales con tu marca a partir del estado de tu proyecto para revisiones de sprint en segundos."
+          "title": "Decks de Sprint Review",
+          "description": "Decks autogenerados desde demos de sprint y revisiones de diseño. Con tu marca, exportables, listos para cliente en segundos — perfecto para status updates de agencia."
         },
         "chat": {
-          "title": "RAG de Repositorios",
-          "description": "Conecta GitHub y documentos internos. Chatea con todo tu stack técnico para responder '¿por qué construimos esto así?'"
+          "title": "RAG de Codebase + Reuniones",
+          "description": "Pregunta '¿por qué construimos esto así?' y obtén una respuesta real basada en standups pasados, design reviews y el estado actual de tu código."
         },
         "insights": {
-          "title": "Tarifa Plana B2B",
-          "description": "Escalabilidad predecible para agencias. Sin impuestos ocultos por tokens, sin ansiedad por mensaje."
+          "title": "BYOK o Managed",
+          "description": "Trae tus propias claves de OpenRouter y Deepgram por €6/asiento. O deja que nosotros gestionemos la IA por €29/asiento. Sin impuestos por token, sin sorpresas."
         }
       }
     },
     "howItWorks": {
-      "heading": "Conéctate a tu stack actual",
+      "heading": "De standup a ticket entregable en 60 segundos",
       "steps": {
         "1": {
-          "title": "Conecta tus datos",
-          "description": "Vincula Jira, GitHub y Google Drive de forma segura. Actuamos como tu capa de inteligencia."
+          "title": "Conecta tu stack",
+          "description": "Enlaza Jira, Linear, GitHub y los docs de tu proyecto. Plan AI es la capa entre tus reuniones y tu tracker — nunca un reemplazo."
         },
         "2": {
-          "title": "Sube contexto",
-          "description": "Añade la última transcripción de reunión de cliente o documento RFP a una sesión."
+          "title": "Graba la reunión",
+          "description": "Haz tu standup, design review o llamada de discovery con cliente. Grabadora nativa en Mac, Windows o móvil. Sin bots."
         },
         "3": {
-          "title": "Orquesta",
-          "description": "Revisa arquitecturas autogeneradas, aprueba los tickets y deja que tus ingenieros codifiquen al momento."
+          "title": "Entrega el output",
+          "description": "Tickets, specs y diagramas de arquitectura aparecen automáticamente — conscientes del código y listos para asignar. Tus ingenieros empiezan a programar al momento."
         }
       }
     },
     "checklist": {
-      "noSetup": "Tarifa Plana B2B",
-      "googleLogin": "SSO Habilitado",
-      "freeTier": "100% Privacidad",
-      "allInOne": "Integraciones API"
+      "noSetup": "BYOK o Managed",
+      "googleLogin": "Consciente del código vía GitNexus",
+      "freeTier": "100% privado — sin bots",
+      "allInOne": "Jira, Linear, GitHub, Notion"
     },
     "cta": {
-      "title": "Escala tu agencia, no tus costes operativos.",
-      "subtitle": "Únete a los equipos técnicos que usan Plan AI para gestionar entregas de software complejas con la mitad de carga administrativa.",
-      "button": "Registrarse Gratis"
+      "title": "Hecho por ingenieros, para equipos de ingeniería.",
+      "subtitle": "Las agencias de software reducen el tiempo de escritura de specs en un 80%. Los equipos de ingeniería entregan más rápido. Pruébalo gratis — trae tu propia clave de OpenRouter o deja que nosotros gestionemos la IA.",
+      "button": "Empezar gratis"
     },
     "footer": {
       "copyright": "© {{year}} {{companyName}} {{productName}}. Todos los derechos reservados.",
       "privacy": "Política de Privacidad",
       "dataDeletion": "Eliminación de Datos",
       "terms": "Términos de Servicio"
+    },
+    "pricing": {
+      "heading": "Precios simples para equipos de software",
+      "subheading": "Trae tus propias claves de IA por el precio más bajo, o deja que lo gestionemos todo. Mismo producto, dos formas de pagar. Cancela cuando quieras.",
+      "byokLabel": "BYOK",
+      "byokDescription": "Tú aportas las claves de OpenRouter + Deepgram",
+      "managedLabel": "Managed",
+      "managedDescription": "Nosotros gestionamos la IA por ti",
+      "perSeatMonth": "/ asiento / mes",
+      "billedYearly": "facturado anualmente",
+      "mostPopular": "La mayoría elige este",
+      "ctaStart": "Empezar gratis",
+      "ctaBuy": "Comprar ahora",
+      "ctaContact": "Contáctanos",
+      "tiers": {
+        "solo": {
+          "name": "Solo",
+          "price": "Gratis",
+          "tagline": "Para developers individuales probando el producto.",
+          "features": [
+            "1 workspace, 1 asiento",
+            "60 minutos de grabación / mes",
+            "Solo BYOK",
+            "Todas las integraciones",
+            "Soporte de comunidad"
+          ]
+        },
+        "proByok": {
+          "name": "Pro · BYOK",
+          "price": "€6",
+          "tagline": "Para agencias de software y equipos de ingeniería con sus propias claves de IA.",
+          "features": [
+            "Horas de grabación ilimitadas",
+            "Trae tu OpenRouter + Deepgram",
+            "Sync con Jira, Linear, Notion, GitHub",
+            "Tickets conscientes del código vía GitNexus",
+            "Decks de sprint review",
+            "Soporte por email"
+          ]
+        },
+        "proManaged": {
+          "name": "Pro · Managed",
+          "price": "€29",
+          "tagline": "Toda la potencia Pro sin gestionar claves de API.",
+          "features": [
+            "Todo lo de Pro BYOK",
+            "20 horas de grabación / asiento / mes",
+            "300k tokens LLM / asiento / mes",
+            "30 generaciones de doc/slide / asiento / mes",
+            "Gestionamos Deepgram + OpenRouter",
+            "Soporte prioritario por email"
+          ]
+        },
+        "businessByok": {
+          "name": "Business · BYOK",
+          "price": "€14",
+          "tagline": "Equipos grandes que quieren controles de admin + sus propias claves.",
+          "features": [
+            "Todo lo de Pro BYOK",
+            "Controles de admin + audit logs",
+            "Topes de presupuesto IA por asiento",
+            "Brand themes para decks de cliente",
+            "SSO (Google + Microsoft)"
+          ]
+        },
+        "businessManaged": {
+          "name": "Business · Managed",
+          "price": "€65",
+          "tagline": "Organizaciones de ingeniería que quieren una sola factura.",
+          "features": [
+            "Todo lo de Business BYOK",
+            "60 horas de grabación / asiento / mes",
+            "1M tokens LLM / asiento / mes",
+            "100 generaciones de doc/slide / asiento / mes",
+            "Canal de Slack dedicado"
+          ]
+        },
+        "enterprise": {
+          "name": "Enterprise",
+          "price": "Custom",
+          "tagline": "Self-host, SLAs personalizados, listo para procurement.",
+          "features": [
+            "Self-hosted o cloud dedicado",
+            "Papeleo de SOC 2",
+            "DPA + MSA a petición",
+            "Routing personalizado de Deepgram / modelos",
+            "Onboarding + training"
+          ]
+        }
+      }
     }
   },
   "projectDetails": {

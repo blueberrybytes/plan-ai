@@ -33,6 +33,7 @@ import { useSelector } from "react-redux";
 import { selectUser } from "../store/slices/auth/authSelector";
 import { useBrandIdentity } from "../hooks/useBrandIdentity";
 import { useTranslation } from "react-i18next";
+import PricingSection from "../components/landing/PricingSection";
 
 export default function LandingPage() {
   const navigate = useNavigate();
@@ -149,14 +150,23 @@ export default function LandingPage() {
               </Typography>
             </Box>
             <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-              <Button 
-                component="a" 
-                href="https://docs.plan-ai.blueberrybytes.com" 
-                target="_blank" 
-                rel="noopener noreferrer" 
-                variant="text" 
+              <Button
+                component="a"
+                href="#pricing"
+                variant="text"
                 size="small"
-                sx={{ color: 'text.secondary', fontWeight: 600, display: { xs: 'none', sm: 'block' } }}
+                sx={{ color: "text.secondary", fontWeight: 600, display: { xs: "none", sm: "block" } }}
+              >
+                Pricing
+              </Button>
+              <Button
+                component="a"
+                href="https://docs.plan-ai.blueberrybytes.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                variant="text"
+                size="small"
+                sx={{ color: "text.secondary", fontWeight: 600, display: { xs: "none", sm: "block" } }}
               >
                 Docs
               </Button>
@@ -600,6 +610,9 @@ export default function LandingPage() {
           </Grid>
         </Container>
       </Box>
+
+      {/* Pricing Section */}
+      <PricingSection />
 
       {/* CTA Section */}
       <Box sx={{ py: { xs: 10, md: 16 }, position: "relative", overflow: "hidden" }}>

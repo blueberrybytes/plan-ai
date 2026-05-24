@@ -24,6 +24,7 @@ export default withMermaid(defineConfig({
       {
         text: 'Getting Started',
         items: [
+          { text: 'Who is it for?', link: '/getting-started/who-its-for' },
           { text: 'Introduction', link: '/getting-started/introduction' },
           { text: 'Quick Start', link: '/getting-started/quickstart' },
           { text: 'Architecture', link: '/getting-started/architecture' }

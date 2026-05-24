@@ -504,80 +504,170 @@
       "signUp": "Register"
     },
     "hero": {
-      "badge": "The Bot-Free AI Meeting to Ticket Engine",
-      "title": "From private meetings to Jira tickets in seconds.",
-      "subtitle": "No bots joining your calls. Securely record locally and let Plan AI transform your conversations into perfectly scoped Jira or Linear tickets automatically.",
-      "cta": "Register for Free",
-      "ctaSecondary": "Sign In"
+      "badge": "Built for software agencies and engineering teams",
+      "title": "Standups in. Jira tickets out.",
+      "subtitle": "The AI meeting assistant for software teams. Plan AI records your engineering meetings, understands your codebase, and ships proper tickets, specs, and architecture diagrams — automatically. Not built for sales calls. Built for the team that writes the code.",
+      "cta": "Start free",
+      "ctaSecondary": "Book a 15-min demo"
     },
     "stats": {
-      "faster": "Saved per TPM",
-      "aiPowered": "Data Privacy",
-      "manualWork": "Context lost"
+      "faster": "Hours/week saved on specs",
+      "aiPowered": "Code-aware tickets",
+      "manualWork": "Bots in your calls"
     },
     "features": {
-      "heading": "Automate your backlog creation",
-      "subheading": "Skip the manual ticket writing. Plan AI is built for technical teams that need to turn discussions into actionable, perfectly scoped software tasks.",
+      "heading": "Engineering meetings without the spec-writing tax",
+      "subheading": "Plan AI is built for software agencies and product engineering teams that turn conversations into shippable work. Real tickets, real specs, real diagrams — informed by your real code.",
       "items": {
         "transcript": {
           "title": "Bot-Free Recording",
-          "description": "No creepy bots joining your Zoom calls. Use our native local recorder to capture audio securely and privately."
+          "description": "Native macOS, Windows, iOS and Android recorders. Your client calls stay on your machine, not on a Fathom server. Zoom, Meet, in-person — all covered."
         },
         "tasks": {
-          "title": "Instant Jira & Linear Sync",
-          "description": "Generate properly scoped, technical tasks with acceptance criteria and push them directly to your tracking boards."
+          "title": "Real Jira & Linear Tickets",
+          "description": "Not bullet points. Properly scoped tickets with acceptance criteria, story points, dependencies, and links to the exact files in your repo."
         },
         "boards": {
-          "title": "Technical Context",
-          "description": "We don't just summarize. We extract technical specifications, API requirements, and dependencies from your conversations."
+          "title": "Code-Aware Specs",
+          "description": "Plan AI reads your repo graph via GitNexus before writing a ticket. References real symbols, real files, real execution flows — no AI hallucinations."
         },
         "slides": {
-          "title": "Board & Client Reports",
-          "description": "Generate professional, branded slide decks from your project state to present sprint reviews in seconds."
+          "title": "Sprint Review Decks",
+          "description": "Auto-generated decks from sprint demos and design reviews. Branded, exportable, client-ready in seconds — perfect for agency status updates."
         },
         "chat": {
-          "title": "Repository RAG",
-          "description": "Connect GitHub and internal docs. Chat across your entire technical stack to answer 'why did we build it this way?'"
+          "title": "Codebase + Meeting RAG",
+          "description": "Ask 'why did we build it this way?' and get a real answer grounded in past standups, design reviews, and the current state of your code."
         },
         "insights": {
-          "title": "Fair & Transparent Pricing",
-          "description": "Predictable flat-fee scaling for agencies. No hidden token taxes, no per-message anxiety."
+          "title": "BYOK or Managed",
+          "description": "Bring your own OpenRouter and Deepgram keys for €6/seat. Or let us handle the AI plumbing for €29/seat. No token taxes, no surprises."
         }
       }
     },
     "howItWorks": {
-      "heading": "Plug into your existing stack",
+      "heading": "From standup to shipped ticket in 60 seconds",
       "steps": {
         "1": {
-          "title": "Connect Data sources",
-          "description": "Link your Jira, GitHub, and Google Drive workspaces securely. We act as the intelligence layer, not a replacement."
+          "title": "Connect your stack",
+          "description": "Link Jira, Linear, GitHub, and your project's docs. Plan AI becomes the layer between your meetings and your tracker — never a replacement."
         },
         "2": {
-          "title": "Upload Context",
-          "description": "Drop the latest client meeting transcript or RFP document into a project session."
+          "title": "Record the meeting",
+          "description": "Run your standup, design review, or client discovery call. Native recorder on Mac, Windows, or mobile. No bots."
         },
         "3": {
-          "title": "Orchestrate",
-          "description": "Review auto-generated architectures, approve the tickets, and let your engineers start coding immediately."
+          "title": "Ship the output",
+          "description": "Tickets, specs, and architecture diagrams appear automatically — code-aware and assignment-ready. Your engineers start coding immediately."
         }
       }
     },
     "checklist": {
-      "noSetup": "B2B Flat Pricing",
-      "googleLogin": "SSO Enabled",
-      "freeTier": "100% Data Privacy",
-      "allInOne": "API Integrations"
+      "noSetup": "BYOK or Managed pricing",
+      "googleLogin": "Code-aware via GitNexus",
+      "freeTier": "100% private — no bots",
+      "allInOne": "Jira, Linear, GitHub, Notion"
     },
     "cta": {
-      "title": "Scale your agency, not your overhead.",
-      "subtitle": "Join the technical teams using Plan AI to manage complex software deliveries with half the administrative burden.",
-      "button": "Register for Free"
+      "title": "Built by engineers, for engineering teams.",
+      "subtitle": "Software agencies cut spec-writing time by 80%. Engineering teams ship faster. Try it free — bring your own OpenRouter key, or let us run the AI.",
+      "button": "Start free"
     },
     "footer": {
       "copyright": "© {{year}} {{companyName}} {{productName}}. All rights reserved.",
       "privacy": "Privacy Policy",
       "dataDeletion": "Data Deletion",
       "terms": "Terms of Service"
+    },
+    "pricing": {
+      "heading": "Simple pricing built for software teams",
+      "subheading": "Bring your own AI keys for the lowest price, or let us run everything. Same product, two ways to pay. Cancel anytime.",
+      "byokLabel": "BYOK",
+      "byokDescription": "You bring OpenRouter + Deepgram keys",
+      "managedLabel": "Managed",
+      "managedDescription": "We run the AI plumbing for you",
+      "perSeatMonth": "/ seat / month",
+      "billedYearly": "billed yearly",
+      "mostPopular": "Most teams pick this",
+      "ctaStart": "Start free",
+      "ctaBuy": "Buy now",
+      "ctaContact": "Contact us",
+      "tiers": {
+        "solo": {
+          "name": "Solo",
+          "price": "Free",
+          "tagline": "For individual developers trying things out.",
+          "features": [
+            "1 workspace, 1 seat",
+            "60 minutes recording / month",
+            "BYOK only",
+            "All integrations",
+            "Community support"
+          ]
+        },
+        "proByok": {
+          "name": "Pro · BYOK",
+          "price": "€6",
+          "tagline": "For software agencies and engineering teams with their own AI keys.",
+          "features": [
+            "Unlimited recording hours",
+            "Bring your own OpenRouter + Deepgram",
+            "Jira, Linear, Notion, GitHub sync",
+            "Code-aware tickets via GitNexus",
+            "Sprint review decks",
+            "Email support"
+          ]
+        },
+        "proManaged": {
+          "name": "Pro · Managed",
+          "price": "€29",
+          "tagline": "Full Pro power without managing AI API keys.",
+          "features": [
+            "Everything in Pro BYOK",
+            "20 recording hours / seat / month",
+            "300k LLM tokens / seat / month",
+            "30 doc / slide generations / seat / month",
+            "We handle Deepgram + OpenRouter",
+            "Priority email support"
+          ]
+        },
+        "businessByok": {
+          "name": "Business · BYOK",
+          "price": "€14",
+          "tagline": "Larger teams that want admin controls + their own keys.",
+          "features": [
+            "Everything in Pro BYOK",
+            "Admin controls + audit logs",
+            "Per-seat AI budget caps",
+            "Brand themes for client decks",
+            "SSO (Google + Microsoft)"
+          ]
+        },
+        "businessManaged": {
+          "name": "Business · Managed",
+          "price": "€65",
+          "tagline": "Engineering orgs that want a single invoice.",
+          "features": [
+            "Everything in Business BYOK",
+            "60 recording hours / seat / month",
+            "1M LLM tokens / seat / month",
+            "100 doc / slide generations / seat / month",
+            "Dedicated Slack channel"
+          ]
+        },
+        "enterprise": {
+          "name": "Enterprise",
+          "price": "Custom",
+          "tagline": "Self-host, custom SLAs, procurement-ready.",
+          "features": [
+            "Self-hosted or dedicated cloud",
+            "SOC 2 paperwork",
+            "DPA + MSA on request",
+            "Custom Deepgram / model routing",
+            "Onboarding + training"
+          ]
+        }
+      }
     }
   },
   "projectDetails": {

@@ -1,10 +1,27 @@
 # Plan AI 🚀
 
-Plan AI is an open-source, AI-assisted meeting planning and execution platform. It records your meetings, generates accurate transcripts using Deepgram, and extracts structured insights, Jira/Linear/Trello tasks, and action items using advanced LLMs via OpenRouter.
+**The AI meeting assistant for software teams.** Plan AI records your engineering meetings, understands your codebase via a code graph (GitNexus), and automatically ships properly scoped Jira / Linear / Trello tickets, technical specs, and architecture diagrams. Open-source core, BYOK-friendly.
 
 ## Video Demo (click on the image to watch it)
 
 [![Plan AI Demo](https://img.youtube.com/vi/NqpvMhQBYqU/hqdefault.jpg)](https://www.youtube.com/watch?v=NqpvMhQBYqU)
+
+## 🎯 Who is this for?
+
+Plan AI is **purpose-built for software teams**. It's the meeting tool that knows what `verifyToken` is and which file it lives in.
+
+**✅ Built for:**
+
+- **Software agencies and consultancies** billing clients hourly — every hour saved on spec-writing is a billable hour back.
+- **Product engineering teams** at startups and scale-ups using Jira / Linear / Notion who are tired of writing tickets from memory after standups.
+- **Engineering managers and tech leads** who want their team's design reviews, retros, and discovery calls to produce real artifacts, not Slack threads.
+
+**❌ Not built for:**
+
+- Sales calls, customer success conversations, recruiting interviews — for those, use [Fathom](https://fathom.video/) or [Granola](https://granola.ai/). They're great at it.
+- Marketing meetings, board meetings, generic business calls — Plan AI's value compounds with technical context. Without code, you're paying for capabilities you don't use.
+
+If you've ever said *"we discussed this in standup, then nobody wrote it down"* — that's the problem Plan AI is built to delete.
 
 ## 🌐 Try It Live
 
