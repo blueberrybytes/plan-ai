@@ -30,6 +30,9 @@ import * as FileSystem from "expo-file-system/legacy";
 import * as Sharing from "expo-sharing";
 import MermaidViewer from "../../components/MermaidViewer";
 import { PostMeetingTasksPanel } from "../../components/PostMeetingTasksPanel";
+import SpeakerInsightsTab, {
+  type SpeakerInsight,
+} from "../../components/SpeakerInsightsTab";
 import { Transcript } from "@/services/planAiApi";
 import type { components } from "@/types/api";
 
@@ -817,6 +820,14 @@ export default function TranscriptViewScreen() {
                     (pt && Object.values(pt).some((s) => s?.status === "FAILED"));
                   return hasErrors ? [{ value: "errors", label: "Errors" }] : [];
                 })(),
+                ...(() => {
+                  const speakers = (
+                    transcript?.metadata as { speakers?: SpeakerInsight[] } | null | undefined
+                  )?.speakers;
+                  return speakers && speakers.length > 0
+                    ? [{ value: "speakers", label: "Speakers" }]
+                    : [];
+                })(),
                 { value: "metadata", label: "Meta" },
               ]}
             />
@@ -871,6 +882,22 @@ export default function TranscriptViewScreen() {
                     ));
                 })()}
               </View>
+            )}
+            {activeTab === "speakers" && (
+              <SpeakerInsightsTab
+                speakers={
+                  (transcript?.metadata as { speakers?: SpeakerInsight[] } | null | undefined)
+                    ?.speakers ?? []
+                }
+                principalSpeakerLabel={
+                  (
+                    transcript?.metadata as
+                      | { principalSpeaker?: string }
+                      | null
+                      | undefined
+                  )?.principalSpeaker ?? null
+                }
+              />
             )}
             {activeTab === "metadata" && (
               <Surface

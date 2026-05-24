@@ -36,6 +36,9 @@ import ReactJson from "react-json-view";
 import MermaidRenderer from "../components/common/MermaidRenderer";
 import { AiGraphTrace, ContextGraph } from "../components/project/ContextGraph";
 import PostMeetingTasksPanel from "../components/project/PostMeetingTasksPanel";
+import SpeakerInsightsTab, {
+  type SpeakerInsight,
+} from "../components/transcript/SpeakerInsightsTab";
 import type { components } from "../types/api";
 
 type TranscriptMetadata = components["schemas"]["TranscriptMetadata"];
@@ -101,19 +104,6 @@ const formatDateTime = (value: string | null | undefined, fallback: string) => {
   }
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? fallback : date.toLocaleString();
-};
-
-const prettyJson = (value: unknown, emptyFallback: string, errorFallback: string) => {
-  if (!value) {
-    return emptyFallback;
-  }
-
-  try {
-    return JSON.stringify(value, null, 2);
-  } catch (error) {
-    console.error("Failed to stringify metadata", error);
-    return errorFallback;
-  }
 };
 
 const formatTimestamp = (seconds?: number | null) => {
@@ -569,7 +559,8 @@ const ProjectTranscriptDetail: React.FC = () => {
                   <Stack spacing={2}>
                     {(transcript.metadata as any)?.processingStatus === "EXTRACTING_TASKS" && (
                       <Alert severity="info" sx={{ mb: 2 }}>
-                        🤖 AI is currently extracting tasks from this transcript in the background. They will appear here shortly!
+                        🤖 AI is currently extracting tasks from this transcript in the background.
+                        They will appear here shortly!
                       </Alert>
                     )}
                     <Box sx={{ borderBottom: 1, borderColor: "divider" }}>
@@ -580,7 +571,9 @@ const ProjectTranscriptDetail: React.FC = () => {
                         scrollButtons="auto"
                       >
                         <Tab label="Raw Transcript" value="transcript" sx={{ fontWeight: 600 }} />
-                        {Boolean((transcript.metadata as Record<string, unknown>)?.aiGraphTrace) && (
+                        {Boolean(
+                          (transcript.metadata as Record<string, unknown>)?.aiGraphTrace,
+                        ) && (
                           <Tab
                             label="✨ AI Context Graph"
                             value="context-graph"
@@ -608,19 +601,30 @@ const ProjectTranscriptDetail: React.FC = () => {
                             />
                           ) : null;
                         })()}
+                        {(() => {
+                          const speakers = (
+                            transcript.metadata as { speakers?: SpeakerInsight[] } | null
+                          )?.speakers;
+                          return speakers && speakers.length > 0 ? (
+                            <Tab label="Speakers" value="speakers" sx={{ fontWeight: 600 }} />
+                          ) : null;
+                        })()}
                         <Tab label="Metadata" value="metadata" sx={{ fontWeight: 600 }} />
                       </Tabs>
                     </Box>
 
-                    {tabValue === "context-graph" && (() => {
-                      const trace = (transcript.metadata as Record<string, unknown>)?.aiGraphTrace as AiGraphTrace | undefined;
-                      if (!trace || !Array.isArray(trace.nodes) || trace.nodes.length === 0) return null;
-                      return (
-                        <Box sx={{ mt: 2 }}>
-                          <ContextGraph height={400} nodes={trace.nodes} links={trace.links} />
-                        </Box>
-                      );
-                    })()}
+                    {tabValue === "context-graph" &&
+                      (() => {
+                        const trace = (transcript.metadata as Record<string, unknown>)
+                          ?.aiGraphTrace as AiGraphTrace | undefined;
+                        if (!trace || !Array.isArray(trace.nodes) || trace.nodes.length === 0)
+                          return null;
+                        return (
+                          <Box sx={{ mt: 2 }}>
+                            <ContextGraph height={400} nodes={trace.nodes} links={trace.links} />
+                          </Box>
+                        );
+                      })()}
 
                     {tabValue === "transcript" && (
                       <Box sx={{ mt: 2 }}>
@@ -666,6 +670,21 @@ const ProjectTranscriptDetail: React.FC = () => {
                       </Box>
                     )}
 
+                    {tabValue === "speakers" && (
+                      <Box sx={{ mt: 2 }}>
+                        <SpeakerInsightsTab
+                          speakers={
+                            (transcript.metadata as { speakers?: SpeakerInsight[] } | null)
+                              ?.speakers ?? []
+                          }
+                          principalSpeakerLabel={
+                            (transcript.metadata as { principalSpeaker?: string } | null)
+                              ?.principalSpeaker ?? null
+                          }
+                        />
+                      </Box>
+                    )}
+
                     {tabValue === "metadata" && (
                       <Box
                         sx={{
@@ -679,12 +698,12 @@ const ProjectTranscriptDetail: React.FC = () => {
                         }}
                       >
                         <ReactJson
-                          src={((transcript.metadata as Record<string, unknown>) || {})}
+                          src={(transcript.metadata as Record<string, unknown>) || {}}
                           collapsed={2}
                           displayDataTypes={false}
                           enableClipboard={false}
                           name={false}
-                          style={{ backgroundColor: 'transparent', fontSize: '0.9rem' }}
+                          style={{ backgroundColor: "transparent", fontSize: "0.9rem" }}
                         />
                       </Box>
                     )}
@@ -738,12 +757,12 @@ const ProjectTranscriptDetail: React.FC = () => {
                     }}
                   >
                     <ReactJson
-                      src={((transcript.metadata as Record<string, unknown>) || {})}
+                      src={(transcript.metadata as Record<string, unknown>) || {}}
                       collapsed={1}
                       displayDataTypes={false}
                       enableClipboard={false}
                       name={false}
-                      style={{ backgroundColor: 'transparent', fontSize: '0.9rem' }}
+                      style={{ backgroundColor: "transparent", fontSize: "0.9rem" }}
                     />
                   </Box>
                 </Stack>

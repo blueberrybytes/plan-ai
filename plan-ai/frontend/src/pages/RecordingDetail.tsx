@@ -33,6 +33,9 @@ import { setToastMessage } from "../store/slices/app/appSlice";
 import ReactMarkdown from "react-markdown";
 import MermaidRenderer from "../components/common/MermaidRenderer";
 import SyncBadges from "../components/recording/SyncBadges";
+import SpeakerInsightsTab, {
+  type SpeakerInsight,
+} from "../components/transcript/SpeakerInsightsTab";
 import { exportMarkdownToDocx } from "../utils/docxExport";
 import { jsPDF } from "jspdf";
 
@@ -549,6 +552,10 @@ const RecordingDetail: React.FC = () => {
                     <Tab label="Key Points & Pain Points" value="keypoints" sx={{ fontWeight: 600 }} />
                   )}
                   <Tab label="Raw Transcript" value="transcript" sx={{ fontWeight: 600 }} />
+                  {(transcript.data?.metadata as { speakers?: unknown[] } | null)?.speakers &&
+                    (transcript.data?.metadata as { speakers: unknown[] }).speakers.length > 0 && (
+                      <Tab label="Speakers" value="speakers" sx={{ fontWeight: 600 }} />
+                    )}
                   {generatedChart && (
                     <Tab label="Architecture Map" value="architecture" sx={{ fontWeight: 600 }} />
                   )}
@@ -628,6 +635,23 @@ const RecordingDetail: React.FC = () => {
                     >
                       {transcript.data.transcript || "No transcript content available."}
                     </Typography>
+                  </Box>
+                )}
+
+                {tabValue === "speakers" && (
+                  <Box sx={{ p: { xs: 0, md: 2 } }}>
+                    <SpeakerInsightsTab
+                      speakers={
+                        (transcript.data?.metadata as {
+                          speakers?: SpeakerInsight[];
+                        } | null)?.speakers ?? []
+                      }
+                      principalSpeakerLabel={
+                        (transcript.data?.metadata as {
+                          principalSpeaker?: string;
+                        } | null)?.principalSpeaker ?? null
+                      }
+                    />
                   </Box>
                 )}
 

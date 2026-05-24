@@ -27,6 +27,9 @@ import type { Transcript, Task } from "../services/planAiApi";
 import ReactMarkdown from "react-markdown";
 import PostMeetingTasksPanel from "../components/PostMeetingTasksPanel";
 import SyncBadges from "../components/SyncBadges";
+import SpeakerInsightsTab, {
+  type SpeakerInsight,
+} from "../components/SpeakerInsightsTab";
 
 const MermaidImgRenderer = ({ tasks }: { tasks: Task[] }) => {
   if (!tasks || tasks.length === 0) return null;
@@ -680,6 +683,14 @@ const TranscriptView: React.FC = () => {
                       />
                     ) : null;
                   })()}
+                  {(() => {
+                    const speakers = (
+                      transcript.metadata as { speakers?: SpeakerInsight[] } | null | undefined
+                    )?.speakers;
+                    return speakers && speakers.length > 0 ? (
+                      <Tab label="Speakers" value="speakers" sx={{ fontWeight: 600 }} />
+                    ) : null;
+                  })()}
                   <Tab label="Metadata" value="metadata" sx={{ fontWeight: 600 }} />
                 </Tabs>
 
@@ -1038,6 +1049,25 @@ const TranscriptView: React.FC = () => {
                           </Alert>
                         ));
                     })()}
+                  </Box>
+                )}
+
+                {tabValue === "speakers" && (
+                  <Box sx={{ mt: 2 }}>
+                    <SpeakerInsightsTab
+                      speakers={
+                        (transcript.metadata as { speakers?: SpeakerInsight[] } | null | undefined)
+                          ?.speakers ?? []
+                      }
+                      principalSpeakerLabel={
+                        (
+                          transcript.metadata as
+                            | { principalSpeaker?: string }
+                            | null
+                            | undefined
+                        )?.principalSpeaker ?? null
+                      }
+                    />
                   </Box>
                 )}
 

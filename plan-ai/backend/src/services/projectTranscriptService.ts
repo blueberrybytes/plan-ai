@@ -39,6 +39,7 @@ import type {
   PostMeetingTaskKind,
   PostMeetingTaskStatus,
   PostMeetingTasksRecord,
+  SpeakerInsight,
 } from "./transcriptMetadataTypes";
 import type {
   JiraIntegrationMetadata,
@@ -556,22 +557,33 @@ export class ProjectTranscriptService {
       });
     }
 
-    // PHASE 2: Heavy Task Extraction
-    const analysisRaw = await this.analyzeTranscript(
-      input.userId,
-      input.workspaceId,
-      processedContent,
-      input.contextPrompt ?? "",
-      input.contextIds,
-      input.persona ?? undefined,
-      input.objective ?? undefined,
-      input.complexityLevel ?? undefined,
-      input.modelKey ?? undefined,
-      input.taskStrategy ?? undefined,
-      input.taskCount ?? undefined,
-      input.agenticInvestigation ?? true,
-      transcriptId,
-    );
+    // PHASE 2: Heavy Task Extraction + Speaker Insights (in parallel).
+    // Both reads from the same transcript, both ~30s LLM calls — racing them
+    // shaves the worst-case latency in half.
+    const [analysisRaw, speakerInsights] = await Promise.all([
+      this.analyzeTranscript(
+        input.userId,
+        input.workspaceId,
+        processedContent,
+        input.contextPrompt ?? "",
+        input.contextIds,
+        input.persona ?? undefined,
+        input.objective ?? undefined,
+        input.complexityLevel ?? undefined,
+        input.modelKey ?? undefined,
+        input.taskStrategy ?? undefined,
+        input.taskCount ?? undefined,
+        input.agenticInvestigation ?? true,
+        transcriptId,
+      ),
+      this.extractSpeakerInsights(
+        input.workspaceId,
+        utterancesJson ?? [],
+        processedContent,
+        principalSpeaker,
+        input.modelKey ?? undefined,
+      ),
+    ]);
 
     const result = await prisma.$transaction(async (tx) => {
       const currentMetadata = (existing.metadata as Record<string, unknown>) || {};
@@ -599,6 +611,9 @@ export class ProjectTranscriptService {
         keyPoints: analysisRaw.keyPoints,
         sentimentExplanation: analysisRaw.sentimentExplanation,
         principalSpeaker,
+        // Speakers tab fuel — empty array when there are no diarized
+        // utterances (text-only transcripts).
+        speakers: speakerInsights,
         aiGraphTrace: {
           nodes: transcriptGraphNodes,
           links: transcriptGraphLinks,
@@ -1201,6 +1216,161 @@ ${content}`;
         language: "unknown",
         tasks: [],
       } satisfies TranscriptAnalysis;
+    }
+  }
+
+  /**
+   * Ask the LLM to attribute each diarized speaker to a real name, role, and
+   * personality summary. Falls back to "Speaker N" when no name can be
+   * confidently inferred. Compute speaking-time + utterance-count from the
+   * raw utterance list (deterministic, not from the LLM).
+   *
+   * Returns [] if utterances is empty (text-only transcripts can't be
+   * diarized, so nothing to insight on).
+   */
+  public async extractSpeakerInsights(
+    workspaceId: string,
+    utterances: Utterance[],
+    fullTranscript: string,
+    principalSpeakerLabel: string | undefined,
+    modelKey?: string,
+  ): Promise<SpeakerInsight[]> {
+    if (!utterances || utterances.length === 0) return [];
+
+    // Compute deterministic stats per speaker first (don't trust the LLM with
+    // numbers it could easily get wrong).
+    const stats = new Map<string, { seconds: number; count: number }>();
+    for (const u of utterances) {
+      const cur = stats.get(u.speaker) ?? { seconds: 0, count: 0 };
+      cur.seconds += Math.max(0, (u.end ?? 0) - (u.start ?? 0));
+      cur.count += 1;
+      stats.set(u.speaker, cur);
+    }
+    const speakerLabels = Array.from(stats.keys());
+
+    // Build a compact transcript view the LLM can scan for name cues. We cap
+    // each utterance to 280 chars and the whole prompt to ~25k so big
+    // meetings still fit.
+    const MAX_PROMPT_CHARS = 25000;
+    let transcriptForLLM = "";
+    for (const u of utterances) {
+      const snippet = (u.transcript ?? "").trim().slice(0, 280);
+      const line = `${u.speaker}: ${snippet}\n`;
+      if (transcriptForLLM.length + line.length > MAX_PROMPT_CHARS) break;
+      transcriptForLLM += line;
+    }
+
+    const SpeakerSchema = z.object({
+      label: z
+        .string()
+        .describe(
+          "EXACT Deepgram label as it appears in the transcript (e.g. 'Speaker 0', 'User 0'). Do not invent.",
+        ),
+      identifiedName: z
+        .string()
+        .nullable()
+        .describe(
+          "Real name inferred from greetings ('Hi Sarah'), introductions, signatures. Null if unsure — DO NOT GUESS.",
+        ),
+      role: z
+        .string()
+        .nullable()
+        .optional()
+        .describe(
+          "Role / title / function inferred from context ('Engineer', 'Product Manager', 'Client'). Null if not inferable.",
+        ),
+      summary: z
+        .string()
+        .describe("One sentence: what this person contributed / their main thread in the meeting."),
+      keyQuotes: z
+        .array(z.string())
+        .max(3)
+        .optional()
+        .describe("Up to 3 verbatim short quotes that best represent this speaker. Optional."),
+      sentiment: z
+        .enum(["POSITIVE", "NEUTRAL", "NEGATIVE", "MIXED"])
+        .optional()
+        .describe("Emotional tone of this speaker through the meeting."),
+    });
+
+    const SpeakersResponseSchema = z.object({
+      speakers: z.array(SpeakerSchema),
+    });
+
+    const prompt = `You are analyzing a diarized meeting transcript. The audio model labeled speakers as "${speakerLabels.join('", "')}" (these are anonymous labels).
+
+Your job: for EACH label, infer the real person's name (only if mentioned in the conversation), their role, a one-sentence summary of their contribution, up to 3 representative quotes, and an overall sentiment.
+
+CRITICAL RULES:
+1. Use the EXACT label string in your output — don't rename "Speaker 0" → "Speaker 1".
+2. Only set identifiedName when you're confident (someone says "Hi <name>", "<name> mentioned…", they introduce themselves, etc.). Otherwise set null.
+3. Don't invent quotes — paste verbatim from the transcript.
+4. Don't invent names that aren't in the transcript.
+5. Output exactly one entry per label, even if the speaker barely talked.
+
+TRANSCRIPT (label-prefixed):
+${transcriptForLLM}`;
+
+    try {
+      const model = await getWorkspaceModel(workspaceId, modelKey || DEFAULT_AI_MODEL);
+      const { object, usage } = await generateObject({
+        model,
+        providerOptions: getFallbackProviderOptions(modelKey || DEFAULT_AI_MODEL),
+        schema: SpeakersResponseSchema,
+        temperature: 0.1,
+        prompt,
+      });
+
+      if (usage) {
+        aiUsageService
+          .logUsage({
+            userId: "system",
+            workspaceId,
+            feature: "TASK_EXTRACTION",
+            provider: "openrouter",
+            model: modelKey || DEFAULT_AI_MODEL,
+            inputTokens: usage.inputTokens || 0,
+            outputTokens: usage.outputTokens || 0,
+          })
+          .catch(() => {});
+      }
+
+      // Merge LLM output with deterministic stats. Make sure every label
+      // appears even if the LLM dropped one.
+      const byLabel = new Map<string, z.infer<typeof SpeakerSchema>>();
+      for (const s of object.speakers) byLabel.set(s.label, s);
+
+      return speakerLabels.map((label) => {
+        const ai = byLabel.get(label);
+        const { seconds, count } = stats.get(label) ?? { seconds: 0, count: 0 };
+        return {
+          label,
+          identifiedName: ai?.identifiedName ?? null,
+          role: ai?.role ?? null,
+          isPrincipalSpeaker: principalSpeakerLabel === label,
+          summary: ai?.summary ?? "",
+          keyQuotes: ai?.keyQuotes ?? [],
+          sentiment: ai?.sentiment,
+          speakingTimeSeconds: Math.round(seconds),
+          utteranceCount: count,
+        } satisfies SpeakerInsight;
+      });
+    } catch (err) {
+      logger.warn("extractSpeakerInsights failed — falling back to label-only", err);
+      // Hard fallback: deterministic stats only.
+      return speakerLabels.map((label) => {
+        const { seconds, count } = stats.get(label) ?? { seconds: 0, count: 0 };
+        return {
+          label,
+          identifiedName: null,
+          role: null,
+          isPrincipalSpeaker: principalSpeakerLabel === label,
+          summary: "",
+          keyQuotes: [],
+          speakingTimeSeconds: Math.round(seconds),
+          utteranceCount: count,
+        } satisfies SpeakerInsight;
+      });
     }
   }
 
