@@ -44,19 +44,44 @@ const PLACEHOLDER_DOC_TITLES = new Set([
 
 export class DocGenerationService {
   /**
-   * Pull a human-readable title from the first markdown heading of the
-   * generated content. Returns null if nothing usable is found.
+   * Pull a human-readable title from the generated content. Prefers the
+   * first H1, then any heading, then falls back to the first non-empty
+   * sentence so we never leave the doc with the "Generating..." placeholder.
    */
   private deriveTitleFromContent(content: string): string | null {
     if (!content) return null;
-    // Match the first ATX-style heading (#, ##, ###, …). Stops at the newline.
-    const match = content.match(/^\s*#{1,6}\s+(.+?)\s*$/m);
-    if (!match) return null;
-    const cleaned = match[1]
-      .replace(/[*_`]/g, "") // strip basic markdown emphasis
-      .trim();
-    if (!cleaned) return null;
-    return cleaned.slice(0, 200);
+    const stripFormatting = (s: string) =>
+      s
+        .replace(/[*_`]/g, "") // basic markdown emphasis
+        .replace(/\s+/g, " ")
+        .trim();
+
+    // 1) Prefer H1 (single #) since the prompt now requires the doc to start with one.
+    const h1 = content.match(/^\s*#\s+(.+?)\s*$/m);
+    if (h1) {
+      const cleaned = stripFormatting(h1[1]);
+      if (cleaned) return cleaned.slice(0, 200);
+    }
+
+    // 2) Fall back to any heading level.
+    const anyHeading = content.match(/^\s*#{1,6}\s+(.+?)\s*$/m);
+    if (anyHeading) {
+      const cleaned = stripFormatting(anyHeading[1]);
+      if (cleaned) return cleaned.slice(0, 200);
+    }
+
+    // 3) Last-resort: first non-empty line that looks like prose.
+    for (const rawLine of content.split(/\r?\n/)) {
+      const line = stripFormatting(rawLine);
+      if (!line) continue;
+      if (line.startsWith("```")) continue;
+      // Take up to the first sentence end (or 80 chars) so the title stays short.
+      const sentenceEnd = line.search(/[.!?]\s/);
+      const candidate = sentenceEnd > 0 ? line.slice(0, sentenceEnd) : line.slice(0, 80);
+      if (candidate.length >= 3) return candidate.slice(0, 200);
+    }
+
+    return null;
   }
 
   public async startGeneration(
@@ -203,27 +228,44 @@ export class DocGenerationService {
     }
 
     // Replace placeholder titles ("Generating Transcript...", "AI Generated
-     // Document", etc) with the actual title from the generated content. Users
-     // who picked a real title themselves are preserved.
+    // Document", etc) with the actual title from the generated content. Users
+    // who picked a real title themselves are preserved.
     const currentDoc = await prisma.docDocument.findUnique({
       where: { id: docId },
       select: { title: true },
     });
-    const derivedTitle = this.deriveTitleFromContent(fullContent);
-    const shouldUpdateTitle = Boolean(
-      derivedTitle &&
-        currentDoc &&
-        (!currentDoc.title || PLACEHOLDER_DOC_TITLES.has(currentDoc.title)),
+    const currentTitleIsPlaceholder = Boolean(
+      currentDoc && (!currentDoc.title || PLACEHOLDER_DOC_TITLES.has(currentDoc.title)),
     );
+    const derivedTitle = this.deriveTitleFromContent(fullContent);
+
+    // Deterministic safety net: if the LLM ignored the H1 instruction AND we
+    // couldn't extract anything from prose, fall back to a date-stamped name
+    // so the UI never ships with the "Generating..." placeholder.
+    const fallbackTitle = `Document — ${new Date().toLocaleDateString(undefined, {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    })}`;
+
+    const nextTitle = currentTitleIsPlaceholder
+      ? derivedTitle || fallbackTitle
+      : null;
 
     await prisma.docDocument.update({
       where: { id: docId },
       data: {
         content: fullContent,
         status: "DRAFT",
-        ...(shouldUpdateTitle && derivedTitle ? { title: derivedTitle } : {}),
+        ...(nextTitle ? { title: nextTitle } : {}),
       },
     });
+
+    if (currentTitleIsPlaceholder && !derivedTitle) {
+      logger.warn(
+        `Doc ${docId}: AI output had no heading or prose to derive a title; using fallback "${fallbackTitle}".`,
+      );
+    }
 
     try {
       const usageData = await totalUsage;
@@ -301,7 +343,12 @@ If you return the exact same broken code without quotes around parentheses and a
     return `You are an expert document writer. Generate a well-structured, highly corporate, formal, and professional document in **rich Markdown format**.
 ${personaInstructions}
 
-Use appropriate headings (# ## ###), bold, italic, bullet lists, numbered lists, tables, and blockquotes where suitable.
+CRITICAL OUTPUT FORMAT:
+- The VERY FIRST non-empty line MUST be a single H1 heading naming the document, e.g. \`# Quarterly Roadmap Sync\`.
+- This H1 is used as the document's title in the UI — never omit it, never use a placeholder like "Untitled" or "Generating...".
+- After the H1, use H2/H3 (\`##\`, \`###\`) for sections.
+
+Use bold, italic, bullet lists, numbered lists, tables, and blockquotes where suitable.
 If explaining an architecture, workflow, data hierarchy, or multi-step process, you MUST include a \`\`\`mermaid block.
 When writing Mermaid code:
 - Node IDs must be strictly alphanumeric (no dots, no slashes).
@@ -309,7 +356,7 @@ When writing Mermaid code:
 - Ensure every \`subgraph\` is properly closed with an \`end\` keyword.
 If the user's prompt implies generating tasks, action items, or a checklist, you MUST format each task with a Markdown checkbox (e.g., \`- [ ] Task description\`).
 Make the document comprehensive, well-organized, and ready to share.
-Do NOT include any preamble like "Here is your document" — start directly with the content.
+Do NOT include any preamble like "Here is your document" — start directly with the H1 title.
 
 ${contextSection}
 ${transcriptSection}

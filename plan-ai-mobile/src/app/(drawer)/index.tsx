@@ -428,8 +428,7 @@ export default function DashboardScreen() {
           {(("project" in item && item.project?.title) ||
             duration ||
             speakers ||
-            item.sentiment ||
-            ("contexts" in item && (item.contexts?.length ?? 0) > 0)) &&
+            item.sentiment) &&
             summarySnippet !== "Processing summary..." &&
             summarySnippet !== "AI processing failed." && (
               <View
@@ -456,30 +455,6 @@ export default function DashboardScreen() {
                     </Text>
                   </View>
                 )}
-                {"contexts" in item &&
-                  (item.contexts ?? []).map((ctx) => (
-                    <View
-                      key={ctx.id}
-                      style={{
-                        paddingHorizontal: 8,
-                        paddingVertical: 4,
-                        borderRadius: 12,
-                        borderWidth: 1,
-                        borderColor: ctx.color || theme.colors.outline,
-                        backgroundColor: "transparent",
-                      }}
-                    >
-                      <Text
-                        variant="labelSmall"
-                        style={{
-                          color: ctx.color || theme.colors.onSurfaceVariant,
-                          fontWeight: "500",
-                        }}
-                      >
-                        🔖 {ctx.name}
-                      </Text>
-                    </View>
-                  ))}
                 {duration && (
                   <View
                     style={{

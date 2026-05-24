@@ -1100,6 +1100,7 @@ const TranscriptView: React.FC = () => {
                     <Box sx={{ mt: 4 }}>
                       <ReactJson
                         src={transcript.metadata ?? {}}
+                        theme="monokai"
                         collapsed={2}
                         displayDataTypes={false}
                         enableClipboard={false}

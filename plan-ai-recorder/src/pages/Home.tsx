@@ -521,23 +521,6 @@ const Home: React.FC = () => {
                                   📁 {t.project.title}
                                 </Typography>
                               )}
-                              {(t.contexts ?? []).map((ctx) => (
-                                <Typography
-                                  key={ctx.id}
-                                  variant="caption"
-                                  sx={{
-                                    border: `1px solid ${ctx.color || 'rgba(255,255,255,0.3)'}`,
-                                    px: 0.5,
-                                    py: 0.2,
-                                    borderRadius: 1,
-                                    fontSize: '0.65rem',
-                                    color: ctx.color || 'text.secondary',
-                                    fontWeight: 500,
-                                  }}
-                                >
-                                  🔖 {ctx.name}
-                                </Typography>
-                              ))}
                               {t.durationSeconds && (
                                 <Typography variant="caption" sx={{ border: '1px solid rgba(255,255,255,0.2)', px: 0.5, py: 0.2, borderRadius: 1, fontSize: '0.65rem', color: "text.secondary" }}>
                                   ⏱️ {Math.floor(t.durationSeconds / 60)}m {t.durationSeconds % 60}s

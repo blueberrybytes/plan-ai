@@ -699,6 +699,7 @@ const ProjectTranscriptDetail: React.FC = () => {
                       >
                         <ReactJson
                           src={(transcript.metadata as Record<string, unknown>) || {}}
+                          theme="monokai"
                           collapsed={2}
                           displayDataTypes={false}
                           enableClipboard={false}

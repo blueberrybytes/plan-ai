@@ -798,9 +798,22 @@ export class ProjectTranscriptService {
     // Auto-Generate Document
     if (input.createDoc) {
       void this.setPostMeetingTaskStatus(result.transcript.id, "doc", { status: "PENDING" });
+      // Seed the doc with the best available title. The transcript title may
+      // still be the "Generating Transcript..." placeholder if the AI summary
+      // step couldn't derive one — in that case fall back to the summary
+      // snippet so the doc doesn't inherit the placeholder.
+      const transcriptTitle = result.transcript.title?.trim();
+      const isPlaceholderTitle =
+        !transcriptTitle || transcriptTitle === "Generating Transcript...";
+      const summarySnippet = analysisRaw?.summary?.trim().slice(0, 80);
+      const seedTitle = !isPlaceholderTitle
+        ? transcriptTitle
+        : summarySnippet && summarySnippet.length > 3
+          ? summarySnippet
+          : "Meeting Document";
       docGenerationService
         .startGeneration(input.userId, input.workspaceId, {
-          title: result.transcript.title || "Meeting Document",
+          title: seedTitle,
           prompt: `Generate a comprehensive meeting document based on the following transcript summary and extracted tasks. Ensure the language and style are highly corporate, formal, and professional.`,
           transcriptIds: [result.transcript.id],
           contextIds: input.contextIds,
