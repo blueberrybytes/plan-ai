@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Box, useTheme } from "@mui/material";
 
 /**
@@ -29,6 +29,42 @@ const SlideFrame: React.FC<SlideFrameProps> = ({ children, brandColors, fonts, s
   const primary = brandColors?.primary || "#6366f1";
   const secondary = brandColors?.secondary || "#a78bfa";
   const bgStyle = brandColors?.backgroundStyle || "solid";
+
+  const [proxiedLogoUri, setProxiedLogoUri] = useState<string | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    if (!brandColors?.logoUrl) {
+      setProxiedLogoUri(null);
+      return;
+    }
+
+    if (brandColors.logoUrl.startsWith("http")) {
+      const fetchLogo = async () => {
+        try {
+          const backendUrl = process.env.REACT_APP_API_BACKEND_URL || "";
+          const res = await fetch(
+            `${backendUrl}/api/proxy/image?url=${encodeURIComponent(brandColors?.logoUrl || "")}`,
+          );
+          if (!res.ok) throw new Error("Proxy failed");
+          const data = await res.json();
+          if (isMounted) {
+            setProxiedLogoUri(`data:${data.mimeType};base64,${data.base64}`);
+          }
+        } catch (e) {
+          console.warn("Failed to load brand logo through proxy, falling back to direct", e);
+          if (isMounted) setProxiedLogoUri(brandColors.logoUrl || null);
+        }
+      };
+      fetchLogo();
+    } else {
+      setProxiedLogoUri(brandColors.logoUrl);
+    }
+
+    return () => {
+      isMounted = false;
+    };
+  }, [brandColors?.logoUrl]);
 
   let backgroundImage = "none";
   if (bgStyle === "gradient") {
@@ -89,10 +125,10 @@ const SlideFrame: React.FC<SlideFrameProps> = ({ children, brandColors, fonts, s
           position: "relative",
         }}
       >
-        {brandColors?.logoUrl && (
+        {proxiedLogoUri && (
           <Box
             component="img"
-            src={brandColors.logoUrl}
+            src={proxiedLogoUri}
             alt="Brand Logo"
             sx={{
               position: "absolute",
