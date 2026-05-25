@@ -119,14 +119,25 @@ export const exportToPptx = async (options: ExportOptions) => {
 
   if (options.theme.logoUrl) {
     const proxiedLogo = await fetchProxiedImage(options.theme.logoUrl);
-    objectsArray.push({
-      image: {
-        x: 8.2, // ~bottom/right aligned based on 10x5.625 standard 16:9 layout
-        y: 0.3, // top edge
-        sizing: { type: "contain", w: 1.5, h: 0.6 },
-        ...(proxiedLogo ? { data: proxiedLogo } : { path: options.theme.logoUrl }),
-      },
-    });
+    if (proxiedLogo) {
+      objectsArray.push({
+        image: {
+          x: 8.2,
+          y: 0.3,
+          sizing: { type: "contain", w: 1.5, h: 0.6 },
+          data: proxiedLogo,
+        },
+      });
+    } else if (!options.theme.logoUrl.startsWith("http")) {
+      objectsArray.push({
+        image: {
+          x: 8.2,
+          y: 0.3,
+          sizing: { type: "contain", w: 1.5, h: 0.6 },
+          path: options.theme.logoUrl,
+        },
+      });
+    }
   }
 
   const masterProps: PptxGenJS.SlideMasterProps = {
@@ -156,7 +167,7 @@ export const exportToPptx = async (options: ExportOptions) => {
               y: 0.8,
               sizing: { type: "contain", w: 2, h: 1 },
             });
-          } else {
+          } else if (!options.theme.logoUrl.startsWith("http")) {
             slidePage.addImage({
               path: options.theme.logoUrl,
               x: 4.0,
