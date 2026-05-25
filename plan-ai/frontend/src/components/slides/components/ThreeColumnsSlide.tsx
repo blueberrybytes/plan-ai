@@ -29,7 +29,7 @@ export const ThreeColumnsSlide: React.FC<SlideProps> = ({
 
   return (
     <SlideFrame brandColors={brandColors} fonts={fonts} scale={scale}>
-      <Box sx={{ textAlign: "center", mb: 6 }}>
+      <Box sx={{ textAlign: "center", mb: 3 }}>
         <SlideBadge text={data.badge as string} primary={primary} animate={animate} />
         <AnimatedText
           animate={animate}
@@ -60,26 +60,26 @@ export const ThreeColumnsSlide: React.FC<SlideProps> = ({
         ) : null}
       </Box>
 
-      <Box sx={{ display: "flex", gap: 4, px: 2, pb: 4 }}>
+      <Box sx={{ display: "flex", gap: 3, px: 1 }}>
         {columns.map((col, i) => (
           <Box key={i} sx={{ flex: 1, textAlign: "center" }}>
             <Box
               sx={{
                 display: "inline-flex",
-                p: 2,
+                p: 1.5,
                 borderRadius: "50%",
                 bgcolor: `${primary}15`,
-                mb: 3,
+                mb: 2,
               }}
             >
               <DynamicIcon name={col.iconName} sx={{ fontSize: 36, color: primary }} />
             </Box>
-            <Typography sx={{ fontSize: 20, fontWeight: 700, color: "inherit", mb: 1.5 }}>
+            <Typography sx={{ fontSize: 18, fontWeight: 700, color: "inherit", mb: 1 }}>
               {String(col.title)}
             </Typography>
             <Typography
               sx={{
-                fontSize: 15,
+                fontSize: 14,
                 color: "inherit",
                 opacity: 0.85,
                 lineHeight: 1.6,

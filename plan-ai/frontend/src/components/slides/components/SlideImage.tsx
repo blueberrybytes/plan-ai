@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Box, Typography } from "@mui/material";
 import ImageIcon from "@mui/icons-material/Image";
 
@@ -12,6 +12,42 @@ export interface SlideImageProps {
 
 const SlideImage: React.FC<SlideImageProps> = ({ src, alt, query, primary = "#6366f1", style }) => {
   const [status, setStatus] = useState<"loading" | "loaded" | "error">("loading");
+  const [dataUri, setDataUri] = useState<string>("");
+
+  useEffect(() => {
+    let isMounted = true;
+    
+    const loadImage = async () => {
+      setStatus("loading");
+      if (!src) {
+        setStatus("error");
+        return;
+      }
+
+      if (src.startsWith("http")) {
+        try {
+          const backendUrl = process.env.REACT_APP_API_BACKEND_URL || "";
+          const res = await fetch(`${backendUrl}/api/proxy/image?url=${encodeURIComponent(src)}`);
+          if (!res.ok) throw new Error("Proxy failed");
+          const data = await res.json();
+          if (isMounted) {
+            setDataUri(`data:${data.mimeType};base64,${data.base64}`);
+          }
+        } catch (e) {
+          console.warn("Failed to load image through proxy, falling back to direct", e);
+          if (isMounted) setDataUri(src);
+        }
+      } else {
+        setDataUri(src);
+      }
+    };
+
+    loadImage();
+    
+    return () => {
+      isMounted = false;
+    };
+  }, [src]);
 
   return (
     <Box sx={{ position: "relative", width: "100%", height: "100%" }}>
@@ -49,17 +85,19 @@ const SlideImage: React.FC<SlideImageProps> = ({ src, alt, query, primary = "#63
         </Box>
       )}
       {/* Actual image */}
-      <img
-        src={src}
-        alt={alt}
-        onLoad={() => setStatus("loaded")}
-        onError={() => setStatus("error")}
-        style={{
-          ...style,
-          opacity: status === "loaded" ? 1 : 0,
-          transition: "opacity 0.4s ease",
-        }}
-      />
+      {dataUri && (
+        <img
+          src={dataUri}
+          alt={alt}
+          onLoad={() => setStatus("loaded")}
+          onError={() => setStatus("error")}
+          style={{
+            ...style,
+            opacity: status === "loaded" ? 1 : 0,
+            transition: "opacity 0.4s ease",
+          }}
+        />
+      )}
     </Box>
   );
 };

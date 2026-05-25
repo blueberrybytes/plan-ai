@@ -14,34 +14,46 @@ export const TextImageSlide: React.FC<SlideProps> = ({
   animate,
 }) => {
   const primary = brandColors?.primary || "#6366f1";
+  
+  const titleStr = String(data.title || "");
+  const bodyStr = String(data.body || "");
+  const effectiveLength = titleStr.length + bodyStr.length;
+  
+  const isVeryLong = effectiveLength > 500;
+  const isLong = effectiveLength > 300;
+
+  const titleSize = isVeryLong ? 24 : isLong ? 28 : 32;
+  const bodySize = isVeryLong ? 13 : isLong ? 15 : 16;
+  const lineH = isVeryLong ? 1.5 : 1.7;
+
   return (
     <SlideFrame brandColors={brandColors} fonts={fonts} scale={scale}>
       <Box sx={{ display: "flex", gap: 5, alignItems: "center", height: "100%" }}>
-        <Box sx={{ flex: 1 }}>
+        <Box sx={{ flex: 1, maxHeight: "100%", overflow: "hidden" }}>
           <SlideBadge text={data.badge as string} primary={primary} animate={animate} />
           <AnimatedText
             animate={animate}
             sx={{
-              fontSize: 32,
+              fontSize: titleSize,
               fontWeight: 700,
               mb: 2,
               color: primary,
               fontFamily: `'${fonts?.heading || "Inter"}', sans-serif`,
             }}
           >
-            {data.title as string}
+            {titleStr}
           </AnimatedText>
           <AnimatedText
             animate={animate}
             sx={{
-              fontSize: 16,
-              lineHeight: 1.7,
+              fontSize: bodySize,
+              lineHeight: lineH,
               color: "inherit",
               whiteSpace: "pre-wrap",
               opacity: 0.85,
             }}
           >
-            {data.body as string}
+            {bodyStr}
           </AnimatedText>
         </Box>
         <Box

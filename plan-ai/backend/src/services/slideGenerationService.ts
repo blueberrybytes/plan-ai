@@ -243,7 +243,8 @@ Slide Intent: "${slideOutline.intent}"
 Template Brand Context: "${template?.name || "Standard Core Blueprint"}"
 ${contextText ? `Source Context:\n${contextText}` : ""}
 
-Provide ONLY the required JSON parameters for this slide type matching the schema exactly. Keep text concise.`;
+Provide ONLY the required JSON parameters for this slide type matching the schema exactly.
+CRITICAL PRESENTATION RULE: Slides must be easily readable. Do NOT write long paragraphs. Keep text extremely concise. Summarize lengthy text into short, punchy bullet points where possible.`;
 
         let parameters = {};
         for (let attempt = 1; attempt <= 2; attempt++) {
@@ -444,7 +445,8 @@ Slide Intent: "${slideIntent}"
 Template Brand Context: "${presentation.template?.name || "Standard Core Blueprint"}"
 ${contextText ? `Source Context:\n${contextText}` : ""}
 
-Provide ONLY the required JSON parameters for this slide type matching the schema exactly. Keep text concise.`;
+Provide ONLY the required JSON parameters for this slide type matching the schema exactly.
+CRITICAL PRESENTATION RULE: Slides must be easily readable. Do NOT write long paragraphs. Keep text extremely concise. Summarize lengthy text into short, punchy bullet points where possible.`;
 
     let parameters = {};
     for (let attempt = 1; attempt <= 2; attempt++) {

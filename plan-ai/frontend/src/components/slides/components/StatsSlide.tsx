@@ -87,9 +87,7 @@ export const StatsSlide: React.FC<SlideProps> = ({
               sx={{
                 fontSize: stat.value.length > 8 ? 32 : 48, // scale down long values like "~19.7M Tokens"
                 fontWeight: 800,
-                background: `linear-gradient(135deg, ${primary}, ${secondary})`,
-                WebkitBackgroundClip: "text",
-                WebkitTextFillColor: "transparent",
+                color: primary,
                 mb: 1,
                 lineHeight: 1.1,
                 wordBreak: "break-word",

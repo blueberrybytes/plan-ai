@@ -1,5 +1,6 @@
 import { Controller, Get, Route, Tags, Query } from "tsoa";
 import axios from "axios";
+import { logger } from "../utils/logger";
 
 export interface ProxyImageResponse {
   mimeType: string;
@@ -20,13 +21,27 @@ export class ProxyController extends Controller {
       throw new Error("Invalid URL. Must be an HTTP(s) resource.");
     }
 
-    // Security restriction: only proxy Google Storage and Firebase Storage URLs to prevent SSRF
-    if (
-      !url.includes("storage.googleapis.com") &&
-      !url.includes("firebasestorage.googleapis.com")
-    ) {
-      this.setStatus(403);
-      throw new Error("Proxy access strictly limited to trusted Firebase/GCS bucket domains.");
+    // Basic SSRF protection: deny internal/local IPs and localhost
+    try {
+      const parsedUrl = new URL(url);
+      const hostname = parsedUrl.hostname.toLowerCase();
+      if (
+        hostname === "localhost" ||
+        hostname.startsWith("127.") ||
+        hostname.startsWith("10.") ||
+        hostname.startsWith("192.168.") ||
+        hostname.endsWith(".local")
+      ) {
+        this.setStatus(403);
+        throw new Error("Proxy access to local or internal networks is forbidden.");
+      }
+    } catch (e) {
+      logger.error(
+        "[ProxyController] Invalid URL format",
+        e instanceof Error ? e.message : String(e),
+      );
+      this.setStatus(400);
+      throw new Error("Invalid URL format.");
     }
 
     try {
