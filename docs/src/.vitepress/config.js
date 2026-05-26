@@ -54,7 +54,14 @@ export default withMermaid(defineConfig({
         items: [
           { text: 'Environment Variables', link: '/self-hosting/environment-variables' },
           { text: 'Docker Deployment', link: '/self-hosting/docker-deployment' },
-          { text: 'Database Migrations', link: '/self-hosting/database-migrations' }
+          { text: 'Database Migrations', link: '/self-hosting/database-migrations' },
+          { text: 'Stripe Billing (optional)', link: '/self-hosting/stripe-billing' }
+        ]
+      },
+      {
+        text: 'About',
+        items: [
+          { text: 'License (BSL 1.1)', link: '/about/license' }
         ]
       }
     ],

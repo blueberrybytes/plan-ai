@@ -12,6 +12,10 @@ import { logger } from "../utils/logger";
 import { authenticateUser, AuthenticatedRequest } from "../middleware/authMiddleware";
 import { aiUsageService } from "../services/aiUsageService";
 import prisma from "../prisma/prismaClient";
+import {
+  requireActiveSubscription,
+  SubscriptionRequiredError,
+} from "../services/subscriptionGuard";
 
 const router = Router();
 
@@ -24,6 +28,22 @@ router.post("/api/gitnexus/chat", authenticateUser, async (req: AuthenticatedReq
   if (process.env.USE_GITNEXUS !== "true") {
     res.status(503).json({ error: "GitNexus is not enabled on this server." });
     return;
+  }
+
+  const workspaceHeader = req.headers["x-workspace-id"];
+  const wsId = Array.isArray(workspaceHeader) ? workspaceHeader[0] : workspaceHeader;
+  if (wsId) {
+    try {
+      await requireActiveSubscription(wsId);
+    } catch (err) {
+      if (err instanceof SubscriptionRequiredError) {
+        res
+          .status(err.status)
+          .json({ code: err.code, message: err.message, reason: err.reason });
+        return;
+      }
+      throw err;
+    }
   }
 
   // Extract which repo to scope tool calls to (sent by GitNexusChatDialog)

@@ -43,6 +43,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Project, Context } from "@/services/planAiApi";
 import * as Location from "expo-location";
 import * as Sentry from "@sentry/react-native";
+import { SubscriptionBanner } from "@/components/SubscriptionBanner";
 
 // Using global object so it survives React Native Fast Refresh (HMR) without dropping native locks
 const g = global as any;
@@ -1454,6 +1455,7 @@ export default function RecordScreen() {
     <View
       style={[styles.container, { backgroundColor: theme.colors.background }]}
     >
+      <SubscriptionBanner />
       <View style={styles.header}>
         <Text
           variant="headlineMedium"

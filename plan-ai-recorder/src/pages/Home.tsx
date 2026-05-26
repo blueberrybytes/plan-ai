@@ -151,14 +151,18 @@ const Home: React.FC = () => {
     return () => window.removeEventListener("focus", handleFocus);
   }, [loadProjects, fetchData]);
 
-  // Poll for updates if any transcript is pending/generating
+  // Poll for updates if any transcript is still being processed.
+  // Relies solely on `processingStatus` — never on the title text, which
+  // can legitimately contain "Generating" even after processing completes.
   useEffect(() => {
-    const hasPending = transcripts.some(
-      (t) =>
-        t.metadata?.processingStatus === "PENDING" ||
-        t.metadata?.processingStatus === "EXTRACTING_TASKS" ||
-        t.title?.includes("Generating")
-    );
+    const hasPending = transcripts.some((t) => {
+      const status = t.metadata?.processingStatus;
+      return (
+        status === "PENDING" ||
+        status === "PROCESSING" ||
+        status === "EXTRACTING_TASKS"
+      );
+    });
 
     if (hasPending) {
       console.log("[Home] Pending transcripts found. Polling every 5s...");

@@ -2,7 +2,9 @@ import PptxGenJS from "pptxgenjs";
 
 const fetchProxiedImage = async (url: string): Promise<string> => {
   try {
-    const backendUrl = process.env.REACT_APP_API_BACKEND_URL || "";
+    // Strip trailing slash(es) so we don't end up with a `…com//api/…`
+    // double-slash request that hits the Express 404 catch-all.
+    const backendUrl = (process.env.REACT_APP_API_BACKEND_URL || "").replace(/\/+$/, "");
     const proxyResponse = await fetch(
       `${backendUrl}/api/proxy/image?url=${encodeURIComponent(url)}`,
     );
@@ -1279,13 +1281,20 @@ export const exportToPptx = async (options: ExportOptions) => {
           const cx = rowStartX + col * (statW + gapX);
           const cy = startY + row * (statH + gapY);
 
-          slidePage.addShape(pptx.ShapeType.roundRect, {
+          slidePage.addShape(pptx.ShapeType.rect, {
             x: cx,
             y: cy,
             w: statW,
             h: statH,
-            fill: { color: rootCardBgColor },
-            rectRadius: 0.15,
+            fill: { color: primaryColor.replace("#", ""), transparency: 95 },
+          });
+
+          slidePage.addShape(pptx.ShapeType.rect, {
+            x: cx,
+            y: cy,
+            w: statW,
+            h: 0.08,
+            fill: { color: primaryColor.replace("#", "") },
           });
 
           const valText = String(stat.value || "");
@@ -1301,7 +1310,7 @@ export const exportToPptx = async (options: ExportOptions) => {
             h: 0.6,
             fontFace: safeHeadingFont,
             fontSize: valConf.size,
-            color: secondaryColor.replace("#", ""),
+            color: cardTitleColor,
             bold: true,
             align: "center",
           });
@@ -1319,7 +1328,7 @@ export const exportToPptx = async (options: ExportOptions) => {
             h: 0.4,
             fontFace: safeBodyFont,
             fontSize: lblConf.size,
-            color: cardTitleColor,
+            color: primaryColor.replace("#", ""),
             align: "center",
             bold: true,
           });

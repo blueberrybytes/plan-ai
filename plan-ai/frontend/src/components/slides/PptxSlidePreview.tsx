@@ -928,14 +928,21 @@ const StatsPreview: React.FC<{ params: Params; theme: PptxTheme }> = ({ params, 
         const cy = startY + row * (statH + 0.3);
         return (
           <React.Fragment key={idx}>
-            <PptxBox x={cx} y={cy} w={statW} h={statH} fill={theme.rootCardBgColor} />
+            <PptxBox 
+              x={cx} y={cy} w={statW} h={statH} 
+              fill={`color-mix(in srgb, ${theme.primaryColor} 5%, transparent)`} 
+            />
+            <PptxBox 
+              x={cx} y={cy} w={statW} h={0.08} 
+              fill={theme.primaryColor} 
+            />
             <PptxText
               x={cx}
               y={cy + 0.3}
               w={statW}
               h={0.6}
               text={str(stat.value)}
-              color={theme.primaryColor}
+              color={theme.cardTitleColor}
               fontSize={42}
               bold
               align="center"
@@ -946,9 +953,10 @@ const StatsPreview: React.FC<{ params: Params; theme: PptxTheme }> = ({ params, 
               w={statW}
               h={0.4}
               text={str(stat.label)}
-              color={theme.cardTitleColor}
+              color={theme.primaryColor}
               fontSize={16}
               align="center"
+              bold
             />
           </React.Fragment>
         );

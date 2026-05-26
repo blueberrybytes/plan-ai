@@ -1,6 +1,6 @@
 # Plan AI – From meeting to done, in seconds
 
-[![License: PolyForm Noncommercial 1.0.0](https://img.shields.io/badge/license-PolyForm%20Noncommercial-blue.svg)](LICENSE)
+[![License: BUSL-1.1](https://img.shields.io/badge/license-BUSL--1.1-blue.svg)](LICENSE)
 [![Status](https://img.shields.io/badge/status-alpha-orange.svg)](#roadmap--status)
 [![Made by Blueberrybytes](https://img.shields.io/badge/made%20by-Blueberry%20Bytes-5027FF.svg)](https://www.blueberrybytes.com)
 
@@ -376,7 +376,13 @@ We follow semantic versioning (`vMAJOR.MINOR.PATCH`). See [`docs/RELEASES.md`](d
 
 ## License
 
-Plan AI is released under the [PolyForm Noncommercial License 1.0.0](LICENSE). This allows you to use, modify, and run the software for personal, academic, or non-profit purposes, but strictly prohibits commercial use or monetization. Commercial support, custom enterprise builds, and commercial licensing are available via Blueberrybytes.
+Plan AI is licensed under the [**Business Source License 1.1 (BUSL-1.1)**](LICENSE).
+
+You may **read, fork, modify, self-host, and use** the Licensed Work for internal business, personal, academic, or non-profit purposes. You may **not** use the Licensed Work to provide a competing commercial SaaS or resell it as a packaged product.
+
+On **2030-05-01** the Licensed Work automatically converts to the **GNU Affero General Public License v3.0**.
+
+For commercial licensing, enterprise self-host deals, or custom builds outside the Additional Use Grant, reach out at [hello@blueberrybytes.com](mailto:hello@blueberrybytes.com).
 
 ---
 

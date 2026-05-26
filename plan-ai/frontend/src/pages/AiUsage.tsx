@@ -22,8 +22,11 @@ import {
   Button,
   Breadcrumbs,
   Link as MuiLink,
+  LinearProgress,
 } from "@mui/material";
+import { alpha } from "@mui/material/styles";
 import SyncIcon from "@mui/icons-material/Sync";
+import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import { useTranslation } from "react-i18next";
 import { format } from "date-fns";
 import { useParams, useLocation, NavLink } from "react-router-dom";
@@ -32,7 +35,11 @@ import { useGetUsageMetricsQuery } from "../store/apis/aiUsageApi";
 import { selectUserDb } from "../store/slices/auth/authSelector";
 import { useSelector } from "react-redux";
 import { selectActiveWorkspaceId } from "../store/slices/app/appSelector";
-import { useGetWorkspaceMembersQuery } from "../store/apis/workspaceApi";
+import {
+  useGetMyWorkspacesQuery,
+  useGetWorkspaceMembersQuery,
+} from "../store/apis/workspaceApi";
+import { useGetSubscriptionQuery, useGetUsageLimitsQuery } from "../store/apis/billingApi";
 
 export const AiUsageContent: React.FC<{ hideBreadcrumbs?: boolean }> = ({
   hideBreadcrumbs = false,
@@ -42,9 +49,53 @@ export const AiUsageContent: React.FC<{ hideBreadcrumbs?: boolean }> = ({
   const [appliedFilters, setAppliedFilters] = useState({ feature: "", provider: "", model: "" });
   const userDb = useSelector(selectUserDb);
   const activeWorkspaceId = useSelector(selectActiveWorkspaceId);
-  const isAdmin = userDb?.role === "ADMIN";
+  // `isPlanAiAdmin` = global Plan AI internal admin (support / debugging
+  // across any workspace). Distinct from workspace OWNER/ADMIN which is a
+  // per-workspace role.
+  const isPlanAiAdmin = userDb?.role === "ADMIN";
   const { targetUserId } = useParams<{ targetUserId: string }>();
   const location = useLocation();
+
+  // Pull the active workspace's role + subscription track so we can show
+  // cost details to BYOK admins (the people whose money is at stake) while
+  // hiding cost from Managed users (flat fee — cost is irrelevant noise).
+  const { data: workspaces } = useGetMyWorkspacesQuery();
+  const { data: subscription } = useGetSubscriptionQuery();
+  const activeWorkspace = workspaces?.find((w) => w.id === activeWorkspaceId);
+  const isWorkspaceAdmin =
+    activeWorkspace?.role === "OWNER" || activeWorkspace?.role === "ADMIN";
+  const isByokTrack = subscription?.track === "BYOK";
+  const isManagedTrack = subscription?.track === "MANAGED";
+
+  // Fetch enforced usage limits for managed plans
+  const { data: usageLimits } = useGetUsageLimitsQuery(undefined, {
+    skip: !activeWorkspaceId || !isManagedTrack,
+    pollingInterval: 60000, // refresh every 60s
+  });
+
+  /**
+   * Cost details (estimated $) are shown when:
+   *  - Plan AI internal admin (always — for support purposes), OR
+   *  - Workspace OWNER/ADMIN on a BYOK plan — they pay OpenRouter directly
+   *    so the estimated cost is THEIR bill.
+   *
+   * Hidden for Managed plans (flat €29/seat covers AI cost — exposing $
+   * estimates is misleading noise) and for regular MEMBERs.
+   */
+  const canSeeCost = isPlanAiAdmin || (isWorkspaceAdmin && isByokTrack);
+
+  /**
+   * Provider/Model detail columns are for technical debugging — gated to
+   * Plan AI internal admins + BYOK workspace admins (who care about which
+   * model is bleeding their OpenRouter budget).
+   */
+  const canSeeProviderModel = isPlanAiAdmin || (isWorkspaceAdmin && isByokTrack);
+
+  /**
+   * Input/Output token split is a low-level debugging stat — Plan AI
+   * internal only. Workspace admins don't need it.
+   */
+  const canSeeTokenSplit = isPlanAiAdmin;
 
   const { data: teamData } = useGetWorkspaceMembersQuery(undefined, {
     skip: !activeWorkspaceId || !targetUserId,
@@ -66,13 +117,23 @@ export const AiUsageContent: React.FC<{ hideBreadcrumbs?: boolean }> = ({
       targetUserId,
       workspaceId: activeWorkspaceId || "",
     },
-    { refetchOnFocus: true, pollingInterval: 5000, skip: !activeWorkspaceId },
+    { refetchOnFocus: true, pollingInterval: 30000, skip: !activeWorkspaceId },
   );
 
   const handleApply = () => setAppliedFilters(tempFilters);
   const handleClear = () => {
     setTempFilters({ feature: "", provider: "", model: "" });
     setAppliedFilters({ feature: "", provider: "", model: "" });
+  };
+
+
+  // Column count for empty-row colSpan
+  const getColumnCount = () => {
+    let count = 4; // date, feature, total, usage units
+    if (canSeeProviderModel) count += 2; // provider, model
+    if (canSeeTokenSplit) count += 2; // input, output
+    if (canSeeCost) count += 1; // est. cost
+    return count;
   };
 
   return (
@@ -135,12 +196,22 @@ export const AiUsageContent: React.FC<{ hideBreadcrumbs?: boolean }> = ({
             </IconButton>
           </Box>
         </Tooltip>
+        {isByokTrack && (
+          <Chip label="BYOK" size="small" color="secondary" variant="outlined" />
+        )}
+        {isManagedTrack && (
+          <Chip label="Managed" size="small" color="primary" variant="outlined" />
+        )}
       </Box>
       <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
-        {t(
-          "aiUsage.description",
-          "Monitor your token consumption and generated content volume across platform features.",
-        )}
+        {isByokTrack
+          ? "Monitor your AI spending and token consumption. Costs are charged to your OpenRouter account."
+          : isManagedTrack
+            ? "Monitor your AI usage against your plan allowance. All AI costs are included in your subscription."
+            : t(
+                "aiUsage.description",
+                "Monitor your token consumption and generated content volume across platform features.",
+              )}
       </Typography>
 
       {isLoading && <CircularProgress />}
@@ -150,7 +221,9 @@ export const AiUsageContent: React.FC<{ hideBreadcrumbs?: boolean }> = ({
 
       {data && (
         <>
+          {/* ── Summary Cards ── */}
           <Box sx={{ display: "flex", gap: 3, mb: 4, flexWrap: "wrap" }}>
+            {/* Total Tokens — always visible */}
             <Paper sx={{ p: 3, flex: "1 1 200px", minWidth: 200 }}>
               <Typography variant="subtitle2" color="text.secondary">
                 {t("aiUsage.totalTokens", "Total Tokens")}
@@ -159,25 +232,121 @@ export const AiUsageContent: React.FC<{ hideBreadcrumbs?: boolean }> = ({
                 {data.totalTokens.toLocaleString()}
               </Typography>
             </Paper>
-            {isAdmin && (
+
+            {/* Estimated Cost — BYOK admins + Plan AI admins */}
+            {canSeeCost && (
               <Paper sx={{ p: 3, flex: "1 1 200px", minWidth: 200 }}>
                 <Typography variant="subtitle2" color="text.secondary">
-                  {t("aiUsage.totalCost", "Total Est. Cost")}
+                  Estimated Cost
                 </Typography>
                 <Typography variant="h3" sx={{ mt: 1, color: "success.main" }}>
-                  ${data.totalEstimatedCost?.toFixed(6) || "0.000000"}
+                  ${data.totalEstimatedCost?.toFixed(4) || "0.0000"}
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  Based on OpenRouter model pricing
                 </Typography>
               </Paper>
             )}
+
+            {/* Enforced Usage Limits — Managed plans */}
+            {isManagedTrack && isWorkspaceAdmin && usageLimits && (
+              <Paper sx={{ p: 3, flex: "1 1 100%", minWidth: 280 }}>
+                <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 2 }}>
+                  Plan Limits (this month)
+                </Typography>
+
+                {/* LLM Tokens */}
+                {usageLimits.llm && (
+                  <Box sx={{ mb: 2 }}>
+                    <Box sx={{ display: "flex", justifyContent: "space-between", mb: 0.5 }}>
+                      <Typography variant="body2">AI Tokens</Typography>
+                      <Typography
+                        variant="body2"
+                        sx={{ fontWeight: 600, color: usageLimits.llm.percentage >= 90 ? "error.main" : "text.primary" }}
+                      >
+                        {usageLimits.llm.used.toLocaleString()} / {usageLimits.llm.allowed.toLocaleString()} ({usageLimits.llm.percentage}%)
+                      </Typography>
+                    </Box>
+                    <LinearProgress
+                      variant="determinate"
+                      value={Math.min(usageLimits.llm.percentage, 100)}
+                      color={usageLimits.llm.percentage >= 90 ? "error" : "primary"}
+                      sx={{
+                        height: 8,
+                        borderRadius: 4,
+                        bgcolor: (theme) => alpha(theme.palette.primary.main, 0.1),
+                        "& .MuiLinearProgress-bar": { borderRadius: 4 },
+                      }}
+                    />
+                  </Box>
+                )}
+
+                {/* Recording Hours */}
+                {usageLimits.recording && (
+                  <Box sx={{ mb: 2 }}>
+                    <Box sx={{ display: "flex", justifyContent: "space-between", mb: 0.5 }}>
+                      <Typography variant="body2">Recording Hours</Typography>
+                      <Typography
+                        variant="body2"
+                        sx={{ fontWeight: 600, color: usageLimits.recording.percentage >= 90 ? "error.main" : "text.primary" }}
+                      >
+                        {(usageLimits.recording.used / 60).toFixed(1)} / {(usageLimits.recording.allowed / 60).toFixed(0)} hrs ({usageLimits.recording.percentage}%)
+                      </Typography>
+                    </Box>
+                    <LinearProgress
+                      variant="determinate"
+                      value={Math.min(usageLimits.recording.percentage, 100)}
+                      color={usageLimits.recording.percentage >= 90 ? "error" : "secondary"}
+                      sx={{
+                        height: 8,
+                        borderRadius: 4,
+                        bgcolor: (theme) => alpha(theme.palette.secondary.main, 0.1),
+                        "& .MuiLinearProgress-bar": { borderRadius: 4 },
+                      }}
+                    />
+                  </Box>
+                )}
+
+                {/* Generations */}
+                {usageLimits.generations && (
+                  <Box>
+                    <Box sx={{ display: "flex", justifyContent: "space-between", mb: 0.5 }}>
+                      <Typography variant="body2">Generations (Docs / Slides / Diagrams)</Typography>
+                      <Typography
+                        variant="body2"
+                        sx={{ fontWeight: 600, color: usageLimits.generations.percentage >= 90 ? "error.main" : "text.primary" }}
+                      >
+                        {usageLimits.generations.used} / {usageLimits.generations.allowed} ({usageLimits.generations.percentage}%)
+                      </Typography>
+                    </Box>
+                    <LinearProgress
+                      variant="determinate"
+                      value={Math.min(usageLimits.generations.percentage, 100)}
+                      color={usageLimits.generations.percentage >= 90 ? "error" : "success"}
+                      sx={{
+                        height: 8,
+                        borderRadius: 4,
+                        bgcolor: (theme) => alpha(theme.palette.success.main, 0.1),
+                        "& .MuiLinearProgress-bar": { borderRadius: 4 },
+                      }}
+                    />
+                  </Box>
+                )}
+              </Paper>
+            )}
+
+            {/* Usage Units — always visible */}
             <Paper sx={{ p: 3, flex: "1 1 200px", minWidth: 200 }}>
               <Typography variant="subtitle2" color="text.secondary">
-                {t("aiUsage.totalBlueberryTokens", "Blueberry Tokens")}
+                {isPlanAiAdmin ? "Blueberry Tokens" : "Usage Units"}
               </Typography>
               <Typography variant="h3" sx={{ mt: 1, color: "secondary.main" }}>
                 {data.totalBlueberryTokens?.toLocaleString() || "0"}
               </Typography>
             </Paper>
-            {isAdmin && (
+
+            {/* Input/Output split — Plan AI internal admins only */}
+            {canSeeTokenSplit && (
               <>
                 <Paper sx={{ p: 3, flex: "1 1 200px", minWidth: 200 }}>
                   <Typography variant="subtitle2" color="text.secondary">
@@ -199,6 +368,7 @@ export const AiUsageContent: React.FC<{ hideBreadcrumbs?: boolean }> = ({
             )}
           </Box>
 
+          {/* ── Usage by Feature ── */}
           <Typography variant="h5" gutterBottom sx={{ mt: 4 }}>
             {t("aiUsage.usageByFeature", "Usage by Feature")}
           </Typography>
@@ -214,6 +384,7 @@ export const AiUsageContent: React.FC<{ hideBreadcrumbs?: boolean }> = ({
             ))}
           </Box>
 
+          {/* ── Execution Logs ── */}
           <Box
             sx={{
               display: "flex",
@@ -250,7 +421,7 @@ export const AiUsageContent: React.FC<{ hideBreadcrumbs?: boolean }> = ({
                 </Select>
               </FormControl>
 
-              {isAdmin && (
+              {canSeeProviderModel && (
                 <>
                   <TextField
                     size="small"
@@ -294,20 +465,24 @@ export const AiUsageContent: React.FC<{ hideBreadcrumbs?: boolean }> = ({
                 <TableRow>
                   <TableCell>{t("aiUsage.table.date", "Date")}</TableCell>
                   <TableCell>{t("aiUsage.table.feature", "Feature")}</TableCell>
-                  {isAdmin && (
+                  {canSeeProviderModel && (
                     <>
                       <TableCell>{t("aiUsage.table.provider", "Provider")}</TableCell>
                       <TableCell>{t("aiUsage.table.model", "Model")}</TableCell>
+                    </>
+                  )}
+                  {canSeeTokenSplit && (
+                    <>
                       <TableCell align="right">{t("aiUsage.table.input", "Input")}</TableCell>
                       <TableCell align="right">{t("aiUsage.table.output", "Output")}</TableCell>
                     </>
                   )}
                   <TableCell align="right">{t("aiUsage.table.total", "Total")}</TableCell>
-                  {isAdmin && (
+                  {canSeeCost && (
                     <TableCell align="right">{t("aiUsage.table.cost", "Est. Cost")}</TableCell>
                   )}
                   <TableCell align="right">
-                    {t("aiUsage.table.blueberryTokens", "Blueberry Tokens")}
+                    {isPlanAiAdmin ? "Blueberry Tokens" : "Usage Units"}
                   </TableCell>
                 </TableRow>
               </TableHead>
@@ -321,10 +496,14 @@ export const AiUsageContent: React.FC<{ hideBreadcrumbs?: boolean }> = ({
                         label={t(`aiUsage.features.${log.feature}`, log.feature)}
                       />
                     </TableCell>
-                    {isAdmin && (
+                    {canSeeProviderModel && (
                       <>
                         <TableCell>{log.provider}</TableCell>
                         <TableCell>{log.model}</TableCell>
+                      </>
+                    )}
+                    {canSeeTokenSplit && (
+                      <>
                         <TableCell align="right">{log.inputTokens.toLocaleString()}</TableCell>
                         <TableCell align="right">{log.outputTokens.toLocaleString()}</TableCell>
                       </>
@@ -332,9 +511,9 @@ export const AiUsageContent: React.FC<{ hideBreadcrumbs?: boolean }> = ({
                     <TableCell align="right">
                       <strong>{log.totalTokens.toLocaleString()}</strong>
                     </TableCell>
-                    {isAdmin && (
+                    {canSeeCost && (
                       <TableCell align="right" sx={{ color: "success.main", fontWeight: "bold" }}>
-                        ${log.estimatedCost?.toFixed(8) || "0.00000000"}
+                        ${log.estimatedCost?.toFixed(6) || "0.000000"}
                       </TableCell>
                     )}
                     <TableCell align="right" sx={{ color: "secondary.main", fontWeight: "bold" }}>
@@ -344,7 +523,7 @@ export const AiUsageContent: React.FC<{ hideBreadcrumbs?: boolean }> = ({
                 ))}
                 {data.logs.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={isAdmin ? 9 : 8} align="center">
+                    <TableCell colSpan={getColumnCount()} align="center">
                       {t("aiUsage.emptyLogs", "No AI operations logged yet.")}
                     </TableCell>
                   </TableRow>
@@ -352,6 +531,44 @@ export const AiUsageContent: React.FC<{ hideBreadcrumbs?: boolean }> = ({
               </TableBody>
             </Table>
           </TableContainer>
+
+          {/* ── Track-specific Footer Notes ── */}
+          <Box sx={{ mt: 3 }}>
+            {isByokTrack && (
+              <Alert
+                severity="info"
+                icon={false}
+                sx={{ borderRadius: 2 }}
+                action={
+                  <Button
+                    size="small"
+                    color="inherit"
+                    endIcon={<OpenInNewIcon fontSize="small" />}
+                    href="https://openrouter.ai/activity"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    OpenRouter Dashboard
+                  </Button>
+                }
+              >
+                Estimates are based on OpenRouter model pricing at time of use. Your OpenRouter
+                invoice is the source of truth for actual charges.
+              </Alert>
+            )}
+            {isManagedTrack && (
+              <Alert severity="success" icon={false} sx={{ borderRadius: 2 }}>
+                All AI costs are included in your Managed plan. No surprise bills — your usage is
+                covered by your subscription.
+              </Alert>
+            )}
+            {!isByokTrack && !isManagedTrack && !isPlanAiAdmin && (
+              <Alert severity="info" icon={false} sx={{ borderRadius: 2 }}>
+                Configure your API keys in Workspace Settings to start using AI features, or upgrade
+                to a Managed plan for hassle-free usage.
+              </Alert>
+            )}
+          </Box>
         </>
       )}
     </Box>

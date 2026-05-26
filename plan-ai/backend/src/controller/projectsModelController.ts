@@ -402,7 +402,7 @@ export class ProjectsModelController extends BaseWorkspaceController {
     @FormField() createDoc?: boolean,
     @FormField() createSlides?: boolean,
   ): Promise<ApiResponse<CreateTranscriptResponse>> {
-    const { user, workspaceId } = await this.getAuthorizedWorkspaceAccess(request);
+    const { user, workspaceId } = await this.getPaidWorkspaceAccess(request);
     await this.getProjectForWorkspace(request, projectId, workspaceId);
 
     if (!files || files.length === 0) {
@@ -570,7 +570,7 @@ export class ProjectsModelController extends BaseWorkspaceController {
     @Path() projectId: string,
     @Body() body: ImportTranscriptRequest,
   ): Promise<ApiResponse<CreateTranscriptResponse>> {
-    const { user, workspaceId } = await this.getAuthorizedWorkspaceAccess(request);
+    const { user, workspaceId } = await this.getPaidWorkspaceAccess(request);
     await this.getProjectForWorkspace(request, projectId, workspaceId);
 
     const sourceTranscript = await prisma.transcript.findUnique({
@@ -870,7 +870,7 @@ export class ProjectsModelController extends BaseWorkspaceController {
     @Path() projectId: string,
     @Body() body: RefineTaskRequest,
   ): Promise<ApiResponse<RefineTaskResponse>> {
-    const { workspaceId } = await this.getAuthorizedWorkspaceAccess(request);
+    const { workspaceId } = await this.getPaidWorkspaceAccess(request);
     await this.getProjectForWorkspace(request, projectId, workspaceId);
 
     const refined = await aiTaskCoachService.refineTask({
@@ -1060,7 +1060,7 @@ export class ProjectsModelController extends BaseWorkspaceController {
     @Path() projectId: string,
     @Body() body: CreateTranscriptRequest,
   ): Promise<ApiResponse<CreateTranscriptResponse>> {
-    const { user, workspaceId } = await this.getAuthorizedWorkspaceAccess(request);
+    const { user, workspaceId } = await this.getPaidWorkspaceAccess(request);
     await this.getProjectForWorkspace(request, projectId, workspaceId);
 
     const contextPrompt = await this.buildContextPrompt(user.id, body.contextIds ?? []);

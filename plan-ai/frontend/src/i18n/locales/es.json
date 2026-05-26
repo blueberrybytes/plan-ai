@@ -587,18 +587,6 @@
       "ctaBuy": "Comprar ahora",
       "ctaContact": "Contáctanos",
       "tiers": {
-        "solo": {
-          "name": "Solo",
-          "price": "Gratis",
-          "tagline": "Para developers individuales probando el producto.",
-          "features": [
-            "1 workspace, 1 asiento",
-            "60 minutos de grabación / mes",
-            "Solo BYOK",
-            "Todas las integraciones",
-            "Soporte de comunidad"
-          ]
-        },
         "proByok": {
           "name": "Pro · BYOK",
           "price": "€6",
@@ -805,7 +793,8 @@
       "aiUsage": "Uso de IA",
       "integrations": "Integraciones",
       "recordings": "Grabaciones",
-      "users": "Usuarios"
+      "users": "Usuarios",
+      "billing": "Facturación"
     },
     "tooltip": {
       "expand": "Expandir barra lateral",
@@ -1231,91 +1220,46 @@
     "teamSubtitle": "Nombra tu espacio de trabajo y elige el estilo de marca para tus presentaciones generadas.",
     "finish": "Completar Configuración"
   },
-  "landingPage": {
-    "pricing": {
-      "heading": "Precios Transparentes",
-      "subheading": "Sin costos ocultos. Paga solo lo que uses. Todos los planes incluyen inteligencia code-aware de GitNexus.",
-      "perSeatMonth": "/usuario/mes",
-      "mostPopular": "La mayoría elige este plan",
-      "ctaStart": "Prueba Gratis",
-      "ctaBuy": "Suscribirse",
-      "ctaContact": "Contactar Ventas",
-      "byokLabel": "BYOK",
-      "byokDescription": "Trae tus propias claves de OpenRouter + Deepgram",
-      "managedLabel": "Managed",
-      "managedDescription": "Nosotros gestionamos infraestructura, claves y soporte",
-      "tiers": {
-        "proByok": {
-          "name": "Pro",
-          "price": "€6",
-          "tagline": "Para equipos pequeños",
-          "features": [
-            "Grabaciones y transcripciones ilimitadas",
-            "Generación de tareas code-aware",
-            "Integración GitNexus",
-            "Sincronización con Jira, Linear, Trello",
-            "1–50 usuarios",
-            "Soporte comunitario"
-          ]
-        },
-        "proManaged": {
-          "name": "Pro",
-          "price": "€29",
-          "tagline": "La mayoría elige este plan",
-          "features": [
-            "Grabaciones y transcripciones ilimitadas",
-            "Generación de tareas code-aware",
-            "Integración GitNexus",
-            "Sincronización con Jira, Linear, Trello",
-            "1–50 usuarios",
-            "Soporte por email",
-            "Infraestructura gestionada"
-          ]
-        },
-        "businessByok": {
-          "name": "Business",
-          "price": "€14",
-          "tagline": "Para equipos en crecimiento",
-          "features": [
-            "Grabaciones y transcripciones ilimitadas",
-            "Análisis code-aware avanzado",
-            "GitNexus + grafos personalizados",
-            "Todas las integraciones",
-            "50–500 usuarios",
-            "Soporte por Slack",
-            "Facturación personalizada"
-          ]
-        },
-        "businessManaged": {
-          "name": "Business",
-          "price": "€65",
-          "tagline": "Premium gestionado",
-          "features": [
-            "Grabaciones y transcripciones ilimitadas",
-            "Análisis code-aware avanzado",
-            "GitNexus + grafos personalizados",
-            "Todas las integraciones",
-            "50–500 usuarios",
-            "Soporte dedicado",
-            "Infraestructura gestionada",
-            "Registros de auditoría"
-          ]
-        },
-        "enterprise": {
-          "name": "Enterprise",
-          "price": "Personalizado",
-          "tagline": "Para 500+ usuarios",
-          "features": [
-            "Todo lo de Business",
-            "Auto-alojado o on-prem",
-            "Cumplimiento SOC 2 Type II",
-            "SLA y soporte personalizado",
-            "500+ usuarios",
-            "Integraciones personalizadas",
-            "Infraestructura dedicada"
-          ]
-        }
-      }
+  "billing": {
+    "title": "Facturación",
+    "subtitle": "Gestiona tu suscripción, asientos y método de pago.",
+    "notConfigured": "La facturación está desactivada en esta instancia (auto-alojada / OSS). No se requiere suscripción.",
+    "currentPlan": "Plan actual",
+    "managePortal": "Gestionar en Stripe",
+    "choosePlan": "Elige un plan",
+    "changePlan": "Cambiar plan",
+    "catalogSubtitle": "Todos los planes incluyen generación de tickets code-aware vía GitNexus. Cancela cuando quieras.",
+    "catalogEmpty": "Aún no hay precios configurados — pide a tu administrador que termine la configuración de Stripe.",
+    "subscribe": "Suscribirse",
+    "currentLabel": "Actual",
+    "seat": "asiento",
+    "seats": "asientos",
+    "renewsOn": "Se renueva el {{date}}",
+    "cancelsAtEnd": "Se cancela al final del periodo",
+    "trackByok": "Trae tus propias claves de IA (Avanzado)",
+    "trackManaged": "Incluye tokens de IA mensuales (Sin claves)",
+    "successAlert": "Suscripción activada. ¡Bienvenido a bordo!",
+    "canceledAlert": "Checkout cancelado — no se ha realizado ningún cargo.",
+    "legalNote": "Las suscripciones se renuevan automáticamente. Cancela cuando quieras desde el portal de Stripe.",
+    "banner": {
+      "title": "Suscripción requerida",
+      "cta": "Elige un plan",
+      "noSubscription": "Tu workspace no tiene una suscripción activa. Las grabaciones y las funciones de IA están desactivadas.",
+      "expired": "Tu suscripción ha caducado. Actualiza tu método de pago para restaurar el acceso.",
+      "canceled": "Tu suscripción ha sido cancelada. Vuelve a suscribirte para seguir usando Plan AI.",
+      "incomplete": "Tu último pago está incompleto. Termina el checkout para activar la suscripción.",
+      "memberAskAdmin": "Este workspace no tiene una suscripción activa. Pide al administrador que elija un plan para desbloquear las grabaciones y la IA.",
+      "overQuotaTitle": "Demasiados usuarios para los asientos contratados",
+      "overQuota": "Tu equipo tiene más miembros que asientos pagados. Quita miembros o compra más asientos para seguir usando Plan AI.",
+      "overQuotaCta": "Gestionar equipo",
+      "memberOverQuota": "Este workspace tiene más miembros que asientos pagados. Pide al administrador que quite miembros o añada más asientos."
+    },
+    "welcome": {
+      "title": "Bienvenido a Plan AI 👋",
+      "subtitle": "Elige un plan para desbloquear grabaciones, tickets con IA, documentos y diapositivas. Cancela cuando quieras."
+    },
+    "toast": {
+      "subscriptionRequired": "Suscripción requerida — ve a Facturación para elegir un plan."
     }
   }
 }

@@ -6,6 +6,7 @@ import { logger } from "../utils/logger";
 import { TranscriptGenerationJobPayload } from "../queue/transcriptGenerationQueue";
 import { projectTranscriptService } from "../services/projectTranscriptService";
 import { PrismaClient, Prisma } from "@prisma/client";
+import { checkSubscription } from "../services/subscriptionGuard";
 
 const prisma = new PrismaClient();
 const REDIS_URL = EnvUtils.get("REDIS_URL") || "redis://localhost:6379";
@@ -29,6 +30,37 @@ export const transcriptGenerationWorker = new Worker<TranscriptGenerationJobPayl
       logger.info(
         `Processing TranscriptGenerationJob ${job.id} for transcript ${job.data.transcriptId}`,
       );
+
+      // Re-check subscription at job execution time. The endpoint that
+      // enqueued this job already gated, but BullMQ retries (or backlogs)
+      // could fire much later — by then the subscription may be canceled
+      // and we don't want to burn OpenRouter/Deepgram credit. Mark the
+      // transcript as FAILED so the UI surfaces a clear next step.
+      const sub = await checkSubscription(job.data.workspaceId);
+      if (!sub.active) {
+        logger.warn(
+          `[worker:transcript] Skipping job ${job.id} — workspace ${job.data.workspaceId} subscription ${sub.reason ?? "missing"}`,
+        );
+        try {
+          await prisma.transcript.update({
+            where: { id: job.data.transcriptId },
+            data: {
+              metadata: {
+                processingStatus: "FAILED",
+                processingError:
+                  "Subscription required. Re-subscribe to retry this transcript.",
+                failureReason: "subscription_required",
+              } as Prisma.InputJsonValue,
+            },
+          });
+        } catch (markErr) {
+          logger.error(
+            `[worker:transcript] Failed to mark transcript ${job.data.transcriptId} as FAILED`,
+            markErr,
+          );
+        }
+        return;
+      }
 
       try {
         await projectTranscriptService.processPendingTranscript(job.data.transcriptId, {

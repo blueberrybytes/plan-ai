@@ -133,7 +133,7 @@ export class DiagramController extends BaseWorkspaceController {
     @Request() request: AuthenticatedRequest,
     @Body() body: CreateDiagramRequest,
   ): Promise<DiagramResponse> {
-    const { user, workspaceId } = await this.getAuthorizedWorkspaceAccess(request);
+    const { user, workspaceId } = await this.getPaidGenerationAccess(request);
 
     const contextIds = await mergeProjectAndContextIds(body.projectIds, body.contextIds);
 
@@ -252,7 +252,7 @@ export class DiagramController extends BaseWorkspaceController {
     @Path() diagramId: string,
     @Body() body: DiagramAssistantRequest,
   ): Promise<DiagramResponse> {
-    const { user, workspaceId } = await this.getAuthorizedWorkspaceAccess(request);
+    const { user, workspaceId } = await this.getPaidWorkspaceAccess(request);
 
     const diagram = await prisma.diagram.findFirst({
       where: { id: diagramId, workspaceId },

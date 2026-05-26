@@ -1,6 +1,6 @@
 {
   "name": "backend",
-  "version": "3.1.0",
+  "version": "3.2.0",
   "description": "",
   "engines": {
     "node": "22.17.1"
@@ -33,7 +33,7 @@
     "backend"
   ],
   "author": "",
-  "license": "PolyForm-Noncommercial-1.0.0",
+  "license": "BUSL-1.1",
   "resolutions": {
     "rollup": "4.52.5"
   },
@@ -85,6 +85,8 @@
     "reflect-metadata": "^0.1.13",
     "remark-parse": "^11.0.0",
     "repomix": "^1.13.1",
+    "sharp": "^0.34.5",
+    "stripe": "^22.1.1",
     "swagger-ui-express": "^5.0.1",
     "tar": "^7.5.13",
     "tsoa": "^6.6.0",

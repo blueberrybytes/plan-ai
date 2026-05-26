@@ -48,6 +48,7 @@ import DiagramTypes from "./pages/DiagramTypes";
 import DiagramView from "./pages/DiagramView";
 import PublicDiagramView from "./pages/PublicDiagramView";
 import AiUsage from "./pages/AiUsage";
+import Billing from "./pages/Billing";
 import SentryTest from "./pages/SentryTest";
 import Users from "./pages/Users";
 import AiPricing from "./pages/AiPricing";
@@ -150,6 +151,7 @@ const AppContent: React.FC = () => {
           <Route path="/diagrams/types" element={<DiagramTypes />} />
           <Route path="/diagrams/:diagramId" element={<DiagramView />} />
           <Route path="/usage" element={<AiUsage />} />
+          <Route path="/billing" element={<Billing />} />
           <Route path="/sentry-error" element={<SentryTest />} />
           <Route path="/admin" element={<AdminDashboard />} />
           <Route path="/admin/users" element={<Users />} />

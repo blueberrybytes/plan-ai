@@ -26,7 +26,24 @@ enum UserPersona {
 enum WorkspaceTier {
   FREE
   PRO
+  BUSINESS
+  ENTERPRISE
   AGENCY
+}
+
+enum SubscriptionStatus {
+  INCOMPLETE
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  CANCELED
+  UNPAID
+  PAUSED
+}
+
+enum SubscriptionTrack {
+  BYOK
+  MANAGED
 }
 
 model Workspace {
@@ -42,6 +59,16 @@ model Workspace {
   isCourtesy        Boolean       @default(false)
   monthlyTokenLimit Int           @default(200000)
 
+  // Stripe billing
+  stripeCustomerId        String?             @unique
+  stripeSubscriptionId    String?             @unique
+  subscriptionStatus      SubscriptionStatus?
+  subscriptionTrack       SubscriptionTrack?
+  subscriptionPriceId     String?
+  subscriptionSeats       Int                 @default(1)
+  subscriptionCurrentPeriodEnd DateTime?
+  subscriptionCancelAtPeriodEnd Boolean       @default(false)
+
   members        WorkspaceMember[]
   integrations   WorkspaceIntegration[]
   projects       Project[]
@@ -56,6 +83,23 @@ model Workspace {
   chatThreads    ChatThread[]
   invitations    WorkspaceInvitation[]
   mcpTokens      McpToken[]
+  billingEvents  BillingEvent[]
+}
+
+/// Audit log of Stripe webhook events processed for this workspace.
+/// Useful for debugging billing issues and replaying state.
+model BillingEvent {
+  id              String   @id @default(cuid())
+  workspaceId     String
+  stripeEventId   String   @unique
+  eventType       String
+  payload         Json
+  processedAt     DateTime @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+  @@index([eventType])
 }
 
 model WorkspaceMember {

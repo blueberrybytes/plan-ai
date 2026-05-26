@@ -80,7 +80,7 @@ export class DocController extends BaseWorkspaceController {
     @Body() body: CreateDocInput,
     @Request() request: AuthenticatedRequest,
   ): Promise<DocDocumentResponse> {
-    const { user, workspaceId } = await this.getAuthorizedWorkspaceAccess(request);
+    const { user, workspaceId } = await this.getPaidGenerationAccess(request);
     this.setStatus(202);
     return docGenerationService.startGeneration(
       user.id,
@@ -98,7 +98,7 @@ export class DocController extends BaseWorkspaceController {
     @FormField() transcriptIds?: string,
     @FormField() themeId?: string,
   ): Promise<DocDocumentResponse> {
-    const { user, workspaceId } = await this.getAuthorizedWorkspaceAccess(request);
+    const { user, workspaceId } = await this.getPaidGenerationAccess(request);
 
     // Parse the file and extract raw text
     const extractedText = await extractTextFromUpload(file);
@@ -155,7 +155,7 @@ export class DocController extends BaseWorkspaceController {
     @Body() body: { brokenCode: string },
     @Request() request: AuthenticatedRequest,
   ): Promise<{ fixedCode: string }> {
-    const { user, workspaceId } = await this.getAuthorizedWorkspaceAccess(request);
+    const { user, workspaceId } = await this.getPaidWorkspaceAccess(request);
     const fixedCode = await docGenerationService.fixMermaidSyntax(user.id, workspaceId, body.brokenCode);
     return { fixedCode };
   }

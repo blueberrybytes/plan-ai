@@ -157,4 +157,161 @@ Use latitude and longitude to place like Barcelona.
 **Problem:** `autoSyncTasks` fires concurrently with doc/slides generation, so the initial auto-created tickets (Jira, Linear, etc.) don't include the public doc/slides links — they only appear on manual re-sync.
 **Solution:** Restructure `processPendingTranscript` so that doc/slides generation runs first (awaited), then `autoSyncTasks` fires after metadata is populated. Trade-off: initial processing becomes slightly slower (sequential instead of parallel), but guarantees links are always on the ticket from the start.
 
-## 24 Plan AI should be connected to claude code so you can ask 
+## 24 Plan AI should be connected to claude code so you can ask
+
+## 25 AI Usage page — per-track redesign (BYOK vs Managed)
+**Problem:** The current `/usage` page is one-size-fits-all. After the BSL-1.1 / Stripe rollout, the page partially branches on workspace role × subscription track (BYOK admins now see estimated cost — which is genuinely *their* OpenRouter bill), but the experience still isn't tailored to what each plan actually needs:
+
+- **BYOK** users care about **cost** (their wallet) and **per-feature/per-user breakdown** (find the expensive call paths).
+- **Managed** users care about **allowance consumption** (am I close to my fair-use cap?) and **capacity planning** (which team members are heavy?). Cost in € is meaningless because it's a flat per-seat fee.
+- **Regular MEMBERs** care about **their own** usage — not the workspace aggregate.
+- **Plan AI internal admins** need everything for support.
+
+**Solution — three distinct views:**
+
+### A. Personal Usage (every member, default route)
+- "My tokens this month" (single big number)
+- Where they went: feature chips (Chat: X, Docs: Y, Slides: Z, …)
+- Recent activity log filtered to the current user
+- No cost, no aggregate workspace data
+- Same UI for BYOK and Managed
+
+### B. Workspace Usage (OWNER/ADMIN only, gated tab) — branches on `subscription.track`
+
+**For BYOK workspaces:**
+- Total workspace tokens
+- 💰 **Estimated cost (USD)** — explicit "estimated, not invoiced" footnote
+- Cost breakdown by feature (Chat $4.20, Transcripts $12.80…)
+- Cost breakdown by user (find the heavy spenders)
+- Deep link: **"Open OpenRouter dashboard for actual billing →"**
+- Disclaimer: *"OpenRouter is the source of truth. Estimates can drift from the actual invoice when pricing changes mid-month."*
+
+**For Managed workspaces:**
+- Total workspace tokens
+- **Allowance progress bar:** `4.2M / (seats × ALLOWANCE_PER_SEAT) tokens used` (define `ALLOWANCE_PER_SEAT` — suggested 5M/seat/month for Pro Managed, 15M/seat/month for Business Managed; stored on `Workspace.monthlyTokenLimit` already)
+- Breakdown by feature + by user (capacity planning, not money)
+- Footer: *"All AI costs included in your Managed plan. No surprise bills."*
+- Warning banner when >85% of allowance consumed
+- Throttle / 429 when allowance exhausted (backend enforcement — wire into `usageLimitGuard`)
+
+### C. Plan AI Admin (existing `/admin/users/:id/usage`)
+- Unchanged — sees everything across any workspace.
+
+**Polish to fix at the same time:**
+- Polling interval: currently 5s. Drop to 30–60s for normal users; keep 5s only when the page is in foreground AND has filters active.
+- "Total Est. Cost" is hardcoded `$` — keep USD (OpenRouter charges USD globally) but make the currency explicit in the label: *"Est. cost (USD)"* to avoid confusion with Plan AI's EUR billing.
+- "Blueberry Tokens" label — clarify what it means for end users (currently the page already uses *"Usage Units"* for non-admins, which is better). Decide on one canonical name in the i18n.
+
+**Backend changes required:**
+- `aiUsageController.getUsageMetrics` should accept a `scope` query: `"personal" | "workspace"`. Personal scopes the query to `userId = caller`; workspace scopes to `workspaceId` and requires OWNER/ADMIN.
+- `subscriptionTrack` already exposed via `/api/billing/subscription` — frontend reads it from there.
+- Define `ALLOWANCE_PER_SEAT` per tier in code (or in env) and surface remaining allowance via `/api/billing/subscription` for the Managed bar.
+
+**Frontend changes required:**
+- Split `AiUsage.tsx` into `PersonalUsage.tsx` (current member view) and `WorkspaceUsage.tsx` (admin view), each ~200 lines instead of one 600-line component.
+- Tabbed layout on `/usage` — Personal default, Workspace tab visible only when OWNER/ADMIN.
+- Reuse the `canSeeCost` / `canSeeProviderModel` / `canSeeTokenSplit` gating helpers added in the BSL Stripe branch.
+
+**Scope:** ~1 day of focused work. Non-blocking for Stripe launch — the current incremental fix (BYOK admins see cost) is good enough until the first 20 paying customers, at which point capacity-planning UX becomes table stakes.
+
+## 26 Managed plan AI allowances — concrete caps + economics
+
+**Problem:** The Managed tiers (€29 Pro, €65 Business) currently have no enforced AI allowance. A heavy customer recording 8 hours/day on Claude Sonnet would burn €100+/month of OpenRouter credit on a €29 plan — we'd lose money on every seat. We need (a) a concrete per-seat allowance, (b) a default-model policy that protects margin, and (c) transparent messaging so customers understand what they're getting.
+
+### Target economics (per €10 of revenue)
+
+For sustainable bootstrapped SaaS at ~75% gross margin:
+
+| Line | Pro Managed (€29) | Business Managed (€65) |
+|---|---|---|
+| **AI budget (Deepgram + OpenRouter)** | **€1.20** | **€2.00** |
+| Infrastructure (Postgres, Redis, Qdrant, hosting, Firebase, storage) | €1.00 | €0.80 |
+| Stripe + tax | €0.25 | €0.20 |
+| Plan AI margin | €7.55 | €7.00 |
+
+**TL;DR:** ~10–15% of revenue returns to the customer as actual AI cost. The other 85–90% covers infra, fees, support, runway. This is normal SaaS (Fathom ~80% GM, Granola ~85%, Loom pre-Atlassian ~75%).
+
+### Concrete per-seat allowances
+
+```ts
+// suggested constant — wire into subscriptionGuard + usageLimitGuard
+const ALLOWANCE_PER_SEAT = {
+  PRO_MANAGED: {
+    monthlyTokens: 5_000_000,           // ~$1.25 @ Gemini Flash blended
+    monthlyRecordingMinutes: 300,       // 5 h × $0.0058/min = $1.74
+    monthlyGenerations: 30,             // docs + slides + diagrams combined
+  },
+  BUSINESS_MANAGED: {
+    monthlyTokens: 15_000_000,
+    monthlyRecordingMinutes: 900,       // 15 h
+    monthlyGenerations: 100,
+  },
+  // BYOK plans: no caps. The customer pays their own OpenRouter + Deepgram
+  // bill directly. We don't need to enforce limits — their wallet does.
+  PRO_BYOK: null,
+  BUSINESS_BYOK: null,
+};
+```
+
+Workspace total allowance = `subscriptionSeats × ALLOWANCE_PER_SEAT[tier]`.
+
+### Why these numbers
+
+- **Deepgram is the floor.** 1 h of audio = $0.35. Typical engineering team records ~10 meetings × 30 min = ~5 h/seat/month → $1.75 just in transcription. Unavoidable.
+- **LLM cost depends drastically on model choice** — see model selection policy below.
+- **95th percentile rule.** Set caps so 95% of real users fit comfortably. The 5% that overshoot get throttled or upgraded.
+
+### Model selection policy for Managed plans
+
+**Default model for Managed tiers: Gemini 2.0 Flash** (~$0.25/M tokens blended). Premium models (Claude Sonnet at ~$9/M, GPT-4o at ~$5/M) would blow the budget instantly — 5M tokens × $9 = $45, vs a €29 plan with €1.20 of budget. Math doesn't work.
+
+Options for offering premium models on Managed:
+1. **Block premium models entirely on Managed plans** — simplest, ships fastest. Customers who want premium switch to BYOK.
+2. **"Premium model add-on" line item** — extra €X/month enables Sonnet/GPT-4o on Managed. Stripe metered billing.
+3. **Pass-through metered billing** — premium model usage logged and billed at end of month at cost + small markup. Complex but fair.
+
+**Recommendation:** start with option 1 (block premium on Managed). Premium-model demand is small enough that BYOK is the right channel for it.
+
+### Cost per 1M tokens reference (for pricing decisions)
+
+| Model | Blended price / 1M tokens | Cost for 5M tokens (Pro Managed budget) |
+|---|---|---|
+| Gemini 2.0 Flash | $0.25 | $1.25 ✅ |
+| GPT-4o mini | $0.30 | $1.50 ✅ |
+| Claude Haiku | $0.50 | $2.50 ⚠️ tight |
+| GPT-4o | $5.00 | $25 ❌ underwater |
+| Claude Sonnet 3.5 | $9.00 | $45 ❌ disaster |
+
+### Stripe-fee gotcha for BYOK tier
+
+Small ticket sizes are barely profitable after Stripe fees. €6 BYOK pays ~5% to Stripe (the fixed €0.25 dominates). Net is ~€5.70 — minus infra (~€1) = ~€4.70 margin. Still positive, but **BYOK is effectively a loss-leader to demonstrate value before upselling to Managed**. Don't expect BYOK to fund growth; it's a top-of-funnel customer-acquisition tool.
+
+### Implementation checklist
+
+**Backend:**
+- Define `ALLOWANCE_PER_SEAT` constant (probably in a new `constants/allowances.ts` file).
+- Extend `usageLimitGuard.ts` to enforce all three caps (tokens, recording minutes, generations).
+- Throttle behavior: when over allowance, return **429 Too Many Requests** with `{ code: "allowance_exceeded", reason: "tokens" | "recording" | "generations" }` — distinct from 402 subscription-required.
+- Audio WebSocket (`audioStream.ts`): check recording minutes consumed before opening Deepgram for the *new* recording. Refuse to start if over cap; emit `ALLOWANCE_EXCEEDED` error message + close.
+- Expose `usage / allowance` ratios via `/api/billing/usage-limits` (already scaffolded in the BSL Stripe branch — extend to include `recording` and `generations`).
+
+**Frontend:**
+- Allowance progress bars on `/usage` (see item #25) consuming the new endpoint.
+- Toast on 429 (separate from the 402 subscription toast) with copy: *"Monthly allowance reached. Upgrade to Business or switch to BYOK."*
+- Pricing page transparency: add a footnote to each Managed card:
+  > *"Pro Managed includes 5M tokens + 5 hours of recording + 30 generations per seat per month — covers ~95% of engineering team usage. Heavier? Switch to Business or BYOK."*
+
+**Docs:**
+- `/docs/setup/openrouter` and `/docs/setup/deepgram` already explain BYOK provisioning. Add a sibling page `/docs/pricing/allowances` explaining the Managed caps in plain English.
+
+### Premium-model strategy (separate decision)
+
+If/when premium-model demand becomes real, decide:
+- Allow Claude Sonnet / GPT-4o on Managed plans with a per-call surcharge?
+- Or restrict premium models to BYOK plans only (current default)?
+
+Don't decide this until you have ≥20 paying Managed customers and real data on what they ask for.
+
+**Scope:** 2 days. Backend enforcement (~1 day), frontend bars + 429 toast (~0.5 day), docs + pricing copy (~0.5 day). Should ship before the influencer launch so you don't accidentally take on a heavy user who costs more than their subscription.
+
+ 

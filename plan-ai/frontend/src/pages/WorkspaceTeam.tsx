@@ -18,6 +18,7 @@ import {
   Chip,
   IconButton,
   Tooltip,
+  Divider,
 } from "@mui/material";
 import { useNavigate, useLocation } from "react-router-dom";
 import GroupAddIcon from "@mui/icons-material/GroupAdd";
@@ -45,6 +46,7 @@ import { useGetWorkspaceSummaryQuery } from "../store/apis/aiUsageApi";
 import { selectActiveWorkspaceId } from "../store/slices/app/appSelector";
 import { selectUserDb } from "../store/slices/auth/authSelector";
 import { setActiveWorkspaceId, setToastMessage } from "../store/slices/app/appSlice";
+import { useGetSubscriptionQuery } from "../store/apis/billingApi";
 import { format } from "date-fns";
 import { Dialog, DialogTitle, DialogContent, DialogActions, TextField, Link } from "@mui/material";
 import { components } from "../types/api";
@@ -204,12 +206,12 @@ const WorkspaceSettingsSection: React.FC<{ activeWorkspace: WorkspaceResponse }>
         </Typography>
         <Typography variant="body2" color="text.secondary" paragraph>
           To make tracking easier, all your AI costs are unified into a single metric called{" "}
-          <b>Blueberry Tokens</b>.
+          <b>Usage Units</b>.
           <br />
           <br />
-          <b>1 Blueberry Token ≈ $0.00005</b>
+          <b>1 Usage Unit ≈ $0.00005</b>
           <br />
-          <b>20,000 Tokens ≈ $1.00</b>
+          <b>20,000 Units ≈ $1.00</b>
         </Typography>
         <Typography variant="body2" color="text.secondary" paragraph>
           This metric combines your two major API costs:
@@ -249,6 +251,8 @@ const WorkspaceTeam: React.FC = () => {
   const [cancelInvitation] = useCancelWorkspaceInvitationMutation();
   const { data: workspaces } = useGetMyWorkspacesQuery();
   const activeWorkspace = workspaces?.find((w) => w.id === activeWorkspaceId);
+  const { data: subscription } = useGetSubscriptionQuery(undefined, { refetchOnFocus: true });
+  const isByokTrack = subscription?.track === "BYOK";
   const canInvite =
     activeWorkspace && (activeWorkspace.role === "OWNER" || activeWorkspace.role === "ADMIN");
   const canViewUsage = activeWorkspace && (activeWorkspace.role === "OWNER" || isAdmin);
@@ -275,12 +279,10 @@ const WorkspaceTeam: React.FC = () => {
     [allMembers],
   );
 
-  const maxInvitations = response?.maxInvitations || 5;
-  const usedInvitations = useMemo(
-    () => activeMembers.filter((m) => m.role !== "OWNER").length + pendingInvitations.length,
-    [activeMembers, pendingInvitations],
-  );
-  const isLimitReached = usedInvitations >= maxInvitations;
+  const totalSeats = subscription?.seats || 1;
+  const usedSeats = activeMembers.length + pendingInvitations.length;
+  const usedInvitations = usedSeats - 1;
+  const isLimitReached = usedSeats >= totalSeats;
 
   const { data: usageData, isLoading: usageLoading } = useGetWorkspaceSummaryQuery(undefined, {
     skip: !activeWorkspaceId || !canViewUsage,
@@ -306,11 +308,14 @@ const WorkspaceTeam: React.FC = () => {
       { id: "active", label: `Active Members (${activeMembers.length})` },
       { id: "pending", label: `Pending Invitations (${pendingInvitations.length})` },
     ];
+    if (activeWorkspace?.role === "OWNER" || activeWorkspace?.role === "ADMIN") {
+      list.push({ id: "seats", label: "Seats & Allocation" });
+    }
     if (canViewUsage) list.push({ id: "usage", label: "Workspace usage" });
     if (canViewUsage) list.push({ id: "analytics", label: "My usage" });
-    if (activeWorkspace?.role === "OWNER") list.push({ id: "settings", label: "Settings" });
+    if (activeWorkspace?.role === "OWNER" && isByokTrack) list.push({ id: "settings", label: "Settings" });
     return list;
-  }, [activeMembers.length, pendingInvitations.length, canViewUsage, activeWorkspace?.role]);
+  }, [activeMembers.length, pendingInvitations.length, activeWorkspace?.role, canViewUsage, isByokTrack]);
 
   // Sync tab value with query param ?tab=
   useEffect(() => {
@@ -386,8 +391,19 @@ const WorkspaceTeam: React.FC = () => {
                   {t("workspaceTeam.sendInvite", "Invite Member")}
                 </Button>
                 <Typography variant="caption" color={isLimitReached ? "error" : "text.secondary"}>
-                  {usedInvitations} / {maxInvitations} invitations used
+                  {usedSeats} / {totalSeats} seats occupied
                 </Typography>
+                {isLimitReached && (
+                  <Button
+                    variant="text"
+                    size="small"
+                    color="primary"
+                    onClick={() => navigate("/billing")}
+                    sx={{ mt: -0.5, p: 0, textTransform: "none", fontWeight: 700 }}
+                  >
+                    Add more seats to invite
+                  </Button>
+                )}
               </Box>
             )}
           </Box>
@@ -576,11 +592,11 @@ const WorkspaceTeam: React.FC = () => {
                     <TableRow>
                       <TableCell>User</TableCell>
                       <TableCell>Role</TableCell>
-                      <TableCell align="right">Input Tokens</TableCell>
-                      <TableCell align="right">Output Tokens</TableCell>
+                      {(isAdmin || isByokTrack) && <TableCell align="right">Input Tokens</TableCell>}
+                      {(isAdmin || isByokTrack) && <TableCell align="right">Output Tokens</TableCell>}
                       <TableCell align="right">Total Tokens</TableCell>
-                      <TableCell align="right">Est. Cost</TableCell>
-                      <TableCell align="right">Blueberry Tokens</TableCell>
+                      {(isAdmin || isByokTrack) && <TableCell align="right">Est. Cost</TableCell>}
+                      <TableCell align="right">{isAdmin ? "Blueberry Tokens" : "Usage Units"}</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -618,21 +634,27 @@ const WorkspaceTeam: React.FC = () => {
                               }
                             />
                           </TableCell>
-                          <TableCell align="right">
-                            {usage.totalInputTokens.toLocaleString()}
-                          </TableCell>
-                          <TableCell align="right">
-                            {usage.totalOutputTokens.toLocaleString()}
-                          </TableCell>
+                          {(isAdmin || isByokTrack) && (
+                            <TableCell align="right">
+                              {usage.totalInputTokens.toLocaleString()}
+                            </TableCell>
+                          )}
+                          {(isAdmin || isByokTrack) && (
+                            <TableCell align="right">
+                              {usage.totalOutputTokens.toLocaleString()}
+                            </TableCell>
+                          )}
                           <TableCell align="right">
                             <strong>{usage.totalTokens.toLocaleString()}</strong>
                           </TableCell>
-                          <TableCell
-                            align="right"
-                            sx={{ color: "success.main", fontWeight: "bold" }}
-                          >
-                            ${usage.estimatedCost?.toFixed(6) || "0.000000"}
-                          </TableCell>
+                          {(isAdmin || isByokTrack) && (
+                            <TableCell
+                              align="right"
+                              sx={{ color: "success.main", fontWeight: "bold" }}
+                            >
+                              ${usage.estimatedCost?.toFixed(4) || "0.0000"}
+                            </TableCell>
+                          )}
                           <TableCell
                             align="right"
                             sx={{ color: "secondary.main", fontWeight: "bold" }}
@@ -644,7 +666,7 @@ const WorkspaceTeam: React.FC = () => {
                     ) : (
                       <TableRow>
                         <TableCell
-                          colSpan={7}
+                          colSpan={isAdmin || isByokTrack ? 7 : 4}
                           align="center"
                           sx={{ py: 4, color: "text.secondary" }}
                         >
@@ -657,6 +679,40 @@ const WorkspaceTeam: React.FC = () => {
               </TableContainer>
             )}
           </>
+        ) : tabs[tabValue]?.id === "seats" ? (
+          <Paper elevation={0} sx={{ p: 4, borderRadius: 2, border: "1px solid", borderColor: "divider", maxWidth: 600 }}>
+            <Typography variant="h6" gutterBottom>
+              Seat Allocation
+            </Typography>
+            <Typography variant="body2" color="text.secondary" paragraph>
+              Your current subscription allows for <b>{totalSeats}</b> seats. You have filled <b>{usedSeats}</b> of them.
+            </Typography>
+            
+            <Box sx={{ mt: 3, mb: 4, display: "flex", alignItems: "center", gap: 2 }}>
+              <Box sx={{ flex: 1, bgcolor: "background.default", borderRadius: 1, height: 16, overflow: "hidden", border: "1px solid", borderColor: "divider" }}>
+                <Box 
+                  sx={{ 
+                    width: `${Math.min(100, (usedSeats / totalSeats) * 100)}%`, 
+                    height: "100%", 
+                    bgcolor: isLimitReached ? "error.main" : "primary.main" 
+                  }} 
+                />
+              </Box>
+              <Typography variant="body2" fontWeight={600}>{usedSeats} / {totalSeats}</Typography>
+            </Box>
+
+            <Divider sx={{ mb: 3 }} />
+
+            <Typography variant="subtitle2" gutterBottom>
+              Need more seats?
+            </Typography>
+            <Typography variant="body2" color="text.secondary" paragraph>
+              You can increase your seat limit at any time. When you add seats, your billing will be prorated automatically.
+            </Typography>
+            <Button variant="outlined" color="primary" onClick={() => navigate("/billing")}>
+              Add Seats in Billing
+            </Button>
+          </Paper>
         ) : tabs[tabValue]?.id === "analytics" && canViewUsage ? (
           <AiUsageContent hideBreadcrumbs />
         ) : tabs[tabValue]?.id === "settings" && activeWorkspace?.role === "OWNER" ? (

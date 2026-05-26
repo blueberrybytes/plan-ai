@@ -395,4 +395,21 @@ Plan AI is built with privacy in mind. When you self-host, your data remains com
 
 ## 📄 License
 
-This project is licensed under the **PolyForm Noncommercial License 1.0.0**. This allows you to use, modify, and run the software for personal, academic, or non-profit purposes, but strictly prohibits commercial use or monetization. Commercial support, custom enterprise builds, and commercial licensing are available via Blueberrybytes. See the `LICENSE` file for details.
+Plan AI is licensed under the **[Business Source License 1.1 (BUSL-1.1)](LICENSE)**.
+
+**What you can do:**
+
+- ✅ Read, fork, modify, and run the code for **internal business purposes**
+- ✅ Self-host Plan AI for your own team
+- ✅ Use it for personal, academic, or non-profit projects
+- ✅ Contribute back via pull requests
+
+**What you cannot do:**
+
+- ❌ Use the Licensed Work to provide a **commercial SaaS that competes with Plan AI**
+- ❌ Resell the Licensed Work as a packaged product
+- ❌ Strip or modify license notices
+
+**Change Date:** On **2030-05-01** the Licensed Work will automatically convert to the **GNU Affero General Public License v3.0**, becoming fully open source under AGPL terms.
+
+For commercial licensing, enterprise self-host deals, custom builds, or anything that falls outside the Additional Use Grant, contact us at [hello@blueberrybytes.com](mailto:hello@blueberrybytes.com).

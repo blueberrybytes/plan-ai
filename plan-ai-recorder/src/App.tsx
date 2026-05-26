@@ -82,10 +82,51 @@ const AppRoutes: React.FC = () => {
     signOut,
     refetchDbUser,
     refetchWorkspaces,
+    api,
   } = useAuth();
+
+  // Subscription gate state. Loaded lazily once we have a workspace.
+  // null = not loaded yet, undefined-active = OSS / pre-load
+  const [subscription, setSubscription] = React.useState<{
+    active: boolean;
+    configured: boolean;
+    reason?: string;
+  } | null>(null);
+  const [subscriptionLoaded, setSubscriptionLoaded] = React.useState(false);
+
+  const loadSubscription = React.useCallback(async () => {
+    if (!activeWorkspaceId) return;
+    try {
+      const sub = await api.getSubscription();
+      setSubscription({
+        active: sub.active,
+        configured: sub.configured,
+        reason: sub.reason,
+      });
+    } catch (err) {
+      // If the call itself fails, fail open — don't block the user from
+      // recording over a billing-API hiccup. Backend endpoints will still
+      // enforce the guard.
+      console.warn("[recorder] Failed to load subscription state", err);
+      setSubscription({ active: true, configured: false });
+    } finally {
+      setSubscriptionLoaded(true);
+    }
+  }, [activeWorkspaceId, api]);
+
+  React.useEffect(() => {
+    if (user && activeWorkspaceId) {
+      void loadSubscription();
+    }
+  }, [user, activeWorkspaceId, loadSubscription]);
+
   const refetchAll = React.useCallback(async () => {
-    await Promise.all([refetchDbUser(), refetchWorkspaces()]);
-  }, [refetchDbUser, refetchWorkspaces]);
+    await Promise.all([
+      refetchDbUser(),
+      refetchWorkspaces(),
+      loadSubscription(),
+    ]);
+  }, [refetchDbUser, refetchWorkspaces, loadSubscription]);
 
   const activeWorkspace = workspaces.find((w) => w.id === activeWorkspaceId);
   const isMissingKeys =
@@ -93,6 +134,15 @@ const AppRoutes: React.FC = () => {
     !activeWorkspace.isCourtesy &&
     activeWorkspace.role === "OWNER" &&
     (!activeWorkspace.openRouterKey || !activeWorkspace.deepgramKey);
+
+  // Subscription required gate — blocks every page except Login. The recorder
+  // is paid-only, so without a sub there's nothing meaningful to do.
+  // Bypassed for self-host instances (`configured: false`) and for active subs.
+  const needsSubscription =
+    subscriptionLoaded &&
+    subscription !== null &&
+    subscription.configured &&
+    !subscription.active;
 
   if (loading) {
     return (
@@ -169,6 +219,59 @@ const AppRoutes: React.FC = () => {
         </Typography>
         <GateActions
           dashboardPath="/team"
+          onSignOut={signOut}
+          onRefetch={refetchAll}
+        />
+      </Box>
+    );
+  }
+
+  if (user && dbUser && needsSubscription && subscription) {
+    // `over_quota` = subscription is active and paid, but the workspace has
+    // more members than purchased seats. Different copy + different deep-link
+    // (Web /team to remove members or open seat management) than the
+    // generic "no subscription" gate.
+    const isOverQuota = subscription.reason === "over_quota";
+    const canSubscribe = activeWorkspace?.role === "OWNER" || activeWorkspace?.role === "ADMIN";
+
+    const reasonCopy = isOverQuota
+      ? "Your team has more members than paid seats. Remove members or add more seats in the Web Dashboard to keep recording."
+      : subscription.reason === "expired"
+        ? "Your subscription has lapsed. Update your payment method in the Web Dashboard to keep recording."
+        : subscription.reason === "canceled"
+          ? "Your subscription has been canceled. Re-subscribe in the Web Dashboard to keep recording."
+          : subscription.reason === "incomplete"
+            ? "Your last payment is incomplete. Finish checkout in the Web Dashboard to activate your subscription."
+            : "Your workspace doesn't have an active subscription yet. Choose a plan in the Web Dashboard to start recording.";
+
+    const memberCopy = isOverQuota
+      ? "This workspace has more members than paid seats. Ask your admin to remove members or add more seats."
+      : "This workspace doesn't have an active subscription. Ask your workspace admin to choose a plan in the Web Dashboard.";
+
+    const dashboardPath = canSubscribe ? (isOverQuota ? "/team" : "/billing") : "/home";
+    const title = isOverQuota ? "Too Many Seats In Use" : "Subscription Required";
+
+    return (
+      <Box
+        sx={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          height: "100vh",
+          bgcolor: "background.default",
+          p: 4,
+          textAlign: "center",
+        }}
+      >
+        <Typography variant="h5" fontWeight="bold" color="warning.main" gutterBottom>
+          {title}
+        </Typography>
+        <Typography color="text.secondary" sx={{ maxWidth: 420 }}>
+          {canSubscribe ? reasonCopy : memberCopy}
+        </Typography>
+        <GateActions
+          dashboardPath={dashboardPath}
           onSignOut={signOut}
           onRefetch={refetchAll}
         />

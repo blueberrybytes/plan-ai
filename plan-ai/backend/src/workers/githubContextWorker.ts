@@ -15,6 +15,7 @@ import * as tar from "tar";
 import { uploadContextFileToFirebaseStorage } from "../firebase/firebaseStorage";
 import { contextService } from "../services/contextService";
 import { contextDocumentQueue } from "../queue/contextDocumentQueue";
+import { checkSubscription } from "../services/subscriptionGuard";
 
 const execAsync = util.promisify(exec);
 const prisma = new PrismaClient();
@@ -36,6 +37,8 @@ export const githubContextWorker = new Worker<GithubContextJobPayload>(
       scope.setTag("queue", "GithubContextQueue");
 
       // Resolve workspace/user from the context record for richer attribution
+      // AND for the subscription check below.
+      let resolvedWorkspaceId: string | null = null;
       try {
         const ctx = await prisma.context.findUnique({
           where: { id: contextId },
@@ -44,9 +47,22 @@ export const githubContextWorker = new Worker<GithubContextJobPayload>(
         if (ctx) {
           scope.setUser({ id: ctx.userId });
           scope.setTag("workspaceId", ctx.workspaceId);
+          resolvedWorkspaceId = ctx.workspaceId;
         }
       } catch {
         // Best-effort context lookup — don't block the job on it
+      }
+
+      // Skip processing if the workspace's subscription has lapsed. This
+      // protects against BullMQ retries firing days after enqueue.
+      if (resolvedWorkspaceId) {
+        const sub = await checkSubscription(resolvedWorkspaceId);
+        if (!sub.active) {
+          logger.warn(
+            `[worker:github] Skipping job ${job.id} — workspace ${resolvedWorkspaceId} subscription ${sub.reason ?? "missing"}`,
+          );
+          return;
+        }
       }
 
       logger.info(`Processing GithubContextJob ${job.id} for context ${contextId}`);

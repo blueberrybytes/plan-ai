@@ -1823,6 +1823,173 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/billing/subscription": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description Returns the current subscription state for the active workspace. Used by
+         *     the frontend to drive the billing page, upgrade banners, and feature
+         *     gating UI.
+         */
+        get: operations["GetSubscription"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/billing/usage-limits": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description Returns the current month's usage vs. plan limits for the workspace.
+         *     Returns null for each limit type when limits are not enforced (BYOK/FREE).
+         */
+        get: operations["GetUsageLimits"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/billing/catalog": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description Returns the available price catalog (resolved from env vars) so the
+         *     frontend can render its pricing UI without hardcoding price IDs.
+         */
+        get: operations["GetCatalog"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/billing/checkout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description Creates a Stripe Checkout session for the given price and returns the
+         *     redirect URL. Only OWNER or ADMIN of the workspace can initiate.
+         */
+        post: operations["CreateCheckout"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/billing/portal": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description Creates a Stripe Customer Portal session for managing the active
+         *     subscription (cancel, update card, view invoices).
+         */
+        post: operations["CreatePortal"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/billing/sync-session": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description Force-sync a subscription by checkout session ID. The frontend calls
+         *     this on `/billing?status=success` as a safety net in case the Stripe
+         *     webhook hasn't yet been delivered (rare but possible — usually
+         *     milliseconds, can be seconds under load).
+         */
+        post: operations["SyncSession"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/billing/sync-portal": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description Force-sync a subscription directly from Stripe. Used when returning
+         *     from the Customer Portal so the UI updates immediately.
+         */
+        post: operations["SyncPortal"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/billing/webhook": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description Stripe webhook receiver. Verifies the signature against the raw body
+         *     captured by bodyParser (see server.ts `verify` callback), then dispatches
+         *     known event types to the syncing service.
+         *
+         *     NOTE: This endpoint is intentionally unauthenticated — Stripe doesn't
+         *     include any JWT, security is provided by HMAC signature verification.
+         */
+        post: operations["HandleWebhook"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/audio/transcribe-chunk": {
         parameters: {
             query?: never;
@@ -2772,6 +2939,39 @@ export interface components {
             themeId?: string | null;
             isPublic?: boolean;
         };
+        /**
+         * @description AI-inferred information about one speaker in a recorded meeting.
+         *     Populated by `extractSpeakerInsights` during transcript processing.
+         */
+        SpeakerInsight: {
+            /** @description Raw Deepgram speaker label as it appears in utterances (e.g. "Speaker 0", "User 0"). Stable, used to join with the transcript. */
+            label: string;
+            /** @description Name the LLM inferred from conversational cues ("Hi Xavier", signatures, intros). Null when not confidently identifiable. */
+            identifiedName: string | null;
+            /** @description Optional role / title the LLM inferred ("Engineer", "Product Manager", "Client"). */
+            role?: string | null;
+            /** @description True when this label matches `metadata.principalSpeaker` (the recording user). */
+            isPrincipalSpeaker: boolean;
+            /** @description One-sentence summary of what they contributed in the meeting. */
+            summary: string;
+            /** @description Up to 3 verbatim quotes that best represent their voice. */
+            keyQuotes?: string[];
+            /**
+             * @description AI-detected emotional tone of THIS speaker (may differ from the overall meeting sentiment).
+             * @enum {string}
+             */
+            sentiment?: "POSITIVE" | "NEUTRAL" | "NEGATIVE" | "MIXED";
+            /**
+             * Format: double
+             * @description Total seconds this speaker spoke (computed from utterance start/end).
+             */
+            speakingTimeSeconds: number;
+            /**
+             * Format: double
+             * @description Number of distinct utterances by this speaker.
+             */
+            utteranceCount: number;
+        };
         PostMeetingTaskStatus: {
             /** @enum {string} */
             status: "PENDING" | "OK" | "FAILED" | "SKIPPED";
@@ -2816,6 +3016,8 @@ export interface components {
             };
             rawTasks?: unknown[];
             principalSpeaker?: string;
+            /** @description AI insights per speaker (name inference + summary + sentiment + speaking time). */
+            speakers?: components["schemas"]["SpeakerInsight"][];
             /** @description Per-step status of fire-and-forget effects kicked off after a transcript is processed */
             postMeetingTasks?: components["schemas"]["PostMeetingTasksRecord"];
         };
@@ -3663,6 +3865,67 @@ export interface components {
             backgroundStyle?: string;
             cardStyle?: string;
         };
+        SubscriptionStatusResponse: {
+            active: boolean;
+            configured: boolean;
+            tier: string;
+            status: string | null;
+            track: string | null;
+            priceId: string | null;
+            /** Format: double */
+            seats: number;
+            currentPeriodEnd: string | null;
+            cancelAtPeriodEnd: boolean;
+            /**
+             * @description Reason the subscription is not active, when applicable.
+             * @enum {string}
+             */
+            reason?: "no_subscription" | "expired" | "canceled" | "incomplete" | "over_quota";
+        };
+        UsageLimitsResponse: {
+            llm: {
+                /** Format: double */
+                percentage: number;
+                /** Format: double */
+                allowed: number;
+                /** Format: double */
+                used: number;
+            } | null;
+            recording: {
+                /** Format: double */
+                percentage: number;
+                /** Format: double */
+                allowed: number;
+                /** Format: double */
+                used: number;
+            } | null;
+            generations: {
+                /** Format: double */
+                percentage: number;
+                /** Format: double */
+                allowed: number;
+                /** Format: double */
+                used: number;
+            } | null;
+        };
+        CatalogEntry: {
+            priceId: string;
+            tier: string;
+            track: string;
+            key: string;
+        };
+        CheckoutResponse: {
+            url: string;
+            sessionId: string;
+        };
+        CheckoutBody: {
+            priceId: string;
+            /** Format: double */
+            seats?: number;
+        };
+        PortalResponse: {
+            url: string;
+        };
         "ApiResponse__text-string__": {
             message?: string;
             data: {
@@ -3819,6 +4082,11 @@ export interface components {
                 totalTokens: number;
                 feature: string;
             }[];
+            usageByFeatureCost: {
+                /** Format: double */
+                estimatedCost: number;
+                feature: string;
+            }[];
             logs: {
                 /** Format: date-time */
                 createdAt: string;
@@ -3955,7 +4223,7 @@ export interface components {
             status: number;
         };
         /** @enum {string} */
-        "_36_Enums.WorkspaceTier": "FREE" | "PRO" | "AGENCY";
+        "_36_Enums.WorkspaceTier": "FREE" | "PRO" | "BUSINESS" | "ENTERPRISE" | "AGENCY";
         WorkspaceTier: components["schemas"]["_36_Enums.WorkspaceTier"];
         /** @enum {string} */
         "_36_Enums.WorkspaceRole": "ADMIN" | "OWNER" | "MEMBER";
@@ -7761,6 +8029,184 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AnalyzeUrlResponse"];
+                };
+            };
+        };
+    };
+    GetSubscription: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SubscriptionStatusResponse"];
+                };
+            };
+        };
+    };
+    GetUsageLimits: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UsageLimitsResponse"];
+                };
+            };
+        };
+    };
+    GetCatalog: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        prices: components["schemas"]["CatalogEntry"][];
+                    };
+                };
+            };
+        };
+    };
+    CreateCheckout: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CheckoutBody"];
+            };
+        };
+        responses: {
+            /** @description Checkout session created */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CheckoutResponse"];
+                };
+            };
+        };
+    };
+    CreatePortal: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Portal session created */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PortalResponse"];
+                };
+            };
+        };
+    };
+    SyncSession: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    sessionId: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Session synced */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        synced: boolean;
+                    };
+                };
+            };
+        };
+    };
+    SyncPortal: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Portal synced */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        synced: boolean;
+                    };
+                };
+            };
+        };
+    };
+    HandleWebhook: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Webhook processed */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        received: boolean;
+                    };
                 };
             };
         };

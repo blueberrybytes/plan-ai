@@ -1743,6 +1743,70 @@
 				"type": "object",
 				"additionalProperties": false
 			},
+			"SpeakerInsight": {
+				"description": "AI-inferred information about one speaker in a recorded meeting.\nPopulated by `extractSpeakerInsights` during transcript processing.",
+				"properties": {
+					"label": {
+						"type": "string",
+						"description": "Raw Deepgram speaker label as it appears in utterances (e.g. \"Speaker 0\", \"User 0\"). Stable, used to join with the transcript."
+					},
+					"identifiedName": {
+						"type": "string",
+						"nullable": true,
+						"description": "Name the LLM inferred from conversational cues (\"Hi Xavier\", signatures, intros). Null when not confidently identifiable."
+					},
+					"role": {
+						"type": "string",
+						"nullable": true,
+						"description": "Optional role / title the LLM inferred (\"Engineer\", \"Product Manager\", \"Client\")."
+					},
+					"isPrincipalSpeaker": {
+						"type": "boolean",
+						"description": "True when this label matches `metadata.principalSpeaker` (the recording user)."
+					},
+					"summary": {
+						"type": "string",
+						"description": "One-sentence summary of what they contributed in the meeting."
+					},
+					"keyQuotes": {
+						"items": {
+							"type": "string"
+						},
+						"type": "array",
+						"description": "Up to 3 verbatim quotes that best represent their voice."
+					},
+					"sentiment": {
+						"type": "string",
+						"enum": [
+							"POSITIVE",
+							"NEUTRAL",
+							"NEGATIVE",
+							"MIXED"
+						],
+						"description": "AI-detected emotional tone of THIS speaker (may differ from the overall meeting sentiment)."
+					},
+					"speakingTimeSeconds": {
+						"type": "number",
+						"format": "double",
+						"description": "Total seconds this speaker spoke (computed from utterance start/end)."
+					},
+					"utteranceCount": {
+						"type": "number",
+						"format": "double",
+						"description": "Number of distinct utterances by this speaker."
+					}
+				},
+				"required": [
+					"label",
+					"identifiedName",
+					"isPrincipalSpeaker",
+					"summary",
+					"speakingTimeSeconds",
+					"utteranceCount"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
 			"PostMeetingTaskStatus": {
 				"properties": {
 					"status": {
@@ -1867,6 +1931,13 @@
 					},
 					"principalSpeaker": {
 						"type": "string"
+					},
+					"speakers": {
+						"items": {
+							"$ref": "#/components/schemas/SpeakerInsight"
+						},
+						"type": "array",
+						"description": "AI insights per speaker (name inference + summary + sentiment + speaking time)."
 					},
 					"postMeetingTasks": {
 						"$ref": "#/components/schemas/PostMeetingTasksRecord",
@@ -5121,6 +5192,214 @@
 				"type": "object",
 				"description": "Make all properties in T optional"
 			},
+			"SubscriptionStatusResponse": {
+				"properties": {
+					"active": {
+						"type": "boolean"
+					},
+					"configured": {
+						"type": "boolean"
+					},
+					"tier": {
+						"type": "string"
+					},
+					"status": {
+						"type": "string",
+						"nullable": true
+					},
+					"track": {
+						"type": "string",
+						"nullable": true
+					},
+					"priceId": {
+						"type": "string",
+						"nullable": true
+					},
+					"seats": {
+						"type": "number",
+						"format": "double"
+					},
+					"currentPeriodEnd": {
+						"type": "string",
+						"nullable": true
+					},
+					"cancelAtPeriodEnd": {
+						"type": "boolean"
+					},
+					"reason": {
+						"type": "string",
+						"enum": [
+							"no_subscription",
+							"expired",
+							"canceled",
+							"incomplete",
+							"over_quota"
+						],
+						"description": "Reason the subscription is not active, when applicable."
+					}
+				},
+				"required": [
+					"active",
+					"configured",
+					"tier",
+					"status",
+					"track",
+					"priceId",
+					"seats",
+					"currentPeriodEnd",
+					"cancelAtPeriodEnd"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"UsageLimitsResponse": {
+				"properties": {
+					"llm": {
+						"properties": {
+							"percentage": {
+								"type": "number",
+								"format": "double"
+							},
+							"allowed": {
+								"type": "number",
+								"format": "double"
+							},
+							"used": {
+								"type": "number",
+								"format": "double"
+							}
+						},
+						"required": [
+							"percentage",
+							"allowed",
+							"used"
+						],
+						"type": "object",
+						"nullable": true
+					},
+					"recording": {
+						"properties": {
+							"percentage": {
+								"type": "number",
+								"format": "double"
+							},
+							"allowed": {
+								"type": "number",
+								"format": "double"
+							},
+							"used": {
+								"type": "number",
+								"format": "double"
+							}
+						},
+						"required": [
+							"percentage",
+							"allowed",
+							"used"
+						],
+						"type": "object",
+						"nullable": true
+					},
+					"generations": {
+						"properties": {
+							"percentage": {
+								"type": "number",
+								"format": "double"
+							},
+							"allowed": {
+								"type": "number",
+								"format": "double"
+							},
+							"used": {
+								"type": "number",
+								"format": "double"
+							}
+						},
+						"required": [
+							"percentage",
+							"allowed",
+							"used"
+						],
+						"type": "object",
+						"nullable": true
+					}
+				},
+				"required": [
+					"llm",
+					"recording",
+					"generations"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"CatalogEntry": {
+				"properties": {
+					"priceId": {
+						"type": "string"
+					},
+					"tier": {
+						"type": "string"
+					},
+					"track": {
+						"type": "string"
+					},
+					"key": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"priceId",
+					"tier",
+					"track",
+					"key"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"CheckoutResponse": {
+				"properties": {
+					"url": {
+						"type": "string"
+					},
+					"sessionId": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"url",
+					"sessionId"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"CheckoutBody": {
+				"properties": {
+					"priceId": {
+						"type": "string"
+					},
+					"seats": {
+						"type": "number",
+						"format": "double"
+					}
+				},
+				"required": [
+					"priceId"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"PortalResponse": {
+				"properties": {
+					"url": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"url"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
 			"ApiResponse__text-string__": {
 				"properties": {
 					"message": {
@@ -5668,6 +5947,25 @@
 						},
 						"type": "array"
 					},
+					"usageByFeatureCost": {
+						"items": {
+							"properties": {
+								"estimatedCost": {
+									"type": "number",
+									"format": "double"
+								},
+								"feature": {
+									"type": "string"
+								}
+							},
+							"required": [
+								"estimatedCost",
+								"feature"
+							],
+							"type": "object"
+						},
+						"type": "array"
+					},
 					"logs": {
 						"items": {
 							"properties": {
@@ -5734,6 +6032,7 @@
 					"totalTokens",
 					"totalBlueberryTokens",
 					"usageByFeature",
+					"usageByFeatureCost",
 					"logs",
 					"totalCount"
 				],
@@ -6174,6 +6473,8 @@
 				"enum": [
 					"FREE",
 					"PRO",
+					"BUSINESS",
+					"ENTERPRISE",
 					"AGENCY"
 				]
 			},
@@ -6712,9 +7013,9 @@
 	},
 	"info": {
 		"title": "backend",
-		"version": "3.0.0",
+		"version": "3.2.0",
 		"license": {
-			"name": "PolyForm-Noncommercial-1.0.0"
+			"name": "BUSL-1.1"
 		},
 		"contact": {}
 	},
@@ -12607,6 +12908,281 @@
 						}
 					}
 				}
+			}
+		},
+		"/api/billing/subscription": {
+			"get": {
+				"operationId": "GetSubscription",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/SubscriptionStatusResponse"
+								}
+							}
+						}
+					}
+				},
+				"description": "Returns the current subscription state for the active workspace. Used by\nthe frontend to drive the billing page, upgrade banners, and feature\ngating UI.",
+				"tags": [
+					"Billing"
+				],
+				"security": [
+					{
+						"BearerAuth": []
+					}
+				],
+				"parameters": []
+			}
+		},
+		"/api/billing/usage-limits": {
+			"get": {
+				"operationId": "GetUsageLimits",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/UsageLimitsResponse"
+								}
+							}
+						}
+					}
+				},
+				"description": "Returns the current month's usage vs. plan limits for the workspace.\nReturns null for each limit type when limits are not enforced (BYOK/FREE).",
+				"tags": [
+					"Billing"
+				],
+				"security": [
+					{
+						"BearerAuth": []
+					}
+				],
+				"parameters": []
+			}
+		},
+		"/api/billing/catalog": {
+			"get": {
+				"operationId": "GetCatalog",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"prices": {
+											"items": {
+												"$ref": "#/components/schemas/CatalogEntry"
+											},
+											"type": "array"
+										}
+									},
+									"required": [
+										"prices"
+									],
+									"type": "object"
+								}
+							}
+						}
+					}
+				},
+				"description": "Returns the available price catalog (resolved from env vars) so the\nfrontend can render its pricing UI without hardcoding price IDs.",
+				"tags": [
+					"Billing"
+				],
+				"security": [
+					{
+						"BearerAuth": []
+					}
+				],
+				"parameters": []
+			}
+		},
+		"/api/billing/checkout": {
+			"post": {
+				"operationId": "CreateCheckout",
+				"responses": {
+					"200": {
+						"description": "Checkout session created",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/CheckoutResponse"
+								}
+							}
+						}
+					}
+				},
+				"description": "Creates a Stripe Checkout session for the given price and returns the\nredirect URL. Only OWNER or ADMIN of the workspace can initiate.",
+				"tags": [
+					"Billing"
+				],
+				"security": [
+					{
+						"BearerAuth": []
+					}
+				],
+				"parameters": [],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/CheckoutBody"
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/billing/portal": {
+			"post": {
+				"operationId": "CreatePortal",
+				"responses": {
+					"200": {
+						"description": "Portal session created",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/PortalResponse"
+								}
+							}
+						}
+					}
+				},
+				"description": "Creates a Stripe Customer Portal session for managing the active\nsubscription (cancel, update card, view invoices).",
+				"tags": [
+					"Billing"
+				],
+				"security": [
+					{
+						"BearerAuth": []
+					}
+				],
+				"parameters": []
+			}
+		},
+		"/api/billing/sync-session": {
+			"post": {
+				"operationId": "SyncSession",
+				"responses": {
+					"200": {
+						"description": "Session synced",
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"synced": {
+											"type": "boolean"
+										}
+									},
+									"required": [
+										"synced"
+									],
+									"type": "object"
+								}
+							}
+						}
+					}
+				},
+				"description": "Force-sync a subscription by checkout session ID. The frontend calls\nthis on `/billing?status=success` as a safety net in case the Stripe\nwebhook hasn't yet been delivered (rare but possible — usually\nmilliseconds, can be seconds under load).",
+				"tags": [
+					"Billing"
+				],
+				"security": [
+					{
+						"BearerAuth": []
+					}
+				],
+				"parameters": [],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"properties": {
+									"sessionId": {
+										"type": "string"
+									}
+								},
+								"required": [
+									"sessionId"
+								],
+								"type": "object"
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/billing/sync-portal": {
+			"post": {
+				"operationId": "SyncPortal",
+				"responses": {
+					"200": {
+						"description": "Portal synced",
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"synced": {
+											"type": "boolean"
+										}
+									},
+									"required": [
+										"synced"
+									],
+									"type": "object"
+								}
+							}
+						}
+					}
+				},
+				"description": "Force-sync a subscription directly from Stripe. Used when returning\nfrom the Customer Portal so the UI updates immediately.",
+				"tags": [
+					"Billing"
+				],
+				"security": [
+					{
+						"BearerAuth": []
+					}
+				],
+				"parameters": []
+			}
+		},
+		"/api/billing/webhook": {
+			"post": {
+				"operationId": "HandleWebhook",
+				"responses": {
+					"200": {
+						"description": "Webhook processed",
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"received": {
+											"type": "boolean"
+										}
+									},
+									"required": [
+										"received"
+									],
+									"type": "object"
+								}
+							}
+						}
+					}
+				},
+				"description": "Stripe webhook receiver. Verifies the signature against the raw body\ncaptured by bodyParser (see server.ts `verify` callback), then dispatches\nknown event types to the syncing service.\n\nNOTE: This endpoint is intentionally unauthenticated — Stripe doesn't\ninclude any JWT, security is provided by HMAC signature verification.",
+				"tags": [
+					"Billing"
+				],
+				"security": [],
+				"parameters": []
 			}
 		},
 		"/api/audio/transcribe-chunk": {

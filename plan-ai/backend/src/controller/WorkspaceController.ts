@@ -257,15 +257,16 @@ export class WorkspaceController extends BaseWorkspaceController {
 
     // Check invitation limits
     const activeMembersCount = await prisma.workspaceMember.count({
-      where: { workspaceId, role: { not: "OWNER" } },
+      where: { workspaceId },
     });
     const pendingInvitationsCount = await prisma.workspaceInvitation.count({
       where: { workspaceId, status: "PENDING" },
     });
 
-    if (workspace && activeMembersCount + pendingInvitationsCount >= workspace.maxInvitations) {
+    const totalSeats = workspace?.subscriptionSeats || 1;
+    if (workspace && activeMembersCount + pendingInvitationsCount >= totalSeats) {
       this.setStatus(403);
-      throw { status: 403, message: "Workspace invitation limit reached." };
+      throw { status: 403, message: "Workspace seat limit reached." };
     }
 
     const invitedUserEmail = body.email.toLowerCase().trim();

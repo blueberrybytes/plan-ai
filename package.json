@@ -1,6 +1,6 @@
 {
   "name": "plan-ai",
-  "version": "3.1.0",
+  "version": "3.2.0",
   "description": "Plan AI - AI-assisted meeting planning & execution platform by Blueberrybytes",
   "main": "index.js",
   "engines": {
@@ -59,7 +59,7 @@
     "blueberrybytes"
   ],
   "author": "Xavier Masleszkiewicz",
-  "license": "PolyForm-Noncommercial-1.0.0",
+  "license": "BUSL-1.1",
   "devDependencies": {
     "@types/node": "^22.15.17",
     "concurrently": "^9.2.1",

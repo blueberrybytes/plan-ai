@@ -80,10 +80,10 @@ export class OnboardingController extends Controller {
     const isInvited = user.workspaceMembers && user.workspaceMembers.length > 0;
 
     if (!isInvited) {
-      // User is the creator, must provide workspaceName, brandTheme, and API keys
-      if (!body.workspaceName || !body.brandTheme || !body.openRouterKey || !body.deepgramKey) {
+      // User is the creator, must provide workspaceName and brandTheme
+      if (!body.workspaceName || !body.brandTheme) {
         this.setStatus(400);
-        throw new Error("workspaceName, brandTheme, and API keys are required for new workspace creators");
+        throw new Error("workspaceName and brandTheme are required for new workspace creators");
       }
 
       // Create Workspace

@@ -13,6 +13,7 @@ export interface AiUsageMetricsResponse {
   totalEstimatedCost?: number;
   totalBlueberryTokens: number;
   usageByFeature: { feature: string; totalTokens: number }[];
+  usageByFeatureCost: { feature: string; estimatedCost: number }[];
   logs: {
     id: string;
     feature: string;
@@ -144,6 +145,14 @@ export class AiUsageController extends BaseWorkspaceController {
       },
     });
 
+    const costByFeature = await prisma.aiUsageLog.groupBy({
+      by: ["feature"],
+      where,
+      _sum: {
+        estimatedCost: true,
+      },
+    });
+
     const totalInputAggregate = await prisma.aiUsageLog.aggregate({
       where,
       _sum: {
@@ -171,17 +180,14 @@ export class AiUsageController extends BaseWorkspaceController {
         totalOutputTokens: totalInputAggregate._sum.outputTokens || 0,
         totalTokens: totalInputAggregate._sum.totalTokens || 0,
         totalEstimatedCost: totalInputAggregate._sum.estimatedCost || 0,
-        totalBlueberryTokens:
-          totalInputAggregate._sum.blueberryTokens ||
-          ((totalInputAggregate._sum.totalTokens || 0) > 0
-            ? Math.max(
-                1,
-                Math.ceil((totalInputAggregate._sum.totalTokens || 0) * 0.000001 * 2 * 10000),
-              )
-            : 0),
+        totalBlueberryTokens: totalInputAggregate._sum.blueberryTokens || 0,
         usageByFeature: aggregates.map((agg) => ({
           feature: agg.feature,
           totalTokens: agg._sum.totalTokens || 0,
+        })),
+        usageByFeatureCost: costByFeature.map((agg) => ({
+          feature: agg.feature,
+          estimatedCost: agg._sum.estimatedCost || 0,
         })),
         logs: enrichedLogs,
         totalCount,

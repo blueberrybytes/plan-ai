@@ -625,7 +625,7 @@ export class ProjectTranscriptService {
         data: {
           title:
             existing.title === "Generating Transcript..."
-              ? analysisRaw.title || existing.title
+              ? analysisRaw.title || `Meeting — ${new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`
               : existing.title,
           language: analysisRaw.language,
           summary: analysisRaw.summary ?? null,
@@ -1515,12 +1515,14 @@ ${transcriptForLLM}`;
           const meta = integration.metadata as unknown as JiraIntegrationMetadata | null;
           if (!meta?.defaultProjectId) continue;
           await this.setPostMeetingTaskStatus(transcript.id, "jira", { status: "PENDING" });
+          let firstTaskUrl: string | undefined;
           for (const task of tasks) {
             const syncResult = await jiraIntegrationService.createJiraIssue(
               workspaceId,
               task.id,
               meta.defaultProjectId,
             );
+            if (!firstTaskUrl) firstTaskUrl = syncResult.url;
             await this.updateTaskTargetMetadata(task.id, "jira", {
               issueId: syncResult.issueId,
               issueKey: syncResult.issueKey,
@@ -1530,6 +1532,7 @@ ${transcriptForLLM}`;
           await this.setPostMeetingTaskStatus(transcript.id, "jira", {
             status: "OK",
             count: tasks.length,
+            url: firstTaskUrl,
           });
         } else if (
           integration.provider === IntegrationProvider.LINEAR &&
@@ -1538,12 +1541,14 @@ ${transcriptForLLM}`;
           const meta = integration.metadata as unknown as LinearIntegrationMetadata | null;
           if (!meta?.defaultTeamId) continue;
           await this.setPostMeetingTaskStatus(transcript.id, "linear", { status: "PENDING" });
+          let firstTaskUrl: string | undefined;
           for (const task of tasks) {
             const syncResult = await linearIntegrationService.createLinearIssue(
               workspaceId,
               task.id,
               meta.defaultTeamId,
             );
+            if (!firstTaskUrl) firstTaskUrl = syncResult.url;
             await this.updateTaskTargetMetadata(task.id, "linear", {
               issueId: syncResult.issueId,
               identifier: syncResult.identifier,
@@ -1553,6 +1558,7 @@ ${transcriptForLLM}`;
           await this.setPostMeetingTaskStatus(transcript.id, "linear", {
             status: "OK",
             count: tasks.length,
+            url: firstTaskUrl,
           });
         } else if (
           integration.provider === IntegrationProvider.TRELLO &&
@@ -1561,6 +1567,7 @@ ${transcriptForLLM}`;
           const meta = integration.metadata as unknown as TrelloIntegrationMetadata | null;
           if (!meta?.defaultBoardId || !meta?.defaultListId) continue;
           await this.setPostMeetingTaskStatus(transcript.id, "trello", { status: "PENDING" });
+          let firstTaskUrl: string | undefined;
           for (const task of tasks) {
             const syncResult = await trelloIntegrationService.createTrelloCard(
               workspaceId,
@@ -1568,6 +1575,7 @@ ${transcriptForLLM}`;
               meta.defaultBoardId,
               meta.defaultListId,
             );
+            if (!firstTaskUrl) firstTaskUrl = syncResult.url;
             logger.info(`Auto-synced task ${task.id} to Trello card ${syncResult.cardId}`);
             await this.updateTaskTargetMetadata(task.id, "trello", {
               cardId: syncResult.cardId,
@@ -1578,6 +1586,7 @@ ${transcriptForLLM}`;
           await this.setPostMeetingTaskStatus(transcript.id, "trello", {
             status: "OK",
             count: tasks.length,
+            url: firstTaskUrl,
           });
         } else if (
           integration.provider === IntegrationProvider.NOTION &&
@@ -1614,12 +1623,14 @@ ${transcriptForLLM}`;
           const meta = integration.metadata as unknown as AsanaIntegrationMetadata | null;
           if (!meta?.defaultProjectGid) continue;
           await this.setPostMeetingTaskStatus(transcript.id, "asana", { status: "PENDING" });
+          let firstTaskUrl: string | undefined;
           for (const task of tasks) {
             const syncResult = await asanaIntegrationService.createAsanaTask(
               workspaceId,
               task.id,
               meta.defaultProjectGid,
             );
+            if (!firstTaskUrl) firstTaskUrl = syncResult.url;
             logger.info(`Auto-synced task ${task.id} to Asana task ${syncResult.taskGid}`);
             await this.updateTaskTargetMetadata(task.id, "asana", {
               taskGid: syncResult.taskGid,
@@ -1629,6 +1640,7 @@ ${transcriptForLLM}`;
           await this.setPostMeetingTaskStatus(transcript.id, "asana", {
             status: "OK",
             count: tasks.length,
+            url: firstTaskUrl,
           });
         }
       } catch (error) {

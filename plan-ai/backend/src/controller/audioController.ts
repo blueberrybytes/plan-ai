@@ -19,7 +19,7 @@ export class AudioController extends BaseWorkspaceController {
     @UploadedFile("mic") micFile?: Express.Multer.File,
     @UploadedFile("system") sysFile?: Express.Multer.File,
   ): Promise<ApiResponse<{ text: string }>> {
-    const { user, workspaceId } = await this.getAuthorizedWorkspaceAccess(request);
+    const { user, workspaceId } = await this.getPaidRecordingAccess(request);
 
     if (!micFile && !sysFile) {
       this.setStatus(400);
