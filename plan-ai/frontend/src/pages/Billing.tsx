@@ -25,6 +25,7 @@ import {
   OpenInNew as OpenInNewIcon,
   Bolt as BoltIcon,
   Key as KeyIcon,
+  CardGiftcard as GiftIcon,
 } from "@mui/icons-material";
 import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router-dom";
@@ -216,6 +217,66 @@ const Billing: React.FC = () => {
             {t("billing.title")}
           </Typography>
           <Alert severity="info">{t("billing.notConfigured")}</Alert>
+        </Container>
+      </SidebarLayout>
+    );
+  }
+
+  // Courtesy workspace — full access granted by the team, no billing needed.
+  if (activeWorkspace?.isCourtesy) {
+    return (
+      <SidebarLayout>
+        <Container maxWidth="sm" sx={{ py: 8 }}>
+          <Stack spacing={4} alignItems="center" textAlign="center">
+            <Box
+              sx={{
+                width: 80,
+                height: 80,
+                borderRadius: "50%",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                bgcolor: (t) => alpha(t.palette.success.main, 0.12),
+              }}
+            >
+              <GiftIcon sx={{ fontSize: 40, color: "success.main" }} />
+            </Box>
+
+            <Box>
+              <Typography variant="h4" sx={{ fontWeight: 800, mb: 1 }}>
+                Courtesy Access
+              </Typography>
+              <Chip label="Active" color="success" size="small" sx={{ fontWeight: 700 }} />
+            </Box>
+
+            <Typography variant="body1" color="text.secondary" sx={{ maxWidth: 420 }}>
+              Your workspace has been granted complimentary access to all Plan AI
+              features. No subscription or payment is required.
+            </Typography>
+
+            <Paper
+              variant="outlined"
+              sx={{ p: 3, borderRadius: "16px", width: "100%", textAlign: "left" }}
+            >
+              <Stack spacing={1.5}>
+                {[
+                  "Unlimited recordings & transcriptions",
+                  "Full AI assistant & generative studio",
+                  "All integrations (Jira, Linear, Trello, Notion, Asana)",
+                  "Branded slides, documents & diagrams",
+                ].map((feat) => (
+                  <Stack key={feat} direction="row" spacing={1.5} alignItems="center">
+                    <CheckIcon sx={{ fontSize: 20, color: "success.main" }} />
+                    <Typography variant="body2">{feat}</Typography>
+                  </Stack>
+                ))}
+              </Stack>
+            </Paper>
+
+            <Typography variant="caption" color="text.secondary">
+              Managed by the Plan AI team. Contact us if you have any questions.
+            </Typography>
+          </Stack>
         </Container>
       </SidebarLayout>
     );
