@@ -176,6 +176,14 @@ const RecordingDetail: React.FC = () => {
   const [tabValue, setTabValue] = useState("summary");
   const [exportAnchor, setExportAnchor] = useState<null | HTMLElement>(null);
 
+  // When a transcript has no AI summary (e.g. standalone / pasted text),
+  // default to the "transcript" tab instead of showing an empty summary.
+  React.useEffect(() => {
+    if (transcript && !transcript.data?.summary && tabValue === "summary") {
+      setTabValue("transcript");
+    }
+  }, [transcript, tabValue]);
+
   const handleTabChange = (_event: React.SyntheticEvent, newValue: string) => {
     setTabValue(newValue);
   };
@@ -501,7 +509,7 @@ const RecordingDetail: React.FC = () => {
         <Card elevation={0} sx={{ border: 1, borderColor: "divider" }}>
           <CardContent sx={{ p: { xs: 2, md: 4 } }}>
             <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
-              {transcript.data?.summary ? "AI Summary & Transcript" : "Transcript"}
+              Recording Details
             </Typography>
 
             {transcript.data?.metadata?.processingStatus ===
@@ -536,14 +544,16 @@ const RecordingDetail: React.FC = () => {
                 The background AI worker encountered an error while processing this transcript.
                 Tasks and summaries could not be generated.
               </Alert>
-            ) : transcript.data?.summary ? (
+            ) : (
               <>
                 <Tabs
                   value={tabValue}
                   onChange={handleTabChange}
                   sx={{ borderBottom: 1, borderColor: "divider", mb: 3 }}
                 >
-                  <Tab label="AI Summary" value="summary" sx={{ fontWeight: 600 }} />
+                  {transcript.data?.summary && (
+                    <Tab label="AI Summary" value="summary" sx={{ fontWeight: 600 }} />
+                  )}
                   {(transcript.data?.documents && transcript.data.documents.length > 0) && (
                     <Tab label="Generated Docs" value="documents" sx={{ fontWeight: 600 }} />
                   )}
@@ -559,7 +569,7 @@ const RecordingDetail: React.FC = () => {
                   {generatedChart && (
                     <Tab label="Architecture Map" value="architecture" sx={{ fontWeight: 600 }} />
                   )}
-                  {transcript.data.chatThread && transcript.data.chatThread.messages.length > 0 && (
+                  {transcript.data?.chatThread && transcript.data.chatThread.messages.length > 0 && (
                     <Tab label="Live Chat" value="chat" sx={{ fontWeight: 600 }} />
                   )}
                   {(() => {
@@ -577,7 +587,7 @@ const RecordingDetail: React.FC = () => {
                 {tabValue === "summary" && (
                   <Box sx={{ p: 3, bgcolor: "action.hover", borderRadius: 2 }}>
                     <Typography variant="body1" sx={{ lineHeight: 1.7, fontSize: "1.05rem" }}>
-                      {transcript.data.summary}
+                      {transcript.data?.summary}
                     </Typography>
                   </Box>
                 )}
@@ -633,7 +643,7 @@ const RecordingDetail: React.FC = () => {
                         fontSize: "1.05rem",
                       }}
                     >
-                      {transcript.data.transcript || "No transcript content available."}
+                      {transcript.data?.transcript || "No transcript content available."}
                     </Typography>
                   </Box>
                 )}
@@ -669,7 +679,7 @@ const RecordingDetail: React.FC = () => {
                   </Box>
                 )}
 
-                {tabValue === "chat" && transcript.data.chatThread && (
+                {tabValue === "chat" && transcript.data?.chatThread && (
                   <Box sx={{ display: "flex", flexDirection: "column" }}>
                     {transcript.data.chatThread.messages.map((msg, idx) => (
                       <ChatMessageItem key={idx} msg={msg} />
@@ -738,39 +748,6 @@ const RecordingDetail: React.FC = () => {
                       {JSON.stringify(transcript.data?.metadata ?? {}, null, 2)}
                     </Box>
                   </Box>
-                )}
-              </>
-            ) : (
-              <>
-                {transcript.data?.transcript ? (
-                  <Box sx={{ position: "relative", p: 3, bgcolor: "background.paper", borderRadius: 2, border: "1px solid", borderColor: "divider" }}>
-                    <Button
-                      size="small"
-                      variant="outlined"
-                      startIcon={<CopyIcon />}
-                      onClick={handleCopy}
-                      disabled={copying || !transcript.data?.transcript}
-                      sx={{ position: "absolute", top: 16, right: 16 }}
-                    >
-                      {copying ? "Copied!" : "Copy Text"}
-                    </Button>
-                    <Typography
-                      variant="body1"
-                      sx={{
-                        mt: 4,
-                        whiteSpace: "pre-wrap",
-                        color: "text.primary",
-                        lineHeight: 1.8,
-                        fontSize: "1.05rem",
-                      }}
-                    >
-                      {transcript.data.transcript}
-                    </Typography>
-                  </Box>
-                ) : (
-                  <Typography color="text.secondary" sx={{ fontStyle: "italic" }}>
-                    No transcript text generated yet.
-                  </Typography>
                 )}
               </>
             )}

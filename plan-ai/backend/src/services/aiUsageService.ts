@@ -1,4 +1,5 @@
 import prisma from "../prisma/prismaClient";
+import { Prisma } from "@prisma/client";
 import { logger } from "../utils/logger";
 import { pricingCacheService } from "./pricingCacheService";
 
@@ -71,6 +72,24 @@ export class AiUsageService {
         },
       });
     } catch (error) {
+      // P2003 = foreign key constraint violation. Most commonly happens
+      // when the user or workspace referenced by the queued job was
+      // deleted between enqueue and worker execution (e.g. test cleanup,
+      // GDPR delete, manual DB reset). Downgrade to a warn — usage
+      // logging is fire-and-forget telemetry; losing one log row is
+      // strictly better than spamming Sentry with red errors on every
+      // diarized recording of a deleted account.
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2003") {
+        const target =
+          (error.meta as { constraint?: string } | undefined)?.constraint ??
+          "unknown_constraint";
+        logger.warn(
+          `[aiUsage] Skipping log — referenced row is gone (${target}). ` +
+            `userId=${params.userId} workspaceId=${params.workspaceId} ` +
+            `projectId=${params.projectId ?? "—"} feature=${params.feature}`,
+        );
+        return;
+      }
       logger.error("Failed to log AI usage", error);
     }
   }

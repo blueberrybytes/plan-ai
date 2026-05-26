@@ -337,6 +337,14 @@ const TranscriptView: React.FC = () => {
     return () => clearTimeout(timeoutId);
   }, [transcript, fetchTranscript]);
 
+  // When a transcript has no AI summary (e.g. standalone / pasted text),
+  // default to the "transcript" tab instead of showing an empty summary.
+  useEffect(() => {
+    if (transcript && !transcript.summary && tabValue === "summary") {
+      setTabValue("transcript");
+    }
+  }, [transcript, tabValue]);
+
   const handleCopy = () => {
     if (transcript?.transcript) {
       navigator.clipboard
@@ -611,7 +619,7 @@ const TranscriptView: React.FC = () => {
                 <br />
                 Tasks and summaries could not be generated.
               </Alert>
-            ) : transcript.summary ? (
+            ) : (
               <>
                 <SyncBadges tasks={transcript.metadata?.postMeetingTasks} />
                 {transcript.metadata?.processingStatus === "EXTRACTING_TASKS" && (
@@ -631,11 +639,13 @@ const TranscriptView: React.FC = () => {
                   variant="scrollable"
                   scrollButtons="auto"
                 >
-                  <Tab
-                    label="AI Summary"
-                    value="summary"
-                    sx={{ fontWeight: 600 }}
-                  />
+                  {transcript.summary && (
+                    <Tab
+                      label="AI Summary"
+                      value="summary"
+                      sx={{ fontWeight: 600 }}
+                    />
+                  )}
                   {(transcript.documents && transcript.documents.length > 0) && (
                     <Tab label="Generated Docs" value="documents" sx={{ fontWeight: 600 }} />
                   )}
@@ -1127,24 +1137,6 @@ const TranscriptView: React.FC = () => {
                   tasks={transcript.metadata?.postMeetingTasks}
                   onAfterRetry={() => void fetchTranscript(true)}
                 />
-              </>
-            ) : (
-              <>
-                <Typography
-                  variant="subtitle2"
-                  color="text.secondary"
-                  gutterBottom
-                  sx={{
-                    textTransform: "uppercase",
-                    fontWeight: 700,
-                    letterSpacing: 0.5,
-                  }}
-                >
-                  Raw Transcript
-                </Typography>
-                <Box sx={{ mt: 2 }}>
-                  <RenderTranscriptContent transcript={transcript} />
-                </Box>
               </>
             )}
           </Box>
