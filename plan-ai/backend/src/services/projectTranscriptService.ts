@@ -63,10 +63,26 @@ const TranscriptTaskRawSchema = z.object({
   title: z.string().min(1),
   summary: z.string().min(1),
   description: z.string().min(1),
-  acceptanceCriteria: z.string().min(1),
+  acceptanceCriteria: z
+    .array(z.string().min(1))
+    .min(1)
+    .describe(
+      "A JSON array of discrete acceptance-criteria strings. Each element MUST be a single, atomic verifiable condition (e.g. 'The endpoint returns 200 when X'). NEVER use markdown bullets ('- foo') inside elements. NEVER return a single concatenated string.",
+    ),
   priority: z.string().optional(),
   status: z.string().optional(),
-  type: z.string().optional(),
+  type: z
+    .string()
+    .optional()
+    .describe(
+      'One of: "TASK", "BUG", "STORY", "EPIC". Use EPIC ONLY for macro/parent tasks that have a non-empty subtasks array. Standalone work uses TASK | BUG | STORY.',
+    ),
+  category: z
+    .enum(["engineering", "design", "support", "ops", "research"])
+    .optional()
+    .describe(
+      "Work category. Use 'engineering' for code/dev work, 'design' for design/UX/mocks, 'support' for customer outreach + admin flags, 'ops' for infra/devops, 'research' for spike/investigation. Customers can filter their ticket board by this.",
+    ),
   dueDate: z.string().optional(),
   storyPoints: z
     .number()
@@ -154,19 +170,49 @@ export interface TranscriptAnalysis {
   tasks: TranscriptTask[];
 }
 
+export type TaskCategory = "engineering" | "design" | "support" | "ops" | "research";
+
 export interface TranscriptTask {
   title: string;
   summary?: string;
   description?: string;
+  /**
+   * Persisted to `Task.acceptanceCriteria` (a `String` column) as a markdown
+   * bullet list joined from the LLM's array output. See `joinAcceptanceCriteria`.
+   */
   acceptanceCriteria?: string;
+  /** Raw array form, preserved for integrations / future structured API. */
+  acceptanceCriteriaList?: string[];
   priority?: TaskPriority;
   status?: TaskStatus;
   type?: TaskType;
+  category?: TaskCategory;
   dueDate?: string;
   storyPoints?: number;
   dependencies?: string[];
   subtasks?: TranscriptTask[];
 }
+
+/**
+ * Convert the LLM's `string[]` array of acceptance criteria into the
+ * markdown bullet list format the existing DB column + Jira/Linear/Notion
+ * integrations expect. Robust to legacy `string` input from older sessions.
+ */
+const joinAcceptanceCriteria = (raw: unknown): { joined: string; list: string[] } => {
+  let list: string[] = [];
+  if (Array.isArray(raw)) {
+    list = raw.filter((x) => typeof x === "string" && x.trim().length > 0);
+  } else if (typeof raw === "string" && raw.trim().length > 0) {
+    // Legacy fallback: split on newline-then-bullet to recover discrete items.
+    list = raw
+      .split(/\n+\s*[-•*]\s*|\n+/)
+      .map((s) => s.trim().replace(/^[-•*]\s*/, ""))
+      .filter(Boolean);
+    if (list.length === 0) list = [raw.trim()];
+  }
+  const joined = list.map((item) => `- ${item}`).join("\n");
+  return { joined, list };
+};
 
 export interface CreateTranscriptInput {
   projectId: string;
@@ -665,6 +711,14 @@ export class ProjectTranscriptService {
               metadata: {
                 generatedFromTranscriptId: transcript.id,
                 generatorVersion: "session-transcript-service@2",
+                // Category lets the frontend filter eng work vs support
+                // actions vs design tasks etc. Defaults to "engineering"
+                // when the LLM didn't classify (backwards compatible).
+                category: taskCandidate.category ?? "engineering",
+                // Discrete acceptance-criteria array, preserved alongside
+                // the joined string in `Task.acceptanceCriteria` for
+                // integrations that want structured data.
+                acceptanceCriteriaList: taskCandidate.acceptanceCriteriaList ?? [],
                 aiGraphTrace: {
                   nodes: [
                     { id: "ai", name: "Plan AI Extractor", group: "function" as const, val: 30 },
@@ -721,6 +775,8 @@ export class ProjectTranscriptService {
                   metadata: {
                     generatedFromTranscriptId: transcript.id,
                     generatorVersion: "session-transcript-service@2",
+                    category: subTaskCandidate.category ?? "engineering",
+                    acceptanceCriteriaList: subTaskCandidate.acceptanceCriteriaList ?? [],
                   } satisfies Prisma.JsonObject,
                 },
               });
@@ -1073,7 +1129,7 @@ Break down goals into specific coding tasks, PRs, and technical improvements.`;
 
     let strategyInstruction = "";
     if (taskStrategy === "AUTO" || !taskStrategy) {
-      strategyInstruction = `\nAGILE SLICE & DICE (AUTO MODE): If the transcript covers a large complex feature, decompose it into 1 macro "EPIC" Task. Place 3 to 6 specialized sub-tasks inside that Epic's 'subtasks' array (e.g., Frontend, Backend, DevOps tasks). Ensure you assign fibonacci storyPoints (1, 2, 3, 5, 8) based on technical complexity (e.g. database schema changes = 5 pts, simple UI tweak = 1 pt).`;
+      strategyInstruction = `\nAGILE SLICE & DICE (AUTO MODE): If the transcript covers a large complex feature, decompose it into 1 macro Task with type "EPIC". Place 3 to 6 specialized sub-tasks inside that EPIC's 'subtasks' array (e.g., Frontend, Backend, DevOps tasks). The EPIC's 'storyPoints' field MUST equal the sum of its subtasks' 'storyPoints' (e.g., subtasks of 1+3+5 → EPIC = 9). Assign fibonacci storyPoints (1, 2, 3, 5, 8, 13) to each subtask based on technical complexity (database schema changes = 5 pts, simple UI tweak = 1 pt). The macro task MUST have type: "EPIC" — NOT "STORY".`;
     } else if (taskStrategy === "SINGLE_TICKET") {
       strategyInstruction = `\nAGILE MEGA-TICKET MODE: You MUST extract exactly ONE single macro ticket (type: "EPIC" or "STORY") that houses all notes and acceptance criteria inside its description. DO NOT generate subtasks.`;
     } else if (taskStrategy === "SPECIFIC_COUNT") {
@@ -1097,9 +1153,11 @@ Analyze the following transcript/request and the provided codebase context.
    - Each task MUST have a clear title.
    - **summary**: REQUIRED. A concise, 1-sentence overview of the task (max 20 words).
    - **description**: Detailed technical steps or context.
-   - **acceptanceCriteria**: REQUIRED. A markdown list of verifiable conditions for success.
+   - **acceptanceCriteria**: REQUIRED. A JSON array of distinct verifiable conditions (e.g. ["Endpoint returns 200 on success", "Logged-out users get 401"]). Each element is a SINGLE atomic criterion. NEVER use markdown bullets ('- foo') inside any element. NEVER return one concatenated string.
    - status (${TASK_STATUS_LIST}) and priority (${TASK_PRIORITY_LIST}).
-   - **type**: Evaluate the nature of the work and assign it either "TASK", "BUG", or "STORY".
+   - **type**: One of "TASK", "BUG", "STORY", or "EPIC". Use "EPIC" ONLY when the task has a non-empty 'subtasks' array. Otherwise use TASK (concrete unit of work), BUG (defect), or STORY (user-facing feature).
+   - **category**: One of "engineering", "design", "support", "ops", "research". Use this to split work types: "engineering" = code/dev work, "design" = mocks/UX, "support" = customer outreach + admin flag toggles (NOT engineering), "ops" = infra/devops/migrations, "research" = spikes and investigations. The user filters their ticket board by this.
+   - **storyPoints**: REQUIRED. Use the Fibonacci scale (1, 2, 3, 5, 8, 13). Engineering rule of thumb: trivial admin/support actions = 1, simple UI tweak = 1, single-file refactor = 2, cross-file feature = 3, schema migration or new integration = 5, multi-platform feature = 8, full system redesign = 13. Never omit this field.
 
 CRITICAL LANGUAGE RULE: The generated title, summary, task titles, descriptions, and acceptance criteria MUST be written entirely in the detected predominant human language of the transcript. If the transcript is spoken in Spanish, ALL output fields must be in Spanish!
 
@@ -1178,30 +1236,40 @@ ${content}`;
         summary: parsed.summary,
         sentiment: parsed.sentiment,
         sentimentExplanation: parsed.sentimentExplanation,
-        tasks: parsed.tasks.map((task) => ({
-          title: task.title,
-          summary: task.summary,
-          description: task.description,
-          acceptanceCriteria: task.acceptanceCriteria,
-          priority: this.normalizeTaskPriority(task.priority),
-          status: this.normalizeTaskStatus(task.status),
-          type: this.normalizeTaskType(task.type),
-          dueDate: task.dueDate,
-          storyPoints: task.storyPoints,
-          dependencies: task.dependencies,
-          subtasks: task.subtasks?.map((subtask) => ({
-            title: subtask.title,
-            summary: subtask.summary,
-            description: subtask.description,
-            acceptanceCriteria: subtask.acceptanceCriteria,
-            priority: this.normalizeTaskPriority(subtask.priority),
-            status: this.normalizeTaskStatus(subtask.status),
-            type: this.normalizeTaskType(subtask.type),
-            dueDate: subtask.dueDate,
-            storyPoints: subtask.storyPoints,
-            dependencies: subtask.dependencies,
-          })),
-        })),
+        tasks: parsed.tasks.map((task) => {
+          const ac = joinAcceptanceCriteria(task.acceptanceCriteria);
+          return {
+            title: task.title,
+            summary: task.summary,
+            description: task.description,
+            acceptanceCriteria: ac.joined,
+            acceptanceCriteriaList: ac.list,
+            priority: this.normalizeTaskPriority(task.priority),
+            status: this.normalizeTaskStatus(task.status),
+            type: this.normalizeTaskType(task.type),
+            category: task.category as TaskCategory | undefined,
+            dueDate: task.dueDate,
+            storyPoints: task.storyPoints,
+            dependencies: task.dependencies,
+            subtasks: task.subtasks?.map((subtask) => {
+              const subAc = joinAcceptanceCriteria(subtask.acceptanceCriteria);
+              return {
+                title: subtask.title,
+                summary: subtask.summary,
+                description: subtask.description,
+                acceptanceCriteria: subAc.joined,
+                acceptanceCriteriaList: subAc.list,
+                priority: this.normalizeTaskPriority(subtask.priority),
+                status: this.normalizeTaskStatus(subtask.status),
+                type: this.normalizeTaskType(subtask.type),
+                category: subtask.category as TaskCategory | undefined,
+                dueDate: subtask.dueDate,
+                storyPoints: subtask.storyPoints,
+                dependencies: subtask.dependencies,
+              };
+            }),
+          };
+        }),
       } satisfies TranscriptAnalysis;
     } catch (error: unknown) {
       const isAuthError = error instanceof Error && (error.message.includes("Missing Authentication header") || error.message.includes("401"));

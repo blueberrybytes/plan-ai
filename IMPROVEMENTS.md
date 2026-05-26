@@ -314,4 +314,66 @@ Don't decide this until you have ≥20 paying Managed customers and real data on
 
 **Scope:** 2 days. Backend enforcement (~1 day), frontend bars + 429 toast (~0.5 day), docs + pricing copy (~0.5 day). Should ship before the influencer launch so you don't accidentally take on a heavy user who costs more than their subscription.
 
+## 27 AI ticket generation — quality + UX polish (from QA harness findings)
+
+**Context:** A QA harness was built at `plan-ai/backend/src/scripts/qaTaskGeneration.ts` that runs the production `processPendingTranscript()` against 4 synthetic transcripts. The core value works — tickets are code-aware, scoped, and prioritized — but the QA run surfaced 4 fixable issues that affect perceived quality.
+
+### 27.1 EPIC tickets have `type: STORY` instead of `type: EPIC`
+**Observed:** When the AI uses the AGILE_SLICE_AND_DICE prompt mode and creates an EPIC ("EPIC: Implement Pause/Resume Functionality…"), the ticket's `type` field is `STORY`, not `EPIC`. Engineering teams using Jira/Linear expect distinct EPIC types so they roll up in dashboards correctly.
+
+**Cause:** Either the Prisma `TaskType` enum is missing `EPIC`, or the prompt schema/instructions don't tell the LLM to use it.
+
+**Fix:**
+1. Audit `TaskType` enum in `schema.prisma` — add `EPIC` if missing.
+2. Update the LLM schema (`TranscriptTaskRawSchema` in `projectTranscriptService.ts`) so the type union includes EPIC.
+3. Update the persona prompt: *"When you generate an EPIC parent task, set `type: EPIC`. Subtasks remain TASK/STORY/BUG."*
+4. Sync integrations: when syncing EPICs to Jira/Linear, map our `EPIC` to their native epic type.
+
+**Scope:** ~3 hours.
+
+### 27.2 EPIC story points don't equal sum of subtasks
+**Observed:** A transcript produced an EPIC with `storyPoints: 8` and 5 subtasks with `storyPoints: 5+3+3+1+2 = 14`. Engineering teams typically expect the EPIC to equal the sum of children.
+
+**Fix:** In the prompt's AGILE_SLICE_AND_DICE section, add: *"The EPIC's storyPoints MUST equal the sum of subtask storyPoints. Compute the sum after deciding on each subtask's points."*
+
+**Scope:** 1 line prompt change. Verify with a re-run of transcripts 02 and 03.
+
+### 27.3 Acceptance criteria returned as bullet-prefixed strings, not arrays
+**Observed:** Every ticket has `acceptanceCriteria` as a single string like `"- Foo\n- Bar\n- Baz"` instead of `["Foo", "Bar", "Baz"]`. This works for markdown UIs but breaks Jira/Linear integrations that expect arrays. The QA harness's renderer now normalizes this client-side (`normalizeAcceptanceCriteria`), but the underlying data is messy.
+
+**Fix:** Strengthen the schema hint. In `TranscriptTaskRawSchema`, the `acceptanceCriteria` field should be `z.array(z.string())` (not string), and the prompt should explicitly say: *"acceptanceCriteria MUST be a JSON array of distinct strings. NEVER use markdown bullets inside the array."*
+
+**Scope:** 30 min — change schema + retest.
+
+### 27.4 Support-action tasks mixed with engineering tasks
+**Observed:** Transcript 01 produced a ticket "Apply Courtesy Flags and Communicate with Affected Customers" — a support task, not engineering. Customers who push this directly to Jira will have non-eng work polluting their engineering board.
+
+**Fix options:**
+1. **Add `category` field** to tasks: `engineering | support | design | ops | research`. Frontend can filter what to surface in the engineering view vs an "action items" panel.
+2. **Skip non-engineering action items entirely** when the persona is "DEVELOPER". Add to prompt: *"Only generate tickets for engineering work. Skip pure support actions (e.g., contacting customers, setting flags via admin UI) — those belong in meeting notes, not the ticket board."*
+
+**Recommendation:** Option 1 (more flexible — different customers want different things).
+
+**Scope:** Backend 2 hrs (add `category` field, prompt update), Frontend 2 hrs (filter UI).
+
+### 27.5 Latency variance (73s → 153s per transcript)
+**Observed:** Run 1 = 73s, Run 4 = 153s. The slow runs correlate with refactor transcripts that trigger more GitNexus tool calls (`gitnexus_query`, `gitnexus_context`). Mean ~100s.
+
+This is **mostly acceptable** for a 1-hour meeting workflow (user comes back after the meeting and tickets are ready), but feels slow if a user records a short 5-min standup.
+
+**Fix options:**
+1. Cap the number of GitNexus tool calls (currently unlimited)
+2. Parallelize tool calls when the LLM requests multiple lookups
+3. Switch the agentic loop to a smaller/faster model for the tool-call phase, then escalate to the final reasoning model only for the JSON synthesis
+
+**Scope:** 1-2 days exploration. Not urgent unless customer feedback complains.
+
+### 27.6 Heuristic counters in QA harness were broken (already fixed in branch)
+The original QA script's quality counters under-reported file/symbol mentions because the regex was too strict. Already fixed in `qaTaskGeneration.ts` by:
+- Loosening file regex to match names mid-sentence
+- Adding multi-shape symbol detection (backticked identifiers, camelCase, dot-paths, method calls)
+- Normalizing acceptance criteria before counting
+
+Re-running the 4 transcripts should now show `Files: 3-5/6` and `Syms: 4-6/6` per run (instead of `0-2` and `0`).
+
  

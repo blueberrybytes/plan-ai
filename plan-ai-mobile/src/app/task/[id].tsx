@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { View, StyleSheet, ScrollView, Platform, Linking } from 'react-native';
 import { Text, useTheme, Card, IconButton, Chip, Divider } from 'react-native-paper';
 import { useLocalSearchParams, router } from 'expo-router';
+import Markdown from 'react-native-markdown-display';
 import { Task } from '../../services/planAiApi';
 
 export default function TaskDetailsScreen() {
@@ -107,9 +108,19 @@ export default function TaskDetailsScreen() {
               <Text variant="titleMedium" style={{ fontWeight: 'bold', color: theme.colors.primary, marginBottom: 8 }}>
                 Acceptance Criteria
               </Text>
-              <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant, lineHeight: 22 }}>
+              {/* AC now comes back from the AI as a markdown bullet list.
+                  Render through react-native-markdown-display so bullets
+                  show as proper • instead of literal `-`. */}
+              <Markdown
+                style={{
+                  body: { color: theme.colors.onSurfaceVariant, fontSize: 14, lineHeight: 22 },
+                  bullet_list: { marginLeft: 0 },
+                  list_item: { marginBottom: 4 },
+                  paragraph: { marginTop: 0, marginBottom: 0 },
+                }}
+              >
                 {task.acceptanceCriteria}
-              </Text>
+              </Markdown>
             </Card.Content>
           </Card>
         ) : null}

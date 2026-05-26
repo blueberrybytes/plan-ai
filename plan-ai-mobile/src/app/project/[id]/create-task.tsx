@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, StyleSheet, ScrollView, Platform, KeyboardAvoidingView, Alert } from 'react-native';
 import { Text, useTheme, TextInput, Button, IconButton, SegmentedButtons, ActivityIndicator, Chip, Surface, Portal, Dialog } from 'react-native-paper';
 import { useLocalSearchParams, router } from 'expo-router';
+import Markdown from 'react-native-markdown-display';
 import { useAuth } from '../../../context/AuthContext';
 
 export default function CreateTaskScreen() {
@@ -225,9 +226,22 @@ export default function CreateTaskScreen() {
                   {aiSuggestion.acceptanceCriteria && (
                     <>
                       <Text variant="titleSmall" style={{ fontWeight: 'bold', marginBottom: 4 }}>Acceptance Criteria</Text>
-                      <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant, marginBottom: 16 }}>
+                      {/* AI returns AC as a markdown bullet list. Render
+                          through markdown-display so bullets show properly. */}
+                      <Markdown
+                        style={{
+                          body: {
+                            color: theme.colors.onSurfaceVariant,
+                            fontSize: 14,
+                            marginBottom: 16,
+                          },
+                          bullet_list: { marginLeft: 0 },
+                          list_item: { marginBottom: 2 },
+                          paragraph: { marginTop: 0, marginBottom: 0 },
+                        }}
+                      >
                         {aiSuggestion.acceptanceCriteria}
-                      </Text>
+                      </Markdown>
                     </>
                   )}
                   <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>

@@ -39,6 +39,7 @@ import { setToastMessage } from "../store/slices/app/appSlice";
 import { useTranslation } from "react-i18next";
 import ProjectTaskFormDialog from "../components/project/ProjectTaskFormDialog";
 import ProjectTaskBoard from "../components/project/ProjectTaskBoard";
+import CategoryFilterBar from "../components/project/CategoryFilterBar";
 import ProjectFilesTab from "../components/project/ProjectFilesTab";
 import ProjectKeywordsTab from "../components/project/ProjectKeywordsTab";
 import AssistantChatPanel from "../components/chat/AssistantChatPanel";
@@ -135,6 +136,23 @@ const ProjectDetails: React.FC = () => {
   const [isDeleteTaskConfirmOpen, setIsDeleteTaskConfirmOpen] = useState(false);
   const [taskPendingDeletion, setTaskPendingDeletion] = useState<TaskResponse | null>(null);
 
+  /**
+   * Category filter — added in IMPROVEMENTS #27.4 to let agency customers
+   * keep their engineering board clean of support / design / ops items
+   * that the AI also extracts from meetings. Default = "engineering" so the
+   * board behaves like a pure dev kanban out of the box.
+   *
+   * Values: "all" | "engineering" | "design" | "support" | "ops" | "research".
+   */
+  type TaskCategoryFilter =
+    | "all"
+    | "engineering"
+    | "design"
+    | "support"
+    | "ops"
+    | "research";
+  const [categoryFilter, setCategoryFilter] = useState<TaskCategoryFilter>("engineering");
+
   const session = data?.data;
   // Create deep clones of the tasks to prevent "object is not extensible" errors
   // when charting libraries (like Recharts) try to mutate deeply nested properties.
@@ -142,6 +160,46 @@ const ProjectDetails: React.FC = () => {
     const rawTasks = tasksData?.data?.tasks ?? [];
     return JSON.parse(JSON.stringify(rawTasks)) as typeof rawTasks;
   }, [tasksData]);
+
+  /**
+   * Per-category bucket count. Always read against the FULL unfiltered task
+   * list so the badge numbers don't change when the user switches filters.
+   * Engineering is the default; absent category defaults to "engineering"
+   * for backward compatibility with tasks created before the field existed.
+   */
+  const categoryCounts = useMemo(() => {
+    const counts: Record<TaskCategoryFilter, number> = {
+      all: tasks.length,
+      engineering: 0,
+      design: 0,
+      support: 0,
+      ops: 0,
+      research: 0,
+    };
+    tasks.forEach((task) => {
+      const cat =
+        ((task.metadata as Record<string, unknown> | null | undefined)?.category as
+          | TaskCategoryFilter
+          | undefined) ?? "engineering";
+      if (cat in counts) counts[cat] += 1;
+    });
+    return counts;
+  }, [tasks]);
+
+  /**
+   * Tasks after applying the category filter — fed to ALL views (board,
+   * diagram, canvas, gantt) so the filter is global.
+   */
+  const filteredTasks = useMemo(() => {
+    if (categoryFilter === "all") return tasks;
+    return tasks.filter((task) => {
+      const cat =
+        ((task.metadata as Record<string, unknown> | null | undefined)?.category as
+          | TaskCategoryFilter
+          | undefined) ?? "engineering";
+      return cat === categoryFilter;
+    });
+  }, [tasks, categoryFilter]);
   const exportableTasks = useMemo(() => tasks, [tasks]);
   const [deleteProjectTask, { isLoading: isDeletingTask }] = useDeleteProjectTaskMutation();
 
@@ -595,30 +653,42 @@ const ProjectDetails: React.FC = () => {
                       >
                         {t("projectDetails.messages.noTasks")}
                       </Alert>
-                    ) : activeTab === "board" ? (
-                      <ProjectTaskBoard
-                        tasks={tasks}
-                        onTaskClick={(task) => setSelectedTask(task)}
-                      />
-                    ) : activeTab === "diagram" ? (
-                      <div ref={diagramRef}>
-                        <ProjectTaskDependencyDiagram
-                          tasks={tasks}
-                          onTaskClick={(task) => setSelectedTask(task)}
-                        />
-                      </div>
-                    ) : activeTab === "canvas" ? (
-                      <ProjectTaskCanvasView
-                        tasks={tasks}
-                        onTaskClick={(task) => setSelectedTask(task)}
-                      />
                     ) : (
-                      <div ref={ganttRef}>
-                        <ProjectTaskGantt
-                          tasks={tasks}
-                          onTaskClick={(task) => setSelectedTask(task)}
+                      // All ticket views (board / diagram / canvas / timeline)
+                      // share the same category filter bar so the filter is
+                      // global across visualisations.
+                      <>
+                        <CategoryFilterBar
+                          value={categoryFilter}
+                          onChange={setCategoryFilter}
+                          counts={categoryCounts}
                         />
-                      </div>
+                        {activeTab === "board" ? (
+                          <ProjectTaskBoard
+                            tasks={filteredTasks}
+                            onTaskClick={(task) => setSelectedTask(task)}
+                          />
+                        ) : activeTab === "diagram" ? (
+                          <div ref={diagramRef}>
+                            <ProjectTaskDependencyDiagram
+                              tasks={filteredTasks}
+                              onTaskClick={(task) => setSelectedTask(task)}
+                            />
+                          </div>
+                        ) : activeTab === "canvas" ? (
+                          <ProjectTaskCanvasView
+                            tasks={filteredTasks}
+                            onTaskClick={(task) => setSelectedTask(task)}
+                          />
+                        ) : (
+                          <div ref={ganttRef}>
+                            <ProjectTaskGantt
+                              tasks={filteredTasks}
+                              onTaskClick={(task) => setSelectedTask(task)}
+                            />
+                          </div>
+                        )}
+                      </>
                     )}
                   </Stack>
                 </CardContent>

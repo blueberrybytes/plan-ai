@@ -679,6 +679,15 @@
       "diagram": "Diagrama de dependencias",
       "timeline": "Cronograma"
     },
+    "categoryFilter": {
+      "label": "Filtrar:",
+      "all": "Todos",
+      "engineering": "Ingeniería",
+      "design": "Diseño",
+      "support": "Soporte",
+      "ops": "Ops",
+      "research": "Investigación"
+    },
     "messages": {
       "noTasks": "Aún no hay tareas. Crea tareas para poblar el tablero.",
       "sessionNotFound": "Sesión no encontrada.",

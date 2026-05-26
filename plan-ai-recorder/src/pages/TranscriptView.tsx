@@ -829,12 +829,22 @@ const TranscriptView: React.FC = () => {
                               >
                                 Acceptance Criteria
                               </Typography>
-                              <Typography
-                                variant="body1"
-                                sx={{ whiteSpace: "pre-wrap" }}
+                              {/* AC now comes back from the AI as a markdown
+                                  bullet list (one criterion per line, prefixed
+                                  with `- `). Render it through ReactMarkdown
+                                  so bullets show as proper • instead of
+                                  literal dashes. */}
+                              <Box
+                                sx={{
+                                  "& ul": { paddingLeft: 2.5, margin: 0 },
+                                  "& li": { marginBottom: 0.5 },
+                                  "& p": { margin: 0 },
+                                }}
                               >
-                                {selectedTask.acceptanceCriteria}
-                              </Typography>
+                                <ReactMarkdown>
+                                  {selectedTask.acceptanceCriteria}
+                                </ReactMarkdown>
+                              </Box>
                             </Box>
                           )}
 

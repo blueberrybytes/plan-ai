@@ -685,6 +685,15 @@
       "diagram": "Dependency diagram",
       "timeline": "Timeline"
     },
+    "categoryFilter": {
+      "label": "Filter:",
+      "all": "All",
+      "engineering": "Engineering",
+      "design": "Design",
+      "support": "Support",
+      "ops": "Ops",
+      "research": "Research"
+    },
     "messages": {
       "noTasks": "No tasks yet. Create tasks to populate the board.",
       "projectNotFound": "Project not found.",
