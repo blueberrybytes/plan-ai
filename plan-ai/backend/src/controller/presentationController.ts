@@ -82,7 +82,7 @@ export class PresentationController extends BaseWorkspaceController {
     @Body() body: GeneratePresentationRequest,
     @Request() request: AuthenticatedRequest,
   ): Promise<PresentationResponse> {
-    const { user, workspaceId } = await this.getAuthorizedWorkspaceAccess(request);
+    const { user, workspaceId } = await this.getPaidGenerationAccess(request);
 
     const contextIds = await mergeProjectAndContextIds(body.projectIds, body.contextIds);
 
@@ -109,7 +109,7 @@ export class PresentationController extends BaseWorkspaceController {
     @Body() body: GenerateSingleSlideRequest,
     @Request() request: AuthenticatedRequest,
   ): Promise<PresentationResponse> {
-    const { user, workspaceId } = await this.getAuthorizedWorkspaceAccess(request);
+    const { user, workspaceId } = await this.getPaidGenerationAccess(request);
 
     const presentation = await slideGenerationService.generateSingleSlide(
       user.id,
@@ -128,7 +128,7 @@ export class PresentationController extends BaseWorkspaceController {
   public async generateDemoPresentation(
     @Request() request: AuthenticatedRequest,
   ): Promise<PresentationResponse> {
-    const { user, workspaceId } = await this.getAuthorizedWorkspaceAccess(request);
+    const { user, workspaceId } = await this.getPaidGenerationAccess(request);
 
     let template = await prisma.slideTemplate.findFirst({
       where: { workspaceId },

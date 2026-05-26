@@ -8,6 +8,8 @@ import EnvUtils from "../utils/EnvUtils";
 import { createClient, LiveTranscriptionEvents } from "@deepgram/sdk";
 import type { ListenLiveClient } from "@deepgram/sdk";
 import { aiUsageService } from "../services/aiUsageService";
+import { checkSubscription } from "../services/subscriptionGuard";
+import { checkUsageLimit, UsageLimitExceededError } from "../services/usageLimitGuard";
 
 export function setupAudioStream(server: Server) {
   const wss = new WebSocketServer({ noServer: true });
@@ -210,6 +212,45 @@ export function setupAudioStream(server: Server) {
       let workspaceRecord = null;
       if (currentWorkspaceId && currentWorkspaceId !== "placeholder") {
         workspaceRecord = await prisma.workspace.findUnique({ where: { id: currentWorkspaceId } });
+
+        // Enforce subscription before opening Deepgram (which costs us / the
+        // user real money per second of audio). Self-host / OSS instances
+        // without STRIPE_SECRET_KEY are auto-bypassed by checkSubscription.
+        const sub = await checkSubscription(currentWorkspaceId);
+        if (!sub.active) {
+          ws.send(
+            JSON.stringify({
+              type: "error",
+              code: "SUBSCRIPTION_REQUIRED",
+              reason: sub.reason ?? "no_subscription",
+              message:
+                "An active subscription is required to start a recording. Open Plan AI → Billing to choose a plan.",
+            }),
+          );
+          ws.close(1008, "SUBSCRIPTION_REQUIRED");
+          return;
+        }
+
+        // Enforce recording-hour limit for managed plans
+        try {
+          await checkUsageLimit(currentWorkspaceId, "recording");
+        } catch (limitErr) {
+          if (limitErr instanceof UsageLimitExceededError) {
+            ws.send(
+              JSON.stringify({
+                type: "error",
+                code: "USAGE_LIMIT_EXCEEDED",
+                limitType: limitErr.limitType,
+                message: limitErr.message,
+                used: limitErr.used,
+                allowed: limitErr.allowed,
+              }),
+            );
+            ws.close(1008, "USAGE_LIMIT_EXCEEDED");
+            return;
+          }
+          throw limitErr;
+        }
       }
 
       console.log("[DEBUG WS] looking up DEEPGRAM_API_KEY");

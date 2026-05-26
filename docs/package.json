@@ -2,6 +2,7 @@
   "name": "plan-ai-docs",
   "version": "1.0.0",
   "type": "module",
+  "license": "BUSL-1.1",
   "description": "Documentation for Plan AI",
   "engines": {
     "node": ">=22"

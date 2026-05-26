@@ -157,6 +157,32 @@ app.use((err: unknown, req: express.Request, res: express.Response, next: expres
     return;
   }
 
+  // SubscriptionRequiredError carries status=402 + a structured payload.
+  if (err instanceof Error && err.name === "SubscriptionRequiredError") {
+    const subErr = err as Error & { status: number; code: string; reason: string };
+    console.warn(`[guard] 402 Subscription Required for ${req.path}: ${subErr.reason}`);
+    res
+      .status(subErr.status)
+      .json({ code: subErr.code, message: subErr.message, reason: subErr.reason });
+    return;
+  }
+
+  // UsageLimitExceededError carries status=429 + a structured payload.
+  if (err instanceof Error && err.name === "UsageLimitExceededError") {
+    const limitErr = err as Error & { status: number; code: string; limitType: string; used: number; allowed: number };
+    console.warn(`[usage-limit] 429 for ${req.path}: ${limitErr.limitType} ${limitErr.used}/${limitErr.allowed}`);
+    res
+      .status(limitErr.status)
+      .json({
+        code: limitErr.code,
+        message: limitErr.message,
+        limitType: limitErr.limitType,
+        used: limitErr.used,
+        allowed: limitErr.allowed,
+      });
+    return;
+  }
+
   if (err instanceof Error && "status" in err) {
     const status = (err as Error & { status: number }).status;
     res.status(status).json({ message: err.message });

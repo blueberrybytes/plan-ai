@@ -20,6 +20,7 @@ export type AiModel               = components['schemas']['AiModelResponse'];
 export type UserIntegrationSummary = components['schemas']['IntegrationSummaryResponse'];
 export type UserResponse = components['schemas']['UserResponse'];
 export type CreateStandaloneTranscriptBody = components['schemas']['CreateStandaloneTranscriptBody'];
+export type SubscriptionStatusResponse = components['schemas']['SubscriptionStatusResponse'];
 
 async function handleResponseWithRetry<T>(
   res: Response,
@@ -265,6 +266,16 @@ export const createPlanAiApi = (
 
       const res = await req(false);
       return handleResponseWithRetry<UserResponse>(res, () => req(true));
+    },
+
+    async getSubscription(): Promise<SubscriptionStatusResponse> {
+      const req = async (force: boolean) =>
+        safeFetch(`${BASE_URL}/api/billing/subscription`, {
+          headers: await getAuthHeaders(force),
+        });
+
+      const res = await req(false);
+      return handleResponseWithRetry<SubscriptionStatusResponse>(res, () => req(true));
     },
 
     async deleteMyAccount(): Promise<void> {

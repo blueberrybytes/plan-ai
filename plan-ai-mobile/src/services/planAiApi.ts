@@ -22,6 +22,7 @@ export type UserIntegrationSummary = components['schemas']['IntegrationSummaryRe
 export type DocDocumentResponse    = components['schemas']['DocDocumentResponse'];
 export type UserResponse           = components['schemas']['UserResponse'];
 export type CreateStandaloneTranscriptBody = components['schemas']['CreateStandaloneTranscriptBody'];
+export type SubscriptionStatusResponse = components['schemas']['SubscriptionStatusResponse'];
 
 let rawBaseUrl = process.env.EXPO_PUBLIC_PLAN_AI_API_URL ?? "http://localhost:8080";
 if (__DEV__ && Platform.OS === 'android') {
@@ -431,6 +432,16 @@ export const createPlanAiApi = (
 
       const res = await req(false);
       return handleResponseWithRetry<UserResponse>(res, () => req(true));
+    },
+
+    async getSubscription(): Promise<SubscriptionStatusResponse> {
+      const req = async (force: boolean) =>
+        safeFetch(`${BASE_URL}/api/billing/subscription`, {
+          headers: await getAuthHeaders(force),
+        });
+
+      const res = await req(false);
+      return handleResponseWithRetry<SubscriptionStatusResponse>(res, () => req(true));
     },
 
     async deleteMyAccount(): Promise<void> {

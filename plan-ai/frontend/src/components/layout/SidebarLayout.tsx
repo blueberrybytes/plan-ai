@@ -36,6 +36,7 @@ import {
   ExpandLess as ExpandLessIcon,
   ExpandMore as ExpandMoreIcon,
   Brush as BrushIcon,
+  CreditCard as CreditCardIcon,
 } from "@mui/icons-material";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
@@ -45,10 +46,12 @@ import { selectSidebarCollapsed } from "../../store/slices/app/appSelector";
 import { toggleSidebar, setActiveWorkspaceId } from "../../store/slices/app/appSlice";
 import { selectActiveWorkspaceId } from "../../store/slices/app/appSelector";
 import WorkspaceSwitcher from "./WorkspaceSwitcher";
+import SubscriptionBanner from "../billing/SubscriptionBanner";
 import { CircularProgress, LinearProgress } from "@mui/material";
 import { useTranslation } from "react-i18next";
 import { useGetUsageMetricsQuery } from "../../store/apis/aiUsageApi";
 import { useGetMyWorkspacesQuery } from "../../store/apis/workspaceApi";
+import { useGetSubscriptionQuery } from "../../store/apis/billingApi";
 
 type SidebarLayoutProps = {
   children: React.ReactNode;
@@ -84,6 +87,11 @@ const libraryNavItems: NavItem[] = [
     icon: <IntegrationInstructionsIcon fontSize="small" />,
   },
   { labelKey: "sidebarLayout.nav.team", path: "/team", icon: <GroupIcon fontSize="small" /> },
+  {
+    labelKey: "sidebarLayout.nav.billing",
+    path: "/billing",
+    icon: <CreditCardIcon fontSize="small" />,
+  },
 ];
 
 const studioNavItems: NavItem[] = [
@@ -121,10 +129,11 @@ const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children, fullHeight = fa
 
   const { data: usageData } = useGetUsageMetricsQuery(
     { currentMonthOnly: true, limit: 1, workspaceId: activeWorkspaceId || "" },
-    { skip: !activeWorkspaceId, refetchOnFocus: true, pollingInterval: 10000 },
+    { skip: !activeWorkspaceId, refetchOnFocus: true, pollingInterval: 30000 },
   );
 
   const { data: workspaces } = useGetMyWorkspacesQuery();
+  const { data: subscription } = useGetSubscriptionQuery();
   
   React.useEffect(() => {
     if (workspaces && workspaces.length > 0 && !activeWorkspaceId) {
@@ -136,15 +145,17 @@ const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children, fullHeight = fa
     [workspaces, activeWorkspaceId],
   );
 
+  const isByokTrack = subscription?.track === "BYOK";
   const isMissingKeys =
     activeWorkspace &&
     !activeWorkspace.isCourtesy &&
     activeWorkspace.role === "OWNER" &&
     userDb?.role !== "ADMIN" &&
+    isByokTrack &&
     (!activeWorkspace.openRouterKey || !activeWorkspace.deepgramKey);
-
   const MAX_MONTHLY_TOKENS = activeWorkspace?.monthlyTokenLimit || 200000;
   const currentTokens = usageData?.totalBlueberryTokens || 0;
+  const estimatedCost = usageData?.totalEstimatedCost || 0;
   const tokenPercentage = Math.min((currentTokens / MAX_MONTHLY_TOKENS) * 100, 100);
   const isOverLimit = currentTokens > MAX_MONTHLY_TOKENS;
 
@@ -281,26 +292,30 @@ const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children, fullHeight = fa
             >
               <Box sx={{ display: "flex", justifyContent: "space-between", mb: 0.5 }}>
                 <Typography variant="caption" sx={{ color: "text.secondary", fontWeight: 600 }}>
-                  Usage (This Month)
+                  {isByokTrack ? "Cost (This Month)" : "Usage (This Month)"}
                 </Typography>
                 <Typography
                   variant="caption"
                   sx={{ color: isOverLimit ? "error.main" : "text.primary", fontWeight: 600 }}
                 >
-                  {currentTokens.toLocaleString()} / {MAX_MONTHLY_TOKENS.toLocaleString()}
+                  {isByokTrack
+                    ? `$${estimatedCost.toFixed(2)}`
+                    : `${currentTokens.toLocaleString()} / ${MAX_MONTHLY_TOKENS.toLocaleString()}`}
                 </Typography>
               </Box>
               <Tooltip
                 title={
-                  isOverLimit
-                    ? "You are exceeding the recommended token limit"
-                    : `${currentTokens.toLocaleString()} Blueberry Tokens used`
+                  isByokTrack
+                    ? `$${estimatedCost.toFixed(4)} estimated OpenRouter cost this month`
+                    : isOverLimit
+                      ? "You are exceeding the recommended usage limit"
+                      : `${currentTokens.toLocaleString()} usage units consumed`
                 }
               >
                 <LinearProgress
                   variant="determinate"
-                  value={tokenPercentage}
-                  color={isOverLimit ? "error" : "primary"}
+                  value={isByokTrack ? Math.min(100, (estimatedCost / 10) * 100) : tokenPercentage}
+                  color={isOverLimit && !isByokTrack ? "error" : "primary"}
                   sx={{
                     height: 6,
                     borderRadius: 3,
@@ -864,7 +879,7 @@ const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children, fullHeight = fa
                     </Typography>
                     <Button
                       component={NavLink}
-                      to="/team"
+                      to="/team?tab=settings"
                       size="small"
                       variant="outlined"
                       sx={{
@@ -882,6 +897,7 @@ const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children, fullHeight = fa
                     </Button>
                   </Box>
                 )}
+                <SubscriptionBanner />
                 {children}
               </>
             ) : (

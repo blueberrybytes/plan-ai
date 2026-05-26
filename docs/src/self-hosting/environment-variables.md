@@ -66,6 +66,15 @@ This is the most critical environment file. It handles database connections, API
 | `FIREBASE_STORAGE_BUCKET` | Firebase Storage bucket name. | `plan-ai.appspot.com` |
 | `RESEND_API_KEY` | Resend API key for transactional emails. | `re_xxxx` |
 | `FROM_EMAIL` | Sender address for system emails. | `noreply@plan-ai.blueberrybytes.com` |
+| **Stripe Billing (optional)** — see [Stripe Billing setup](/self-hosting/stripe-billing) | | |
+| `STRIPE_SECRET_KEY` | Stripe secret key. Leave empty to disable billing entirely (OSS default). | `sk_test_…` |
+| `STRIPE_WEBHOOK_SECRET` | Webhook signing secret from Stripe Dashboard or CLI. | `whsec_…` |
+| `STRIPE_PRICE_PRO_BYOK` | Stripe Price ID for the Pro BYOK tier (€6/seat/month). | `price_…` |
+| `STRIPE_PRICE_PRO_MANAGED` | Stripe Price ID for the Pro Managed tier (€29/seat/month). | `price_…` |
+| `STRIPE_PRICE_BUSINESS_BYOK` | Stripe Price ID for the Business BYOK tier (€14/seat/month). | `price_…` |
+| `STRIPE_PRICE_BUSINESS_MANAGED` | Stripe Price ID for the Business Managed tier (€65/seat/month). | `price_…` |
+| `STRIPE_CHECKOUT_SUCCESS_PATH` | Path appended to `APP_URL` for Stripe success redirect. | `/billing?status=success` |
+| `STRIPE_CHECKOUT_CANCEL_PATH` | Path appended to `APP_URL` for Stripe cancel redirect. | `/billing?status=canceled` |
 
 ## Frontend Variables (`plan-ai/frontend/.env`)
 

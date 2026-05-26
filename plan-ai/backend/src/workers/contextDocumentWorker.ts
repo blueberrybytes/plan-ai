@@ -15,6 +15,7 @@ import { aiUsageService } from "../services/aiUsageService";
 import { generateText, Output } from "ai";
 import { getWorkspaceModel, FAST_AI_MODEL } from "../utils/aiModelUtils";
 import { z } from "zod";
+import { checkSubscription } from "../services/subscriptionGuard";
 
 const prisma = new PrismaClient();
 const REDIS_URL = EnvUtils.get("REDIS_URL") || "redis://localhost:6379";
@@ -36,6 +37,34 @@ export const contextDocumentWorker = new Worker<ContextDocumentJobPayload>(
       scope.setTag("queue", "ContextDocumentQueue");
 
       logger.info(`Processing ContextDocumentJob ${job.id} for file ${fileId}`);
+
+      // Guard against stale jobs whose workspace subscription has lapsed.
+      // BullMQ retries or backlog drains can fire long after enqueue.
+      const sub = await checkSubscription(workspaceId);
+      if (!sub.active) {
+        logger.warn(
+          `[worker:contextDoc] Skipping job ${job.id} — workspace ${workspaceId} subscription ${sub.reason ?? "missing"}`,
+        );
+        try {
+          await prisma.contextFile.update({
+            where: { id: fileId },
+            data: {
+              metadata: {
+                processingStatus: "FAILED",
+                processingError:
+                  "Subscription required. Re-subscribe and retry the upload.",
+                failureReason: "subscription_required",
+              } as Prisma.InputJsonValue,
+            },
+          });
+        } catch (markErr) {
+          logger.error(
+            `[worker:contextDoc] Failed to mark file ${fileId} as FAILED`,
+            markErr,
+          );
+        }
+        return;
+      }
 
       try {
       const fileRecord = await prisma.contextFile.findUnique({

@@ -247,7 +247,7 @@ export class ContextController extends BaseWorkspaceController {
     @Path() contextId: string,
     @Body() body: ConnectGithubRequest,
   ): Promise<ApiResponse<ContextResponse>> {
-    const { workspaceId } = await this.getAuthorizedWorkspaceAccess(request);
+    const { workspaceId } = await this.getPaidWorkspaceAccess(request);
 
     // Get the current context to ensure it exists and belongs to the user
     const context = await contextService.getContextForWorkspace(workspaceId, contextId);
@@ -328,7 +328,7 @@ export class ContextController extends BaseWorkspaceController {
     @UploadedFiles() files: Express.Multer.File[],
     @Query() metadata?: string,
   ): Promise<ApiResponse<ContextResponse>> {
-    const { user, workspaceId } = await this.getAuthorizedWorkspaceAccess(request);
+    const { user, workspaceId } = await this.getPaidWorkspaceAccess(request);
 
     if (!files || files.length === 0) {
       this.setStatus(400);
@@ -435,7 +435,7 @@ export class ContextController extends BaseWorkspaceController {
     @Path() contextId: string,
     @Path() fileId: string,
   ): Promise<ApiResponse<ContextResponse>> {
-    const { user, workspaceId } = await this.getAuthorizedWorkspaceAccess(request);
+    const { user, workspaceId } = await this.getPaidWorkspaceAccess(request);
 
     const file = await prisma.contextFile.findUnique({
       where: { id: fileId },
@@ -489,7 +489,7 @@ export class ContextController extends BaseWorkspaceController {
     @Path() contextId: string,
     @Body() body: { fileIds: string[] },
   ): Promise<ApiResponse<ContextResponse>> {
-    const { user, workspaceId } = await this.getAuthorizedWorkspaceAccess(request);
+    const { user, workspaceId } = await this.getPaidWorkspaceAccess(request);
 
     if (!body.fileIds || body.fileIds.length === 0) {
       this.setStatus(400);
@@ -604,7 +604,7 @@ export class ContextController extends BaseWorkspaceController {
     @Path() contextId: string,
     @Body() body: { fileIds: string[] },
   ): Promise<ApiResponse<ContextResponse>> {
-    const { user, workspaceId } = await this.getAuthorizedWorkspaceAccess(request);
+    const { user, workspaceId } = await this.getPaidWorkspaceAccess(request);
 
     if (!body.fileIds || body.fileIds.length === 0) {
       this.setStatus(400);
@@ -707,7 +707,7 @@ export class ContextController extends BaseWorkspaceController {
     @Path() contextId: string,
     @Body() body: ImportWebsiteRequest,
   ): Promise<ApiResponse<ContextResponse>> {
-    const { user, workspaceId } = await this.getAuthorizedWorkspaceAccess(request);
+    const { user, workspaceId } = await this.getPaidWorkspaceAccess(request);
 
     if (!body.url) {
       this.setStatus(400);

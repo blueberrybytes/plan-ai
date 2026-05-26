@@ -74,8 +74,9 @@ export const StatsSlide: React.FC<SlideProps> = ({
               textAlign: "center",
               p: 4,
               borderRadius: 4,
-              bgcolor: cardBg,
+              bgcolor: brandColors?.cardStyle === "glass" ? "rgba(255,255,255,0.03)" : `color-mix(in srgb, ${primary} 5%, transparent)`,
               border: cardBorder,
+              borderTop: `4px solid ${primary}`,
               backdropFilter: cardFilter,
               boxShadow:
                 brandColors?.cardStyle === "glass" ? "0 8px 32px rgba(0,0,0,0.15)" : "none",
@@ -87,8 +88,8 @@ export const StatsSlide: React.FC<SlideProps> = ({
               sx={{
                 fontSize: stat.value.length > 8 ? 32 : 48, // scale down long values like "~19.7M Tokens"
                 fontWeight: 800,
-                color: primary,
-                mb: 1,
+                color: "text.primary",
+                mb: 1.5,
                 lineHeight: 1.1,
                 wordBreak: "break-word",
                 overflowWrap: "anywhere",
@@ -99,9 +100,8 @@ export const StatsSlide: React.FC<SlideProps> = ({
             <Typography
               sx={{
                 fontSize: 14,
-                color: "inherit",
-                opacity: 0.7,
-                fontWeight: 600,
+                color: primary,
+                fontWeight: 700,
                 letterSpacing: "0.05em",
                 textTransform: "uppercase",
                 wordBreak: "break-word",

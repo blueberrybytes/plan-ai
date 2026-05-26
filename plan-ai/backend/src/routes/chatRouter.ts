@@ -14,6 +14,11 @@ import { logger } from "../utils/logger";
 import { assistantChatService } from "../services/assistantService";
 import { aiUsageService } from "../services/aiUsageService";
 import { mcpClientService } from "../services/mcpClientService";
+import {
+  requireActiveSubscription,
+  SubscriptionRequiredError,
+} from "../services/subscriptionGuard";
+import { checkUsageLimit, UsageLimitExceededError } from "../services/usageLimitGuard";
 
 const router = Router();
 
@@ -45,6 +50,28 @@ router.post(
       const workspaceId = req.headers["x-workspace-id"] as string;
       if (!workspaceId) {
         return res.status(400).json({ message: "Missing x-workspace-id header" });
+      }
+
+      try {
+        await requireActiveSubscription(workspaceId);
+      } catch (err) {
+        if (err instanceof SubscriptionRequiredError) {
+          return res
+            .status(err.status)
+            .json({ code: err.code, message: err.message, reason: err.reason });
+        }
+        throw err;
+      }
+
+      try {
+        await checkUsageLimit(workspaceId, "llm");
+      } catch (err) {
+        if (err instanceof UsageLimitExceededError) {
+          return res
+            .status(err.status)
+            .json({ code: err.code, message: err.message, limitType: err.limitType, used: err.used, allowed: err.allowed });
+        }
+        throw err;
       }
 
       const thread = await prisma.chatThread.findFirstOrThrow({
@@ -398,6 +425,28 @@ router.post("/assistant/stream", authenticateUser, async (req: AuthenticatedRequ
     const workspaceId = req.headers["x-workspace-id"] as string;
     if (!workspaceId) {
       return res.status(400).json({ message: "Missing x-workspace-id header" });
+    }
+
+    try {
+      await requireActiveSubscription(workspaceId);
+    } catch (err) {
+      if (err instanceof SubscriptionRequiredError) {
+        return res
+          .status(err.status)
+          .json({ code: err.code, message: err.message, reason: err.reason });
+      }
+      throw err;
+    }
+
+    try {
+      await checkUsageLimit(workspaceId, "llm");
+    } catch (err) {
+      if (err instanceof UsageLimitExceededError) {
+        return res
+          .status(err.status)
+          .json({ code: err.code, message: err.message, limitType: err.limitType, used: err.used, allowed: err.allowed });
+      }
+      throw err;
     }
 
     const { modelKey } = req.query;

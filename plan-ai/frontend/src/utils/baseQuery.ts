@@ -163,49 +163,88 @@ const createBaseQueryWithReauth =
       }
     }
 
-    // Handle rate limit responses (429 Too Many Requests)
-    if (result.error && httpStatus === 429) {
-      console.warn(
-        `Rate limit error (429) detected for request:`,
-        requestUrl,
-        "Error details:",
-        result.error,
-      );
-      clientLogger.warn("API rate limit detected", {
-        requestUrl,
-        status: httpStatus,
-        error: result.error,
+    // Handle 402 Payment Required (subscription guard rejected the request).
+    // We surface a toast so the user knows why their action silently failed,
+    // and the always-visible SubscriptionBanner provides the "Choose a plan"
+    // CTA. Navigation from baseQuery would be brittle (no router context),
+    // so we deliberately keep this as a passive notification.
+    if (result.error && httpStatus === 402) {
+      const errorData = result.error.data as { message?: string } | undefined;
+      const message =
+        errorData?.message || i18n.t("billing.toast.subscriptionRequired");
+      clientLogger.warn("Subscription required for request", {
+        endpoint: typeof args === "string" ? args : args.url,
+        status: 402,
       });
-
-      // Determine which platform the rate limit is for
-      let platform = "API";
-      if (requestUrl.includes("/linkedin") || requestUrl.includes("/linkedin-community")) {
-        platform = "LinkedIn";
-      } else if (requestUrl.includes("/facebook")) {
-        platform = "Facebook";
-      } else if (requestUrl.includes("/instagram")) {
-        platform = "Instagram";
-      } else if (requestUrl.includes("/twitter") || requestUrl.includes("/x")) {
-        platform = "Twitter/X";
-      }
-
-      // Get retry-after header if available
-      // Access headers safely with type checking
-      const errorData = result.error.data as any;
-      const headers = errorData?.headers || {};
-      const retryAfter = headers["retry-after"] || "3600"; // Default to 1 hour
-      const retryMinutes = Math.ceil(parseInt(retryAfter, 10) / 60);
-      const retryMessage =
-        retryMinutes > 60 ? "later today" : `in approximately ${retryMinutes} minutes`;
-
-      // Show toast message with platform-specific information
       api.dispatch(
         setToastMessage({
-          message: `${platform} API rate limit reached. Please try again ${retryMessage}.`,
+          message,
           severity: "warning",
-          autoHideDuration: 8000,
+          autoHideDuration: 7000,
         }),
       );
+    }
+
+    // Handle rate limit responses (429 Too Many Requests)
+    if (result.error && httpStatus === 429) {
+      const errorData = result.error.data as Record<string, unknown> | undefined;
+
+      // Usage limit exceeded — managed plan enforcement (distinct from external API rate limits)
+      if (errorData?.code === "usage_limit_exceeded") {
+        const limitType = errorData.limitType as string;
+        const friendlyType =
+          limitType === "llm"
+            ? "AI token"
+            : limitType === "recording"
+              ? "recording hour"
+              : "generation";
+        api.dispatch(
+          setToastMessage({
+            message: `You've reached your monthly ${friendlyType} limit. Upgrade your plan or wait until next billing cycle.`,
+            severity: "warning",
+            autoHideDuration: 10000,
+          }),
+        );
+      } else {
+        // Generic external API rate limit (LinkedIn, etc.)
+        console.warn(
+          `Rate limit error (429) detected for request:`,
+          requestUrl,
+          "Error details:",
+          result.error,
+        );
+        clientLogger.warn("API rate limit detected", {
+          requestUrl,
+          status: httpStatus,
+          error: result.error,
+        });
+
+        let platform = "API";
+        if (requestUrl.includes("/linkedin") || requestUrl.includes("/linkedin-community")) {
+          platform = "LinkedIn";
+        } else if (requestUrl.includes("/facebook")) {
+          platform = "Facebook";
+        } else if (requestUrl.includes("/instagram")) {
+          platform = "Instagram";
+        } else if (requestUrl.includes("/twitter") || requestUrl.includes("/x")) {
+          platform = "Twitter/X";
+        }
+
+        const retryAfter = (errorData as Record<string, unknown>)?.headers
+          ? ((errorData as Record<string, unknown>).headers as Record<string, string>)["retry-after"] || "3600"
+          : "3600";
+        const retryMinutes = Math.ceil(parseInt(retryAfter, 10) / 60);
+        const retryMessage =
+          retryMinutes > 60 ? "later today" : `in approximately ${retryMinutes} minutes`;
+
+        api.dispatch(
+          setToastMessage({
+            message: `${platform} API rate limit reached. Please try again ${retryMessage}.`,
+            severity: "warning",
+            autoHideDuration: 8000,
+          }),
+        );
+      }
     }
 
     // Handle unauthorized responses (token expired)

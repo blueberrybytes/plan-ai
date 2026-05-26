@@ -319,7 +319,7 @@ export class TranscriptsController extends BaseWorkspaceController {
     @UploadedFile("micFile") micFile?: Express.Multer.File,
     @UploadedFile("sysFile") sysFile?: Express.Multer.File,
   ): Promise<ApiResponse<StandaloneTranscriptResponse>> {
-    const { user, workspaceId } = await this.getAuthorizedWorkspaceAccess(request);
+    const { user, workspaceId } = await this.getPaidLlmAccess(request);
 
     console.log(`[Upload Debug] POST /api/transcripts/recorder-upload hit by user ${user.id}`);
     console.log(
@@ -484,7 +484,7 @@ export class TranscriptsController extends BaseWorkspaceController {
     @Body() body: CreateStandaloneTranscriptBody,
   ): Promise<ApiResponse<StandaloneTranscriptResponse>> {
     try {
-      const { user, workspaceId } = await this.getAuthorizedWorkspaceAccess(request);
+      const { user, workspaceId } = await this.getPaidLlmAccess(request);
 
       let transcript: Transcript;
 
@@ -675,7 +675,7 @@ export class TranscriptsController extends BaseWorkspaceController {
     @Request() request: AuthenticatedRequest,
     @Path() id: string,
   ): Promise<ApiResponse<StandaloneTranscriptResponse>> {
-    const { user, workspaceId } = await this.getAuthorizedWorkspaceAccess(request);
+    const { user, workspaceId } = await this.getPaidLlmAccess(request);
 
     const existing = await transcriptCrudService.getTranscriptForWorkspace(workspaceId, id);
 
@@ -739,7 +739,7 @@ export class TranscriptsController extends BaseWorkspaceController {
     @Path() id: string,
     @Path() kind: PostMeetingTaskKind,
   ): Promise<ApiResponse<{ success: boolean }>> {
-    const { user, workspaceId } = await this.getAuthorizedWorkspaceAccess(request);
+    const { user, workspaceId } = await this.getPaidLlmAccess(request);
 
     const existing = await transcriptCrudService.getTranscriptForWorkspace(workspaceId, id);
     if (!existing) {

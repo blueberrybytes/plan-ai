@@ -3,6 +3,7 @@ import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { useTheme, IconButton, Avatar, Text } from 'react-native-paper';
 import { useNavigation, DrawerActions } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
+import { SubscriptionBanner } from './SubscriptionBanner';
 
 interface ScreenHeaderProps {
   title?: string;
@@ -18,6 +19,7 @@ export function ScreenHeader({ title, titleComponent, user, showProfile = true, 
   const router = useRouter();
 
   return (
+    <View>
     <View style={styles.header}>
       <View style={styles.headerLeft}>
         <IconButton 
@@ -47,6 +49,8 @@ export function ScreenHeader({ title, titleComponent, user, showProfile = true, 
           </TouchableOpacity>
         )}
       </View>
+    </View>
+    <SubscriptionBanner />
     </View>
   );
 }

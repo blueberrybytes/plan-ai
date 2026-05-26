@@ -42,7 +42,9 @@ const SlideFrame: React.FC<SlideFrameProps> = ({ children, brandColors, fonts, s
     if (brandColors.logoUrl.startsWith("http")) {
       const fetchLogo = async () => {
         try {
-          const backendUrl = process.env.REACT_APP_API_BACKEND_URL || "";
+          // Strip trailing slash(es) so we don't end up with a `…com//api/…`
+          // double-slash request that hits the Express 404 catch-all.
+          const backendUrl = (process.env.REACT_APP_API_BACKEND_URL || "").replace(/\/+$/, "");
           const res = await fetch(
             `${backendUrl}/api/proxy/image?url=${encodeURIComponent(brandColors?.logoUrl || "")}`,
           );

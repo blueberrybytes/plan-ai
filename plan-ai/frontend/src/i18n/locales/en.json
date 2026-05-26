@@ -593,18 +593,6 @@
       "ctaBuy": "Buy now",
       "ctaContact": "Contact us",
       "tiers": {
-        "solo": {
-          "name": "Solo",
-          "price": "Free",
-          "tagline": "For individual developers trying things out.",
-          "features": [
-            "1 workspace, 1 seat",
-            "60 minutes recording / month",
-            "BYOK only",
-            "All integrations",
-            "Community support"
-          ]
-        },
         "proByok": {
           "name": "Pro · BYOK",
           "price": "€6",
@@ -811,7 +799,8 @@
       "diagrams": "Diagrams",
       "integrations": "Integrations",
       "recordings": "Recordings",
-      "users": "Users"
+      "users": "Users",
+      "billing": "Billing"
     },
     "tooltip": {
       "expand": "Expand sidebar",
@@ -1237,91 +1226,46 @@
     "teamSubtitle": "Name your workspace and choose the branding style for your generated presentations.",
     "finish": "Complete Setup"
   },
-  "landingPage": {
-    "pricing": {
-      "heading": "Transparent Pricing",
-      "subheading": "No hidden fees. Pay only for what you use. All plans include GitNexus code-aware intelligence.",
-      "perSeatMonth": "/seat/month",
-      "mostPopular": "Most teams pick this",
-      "ctaStart": "Start Free Trial",
-      "ctaBuy": "Subscribe",
-      "ctaContact": "Contact Sales",
-      "byokLabel": "BYOK",
-      "byokDescription": "Bring your own OpenRouter + Deepgram keys",
-      "managedLabel": "Managed",
-      "managedDescription": "We handle infrastructure, keys, and support",
-      "tiers": {
-        "proByok": {
-          "name": "Pro",
-          "price": "€6",
-          "tagline": "For small teams",
-          "features": [
-            "Unlimited recordings & transcriptions",
-            "Code-aware task generation",
-            "GitNexus integration",
-            "Jira, Linear, Trello sync",
-            "1–50 seats",
-            "Community support"
-          ]
-        },
-        "proManaged": {
-          "name": "Pro",
-          "price": "€29",
-          "tagline": "Most teams pick this",
-          "features": [
-            "Unlimited recordings & transcriptions",
-            "Code-aware task generation",
-            "GitNexus integration",
-            "Jira, Linear, Trello sync",
-            "1–50 seats",
-            "Email support",
-            "Managed infrastructure"
-          ]
-        },
-        "businessByok": {
-          "name": "Business",
-          "price": "€14",
-          "tagline": "For scaling teams",
-          "features": [
-            "Unlimited recordings & transcriptions",
-            "Advanced code-aware analysis",
-            "GitNexus + custom graphs",
-            "All integrations",
-            "50–500 seats",
-            "Slack support",
-            "Custom billing"
-          ]
-        },
-        "businessManaged": {
-          "name": "Business",
-          "price": "€65",
-          "tagline": "Premium managed",
-          "features": [
-            "Unlimited recordings & transcriptions",
-            "Advanced code-aware analysis",
-            "GitNexus + custom graphs",
-            "All integrations",
-            "50–500 seats",
-            "Dedicated support",
-            "Managed infrastructure",
-            "Audit logs"
-          ]
-        },
-        "enterprise": {
-          "name": "Enterprise",
-          "price": "Custom",
-          "tagline": "For 500+ teams",
-          "features": [
-            "Everything in Business",
-            "Self-hosted or on-prem",
-            "SOC 2 Type II compliance",
-            "Custom SLA & support",
-            "500+ seats",
-            "Custom integrations",
-            "Dedicated infrastructure"
-          ]
-        }
-      }
+  "billing": {
+    "title": "Billing",
+    "subtitle": "Manage your subscription, seats, and payment method.",
+    "notConfigured": "Billing is disabled on this instance (self-hosted / OSS). No subscription required.",
+    "currentPlan": "Current plan",
+    "managePortal": "Manage in Stripe",
+    "choosePlan": "Choose a plan",
+    "changePlan": "Switch plan",
+    "catalogSubtitle": "All plans include code-aware ticket generation via GitNexus. Cancel any time.",
+    "catalogEmpty": "No price IDs configured yet — ask your administrator to finish Stripe setup.",
+    "subscribe": "Subscribe",
+    "currentLabel": "Current",
+    "seat": "seat",
+    "seats": "seats",
+    "renewsOn": "Renews on {{date}}",
+    "cancelsAtEnd": "Cancels at period end",
+    "trackByok": "Bring your own AI keys (Advanced)",
+    "trackManaged": "Includes monthly AI tokens (No keys needed)",
+    "successAlert": "Subscription activated. Welcome aboard.",
+    "canceledAlert": "Checkout canceled — no charge was made.",
+    "legalNote": "Subscriptions renew automatically. Cancel any time in the Stripe portal.",
+    "banner": {
+      "title": "Subscription required",
+      "cta": "Choose a plan",
+      "noSubscription": "Your workspace doesn't have an active subscription. Recordings and AI features are disabled.",
+      "expired": "Your subscription has lapsed. Update your payment method to restore access.",
+      "canceled": "Your subscription has been canceled. Re-subscribe to keep using Plan AI.",
+      "incomplete": "Your last payment is incomplete. Finish checkout to activate your subscription.",
+      "memberAskAdmin": "This workspace doesn't have an active subscription. Ask your workspace admin to choose a plan to unlock recordings and AI.",
+      "overQuotaTitle": "Too many seats in use",
+      "overQuota": "Your team has more members than paid seats. Remove members or buy more seats to keep using Plan AI.",
+      "overQuotaCta": "Manage team",
+      "memberOverQuota": "This workspace has more members than paid seats. Ask your workspace admin to remove members or add more seats."
+    },
+    "welcome": {
+      "title": "Welcome to Plan AI 👋",
+      "subtitle": "Pick a plan to unlock recordings, AI tickets, docs, and slides. Cancel any time — no questions asked."
+    },
+    "toast": {
+      "subscriptionRequired": "Subscription required — open Billing to choose a plan."
     }
   }
 }

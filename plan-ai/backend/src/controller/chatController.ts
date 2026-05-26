@@ -476,7 +476,7 @@ export class ChatController extends BaseWorkspaceController {
     @Body() body: SendMessageRequest,
     @Request() request: AuthenticatedRequest,
   ): Promise<ApiResponse<SendMessageResponse>> {
-    const { user, workspaceId } = await this.getAuthorizedWorkspaceAccess(request);
+    const { user, workspaceId } = await this.getPaidLlmAccess(request);
 
     // Verify thread ownership
     const thread = await prisma.chatThread.findFirst({
@@ -671,7 +671,7 @@ CRITICAL RULES FOR MERMAID:
     @Body() body: LiveChatMessageRequest,
     @Request() request: AuthenticatedRequest,
   ): Promise<ApiResponse<LiveChatMessageResponse>> {
-    const { workspaceId } = await this.getAuthorizedWorkspaceAccess(request);
+    const { workspaceId } = await this.getPaidLlmAccess(request);
 
     // 1. Retrieve Context (RAG) — accept either projectIds (preferred) or contextIds.
     let contextText = "";
