@@ -321,7 +321,8 @@ const TranscriptView: React.FC = () => {
     const isProcessing =
       transcript?.metadata?.processingStatus === "PENDING" ||
       transcript?.metadata?.processingStatus === "PROCESSING" ||
-      transcript?.metadata?.processingStatus === "EXTRACTING_TASKS";
+      transcript?.metadata?.processingStatus === "EXTRACTING_TASKS" ||
+      transcript?.metadata?.processingStatus === "REFINING_TASKS";
 
     const hasPendingPostMeetingTask =
       transcript?.metadata?.postMeetingTasks &&
@@ -625,6 +626,11 @@ const TranscriptView: React.FC = () => {
                 {transcript.metadata?.processingStatus === "EXTRACTING_TASKS" && (
                   <Alert severity="info" sx={{ mb: 2, mt: 2 }}>
                     🤖 AI is currently extracting tasks from this transcript in the background. They will appear here shortly!
+                  </Alert>
+                )}
+                {transcript.metadata?.processingStatus === "REFINING_TASKS" && (
+                  <Alert severity="info" sx={{ mb: 2, mt: 2 }}>
+                    ✨ Enriching tickets with codebase context… Tasks are usable now and will be updated shortly.
                   </Alert>
                 )}
                 <Tabs

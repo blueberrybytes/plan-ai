@@ -160,7 +160,8 @@ const Home: React.FC = () => {
       return (
         status === "PENDING" ||
         status === "PROCESSING" ||
-        status === "EXTRACTING_TASKS"
+        status === "EXTRACTING_TASKS" ||
+        status === "REFINING_TASKS"
       );
     });
 
@@ -545,6 +546,67 @@ const Home: React.FC = () => {
                                   </Typography>
                                 </Box>
                               )}
+                              {/* Live processing indicator — covers all four
+                                  in-flight states. Two-pass extraction means
+                                  the user sees "Generating tickets…" first
+                                  (Pass 1), then "✨ Enhancing with code…"
+                                  during Pass 2 background enrichment. */}
+                              {(() => {
+                                const status = t.metadata?.processingStatus;
+                                if (
+                                  status !== "PENDING" &&
+                                  status !== "PROCESSING" &&
+                                  status !== "EXTRACTING_TASKS" &&
+                                  status !== "REFINING_TASKS"
+                                )
+                                  return null;
+                                const label =
+                                  status === "REFINING_TASKS"
+                                    ? "✨ Enhancing with code…"
+                                    : status === "EXTRACTING_TASKS"
+                                      ? "Generating tickets…"
+                                      : "Processing…";
+                                const isRefining = status === "REFINING_TASKS";
+                                return (
+                                  <Tooltip
+                                    title={
+                                      isRefining
+                                        ? "Tickets are usable now — Plan AI is enriching them with file + symbol references from your codebase in the background."
+                                        : "AI is processing the recording. Tickets will appear here once ready."
+                                    }
+                                  >
+                                    <Box
+                                      sx={{
+                                        display: "flex",
+                                        alignItems: "center",
+                                        gap: 0.5,
+                                        border: `1px solid ${isRefining ? "#a78bfa" : "#60a5fa"}`,
+                                        bgcolor: isRefining
+                                          ? "rgba(167, 139, 250, 0.1)"
+                                          : "rgba(96, 165, 250, 0.1)",
+                                        color: isRefining ? "#a78bfa" : "#60a5fa",
+                                        px: 0.5,
+                                        py: 0.2,
+                                        borderRadius: 1,
+                                      }}
+                                    >
+                                      <CircularProgress
+                                        size={10}
+                                        thickness={6}
+                                        sx={{
+                                          color: isRefining ? "#a78bfa" : "#60a5fa",
+                                        }}
+                                      />
+                                      <Typography
+                                        variant="caption"
+                                        sx={{ fontSize: "0.65rem", color: "inherit" }}
+                                      >
+                                        {label}
+                                      </Typography>
+                                    </Box>
+                                  </Tooltip>
+                                );
+                              })()}
                               {t.metadata?.processingStatus === "FAILED" && (
                                 <Tooltip title={t.metadata?.errorMessage || "Failed to process"}>
                                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>

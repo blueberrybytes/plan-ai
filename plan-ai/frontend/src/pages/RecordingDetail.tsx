@@ -111,8 +111,9 @@ const RecordingDetail: React.FC = () => {
   });
 
   React.useEffect(() => {
+    const status = transcript?.data?.metadata?.processingStatus;
     const isPending =
-      transcript?.data?.metadata?.processingStatus === "PENDING";
+      status === "PENDING" || status === "REFINING_TASKS";
     setPollingInterval(isPending ? 3000 : 0);
   }, [transcript]);
 
@@ -546,6 +547,11 @@ const RecordingDetail: React.FC = () => {
               </Alert>
             ) : (
               <>
+                {transcript.data?.metadata?.processingStatus === "REFINING_TASKS" && (
+                  <Alert severity="info" sx={{ mb: 2 }} icon={<CircularProgress size={16} />}>
+                    Enriching tickets with codebase context… Tasks are usable now and will be updated shortly.
+                  </Alert>
+                )}
                 <Tabs
                   value={tabValue}
                   onChange={handleTabChange}

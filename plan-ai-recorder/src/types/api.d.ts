@@ -3002,7 +3002,7 @@ export interface components {
         PostMeetingTasksRecord: components["schemas"]["Partial_Record_PostMeetingTaskKind.PostMeetingTaskStatus__"];
         TranscriptMetadata: {
             /** @enum {string} */
-            processingStatus?: "PENDING" | "PROCESSING" | "EXTRACTING_TASKS" | "COMPLETED" | "FAILED" | "DONE";
+            processingStatus?: "PENDING" | "PROCESSING" | "EXTRACTING_TASKS" | "REFINING_TASKS" | "COMPLETED" | "FAILED" | "DONE";
             errorMessage?: string;
             sentimentExplanation?: string;
             keyPoints?: string[];
@@ -3144,6 +3144,13 @@ export interface components {
         };
         /** @enum {string} */
         PostMeetingTaskKind: "jira" | "linear" | "trello" | "notion" | "asana" | "googleDrive" | "oneDrive" | "doc" | "slides";
+        /**
+         * @description Work-category tag set by the AI ticket extractor. Lets the frontend split
+         *     engineering work from support / design / ops / research items so the
+         *     customer's engineering board only shows engineering tickets.
+         * @enum {string}
+         */
+        TaskCategory: "engineering" | "design" | "support" | "ops" | "research";
         TaskMetadata: {
             jira?: {
                 url: string;
@@ -3170,6 +3177,14 @@ export interface components {
             };
             publicDocUrl?: string;
             publicSlidesUrl?: string;
+            /** @description Set by the AI ticket extractor. Defaults to "engineering" when absent. */
+            category?: components["schemas"]["TaskCategory"];
+            /**
+             * @description Discrete acceptance-criteria items. Mirrors the bullet list joined into
+             *     the `Task.acceptanceCriteria` String column. Integrations (Jira / Linear
+             *     / Notion / Asana) and a future structured API can read this array form.
+             */
+            acceptanceCriteriaList?: string[];
         };
         ApiResponse_TaskMetadata_: {
             message?: string;

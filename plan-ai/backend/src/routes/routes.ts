@@ -719,7 +719,7 @@ const models: TsoaRoute.Models = {
     "TranscriptMetadata": {
         "dataType": "refObject",
         "properties": {
-            "processingStatus": {"dataType":"union","subSchemas":[{"dataType":"enum","enums":["PENDING"]},{"dataType":"enum","enums":["PROCESSING"]},{"dataType":"enum","enums":["EXTRACTING_TASKS"]},{"dataType":"enum","enums":["COMPLETED"]},{"dataType":"enum","enums":["FAILED"]},{"dataType":"enum","enums":["DONE"]}]},
+            "processingStatus": {"dataType":"union","subSchemas":[{"dataType":"enum","enums":["PENDING"]},{"dataType":"enum","enums":["PROCESSING"]},{"dataType":"enum","enums":["EXTRACTING_TASKS"]},{"dataType":"enum","enums":["REFINING_TASKS"]},{"dataType":"enum","enums":["COMPLETED"]},{"dataType":"enum","enums":["FAILED"]},{"dataType":"enum","enums":["DONE"]}]},
             "errorMessage": {"dataType":"string"},
             "sentimentExplanation": {"dataType":"string"},
             "keyPoints": {"dataType":"array","array":{"dataType":"string"}},
@@ -856,6 +856,11 @@ const models: TsoaRoute.Models = {
         "type": {"dataType":"union","subSchemas":[{"dataType":"enum","enums":["jira"]},{"dataType":"enum","enums":["linear"]},{"dataType":"enum","enums":["trello"]},{"dataType":"enum","enums":["notion"]},{"dataType":"enum","enums":["asana"]},{"dataType":"enum","enums":["googleDrive"]},{"dataType":"enum","enums":["oneDrive"]},{"dataType":"enum","enums":["doc"]},{"dataType":"enum","enums":["slides"]}],"validators":{}},
     },
     // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "TaskCategory": {
+        "dataType": "refAlias",
+        "type": {"dataType":"union","subSchemas":[{"dataType":"enum","enums":["engineering"]},{"dataType":"enum","enums":["design"]},{"dataType":"enum","enums":["support"]},{"dataType":"enum","enums":["ops"]},{"dataType":"enum","enums":["research"]}],"validators":{}},
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
     "TaskMetadata": {
         "dataType": "refObject",
         "properties": {
@@ -866,6 +871,8 @@ const models: TsoaRoute.Models = {
             "asana": {"dataType":"nestedObjectLiteral","nestedProperties":{"url":{"dataType":"string","required":true},"taskGid":{"dataType":"string","required":true}}},
             "publicDocUrl": {"dataType":"string"},
             "publicSlidesUrl": {"dataType":"string"},
+            "category": {"ref":"TaskCategory"},
+            "acceptanceCriteriaList": {"dataType":"array","array":{"dataType":"string"}},
         },
         "additionalProperties": false,
     },
