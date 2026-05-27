@@ -1,7 +1,7 @@
 {
   "name": "plan-ai-mobile",
   "main": "expo-router/entry",
-  "version": "3.4.0",
+  "version": "3.5.0",
   "license": "BUSL-1.1",
   "engines": {
     "node": "22.17.1"

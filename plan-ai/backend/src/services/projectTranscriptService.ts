@@ -49,6 +49,7 @@ import type {
 } from "./integrationMetadataTypes";
 import { getPersonaInstructions } from "./personaService";
 import { mcpClientService } from "./mcpClientService";
+import { taskRefinementQueue } from "../queue/taskRefinementQueue";
 
 const TASK_STATUS_VALUES = ["BACKLOG", "IN_PROGRESS", "BLOCKED", "COMPLETED", "ARCHIVED"] as const;
 const TASK_PRIORITY_VALUES = ["LOW", "MEDIUM", "HIGH", "URGENT"] as const;
@@ -603,9 +604,9 @@ export class ProjectTranscriptService {
       });
     }
 
-    // PHASE 2: Heavy Task Extraction + Speaker Insights (in parallel).
-    // Both reads from the same transcript, both ~30s LLM calls — racing them
-    // shaves the worst-case latency in half.
+    // PHASE 2: FAST Task Extraction (NO agentic investigation) + Speaker Insights (in parallel).
+    // The agentic GitNexus investigation is deferred to a background BullMQ job
+    // (TaskRefinementQueue) so users see basic tickets in ~30-40s instead of 300s.
     const [analysisRaw, speakerInsights] = await Promise.all([
       this.analyzeTranscript(
         input.userId,
@@ -619,7 +620,7 @@ export class ProjectTranscriptService {
         input.modelKey ?? undefined,
         input.taskStrategy ?? undefined,
         input.taskCount ?? undefined,
-        input.agenticInvestigation ?? true,
+        false, // agenticInvestigation always false in main pipeline — deferred to refinement
         transcriptId,
       ),
       this.extractSpeakerInsights(
@@ -952,6 +953,34 @@ export class ProjectTranscriptService {
         });
     }
 
+    // PHASE 3: Enqueue background refinement if agentic investigation was requested.
+    // This runs the heavy GitNexus MCP investigation and upgrades the already-visible
+    // fast-pass tasks with code references, improved acceptance criteria, and blast-radius context.
+    if (input.agenticInvestigation !== false && result.createdTasks.length > 0) {
+      taskRefinementQueue
+        .add("refine-tasks", {
+          transcriptId,
+          workspaceId: input.workspaceId,
+          userId: input.userId,
+          content: processedContent,
+          contextIds: input.contextIds,
+          contextPrompt: input.contextPrompt ?? undefined,
+          persona: input.persona ?? undefined,
+          objective: input.objective ?? undefined,
+          complexityLevel: input.complexityLevel ?? undefined,
+          modelKey: input.modelKey ?? undefined,
+          taskIds: result.createdTasks.map((t) => t.id),
+        })
+        .then(() => {
+          logger.info(`Enqueued task refinement job for transcript ${transcriptId}`);
+          // Mark transcript as REFINING_TASKS so frontend can show a subtle indicator
+          this.setTranscriptProcessingStatus(transcriptId, "REFINING_TASKS").catch(() => {});
+        })
+        .catch((err) =>
+          logger.error(`Failed to enqueue task refinement for transcript ${transcriptId}`, err),
+        );
+    }
+
     return {
       transcript: result.transcript,
       tasks: result.createdTasks,
@@ -1066,7 +1095,7 @@ export class ProjectTranscriptService {
           model: fastModel,
           providerOptions: getFallbackProviderOptions("openai/gpt-4o-mini"),
           tools,
-          stopWhen: stepCountIs(3),
+          stopWhen: stepCountIs(2),
           system:
             "You are an AI Software Architect. The user is generating Agile task tickets from a transcript or request. IF the request is a simple, non-technical business or life task (like sending an email, scheduling a meeting, calling someone), DO NOT query the codebase. Simply return 'No codebase context needed.' OTHERWISE, use your tools to query the codebase knowledge graph and gather relevant structural context (e.g. affected components, database models, related execution flows). Summarize your findings so the task generator can write highly accurate, technically specific acceptance criteria.",
           prompt: `Transcript/Request:\n${content}\n\nObjective: ${objective ?? "Extract tasks"}\n\nPlease investigate the codebase ONLY IF this is a technical software task to gather any missing structural context.`,
@@ -1861,6 +1890,248 @@ ${transcriptForLLM}`;
       }, "slides generation");
       return;
     }
+  }
+
+  /**
+   * Update the transcript's `metadata.processingStatus` field.
+   * Used to transition between REFINING_TASKS → COMPLETED after background refinement.
+   */
+  public async setTranscriptProcessingStatus(
+    transcriptId: string,
+    status: string,
+  ): Promise<void> {
+    const transcript = await prisma.transcript.findUnique({
+      where: { id: transcriptId },
+      select: { metadata: true },
+    });
+    if (!transcript) return;
+
+    const meta: Prisma.JsonObject =
+      typeof transcript.metadata === "object" && transcript.metadata
+        ? { ...(transcript.metadata as Prisma.JsonObject) }
+        : {};
+
+    meta.processingStatus = status;
+
+    await prisma.transcript.update({
+      where: { id: transcriptId },
+      data: { metadata: meta as Prisma.InputJsonValue },
+    });
+  }
+
+  /**
+   * Background refinement: runs the agentic GitNexus investigation and
+   * upgrades already-persisted fast-pass tasks with enriched descriptions,
+   * acceptance criteria, and code references.
+   *
+   * Called by the TaskRefinementWorker. If this fails, the fast-pass tasks
+   * remain usable — refinement is best-effort.
+   */
+  public async refineTasksWithInvestigation(payload: {
+    transcriptId: string;
+    workspaceId: string;
+    userId: string;
+    content: string;
+    contextIds?: string[];
+    contextPrompt?: string;
+    persona?: "SECRETARY" | "ARCHITECT" | "PRODUCT_MANAGER" | "DEVELOPER";
+    objective?: string;
+    complexityLevel?: string;
+    modelKey?: string;
+    taskIds: string[];
+  }): Promise<void> {
+    const {
+      transcriptId, workspaceId, userId, content,
+      contextIds, contextPrompt, objective, modelKey, taskIds,
+    } = payload;
+
+    logger.info(
+      `[TaskRefinement] Starting agentic investigation for transcript ${transcriptId} (${taskIds.length} tasks)`,
+    );
+
+    // Step 1: Run the agentic MCP investigation
+    const tools = mcpClientService.getAiTools();
+    let investigationContext = "";
+
+    if (tools) {
+      try {
+        const fastModel = await getWorkspaceModel(workspaceId, "openai/gpt-4o-mini");
+        const investigation = await generateText({
+          model: fastModel,
+          providerOptions: getFallbackProviderOptions("openai/gpt-4o-mini"),
+          tools,
+          stopWhen: stepCountIs(2),
+          system:
+            "You are an AI Software Architect. The user is generating Agile task tickets from a transcript or request. IF the request is a simple, non-technical business or life task (like sending an email, scheduling a meeting, calling someone), DO NOT query the codebase. Simply return 'No codebase context needed.' OTHERWISE, use your tools to query the codebase knowledge graph and gather relevant structural context (e.g. affected components, database models, related execution flows). Summarize your findings so the task generator can write highly accurate, technically specific acceptance criteria.",
+          prompt: `Transcript/Request:\n${content}\n\nObjective: ${objective ?? "Extract tasks"}\n\nPlease investigate the codebase ONLY IF this is a technical software task to gather any missing structural context.`,
+        });
+
+        if (investigation.text && investigation.text.trim() !== "No codebase context needed.") {
+          investigationContext = investigation.text;
+        }
+
+        aiUsageService
+          .logUsage({
+            userId,
+            workspaceId,
+            feature: "TASK_EXTRACTION",
+            provider: "openrouter",
+            model: "openai/gpt-4o-mini",
+            inputTokens: investigation.totalUsage?.inputTokens || 0,
+            outputTokens: investigation.totalUsage?.outputTokens || 0,
+          })
+          .catch(() => {});
+      } catch (err) {
+        if (
+          err instanceof Error &&
+          (err.message.includes("Missing Authentication header") || err.message.includes("401"))
+        ) {
+          logger.warn("[TaskRefinement] Auth error during MCP investigation (skipping)", err.message);
+        } else {
+          logger.error("[TaskRefinement] Failed during MCP agentic investigation", err);
+        }
+      }
+    }
+
+    // If no meaningful investigation context was gathered, skip refinement
+    if (!investigationContext) {
+      logger.info(
+        `[TaskRefinement] No codebase context gathered for transcript ${transcriptId} — skipping enrichment`,
+      );
+      await this.setTranscriptProcessingStatus(transcriptId, "COMPLETED");
+      return;
+    }
+
+    // Step 2: For each existing task, enrich with investigation context
+    const activeModel = modelKey || DEFAULT_AI_MODEL;
+    const model = await getWorkspaceModel(workspaceId, activeModel);
+
+    const tasks = await prisma.task.findMany({
+      where: { id: { in: taskIds } },
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        acceptanceCriteria: true,
+        parentId: true,
+      },
+    });
+
+    // Only refine top-level tasks (not subtasks) to save LLM calls.
+    // Subtask refinement can be added later if needed.
+    const topLevelTasks = tasks.filter((t) => !t.parentId);
+
+    if (topLevelTasks.length === 0) {
+      await this.setTranscriptProcessingStatus(transcriptId, "COMPLETED");
+      return;
+    }
+
+    const TaskRefinementSchema = z.object({
+      tasks: z.array(
+        z.object({
+          id: z.string(),
+          enrichedDescription: z.string().describe(
+            "The improved task description incorporating specific file references, component names, function signatures, and technical context from the codebase investigation. Keep the original intent but add concrete implementation details.",
+          ),
+          enrichedAcceptanceCriteria: z.array(z.string()).describe(
+            "Improved acceptance criteria that reference specific files, functions, or components from the codebase. Each item is a single atomic verifiable condition.",
+          ),
+        }),
+      ),
+    });
+
+    const taskSummaries = topLevelTasks
+      .map(
+        (t) =>
+          `[ID: ${t.id}]\nTitle: ${t.title}\nDescription: ${t.description ?? "(none)"}\nAcceptance Criteria: ${t.acceptanceCriteria ?? "(none)"}`,
+      )
+      .join("\n\n---\n\n");
+
+    try {
+      const { object, usage } = await generateObject({
+        model,
+        providerOptions: getFallbackProviderOptions(activeModel),
+        schema: TaskRefinementSchema,
+        temperature: 0.15,
+        prompt: `You are enriching existing agile tickets with codebase intelligence. Below is codebase investigation context gathered from the project's knowledge graph, followed by the existing tasks.
+
+Your job: For each task, produce an ENRICHED description and acceptance criteria that incorporates specific file paths, function names, component names, database models, or execution flows found in the investigation. Do NOT change the intent of the task — only add technical precision.
+
+If a task is non-technical (e.g. "Send email to client"), return its description and acceptance criteria UNCHANGED.
+
+### Codebase Investigation Context:
+${investigationContext}
+
+${contextPrompt ? `### Additional Context:\n${contextPrompt}\n` : ""}
+
+### Existing Tasks to Enrich:
+${taskSummaries}`,
+        maxRetries: 2,
+      });
+
+      if (usage) {
+        aiUsageService
+          .logUsage({
+            userId,
+            workspaceId,
+            feature: "TASK_EXTRACTION",
+            provider: "openrouter",
+            model: activeModel,
+            inputTokens: usage.inputTokens || 0,
+            outputTokens: usage.outputTokens || 0,
+          })
+          .catch(() => {});
+      }
+
+      // Step 3: Update each task in the database
+      let enrichedCount = 0;
+      for (const enrichedTask of object.tasks) {
+        const existingTask = topLevelTasks.find((t) => t.id === enrichedTask.id);
+        if (!existingTask) continue;
+
+        const { joined, list } = joinAcceptanceCriteria(enrichedTask.enrichedAcceptanceCriteria);
+
+        // Only update if the enrichment actually adds value
+        const descriptionChanged =
+          enrichedTask.enrichedDescription !== existingTask.description;
+        const acChanged = joined !== existingTask.acceptanceCriteria;
+
+        if (descriptionChanged || acChanged) {
+          const currentTask = await prisma.task.findUnique({ where: { id: enrichedTask.id } });
+          if (!currentTask) continue;
+
+          const metadata = (currentTask.metadata as Record<string, unknown>) ?? {};
+          metadata.refinedAt = new Date().toISOString();
+          metadata.refinedFromTranscriptId = transcriptId;
+          // Preserve the original pre-enrichment content for auditing
+          if (descriptionChanged) metadata.preRefinementDescription = existingTask.description;
+          if (acChanged) metadata.preRefinementAcceptanceCriteria = existingTask.acceptanceCriteria;
+          metadata.acceptanceCriteriaList = list;
+
+          await prisma.task.update({
+            where: { id: enrichedTask.id },
+            data: {
+              ...(descriptionChanged ? { description: enrichedTask.enrichedDescription } : {}),
+              ...(acChanged ? { acceptanceCriteria: joined } : {}),
+              metadata: metadata as Prisma.InputJsonObject,
+            },
+          });
+          enrichedCount++;
+        }
+      }
+
+      logger.info(
+        `[TaskRefinement] Enriched ${enrichedCount}/${topLevelTasks.length} tasks for transcript ${transcriptId}`,
+      );
+    } catch (err) {
+      logger.error(
+        `[TaskRefinement] LLM enrichment call failed for transcript ${transcriptId}`,
+        err,
+      );
+    }
+
+    // Always mark as COMPLETED when refinement finishes (even on partial failure)
+    await this.setTranscriptProcessingStatus(transcriptId, "COMPLETED");
   }
 
   /**

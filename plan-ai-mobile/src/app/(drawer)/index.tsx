@@ -127,6 +127,7 @@ export default function DashboardScreen() {
       status === "PENDING" ||
       status === "PROCESSING" ||
       status === "EXTRACTING_TASKS" ||
+      status === "REFINING_TASKS" ||
       t.title?.includes("Generating")
     );
   });
@@ -401,6 +402,35 @@ export default function DashboardScreen() {
             >
               {summarySnippet}
             </Text>
+          )}
+
+          {/* Pass 2 (background refinement) indicator. Appears AFTER the
+              summary is rendered — tickets are already usable. Distinct
+              purple color signals "this is the new code-aware enrichment
+              step, not the initial analysis". */}
+          {processingStatus === "REFINING_TASKS" && (
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                marginTop: 8,
+                backgroundColor: "rgba(167, 139, 250, 0.15)",
+                borderColor: "#a78bfa",
+                borderWidth: 1,
+                alignSelf: "flex-start",
+                paddingHorizontal: 10,
+                paddingVertical: 4,
+                borderRadius: 12,
+              }}
+            >
+              <ActivityIndicator size={12} color="#a78bfa" style={{ marginRight: 6 }} />
+              <Text
+                variant="labelSmall"
+                style={{ color: "#a78bfa", fontWeight: "600", fontSize: 11 }}
+              >
+                ✨ Enhancing tickets with code context…
+              </Text>
+            </View>
           )}
 
           {processingStatus === "FAILED" && (

@@ -1886,6 +1886,7 @@
 							"PENDING",
 							"PROCESSING",
 							"EXTRACTING_TASKS",
+							"REFINING_TASKS",
 							"COMPLETED",
 							"FAILED",
 							"DONE"
@@ -2431,6 +2432,17 @@
 					"slides"
 				]
 			},
+			"TaskCategory": {
+				"type": "string",
+				"enum": [
+					"engineering",
+					"design",
+					"support",
+					"ops",
+					"research"
+				],
+				"description": "Work-category tag set by the AI ticket extractor. Lets the frontend split\nengineering work from support / design / ops / research items so the\ncustomer's engineering board only shows engineering tickets."
+			},
 			"TaskMetadata": {
 				"properties": {
 					"jira": {
@@ -2525,6 +2537,17 @@
 					},
 					"publicSlidesUrl": {
 						"type": "string"
+					},
+					"category": {
+						"$ref": "#/components/schemas/TaskCategory",
+						"description": "Set by the AI ticket extractor. Defaults to \"engineering\" when absent."
+					},
+					"acceptanceCriteriaList": {
+						"items": {
+							"type": "string"
+						},
+						"type": "array",
+						"description": "Discrete acceptance-criteria items. Mirrors the bullet list joined into\nthe `Task.acceptanceCriteria` String column. Integrations (Jira / Linear\n/ Notion / Asana) and a future structured API can read this array form."
 					}
 				},
 				"type": "object",
@@ -7013,7 +7036,7 @@
 	},
 	"info": {
 		"title": "backend",
-		"version": "3.2.0",
+		"version": "3.4.0",
 		"license": {
 			"name": "BUSL-1.1"
 		},

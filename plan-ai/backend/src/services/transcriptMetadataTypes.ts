@@ -49,7 +49,7 @@ export interface SpeakerInsight {
 }
 
 export interface TranscriptMetadata {
-  processingStatus?: "PENDING" | "PROCESSING" | "EXTRACTING_TASKS" | "COMPLETED" | "FAILED" | "DONE";
+  processingStatus?: "PENDING" | "PROCESSING" | "EXTRACTING_TASKS" | "REFINING_TASKS" | "COMPLETED" | "FAILED" | "DONE";
   errorMessage?: string;
   sentimentExplanation?: string;
   keyPoints?: string[];

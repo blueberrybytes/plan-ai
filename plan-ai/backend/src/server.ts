@@ -24,6 +24,8 @@ import { pricingSyncWorker } from "./workers/pricingSyncWorker";
 import { pricingSyncQueue } from "./queue/pricingSyncQueue";
 import { transcriptGenerationWorker } from "./workers/transcriptGenerationWorker";
 import { transcriptGenerationQueue } from "./queue/transcriptGenerationQueue";
+import { taskRefinementWorker } from "./workers/taskRefinementWorker";
+import { taskRefinementQueue } from "./queue/taskRefinementQueue";
 import { contextDocumentWorker } from "./workers/contextDocumentWorker";
 import { contextDocumentQueue } from "./queue/contextDocumentQueue";
 import { pricingCacheService } from "./services/pricingCacheService";
@@ -131,6 +133,7 @@ createBullBoard({
     new BullMQAdapter(githubContextQueue),
     new BullMQAdapter(pricingSyncQueue),
     new BullMQAdapter(transcriptGenerationQueue),
+    new BullMQAdapter(taskRefinementQueue),
     new BullMQAdapter(contextDocumentQueue),
   ],
   serverAdapter: serverAdapter,
@@ -261,6 +264,7 @@ const closeServer = async (cb?: () => void) => {
   await githubContextWorker.close();
   await pricingSyncWorker.close();
   await transcriptGenerationWorker.close();
+  await taskRefinementWorker.close();
   await contextDocumentWorker.close();
   pricingCacheService.close();
 

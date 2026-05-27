@@ -231,7 +231,7 @@ const ProjectTranscriptDetail: React.FC = () => {
   React.useEffect(() => {
     const meta = transcriptData?.data?.metadata as TranscriptMetadata | null | undefined;
     const status = meta?.processingStatus;
-    const isPending = status === "PENDING" || status === "EXTRACTING_TASKS";
+    const isPending = status === "PENDING" || status === "EXTRACTING_TASKS" || status === "REFINING_TASKS";
     const hasPendingPostMeetingTask =
       meta?.postMeetingTasks &&
       Object.values(meta.postMeetingTasks).some((t) => t?.status === "PENDING");
@@ -561,6 +561,11 @@ const ProjectTranscriptDetail: React.FC = () => {
                       <Alert severity="info" sx={{ mb: 2 }}>
                         🤖 AI is currently extracting tasks from this transcript in the background.
                         They will appear here shortly!
+                      </Alert>
+                    )}
+                    {(transcript.metadata as any)?.processingStatus === "REFINING_TASKS" && (
+                      <Alert severity="info" sx={{ mb: 2 }}>
+                        ✨ Enriching tickets with codebase context… Tasks are usable now and will be updated shortly.
                       </Alert>
                     )}
                     <Box sx={{ borderBottom: 1, borderColor: "divider" }}>

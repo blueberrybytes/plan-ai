@@ -86,7 +86,8 @@ const ProjectDetails: React.FC = () => {
       transcriptsData?.data?.transcripts?.some(
         (t) =>
           (t.metadata as { processingStatus?: string })?.processingStatus === "PENDING" ||
-          (t.metadata as { processingStatus?: string })?.processingStatus === "EXTRACTING_TASKS",
+          (t.metadata as { processingStatus?: string })?.processingStatus === "EXTRACTING_TASKS" ||
+          (t.metadata as { processingStatus?: string })?.processingStatus === "REFINING_TASKS",
       ) ?? false
     );
   }, [transcriptsData]);
