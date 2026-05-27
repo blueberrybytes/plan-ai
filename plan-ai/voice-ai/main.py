@@ -5,6 +5,14 @@ import httpx
 import logging
 from speechbrain.inference.speaker import SpeakerRecognition
 from fastapi import FastAPI, HTTPException, Form
+import sentry_sdk
+
+sentry_sdk.init(
+    dsn="https://22b2182401ea5abb0092d103c1742f75@o4511196762734592.ingest.us.sentry.io/4511461842812928",
+    send_default_pii=True,
+    traces_sample_rate=0.2,
+    environment=os.environ.get("ENV", "local"),
+)
 
 # Use uvicorn's logger so our messages appear in the console
 logger = logging.getLogger("uvicorn.error")
@@ -49,6 +57,7 @@ async def download_file(url: str) -> str:
         
         return wav_temp.name
     except Exception as e:
+        sentry_sdk.capture_exception(e)
         if os.path.exists(wav_temp.name):
             os.unlink(wav_temp.name)
         raise HTTPException(status_code=400, detail=f"Failed to process audio from {url}: {str(e)}")
@@ -93,6 +102,7 @@ async def verify(profile_url: str = Form(...), meeting_url: str = Form(...)):
             "threshold": 0.25 # SpeechBrain default for ECAPA-TDNN is around 0.25
         }
     except Exception as e:
+        sentry_sdk.capture_exception(e)
         logger.error(f"Error during verification: {e}")
         raise HTTPException(status_code=500, detail=str(e))
     finally:

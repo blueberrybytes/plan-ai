@@ -4,3 +4,4 @@ python-multipart
 httpx
 speechbrain
 torchaudio
+sentry-sdk[fastapi]

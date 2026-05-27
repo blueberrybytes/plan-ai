@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import {
   Prisma,
@@ -452,7 +453,8 @@ export class ProjectTranscriptService {
 
       return null;
     } catch (e: any) {
-      logger.error(`[Voice Biometrics] Identification failed: ${e?.message ?? e}`);
+      const voiceAiUrl = process.env.VOICE_AI_URL || "http://localhost:8001";
+      logger.error(`[Voice Biometrics] Identification failed (url=${voiceAiUrl})`, e);
       return null;
     }
   }
