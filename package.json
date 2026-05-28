@@ -1,6 +1,6 @@
 {
   "name": "plan-ai",
-  "version": "3.5.0",
+  "version": "3.6.0",
   "description": "Plan AI - AI-assisted meeting planning & execution platform by Blueberrybytes",
   "main": "index.js",
   "engines": {
@@ -34,6 +34,7 @@
     "tunnel-frontend": "cloudflared tunnel --url http://localhost:3000",
     "tunnel-backend": "cloudflared tunnel run --url http://localhost:8080 my-backend",
     "repomix": "bash ./repomix.sh",
+    "repomix:single": "npx repomix . --output repomix_output/plan-ai-full.xml --style xml --compress --ignore '**/tests/**,**/*.test.*,**/*.spec.*,**/android/**,**/ios/**,**/.next/**,**/dist/**,**/build/**,**/.expo/**,**/coverage/**,**/jest/**,**/__tests__/**,**/*.pbxproj,**/*.xcworkspacedata,**/*.storyboard,**/node_modules/**,**/.venv/**,**/voice-ai/.venv/**,**/.git/**,**/repomix_output/**'",
     "kill-ports": "echo 'Killing ports 3000, 8080, 4747, 8000, 8001 and electron...' && lsof -ti:3000 | xargs -r kill -9 && lsof -ti:8080 | xargs -r kill -9 && lsof -ti:4747 | xargs -r kill -9 && lsof -ti:8000 | xargs -r kill -9 && lsof -ti:8001 | xargs -r kill -9 && (pkill -9 -if electron || true) && echo 'All ports killed successfully!'",
     "lint": "yarn lint:backend && yarn lint:frontend",
     "lint:backend": "yarn --cwd plan-ai/backend lint",

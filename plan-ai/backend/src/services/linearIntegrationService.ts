@@ -73,6 +73,7 @@ class LinearIntegrationService {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: params.toString(),
+      signal: AbortSignal.timeout(15000),
     });
 
     if (!tokenResponse.ok) {
@@ -132,6 +133,7 @@ class LinearIntegrationService {
         method: "POST",
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
         body: params.toString(),
+        signal: AbortSignal.timeout(15000),
       });
 
       const rawBody = await response.text();

@@ -27,6 +27,7 @@ export async function sendWorkspaceInvitationEmail(
       subject: `You've been invited to join ${workspaceName} on Plan AI`,
       html,
     }),
+    signal: AbortSignal.timeout(15000),
   });
 
   if (!response.ok) {

@@ -73,7 +73,7 @@ export const pricingSyncWorker = new Worker(
       throw error;
     }
   },
-  { connection: redisClient },
+  { connection: redisClient, lockDuration: 60_000 }, // 1 minute — OpenRouter API fetch is 5-15s normally
 );
 
 pricingSyncWorker.on("failed", (job, err) => {

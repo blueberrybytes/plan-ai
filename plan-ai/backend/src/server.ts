@@ -4,6 +4,8 @@ import "./sentry/sentry";
 import express, { RequestHandler } from "express";
 import bodyParser from "body-parser";
 import cors from "cors";
+import helmet from "helmet";
+import rateLimit, { type Options } from "express-rate-limit";
 import swaggerUi from "swagger-ui-express";
 import swaggerDocument from "./swagger/swagger.json";
 import path from "path";
@@ -42,11 +44,29 @@ const PORT = EnvUtils.get("PORT") || 8080;
 const QDRANT_URL = EnvUtils.get("QDRANT_URL") || "http://127.0.0.1:6333";
 
 // Middlewares
+app.use(helmet());
+
+// CORS — in production set CORS_ORIGINS="https://plan-ai.blueberrybytes.com,https://other.domain"
+// When unset (local dev), all origins are allowed.
+const corsOriginsEnv = EnvUtils.get("CORS_ORIGINS", "");
+const corsOrigin: cors.CorsOptions["origin"] = corsOriginsEnv
+  ? corsOriginsEnv.split(",").map((s) => s.trim())
+  : true; // true = reflect request origin (allow all, safe for local dev)
+
 app.use(
   cors({
-    origin: "*", // allow all
+    origin: corsOrigin,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allowedHeaders: "*", // allow all headers
+    allowedHeaders: [
+      "Content-Type",
+      "Authorization",
+      "X-Requested-With",
+      "Accept",
+      "x-api-key",
+      "X-Workspace-Id",
+      "X-Current-Path",
+    ],
+    credentials: true,
   }),
 );
 app.use(bodyParser.urlencoded({ limit: "50mb", extended: true }));
@@ -76,9 +96,47 @@ app.use((req, res, next) => {
   next();
 });
 
+// Rate-limit breach handler — logs + reports to Sentry for visibility
+const rateLimitHandler: Options["handler"] = (req: express.Request, res: express.Response, _next: express.NextFunction, options) => {
+  const ip = req.ip || req.socket.remoteAddress || "unknown";
+  const limiterName = options.max === 20 ? "ai" : "api";
+  logger.warn(`[rate-limit] ${limiterName} limit hit — IP=${ip} path=${req.path}`);
+  Sentry.captureEvent({
+    message: `Rate limit exceeded (${limiterName})`,
+    level: "warning",
+    tags: { limiter: limiterName },
+    extra: { ip, path: req.path, method: req.method, limit: options.max },
+  });
+  res.status(options.statusCode).json(options.message);
+};
+
+// Global API rate limiter
+const apiLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 100, // 100 requests per minute per IP
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many requests, please try again later." },
+  handler: rateLimitHandler,
+});
+
+// Tighter limiter for AI-heavy endpoints
+const aiLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "AI rate limit exceeded. Please wait before making another request." },
+  handler: rateLimitHandler,
+});
+
+app.use("/api/", apiLimiter);
+app.use("/api/chat", aiLimiter);
+app.use("/api/presentations/generate", aiLimiter);
+app.use("/api/documents/generate", aiLimiter);
+app.use("/api/diagrams/generate", aiLimiter);
+
 // Register TSOA routes (with role-based access control and increased upload limits)
-
-
 RegisterRoutes(app, {
   multer: multer({
     limits: {

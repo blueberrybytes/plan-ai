@@ -1,5 +1,4 @@
 import { Worker, Job } from "bullmq";
-import Redis from "ioredis";
 import * as Sentry from "@sentry/node";
 import EnvUtils from "../utils/EnvUtils";
 import { logger } from "../utils/logger";
@@ -20,11 +19,9 @@ import { checkSubscription } from "../services/subscriptionGuard";
 const execAsync = util.promisify(exec);
 const prisma = new PrismaClient();
 
-const REDIS_URL = EnvUtils.get("REDIS_URL") || "redis://localhost:6379";
+import { createWorkerConnection } from "../queue/redisConnection";
 
-const connection = new Redis(REDIS_URL, {
-  maxRetriesPerRequest: null,
-});
+const connection = createWorkerConnection();
 
 export const githubContextWorker = new Worker<GithubContextJobPayload>(
   "GithubContextQueue",
@@ -261,7 +258,12 @@ export const githubContextWorker = new Worker<GithubContextJobPayload>(
     }
     });
   },
-  { connection, concurrency: 1 },
+  {
+    connection,
+    concurrency: 1,
+    lockDuration: 300_000,    // 5 minutes — tarball download + Repomix + GitNexus can take 60s+
+    stalledInterval: 120_000, // Check for stalled jobs every 2 minutes
+  },
 );
 
 githubContextWorker.on("completed", (job) => {

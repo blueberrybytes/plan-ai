@@ -26,11 +26,16 @@ const GateActions: React.FC<{
   onRefetch: () => Promise<void>;
 }> = ({ dashboardPath = "", onSignOut, onRefetch }) => {
   const [refreshing, setRefreshing] = React.useState(false);
+  const [showStillPending, setShowStillPending] = React.useState(false);
 
   const handleRefresh = async () => {
     setRefreshing(true);
+    setShowStillPending(false);
     try {
       await onRefetch();
+      // If the component is still mounted after refetch, the gate condition
+      // is still true — setup wasn't completed. Show feedback.
+      setShowStillPending(true);
     } finally {
       setRefreshing(false);
     }
@@ -65,6 +70,16 @@ const GateActions: React.FC<{
       >
         {refreshing ? "Checking..." : "I've Completed Setup"}
       </Button>
+      {showStillPending && (
+        <Typography
+          variant="body2"
+          color="warning.main"
+          sx={{ textAlign: "center", mt: 0.5 }}
+        >
+          Setup is still incomplete. Please finish the configuration on the web
+          dashboard and try again.
+        </Typography>
+      )}
       <Button variant="text" color="inherit" onClick={onSignOut} sx={{ mt: 1 }}>
         Log Out
       </Button>
@@ -91,6 +106,7 @@ const AppRoutes: React.FC = () => {
     active: boolean;
     configured: boolean;
     reason?: string;
+    track?: string | null;
   } | null>(null);
   const [subscriptionLoaded, setSubscriptionLoaded] = React.useState(false);
 
@@ -102,13 +118,14 @@ const AppRoutes: React.FC = () => {
         active: sub.active,
         configured: sub.configured,
         reason: sub.reason,
+        track: sub.track,
       });
     } catch (err) {
       // If the call itself fails, fail open — don't block the user from
       // recording over a billing-API hiccup. Backend endpoints will still
       // enforce the guard.
       console.warn("[recorder] Failed to load subscription state", err);
-      setSubscription({ active: true, configured: false });
+      setSubscription({ active: true, configured: false, track: null });
     } finally {
       setSubscriptionLoaded(true);
     }
@@ -129,9 +146,15 @@ const AppRoutes: React.FC = () => {
   }, [refetchDbUser, refetchWorkspaces, loadSubscription]);
 
   const activeWorkspace = workspaces.find((w) => w.id === activeWorkspaceId);
+
+  // Only BYOK workspaces need user-provided API keys. Managed plans get
+  // platform-provided AI, courtesy workspaces use global fallback keys,
+  // and workspaces without a plan yet are handled by the subscription gate.
+  const isByok = subscription?.track === "BYOK";
   const isMissingKeys =
     activeWorkspace &&
     !activeWorkspace.isCourtesy &&
+    isByok &&
     activeWorkspace.role === "OWNER" &&
     (!activeWorkspace.openRouterKey || !activeWorkspace.deepgramKey);
 
@@ -213,8 +236,9 @@ const AppRoutes: React.FC = () => {
           API Keys Required
         </Typography>
         <Typography color="text.secondary" sx={{ maxWidth: 400 }}>
-          Your workspace "{activeWorkspace.name}" is missing required API keys.
-          Configure them on the web dashboard, then tap "I've Completed Setup"
+          Your workspace "{activeWorkspace.name}" uses Bring Your Own Key
+          (BYOK) mode and is missing API keys. Configure your OpenRouter and
+          Deepgram keys on the web dashboard, then tap "I've Completed Setup"
           to continue.
         </Typography>
         <GateActions

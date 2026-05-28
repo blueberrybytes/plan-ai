@@ -1,17 +1,13 @@
 import { Worker, Job } from "bullmq";
-import Redis from "ioredis";
 import * as Sentry from "@sentry/node";
-import EnvUtils from "../utils/EnvUtils";
 import { logger } from "../utils/logger";
 import { TaskRefinementJobPayload } from "../queue/taskRefinementQueue";
 import { projectTranscriptService } from "../services/projectTranscriptService";
 import { checkSubscription } from "../services/subscriptionGuard";
+import { createWorkerConnection } from "../queue/redisConnection";
 
-const REDIS_URL = EnvUtils.get("REDIS_URL") || "redis://localhost:6379";
 
-const connection = new Redis(REDIS_URL, {
-  maxRetriesPerRequest: null,
-});
+const connection = createWorkerConnection();
 
 export const taskRefinementWorker = new Worker<TaskRefinementJobPayload>(
   "TaskRefinementQueue",
@@ -82,6 +78,8 @@ export const taskRefinementWorker = new Worker<TaskRefinementJobPayload>(
     // Lower concurrency than the main transcript queue to avoid overloading
     // MCP/GitNexus and OpenRouter simultaneously.
     concurrency: 1,
+    lockDuration: 300_000,    // 5 minutes — agentic investigation takes 60-120s
+    stalledInterval: 120_000, // Check for stalled jobs every 2 minutes
   },
 );
 

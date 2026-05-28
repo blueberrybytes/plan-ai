@@ -1,6 +1,10 @@
 import { Queue } from "bullmq";
-import { redisClient } from "../utils/redisClient";
+import { queueConnection } from "./redisConnection";
 
 export const pricingSyncQueue = new Queue("PricingSyncQueue", {
-  connection: redisClient,
+  connection: queueConnection,
+  defaultJobOptions: {
+    removeOnComplete: { count: 100 },
+    removeOnFail: { count: 50 },
+  },
 });

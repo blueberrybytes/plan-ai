@@ -359,6 +359,7 @@ export class GithubIntegrationService {
           url: gitUrl,
           dropEmbeddings: true, // fast exact-match graph generation only
         }),
+        signal: AbortSignal.timeout(30000),
       });
 
       const data = await response.json();

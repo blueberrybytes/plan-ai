@@ -611,9 +611,7 @@ const Recording: React.FC = () => {
         setError(err.message || "Connection lost. Audio transcription stopped.");
         const code = (err as Error & { code?: string }).code ?? null;
         setErrorCode(code);
-        // Unrecoverable backend signals (bad/missing keys) should land on the error screen
-        // so the user sees the actionable CTA instead of the transient "poor connection" warning.
-        if (code === "MISSING_API_KEY" || code === "INVALID_API_KEY") {
+        if (code === "MISSING_API_KEY" || code === "INVALID_API_KEY" || code === "USAGE_LIMIT_EXCEEDED" || code === "SUBSCRIPTION_REQUIRED") {
           setPhase("error");
         }
       },
@@ -902,9 +900,17 @@ const Recording: React.FC = () => {
       errorCode === "INVALID_API_KEY" ||
       (error ? /MISSING_API_KEY|INVALID_API_KEY|API key|Deepgram|OpenRouter/i.test(error) : false);
 
+    const isQuotaIssue = errorCode === "USAGE_LIMIT_EXCEEDED";
+    const isSubIssue = errorCode === "SUBSCRIPTION_REQUIRED";
+
     const openWorkspaceSettings = () => {
       const baseUrl = import.meta.env.VITE_PLAN_AI_WEB_URL || "http://localhost:3000";
       window.open(`${baseUrl.replace(/\/+$/, "")}/settings/workspace`, "_blank");
+    };
+
+    const openBilling = () => {
+      const baseUrl = import.meta.env.VITE_PLAN_AI_WEB_URL || "http://localhost:3000";
+      window.open(`${baseUrl.replace(/\/+$/, "")}/billing`, "_blank");
     };
 
     return (
@@ -919,12 +925,17 @@ const Recording: React.FC = () => {
           p: 4,
         }}
       >
-        <Alert severity="error" sx={{ width: "100%", maxWidth: 400 }}>
+        <Alert severity={isQuotaIssue ? "warning" : "error"} sx={{ width: "100%", maxWidth: 400 }}>
           {error ?? "An unexpected error occurred."}
         </Alert>
         {isKeyIssue && (
           <Button variant="contained" onClick={openWorkspaceSettings}>
             Open Workspace Settings
+          </Button>
+        )}
+        {(isQuotaIssue || isSubIssue) && (
+          <Button variant="contained" onClick={openBilling}>
+            {isQuotaIssue ? "Upgrade Plan" : "Choose a Plan"}
           </Button>
         )}
         <Button

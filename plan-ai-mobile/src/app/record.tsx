@@ -650,6 +650,8 @@ export default function RecordScreen() {
             console.error("[WS Error from Backend]", msg.message);
             const isKeyIssue =
               msg.code === "MISSING_API_KEY" || msg.code === "INVALID_API_KEY";
+            const isQuotaIssue = msg.code === "USAGE_LIMIT_EXCEEDED";
+            const isSubIssue = msg.code === "SUBSCRIPTION_REQUIRED";
             Sentry.captureException(
               new Error(`WS backend error: ${msg.message ?? "(no message)"}`),
               {
@@ -676,6 +678,27 @@ export default function RecordScreen() {
                     text: "Open Workspace Settings",
                     onPress: () =>
                       Linking.openURL(`${webAppUrl.replace(/\/+$/, "")}/settings/workspace`),
+                  },
+                  { text: "Dismiss", style: "cancel" },
+                ],
+              );
+            } else if (isQuotaIssue || isSubIssue) {
+              // Unrecoverable — stop reconnect and direct user to billing
+              setWsUnrecoverable(true);
+              const webAppUrl =
+                process.env.EXPO_PUBLIC_PLAN_AI_WEB_URL ??
+                "https://plan-ai.blueberrybytes.com";
+              Alert.alert(
+                isQuotaIssue ? "Usage Limit Reached" : "Subscription Required",
+                msg.message ||
+                  (isQuotaIssue
+                    ? "You've reached your monthly limit. Upgrade your plan or wait until the next billing cycle."
+                    : "An active subscription is required to record. Choose a plan to continue."),
+                [
+                  {
+                    text: isQuotaIssue ? "Upgrade Plan" : "Choose a Plan",
+                    onPress: () =>
+                      Linking.openURL(`${webAppUrl.replace(/\/+$/, "")}/billing`),
                   },
                   { text: "Dismiss", style: "cancel" },
                 ],

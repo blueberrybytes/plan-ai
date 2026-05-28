@@ -79,6 +79,7 @@ class NotionIntegrationService {
         code,
         redirect_uri: redirectUri,
       }),
+      signal: AbortSignal.timeout(15000),
     });
 
     if (!response.ok) {

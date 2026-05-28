@@ -21,6 +21,7 @@ class TrelloIntegrationService {
         Accept: "application/json",
         ...options.headers,
       },
+      signal: AbortSignal.timeout(15000),
     });
 
     if (!response.ok) {

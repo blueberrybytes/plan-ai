@@ -4,11 +4,17 @@ import { tool } from "ai";
 import { z } from "zod";
 import { logger } from "../utils/logger";
 
+const MCP_TOOL_TIMEOUT_MS = 10_000; // 10 seconds per tool call
+const MCP_CONNECT_TIMEOUT_MS = 5_000;
+const MCP_CIRCUIT_BREAKER_THRESHOLD = 3; // Consecutive failures before disabling
+
 export class McpClientService {
   private static instance: McpClientService;
   private client: Client | null = null;
   public isAvailable: boolean = false;
   private initializationPromise: Promise<void> | null = null;
+  private consecutiveFailures: number = 0;
+  private isReconnecting: boolean = false;
 
   private constructor() {
     this.initializationPromise = this.initialize();
@@ -57,12 +63,73 @@ export class McpClientService {
       ]);
 
       this.isAvailable = true;
+      this.consecutiveFailures = 0;
       logger.info("Successfully connected to GitNexus MCP Server.");
     } catch (e) {
       logger.error("Failed to connect to GitNexus MCP Server. Continuing without it.", e);
       this.isAvailable = false;
       this.client = null;
     }
+  }
+
+  /**
+   * Attempt to reconnect to the MCP server after a failure.
+   * Uses a lock to prevent concurrent reconnection attempts.
+   */
+  private async reconnect(): Promise<boolean> {
+    if (this.isReconnecting) return false;
+    this.isReconnecting = true;
+    try {
+      logger.info("Attempting to reconnect to GitNexus MCP Server...");
+      this.client = null;
+      this.isAvailable = false;
+      this.initializationPromise = this.initialize();
+      await this.initializationPromise;
+      return this.isAvailable;
+    } finally {
+      this.isReconnecting = false;
+    }
+  }
+
+  /**
+   * Records a tool call failure and triggers reconnection if needed.
+   * After CIRCUIT_BREAKER_THRESHOLD consecutive failures, disables the client.
+   */
+  private async handleToolFailure(error: unknown): Promise<void> {
+    this.consecutiveFailures++;
+    if (this.consecutiveFailures >= MCP_CIRCUIT_BREAKER_THRESHOLD) {
+      logger.warn(
+        `GitNexus MCP: ${this.consecutiveFailures} consecutive failures — circuit breaker open. Attempting reconnect.`,
+      );
+      this.isAvailable = false;
+      await this.reconnect();
+    }
+  }
+
+  /** Reset failure counter on successful tool call */
+  private handleToolSuccess(): void {
+    this.consecutiveFailures = 0;
+  }
+
+  /** Helper: call a tool with a timeout and extract text content */
+  private async callToolWithTimeout(
+    name: string,
+    args: Record<string, unknown>,
+  ): Promise<string> {
+    const result = await Promise.race([
+      this.client!.callTool({ name, arguments: args }),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error(`MCP tool '${name}' timeout (${MCP_TOOL_TIMEOUT_MS}ms)`)), MCP_TOOL_TIMEOUT_MS),
+      ),
+    ]);
+    if (!result || !result.content || !Array.isArray(result.content)) return "";
+    return result.content
+      .filter(
+        (c: unknown): c is { type: "text"; text: string } =>
+          typeof c === "object" && c !== null && "type" in c && c.type === "text" && "text" in c,
+      )
+      .map((c) => c.text)
+      .join("\n\n");
   }
 
   /**
@@ -76,36 +143,12 @@ export class McpClientService {
     }
 
     try {
-      const result = await Promise.race([
-        this.client.callTool({
-          name: "mcp_gitnexus_query",
-          arguments: { query: prompt },
-        }),
-        new Promise<null>((_, reject) =>
-          setTimeout(() => reject(new Error("MCP Query timeout")), 5000),
-        ),
-      ]);
-
-      if (
-        !result ||
-        !result.content ||
-        !Array.isArray(result.content) ||
-        result.content.length === 0
-      ) {
-        return null;
-      }
-
-      // The GitNexus MCP Server typically returns markdown via text content blocks
-      const textContents = result.content
-        .filter(
-          (c: unknown): c is { type: "text"; text: string } =>
-            typeof c === "object" && c !== null && "type" in c && c.type === "text" && "text" in c,
-        )
-        .map((c) => c.text);
-
-      return textContents.join("\n\n");
+      const text = await this.callToolWithTimeout("mcp_gitnexus_query", { query: prompt });
+      this.handleToolSuccess();
+      return text || null;
     } catch (error) {
       logger.error("Error querying GitNexus MCP Server (gracefully degrading).", error);
+      await this.handleToolFailure(error);
       return null;
     }
   }
@@ -129,24 +172,16 @@ export class McpClientService {
         }),
         execute: async ({ query, goal }) => {
           try {
-            const result = await this.client!.callTool({
-              name: "mcp_gitnexus_query",
-              arguments: { query, goal, ...(repo ? { repo } : {}) },
+            const text = await this.callToolWithTimeout("mcp_gitnexus_query", {
+              query,
+              goal,
+              ...(repo ? { repo } : {}),
             });
-            if (!result || !result.content || !Array.isArray(result.content)) return "";
-            return result.content
-              .filter(
-                (c: unknown): c is { type: "text"; text: string } =>
-                  typeof c === "object" &&
-                  c !== null &&
-                  "type" in c &&
-                  c.type === "text" &&
-                  "text" in c,
-              )
-              .map((c) => c.text)
-              .join("\n\n");
+            this.handleToolSuccess();
+            return text;
           } catch (e) {
             logger.error("Error executing query_codebase tool", e);
+            await this.handleToolFailure(e);
             return "Error executing tool. Proceed with existing knowledge.";
           }
         },
@@ -163,24 +198,16 @@ export class McpClientService {
         }),
         execute: async ({ name, kind }) => {
           try {
-            const result = await this.client!.callTool({
-              name: "mcp_gitnexus_context",
-              arguments: { name, kind, ...(repo ? { repo } : {}) },
+            const text = await this.callToolWithTimeout("mcp_gitnexus_context", {
+              name,
+              kind,
+              ...(repo ? { repo } : {}),
             });
-            if (!result || !result.content || !Array.isArray(result.content)) return "";
-            return result.content
-              .filter(
-                (c: unknown): c is { type: "text"; text: string } =>
-                  typeof c === "object" &&
-                  c !== null &&
-                  "type" in c &&
-                  c.type === "text" &&
-                  "text" in c,
-              )
-              .map((c) => c.text)
-              .join("\n\n");
+            this.handleToolSuccess();
+            return text;
           } catch (e) {
             logger.error("Error executing get_symbol_context tool", e);
+            await this.handleToolFailure(e);
             return "Error executing tool. Proceed with existing knowledge.";
           }
         },

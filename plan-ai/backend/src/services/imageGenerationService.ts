@@ -34,7 +34,8 @@ export class ImageGenerationService {
           body: JSON.stringify({
             model: "black-forest-labs/flux.2-klein-4b",
             messages: [{ role: "user", content: prompt }]
-          })
+          }),
+          signal: AbortSignal.timeout(30000),
         });
 
         if (!response.ok) {
