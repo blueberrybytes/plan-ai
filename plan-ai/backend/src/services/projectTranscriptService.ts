@@ -1039,7 +1039,7 @@ export class ProjectTranscriptService {
     // automatic model fallback does NOT recover from. Callers can still pass
     // an explicit `modelKey` to override.
     const activeModel = modelKey || FAST_AI_MODEL;
-    const model = await getWorkspaceModel(workspaceId, activeModel, true);
+    const model = await getWorkspaceModel(workspaceId, activeModel);
     const todayIso = new Date().toISOString().split("T")[0];
 
     // RAG vs Fast-Track Router

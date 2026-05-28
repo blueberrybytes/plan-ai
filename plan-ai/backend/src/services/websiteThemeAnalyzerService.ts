@@ -327,7 +327,7 @@ ${googleFontNames.length > 0 ? googleFontNames.join(", ") : "(none found)"}
 `;
 
     // ── 9. Call AI ────────────────────────────────────────────────────────
-    const model = await getWorkspaceModel(workspaceId, undefined, true);
+    const model = await getWorkspaceModel(workspaceId, undefined);
 
     const result = await generateText({
       model,

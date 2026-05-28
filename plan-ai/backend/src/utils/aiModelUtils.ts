@@ -5,12 +5,15 @@ import prisma from "../prisma/prismaClient";
 import { logger } from "./logger";
 
 export const DEFAULT_AI_MODEL = "minimax/minimax-m2.7";
-export const FAST_AI_MODEL = "google/gemini-2.5-flash";
+export const FAST_AI_MODEL = "minimax/minimax-m2.7";
+// Fallback models used when the primary model fails.
+// IMPORTANT: Every model in this list MUST support json_schema structured
+// output on OpenRouter — we use Output.object() across the entire app and
+// the fallback must be able to handle it too.
 export const FALLBACK_MODELS = [
-  "qwen/qwen3.5-flash-02-23",
-  "openai/gpt-5.5",
-  "google/gemini-2.5-flash",
-  "google/gemini-3.1-pro-preview",
+  "openai/gpt-4o-mini",          // gold standard for json_schema, cheap & fast
+  "openai/gpt-4.1-mini",         // newer OpenAI, also reliable structured output
+  "anthropic/claude-sonnet-4.6", // confirmed structured output support
 ];
 
 export class MissingApiKeyError extends Error {
@@ -22,10 +25,12 @@ export class MissingApiKeyError extends Error {
 
 /**
  * Returns a configured model instance dynamically with an optional API key.
+ * Fallbacks are always enabled — every model in FALLBACK_MODELS supports
+ * json_schema structured output so it is always safe to fall back.
  */
-export function getConfiguredModel(modelKey?: string, apiKey?: string, disableFallbacks: boolean = false) {
+export function getConfiguredModel(modelKey?: string, apiKey?: string) {
   const primaryModel = modelKey && modelKey.length > 0 ? modelKey : DEFAULT_AI_MODEL;
-  const fallbacks = disableFallbacks ? [] : FALLBACK_MODELS.filter((m) => m !== primaryModel);
+  const fallbacks = FALLBACK_MODELS.filter((m) => m !== primaryModel);
 
   const openrouter = createOpenRouter({
     apiKey: apiKey || EnvUtils.get("OPENROUTER_API_KEY"),
@@ -36,8 +41,9 @@ export function getConfiguredModel(modelKey?: string, apiKey?: string, disableFa
 
 /**
  * Helper to fetch a Workspace's OpenRouter API key and return a configured model.
+ * Fallbacks are always enabled — see FALLBACK_MODELS for the curated safe list.
  */
-export async function getWorkspaceModel(workspaceId: string, modelKey?: string, disableFallbacks: boolean = false) {
+export async function getWorkspaceModel(workspaceId: string, modelKey?: string) {
   let apiKey: string | undefined = undefined;
   let isCourtesy = false;
 
@@ -68,7 +74,7 @@ export async function getWorkspaceModel(workspaceId: string, modelKey?: string, 
     throw new MissingApiKeyError();
   }
 
-  return getConfiguredModel(modelKey, apiKey, disableFallbacks);
+  return getConfiguredModel(modelKey, apiKey);
 }
 
 /**

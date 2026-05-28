@@ -36,6 +36,13 @@ export const AI_MODEL_LIMITS: Record<string, ModelLimits> = {
   },
 
   // 2026 Fleet - Fast & Efficient
+  "minimax/minimax-m2.7": {
+    modelName: "MiniMax M2.7",
+    maxTokens: 1000000,
+    description:
+      "MiniMax's latest flagship model. Fast, cost-efficient, and fully supports structured outputs. Great all-rounder for transcription analysis and task extraction.",
+    tags: ["Fast", "Structured Output", "MiniMax"],
+  },
   "google/gemini-2.5-flash": {
     modelName: "Gemini 2.5 Flash",
     maxTokens: 1000000,
