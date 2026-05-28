@@ -30,7 +30,7 @@ export function getConfiguredModel(modelKey?: string, apiKey?: string, disableFa
     apiKey: apiKey || EnvUtils.get("OPENROUTER_API_KEY"),
   });
 
-  return openrouter(primaryModel, { models: fallbacks });
+  return openrouter(primaryModel, fallbacks.length > 0 ? { models: fallbacks } : undefined);
 }
 
 /**
@@ -76,11 +76,9 @@ export async function getWorkspaceModel(workspaceId: string, modelKey?: string, 
 export function getFallbackProviderOptions(modelKey?: string) {
   const primaryModel = modelKey && modelKey.length > 0 ? modelKey : DEFAULT_AI_MODEL;
   const fallbacks = FALLBACK_MODELS.filter((m) => m !== primaryModel);
-  return {
-    openrouter: {
-      models: fallbacks,
-    },
-  };
+  return fallbacks.length > 0
+    ? { openrouter: { models: fallbacks } }
+    : {};
 }
 
 /**
