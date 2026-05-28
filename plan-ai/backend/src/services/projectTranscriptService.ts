@@ -13,6 +13,7 @@ import {
   getWorkspaceModel,
   getFallbackProviderOptions,
   DEFAULT_AI_MODEL,
+  FAST_AI_MODEL,
   getMaxContextChunks,
 } from "../utils/aiModelUtils";
 import { generateText, generateObject, stepCountIs } from "ai";
@@ -1027,7 +1028,13 @@ export class ProjectTranscriptService {
     /** Optional transcript id to exclude from the "previous meetings" lookup — the one being analyzed right now. */
     excludeTranscriptId?: string,
   ): Promise<TranscriptAnalysis> {
-    const activeModel = modelKey || DEFAULT_AI_MODEL;
+    // Structured-output extraction defaults to Gemini Flash: it handles
+    // `response_format: json_schema` reliably and cheaply. Premium models
+    // (e.g. claude-sonnet) intermittently return OpenRouter's body-level 400
+    // "Provider returned error" on structured output, which OpenRouter's
+    // automatic model fallback does NOT recover from. Callers can still pass
+    // an explicit `modelKey` to override.
+    const activeModel = modelKey || FAST_AI_MODEL;
     const model = await getWorkspaceModel(workspaceId, activeModel);
     const todayIso = new Date().toISOString().split("T")[0];
 
@@ -1248,16 +1255,16 @@ ${content}`;
         break;
       } catch (error: any) {
         attempt++;
-        const isSocketDisconnect = 
-          error?.name === "AI_APICallError" && 
+        const isSocketDisconnect =
+          error?.name === "AI_APICallError" &&
           error?.message?.includes("Failed to process successful response");
-          
+
         if (isSocketDisconnect && attempt < maxManualRetries) {
           logger.warn(`LLM API socket closed prematurely (attempt ${attempt}/${maxManualRetries}). Retrying...`);
           await new Promise((resolve) => setTimeout(resolve, 2000 * attempt));
           continue;
         }
-        
+
         throw error;
       }
     }
@@ -1324,31 +1331,32 @@ ${content}`;
         }),
       } satisfies TranscriptAnalysis;
     } catch (error: unknown) {
-      const isAuthError = error instanceof Error && (error.message.includes("Missing Authentication header") || error.message.includes("401"));
-      
+      // IMPORTANT: we deliberately THROW here rather than return a fallback
+      // "Processing Error" object. Returning a fake-success result caused the
+      // worker to mark the transcript COMPLETED (not FAILED), so the recorder
+      // never showed a Retry button. By throwing, the worker's catch sets
+      // `processingStatus: "FAILED"` + records the message in
+      // `metadata.errorMessage` (shown in the recorder tooltip) and the Retry
+      // button appears. See transcriptGenerationWorker.ts.
+      const isAuthError =
+        error instanceof Error &&
+        (error.message.includes("Missing Authentication header") || error.message.includes("401"));
+
       if (isAuthError) {
         logger.warn("OpenRouter API key is invalid or missing.", (error as Error).message);
-        return {
-          chainOfThought: "The provided OpenRouter API key is invalid or revoked.",
-          title: "Authentication Error",
-          summary: "Your OpenRouter API key is invalid or revoked. Please update it in your Workspace Settings.",
-          sentiment: "NEUTRAL",
-          language: "unknown",
-          tasks: [],
-        } satisfies TranscriptAnalysis;
+        throw new Error(
+          "Your OpenRouter API key is invalid or revoked. Please update it in your Workspace Settings, then retry.",
+        );
       }
 
       logger.error("Failed to analyse transcript with OpenAI", error);
-      return {
-        chainOfThought:
-          "Fallback: AI failed to parse the transcript natively due to schema violations or maxToken aborts.",
-        title: "Processing Error (Incomplete AI Output)",
-        summary:
-          "The AI encountered an error while formatting tasks (Unterminated JSON String). Please try again or provide a shorter audio clip.",
-        sentiment: "NEUTRAL",
-        language: "unknown",
-        tasks: [],
-      } satisfies TranscriptAnalysis;
+      // Surface a concise, human-readable reason — the raw provider error is
+      // already logged above for debugging.
+      const reason =
+        error instanceof Error && error.message.includes("Provider returned error")
+          ? "The AI provider rejected the request. Please retry — we'll route to a more compatible model."
+          : "The AI failed to generate tasks from this transcript. Please retry, or try a shorter recording.";
+      throw new Error(reason);
     }
   }
 
@@ -1542,9 +1550,7 @@ ${transcriptForLLM}`;
 
   private resolveDueDate(
     rawDueDate: string | undefined,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     priority: TaskPriority | undefined,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     startDate: Date,
   ): Date | null {
     const parsedDueDate = this.parseDueDate(rawDueDate);

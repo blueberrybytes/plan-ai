@@ -156,12 +156,20 @@ export default function TranscriptViewScreen() {
   };
 
   const processingStatus = transcript?.metadata?.processingStatus;
-  const isFailed = processingStatus === "FAILED";
+  // Treat "legacy" masked transcripts (completed-with-error-title + 0 tasks,
+  // from before the backend threw on AI failure) as failed so they surface the
+  // Retry affordance instead of rendering the fallback error text as a summary.
+  const transcriptTitle = transcript?.title || "";
+  const isErrorTitle =
+    transcriptTitle.startsWith("Processing Error") ||
+    transcriptTitle.startsWith("Failed Transcript") ||
+    transcriptTitle.startsWith("Authentication Error");
+  const isFailed = processingStatus === "FAILED" || isErrorTitle;
   const isPending =
     processingStatus === "PENDING" || processingStatus === "PROCESSING";
 
   const renderSummaryTab = () => {
-    if (!transcript?.summary) {
+    if (isFailed || !transcript?.summary) {
       return (
         <View style={styles.emptyContainer}>
           {isFailed ? (

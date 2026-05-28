@@ -58,6 +58,18 @@ export const transcriptApi = createApi({
         { type: "Transcript", id: transcriptId },
       ],
     }),
+    reprocessTranscript: builder.mutation<ApiResponseStandaloneTranscriptResponse, string>({
+      query: (id: string) => ({
+        url: `/api/transcripts/${id}/reprocess`,
+        method: "POST",
+      }),
+      // Invalidate so the detail view refetches and reflects the re-queued
+      // PENDING status (and any active polling picks it up).
+      invalidatesTags: (_result, _error, id: string) => [
+        { type: "Transcript", id },
+        "Transcript",
+      ],
+    }),
   }),
 });
 
@@ -66,4 +78,5 @@ export const {
   useGetTranscriptQuery,
   useDeleteTranscriptMutation,
   useRetryPostMeetingTaskMutation,
+  useReprocessTranscriptMutation,
 } = transcriptApi;

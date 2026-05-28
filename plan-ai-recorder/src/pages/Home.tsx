@@ -607,7 +607,22 @@ const Home: React.FC = () => {
                                   </Tooltip>
                                 );
                               })()}
-                              {t.metadata?.processingStatus === "FAILED" && (
+              {(() => {
+                                // Show the Retry affordance for both genuinely
+                                // FAILED transcripts and "legacy" ones that
+                                // were masked as completed before the backend
+                                // started throwing on AI failure (they carry a
+                                // fallback error title + 0 tasks). This makes
+                                // pre-fix broken recordings recoverable without
+                                // delete + re-record.
+                                const status = t.metadata?.processingStatus;
+                                const title = t.title || "";
+                                const isErrorTitle =
+                                  title.startsWith("Processing Error") ||
+                                  title.startsWith("Failed Transcript") ||
+                                  title.startsWith("Authentication Error");
+                                if (status !== "FAILED" && !isErrorTitle) return null;
+                                return (
                                 <Tooltip title={t.metadata?.errorMessage || "Failed to process"}>
                                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                     <Typography variant="caption" sx={{ border: '1px solid #f87171', px: 0.5, py: 0.2, borderRadius: 1, fontSize: '0.65rem', color: '#f87171', bgcolor: 'rgba(248, 113, 113, 0.1)' }}>
@@ -627,7 +642,8 @@ const Home: React.FC = () => {
                                     </Button>
                                   </Box>
                                 </Tooltip>
-                              )}
+                                );
+                              })()}
                               {t.metadata?.processingStatus !== "FAILED" && (() => {
                                 const postMeetingTasks = t.metadata?.postMeetingTasks;
                                 if (!postMeetingTasks) return null;

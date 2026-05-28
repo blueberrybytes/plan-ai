@@ -22,6 +22,8 @@ export type ApiResponseTranscriptListResponse =
   components["schemas"]["ApiResponse_TranscriptListResponse_"];
 export type ApiResponseTranscriptResponse =
   components["schemas"]["ApiResponse_TranscriptResponse_"];
+export type ApiResponseStandaloneTranscriptResponse =
+  components["schemas"]["ApiResponse_StandaloneTranscriptResponse_"];
 export type ApiResponseTaskListResponse = components["schemas"]["ApiResponse_TaskListResponse_"];
 export type ApiResponseTaskResponse = components["schemas"]["ApiResponse_TaskResponse_"];
 export type TaskResponse = components["schemas"]["TaskResponse"];
@@ -158,6 +160,22 @@ export const projectApi = createApi({
         method: "GET",
       }),
       providesTags: (result, error, { projectId, transcriptId }) => [
+        { type: "Project" as const, id: projectId },
+        { type: "Transcript" as const, id: transcriptId },
+      ],
+    }),
+    // Re-queue a failed/legacy transcript for AI processing. The endpoint is
+    // global (not project-scoped); we still take projectId so we can invalidate
+    // the project transcript cache and refetch the re-queued PENDING status.
+    reprocessProjectTranscript: builder.mutation<
+      ApiResponseStandaloneTranscriptResponse,
+      TranscriptPathParams
+    >({
+      query: ({ transcriptId }) => ({
+        url: `/api/transcripts/${transcriptId}/reprocess`,
+        method: "POST",
+      }),
+      invalidatesTags: (result, error, { projectId, transcriptId }) => [
         { type: "Project" as const, id: projectId },
         { type: "Transcript" as const, id: transcriptId },
       ],
@@ -376,6 +394,7 @@ export const {
   useCreateManualTranscriptMutation,
   useUpdateProjectTranscriptMutation,
   useDeleteProjectTranscriptMutation,
+  useReprocessProjectTranscriptMutation,
   useListProjectTasksQuery,
   useGetProjectTaskQuery,
   useCreateProjectTaskMutation,

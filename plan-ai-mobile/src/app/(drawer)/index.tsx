@@ -320,6 +320,15 @@ export default function DashboardScreen() {
     const processingStatus = item.metadata?.processingStatus;
     const isDone =
       processingStatus === "COMPLETED" || processingStatus === "DONE";
+    // Show Retry for genuinely FAILED transcripts AND "legacy" ones that were
+    // masked as completed before the backend started throwing on AI failure
+    // (they carry a fallback error title + 0 tasks). Keeps pre-fix broken
+    // recordings recoverable without delete + re-record.
+    const isErrorTitle =
+      title.startsWith("Processing Error") ||
+      title.startsWith("Failed Transcript") ||
+      title.startsWith("Authentication Error");
+    const showRetry = processingStatus === "FAILED" || isErrorTitle;
 
     // Determine summary snippet
     let summarySnippet = "Processing summary...";
@@ -433,7 +442,7 @@ export default function DashboardScreen() {
             </View>
           )}
 
-          {processingStatus === "FAILED" && (
+          {showRetry && (
             <View style={{ marginTop: 10 }}>
               <Button
                 mode="contained-tonal"

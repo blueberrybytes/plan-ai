@@ -24,9 +24,13 @@ import {
   AccessTime as TimeIcon,
   Group as GroupIcon,
   Place as LocationIcon,
+  Refresh as RefreshIcon,
 } from "@mui/icons-material";
 import { useParams, useNavigate } from "react-router-dom";
-import { useGetTranscriptQuery } from "../store/apis/transcriptApi";
+import {
+  useGetTranscriptQuery,
+  useReprocessTranscriptMutation,
+} from "../store/apis/transcriptApi";
 import SidebarLayout from "../components/layout/SidebarLayout";
 import { useDispatch } from "react-redux";
 import { setToastMessage } from "../store/slices/app/appSlice";
@@ -116,6 +120,35 @@ const RecordingDetail: React.FC = () => {
       status === "PENDING" || status === "REFINING_TASKS";
     setPollingInterval(isPending ? 3000 : 0);
   }, [transcript]);
+
+  const [reprocessTranscript, { isLoading: isReprocessing }] =
+    useReprocessTranscriptMutation();
+
+  // Treat "legacy" masked transcripts (completed-with-error-title + 0 tasks,
+  // from before the backend threw on AI failure) as failed so they surface
+  // the Retry affordance instead of rendering the fallback error text.
+  const transcriptTitle = transcript?.data?.title || "";
+  const isErrorTitle =
+    transcriptTitle.startsWith("Processing Error") ||
+    transcriptTitle.startsWith("Failed Transcript") ||
+    transcriptTitle.startsWith("Authentication Error");
+  const isFailedTranscript =
+    transcript?.data?.metadata?.processingStatus === "FAILED" || isErrorTitle;
+
+  const handleReprocess = async () => {
+    if (!recordingId) return;
+    try {
+      await reprocessTranscript(recordingId).unwrap();
+      dispatch(
+        setToastMessage({ message: "Re-queued for AI processing", severity: "success" }),
+      );
+      setPollingInterval(3000);
+    } catch {
+      dispatch(
+        setToastMessage({ message: "Could not re-queue. Please try again.", severity: "error" }),
+      );
+    }
+  };
 
   interface RawTask {
     id?: string;
@@ -539,11 +572,26 @@ const RecordingDetail: React.FC = () => {
                   refresh automatically when finished.
                 </Typography>
               </Box>
-            ) : transcript.data?.metadata?.processingStatus ===
-              "FAILED" ? (
-              <Alert severity="error" sx={{ mt: 2 }}>
-                The background AI worker encountered an error while processing this transcript.
-                Tasks and summaries could not be generated.
+            ) : isFailedTranscript ? (
+              <Alert
+                severity="error"
+                sx={{ mt: 2 }}
+                action={
+                  <Button
+                    color="inherit"
+                    size="small"
+                    startIcon={
+                      isReprocessing ? <CircularProgress size={16} color="inherit" /> : <RefreshIcon />
+                    }
+                    onClick={handleReprocess}
+                    disabled={isReprocessing}
+                  >
+                    {isReprocessing ? "Retrying…" : "Retry"}
+                  </Button>
+                }
+              >
+                {transcript.data?.metadata?.errorMessage ||
+                  "The AI worker encountered an error while processing this transcript. Tasks and summaries could not be generated."}
               </Alert>
             ) : (
               <>

@@ -28,6 +28,7 @@ import {
   useGetProjectQuery,
   useGetProjectTranscriptQuery,
   useListProjectTasksQuery,
+  useReprocessProjectTranscriptMutation,
 } from "../store/apis/projectApi";
 import { useTranslation } from "react-i18next";
 import { ContentCopy as CopyIcon, Check as CheckIcon } from "@mui/icons-material";
@@ -238,6 +239,21 @@ const ProjectTranscriptDetail: React.FC = () => {
     setPollingInterval(isPending || hasPendingPostMeetingTask ? 3000 : 0);
   }, [transcriptData]);
 
+  const [reprocessTranscript, { isLoading: isReprocessing }] =
+    useReprocessProjectTranscriptMutation();
+
+  const handleReprocess = async () => {
+    if (!projectId || !transcriptId) return;
+    try {
+      await reprocessTranscript({ projectId, transcriptId }).unwrap();
+      // Flip to the PENDING spinner immediately and start polling.
+      setPollingInterval(3000);
+      refetchTranscript();
+    } catch {
+      // Surfaced inline below via the still-visible Retry button; polling stays off.
+    }
+  };
+
   const { data: allTasksData } = useListProjectTasksQuery(
     { projectId: projectId ?? "" },
     { skip: !projectId || !transcriptData?.data },
@@ -305,6 +321,17 @@ const ProjectTranscriptDetail: React.FC = () => {
   }
 
   const transcript = transcriptData?.data ?? null;
+
+  // Treat "legacy" masked transcripts (completed-with-error-title + 0 tasks,
+  // from before the backend threw on AI failure) as failed so they surface the
+  // Retry affordance instead of rendering the fallback error text as a summary.
+  const isErrorTitle =
+    (transcript?.title ?? "").startsWith("Processing Error") ||
+    (transcript?.title ?? "").startsWith("Failed Transcript") ||
+    (transcript?.title ?? "").startsWith("Authentication Error");
+  const isFailedTranscript =
+    (transcript?.metadata as { processingStatus?: string })?.processingStatus === "FAILED" ||
+    isErrorTitle;
 
   const sessionErrorMessage = (() => {
     if (!sessionError) {
@@ -510,7 +537,7 @@ const ProjectTranscriptDetail: React.FC = () => {
                     </Stack>
                   </Stack>
 
-                  {transcript.summary ? (
+                  {transcript.summary && !isFailedTranscript ? (
                     <Box>
                       <Typography variant="overline" color="text.secondary">
                         {t("projectTranscriptDetail.sections.summary")}
@@ -544,10 +571,25 @@ const ProjectTranscriptDetail: React.FC = () => {
                   </Typography>
                 </CardContent>
               </Card>
-            ) : (transcript.metadata as { processingStatus?: string })?.processingStatus ===
-              "FAILED" ? (
-              <Alert severity="error" sx={{ mt: 2 }}>
-                The background AI worker encountered an error while processing this transcript:{" "}
+            ) : isFailedTranscript ? (
+              <Alert
+                severity="error"
+                sx={{ mt: 2 }}
+                action={
+                  <Button
+                    color="inherit"
+                    size="small"
+                    startIcon={
+                      isReprocessing ? <CircularProgress size={16} color="inherit" /> : <RefreshIcon />
+                    }
+                    onClick={handleReprocess}
+                    disabled={isReprocessing}
+                  >
+                    {isReprocessing ? "Retrying…" : "Retry"}
+                  </Button>
+                }
+              >
+                The AI worker encountered an error while processing this transcript:{" "}
                 <strong>{(transcript.metadata as any)?.errorMessage || "Unknown Error"}</strong>
                 <br />
                 <br />
