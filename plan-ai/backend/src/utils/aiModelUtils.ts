@@ -78,7 +78,7 @@ export function getFallbackProviderOptions(modelKey?: string) {
   const fallbacks = FALLBACK_MODELS.filter((m) => m !== primaryModel);
   return fallbacks.length > 0
     ? { openrouter: { models: fallbacks } }
-    : {};
+    : undefined;
 }
 
 /**
