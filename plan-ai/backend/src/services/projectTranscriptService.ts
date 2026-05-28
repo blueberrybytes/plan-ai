@@ -420,9 +420,12 @@ export class ProjectTranscriptService {
 
       // Call the Python Microservice
       const voiceAiUrl = process.env.VOICE_AI_URL || "http://localhost:8001";
+      const voiceAiKey = process.env.VOICE_AI_API_KEY || "";
       const verifyRes = await fetch(`${voiceAiUrl}/verify`, {
         method: "POST",
         body: formData,
+        headers: voiceAiKey ? { "x-api-key": voiceAiKey } : undefined,
+        signal: AbortSignal.timeout(30000),
       });
 
       if (!verifyRes.ok) {
@@ -796,7 +799,8 @@ export class ProjectTranscriptService {
             })),
           });
 
-          // Resolve string-based dependencies to actual created Task IDs
+          // Batch all task dependencies into a single createMany call
+          const allDependencyData: { taskId: string; dependsOnTaskId: string; type: "BLOCKS" }[] = [];
           for (let i = 0; i < analysisRaw.tasks.length; i++) {
             const candidateDeps = analysisRaw.tasks[i].dependencies;
             if (candidateDeps && candidateDeps.length > 0) {
@@ -809,16 +813,18 @@ export class ProjectTranscriptService {
                 )
                 .filter((id: string | undefined): id is string => Boolean(id));
 
-              if (validDependantIds.length > 0) {
-                await tx.taskDependency.createMany({
-                  data: validDependantIds.map((depId: string) => ({
-                    taskId: currentTaskId,
-                    dependsOnTaskId: depId,
-                    type: "BLOCKS",
-                  })),
+              for (const depId of validDependantIds) {
+                allDependencyData.push({
+                  taskId: currentTaskId,
+                  dependsOnTaskId: depId,
+                  type: "BLOCKS",
                 });
               }
             }
+          }
+
+          if (allDependencyData.length > 0) {
+            await tx.taskDependency.createMany({ data: allDependencyData });
           }
         }
       }
@@ -885,16 +891,24 @@ export class ProjectTranscriptService {
             url: `/docs/view/${doc.id}`,
           });
 
-          for (const task of result.createdTasks) {
-            const currentTask = await prisma.task.findUnique({ where: { id: task.id } });
-            if (currentTask) {
-              const metadata: TaskMetadata = (currentTask.metadata as TaskMetadata) ?? {};
-              metadata.publicDocUrl = publicUrl;
-              await prisma.task.update({
-                where: { id: task.id },
-                data: { metadata: metadata as Prisma.InputJsonObject }
-              });
-            }
+          // Batch-update all tasks with publicDocUrl in a single transaction
+          // instead of N findUnique+update calls.
+          const taskIds = result.createdTasks.map((t) => t.id);
+          if (taskIds.length > 0) {
+            const tasksWithMeta = await prisma.task.findMany({
+              where: { id: { in: taskIds } },
+              select: { id: true, metadata: true },
+            });
+            await prisma.$transaction(
+              tasksWithMeta.map((t) => {
+                const metadata: TaskMetadata = (t.metadata as TaskMetadata) ?? {};
+                metadata.publicDocUrl = publicUrl;
+                return prisma.task.update({
+                  where: { id: t.id },
+                  data: { metadata: metadata as Prisma.InputJsonObject },
+                });
+              }),
+            );
           }
         })
         .catch(async (err) => {
@@ -931,16 +945,23 @@ export class ProjectTranscriptService {
             url: `/presentations/${pres.id}`,
           });
 
-          for (const task of result.createdTasks) {
-            const currentTask = await prisma.task.findUnique({ where: { id: task.id } });
-            if (currentTask) {
-              const metadata: TaskMetadata = (currentTask.metadata as TaskMetadata) ?? {};
-              metadata.publicSlidesUrl = publicUrl;
-              await prisma.task.update({
-                where: { id: task.id },
-                data: { metadata: metadata as Prisma.InputJsonObject }
-              });
-            }
+          // Batch-update all tasks with publicSlidesUrl in a single transaction
+          const taskIds = result.createdTasks.map((t) => t.id);
+          if (taskIds.length > 0) {
+            const tasksWithMeta = await prisma.task.findMany({
+              where: { id: { in: taskIds } },
+              select: { id: true, metadata: true },
+            });
+            await prisma.$transaction(
+              tasksWithMeta.map((t) => {
+                const metadata: TaskMetadata = (t.metadata as TaskMetadata) ?? {};
+                metadata.publicSlidesUrl = publicUrl;
+                return prisma.task.update({
+                  where: { id: t.id },
+                  data: { metadata: metadata as Prisma.InputJsonObject },
+                });
+              }),
+            );
           }
         })
         .catch(async (err) => {
@@ -2016,6 +2037,7 @@ ${transcriptForLLM}`;
         description: true,
         acceptanceCriteria: true,
         parentId: true,
+        metadata: true,
       },
     });
 
@@ -2085,41 +2107,44 @@ ${taskSummaries}`,
           .catch(() => {});
       }
 
-      // Step 3: Update each task in the database
-      let enrichedCount = 0;
+      // Batch task enrichment updates into a single $transaction instead of
+      // sequential findUnique+update per task.
+      const updateOps: ReturnType<typeof prisma.task.update>[] = [];
       for (const enrichedTask of object.tasks) {
         const existingTask = topLevelTasks.find((t) => t.id === enrichedTask.id);
         if (!existingTask) continue;
 
         const { joined, list } = joinAcceptanceCriteria(enrichedTask.enrichedAcceptanceCriteria);
 
-        // Only update if the enrichment actually adds value
         const descriptionChanged =
           enrichedTask.enrichedDescription !== existingTask.description;
         const acChanged = joined !== existingTask.acceptanceCriteria;
 
         if (descriptionChanged || acChanged) {
-          const currentTask = await prisma.task.findUnique({ where: { id: enrichedTask.id } });
-          if (!currentTask) continue;
-
-          const metadata = (currentTask.metadata as Record<string, unknown>) ?? {};
+          const metadata = (existingTask.metadata as Record<string, unknown>) ?? {};
           metadata.refinedAt = new Date().toISOString();
           metadata.refinedFromTranscriptId = transcriptId;
-          // Preserve the original pre-enrichment content for auditing
           if (descriptionChanged) metadata.preRefinementDescription = existingTask.description;
           if (acChanged) metadata.preRefinementAcceptanceCriteria = existingTask.acceptanceCriteria;
           metadata.acceptanceCriteriaList = list;
 
-          await prisma.task.update({
-            where: { id: enrichedTask.id },
-            data: {
-              ...(descriptionChanged ? { description: enrichedTask.enrichedDescription } : {}),
-              ...(acChanged ? { acceptanceCriteria: joined } : {}),
-              metadata: metadata as Prisma.InputJsonObject,
-            },
-          });
-          enrichedCount++;
+          updateOps.push(
+            prisma.task.update({
+              where: { id: enrichedTask.id },
+              data: {
+                ...(descriptionChanged ? { description: enrichedTask.enrichedDescription } : {}),
+                ...(acChanged ? { acceptanceCriteria: joined } : {}),
+                metadata: metadata as Prisma.InputJsonObject,
+              },
+            }),
+          );
         }
+      }
+
+      let enrichedCount = 0;
+      if (updateOps.length > 0) {
+        await prisma.$transaction(updateOps);
+        enrichedCount = updateOps.length;
       }
 
       logger.info(

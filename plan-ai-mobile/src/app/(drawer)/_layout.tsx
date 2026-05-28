@@ -4,7 +4,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { CustomDrawerContent } from '../../components/CustomDrawerContent';
 import * as FileSystem from 'expo-file-system';
 import { useEffect, useState } from 'react';
-import { Linking, View } from 'react-native';
+import { Alert, Linking, View } from 'react-native';
 import { useAuth } from '../../context/AuthContext';
 
 const WEB_APP_URL = process.env.EXPO_PUBLIC_PLAN_AI_WEB_URL ?? 'https://plan-ai.blueberrybytes.com';
@@ -12,11 +12,24 @@ const WEB_APP_URL = process.env.EXPO_PUBLIC_PLAN_AI_WEB_URL ?? 'https://plan-ai.
 export default function DrawerLayout() {
   const theme = useTheme();
   const [showAiBanner, setShowAiBanner] = useState(false);
-  const { workspaces, activeWorkspaceId, logout, refreshBackendUser, refreshWorkspaces } = useAuth();
+  const { workspaces, activeWorkspaceId, logout, refreshBackendUser, refreshWorkspaces, api } = useAuth();
   const [refreshing, setRefreshing] = useState(false);
+  const [showStillPending, setShowStillPending] = useState(false);
 
   const activeWorkspace = workspaces.find((w) => w.id === activeWorkspaceId);
-  const isMissingKeys = activeWorkspace && !activeWorkspace.isCourtesy && activeWorkspace.role === "OWNER" && (!activeWorkspace.openRouterKey || !activeWorkspace.deepgramKey);
+
+  // Load subscription track to distinguish BYOK vs Managed plans.
+  // Only BYOK workspaces need user-provided API keys.
+  const [subscriptionTrack, setSubscriptionTrack] = useState<string | null>(null);
+  useEffect(() => {
+    if (!activeWorkspaceId) return;
+    api.getSubscription()
+      .then((sub) => setSubscriptionTrack(sub.track ?? null))
+      .catch(() => setSubscriptionTrack(null)); // fail open
+  }, [activeWorkspaceId, api]);
+
+  const isByok = subscriptionTrack === "BYOK";
+  const isMissingKeys = activeWorkspace && !activeWorkspace.isCourtesy && isByok && activeWorkspace.role === "OWNER" && (!activeWorkspace.openRouterKey || !activeWorkspace.deepgramKey);
 
   useEffect(() => {
     const checkBanner = async () => {
@@ -51,9 +64,10 @@ export default function DrawerLayout() {
           <Dialog.Title style={{ textAlign: "center", color: theme.colors.error }}>API Keys Required</Dialog.Title>
           <Dialog.Content>
             <PaperText variant="bodyMedium" style={{ lineHeight: 22, textAlign: "center" }}>
-              Your workspace "{activeWorkspace?.name}" is missing required configuration.
-              {"\n\n"}
-              Please configure your workspace settings from your computer, then tap "Refresh" to continue.
+              Your workspace "{activeWorkspace?.name}" uses Bring Your Own Key
+              (BYOK) mode and is missing API keys.{"\n\n"}Configure your
+              OpenRouter and Deepgram keys on the web dashboard, then tap
+              "Refresh" to continue.
             </PaperText>
           </Dialog.Content>
           <Dialog.Actions>
@@ -64,8 +78,15 @@ export default function DrawerLayout() {
                 disabled={refreshing}
                 onPress={async () => {
                   setRefreshing(true);
+                  setShowStillPending(false);
                   try {
                     await Promise.all([refreshBackendUser(), refreshWorkspaces()]);
+                    // If the dialog is still showing, setup wasn't completed
+                    setShowStillPending(true);
+                    Alert.alert(
+                      "Still Incomplete",
+                      "API keys are still missing. Please configure your OpenRouter and Deepgram keys on the web dashboard first.",
+                    );
                   } finally {
                     setRefreshing(false);
                   }

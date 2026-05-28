@@ -21,6 +21,7 @@ This is the most critical environment file. It handles database connections, API
 | `FRONTEND_URL` | The public URL of the frontend app (for CORS). | `http://localhost:3000` |
 | `BACKEND_URL` | The public URL of this API (for webhooks). | `https://api.plan-ai.com` |
 | `APP_URL` | The main URL of the app (used in emails). | `https://plan-ai.blueberrybytes.com` |
+| `CORS_ORIGINS` | Comma-separated list of allowed CORS origins for production. Leave empty for local dev (allows all origins). | `https://plan-ai.blueberrybytes.com` |
 | `API_ADMIN_KEY` | Secret key for cron jobs or admin overrides. | `test123` |
 | `LOG_LEVEL` | Logging verbosity (`info`, `debug`, `error`). | `info` |
 | **Databases** | | |
@@ -37,6 +38,7 @@ This is the most critical environment file. It handles database connections, API
 | `OPENAI_API_KEY` | Optional OpenAI key. | `sk-proj-xxxx` |
 | `GROQ_API_KEY` | Optional Groq key. | `gsk_xxxx` |
 | `VOICE_AI_URL` | Internal URL for the Python Voice API. | `http://localhost:8001` |
+| `VOICE_AI_API_KEY` | Shared secret between the backend and voice-ai service. Leave empty for local dev. | `your-secret-key` |
 | **Integrations** | | |
 | `JIRA_CLIENT_ID` | OAuth Client ID for Jira integration. | `xxxx` |
 | `JIRA_CLIENT_SECRET` | OAuth Client Secret for Jira integration. | `xxxx` |
@@ -108,6 +110,8 @@ This powers the deep-learning speaker identification system.
 | `PORT` | The port the FastAPI service runs on. | `8001` |
 | `HOST` | The binding host. | `0.0.0.0` |
 | `HF_HOME` | Directory for caching HuggingFace models. | `./.cache/huggingface` |
+| `VOICE_AI_API_KEY` | Shared secret to authenticate requests from the backend. Must match the backend value. | `your-secret-key` |
+| `VOICE_REQUEST_TIMEOUT` | Request timeout in seconds (default: `180`). | `180` |
 
 ## Desktop Recorder Variables (`plan-ai-recorder/.env`)
 

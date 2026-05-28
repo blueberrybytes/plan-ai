@@ -136,6 +136,7 @@ class AsanaIntegrationService {
         "Content-Type": "application/x-www-form-urlencoded",
       },
       body: params.toString(),
+      signal: AbortSignal.timeout(15000),
     });
 
     const rawBody = await response.text();
@@ -191,6 +192,7 @@ class AsanaIntegrationService {
           "Content-Type": "application/x-www-form-urlencoded",
         },
         body: params.toString(),
+        signal: AbortSignal.timeout(15000),
       });
 
       const rawBody = await response.text();
@@ -232,6 +234,7 @@ class AsanaIntegrationService {
         Authorization: `Bearer ${accessToken}`,
         Accept: "application/json",
       },
+      signal: AbortSignal.timeout(15000),
     });
 
     const bodyText = await response.text();
@@ -306,6 +309,7 @@ class AsanaIntegrationService {
         Authorization: `Bearer ${personalAccessToken.trim()}`,
         Accept: "application/json",
       },
+      signal: AbortSignal.timeout(15000),
     });
 
     const bodyText = await response.text();
@@ -391,7 +395,7 @@ class AsanaIntegrationService {
       try {
         const projectsRes = await fetch(
           `${ASANA_API_BASE}/projects?workspace=${asanaWorkspaceGid}&opt_fields=name&limit=100`,
-          { headers },
+          { headers, signal: AbortSignal.timeout(15000) },
         );
         if (projectsRes.ok) {
           const data = (await projectsRes.json()) as AsanaProjectResponse;
@@ -405,7 +409,7 @@ class AsanaIntegrationService {
       try {
         const tasksRes = await fetch(
           `${ASANA_API_BASE}/tasks?assignee=me&workspace=${asanaWorkspaceGid}&opt_fields=name&limit=100&completed_since=now`,
-          { headers },
+          { headers, signal: AbortSignal.timeout(15000) },
         );
         if (tasksRes.ok) {
           const data = (await tasksRes.json()) as { data: unknown[] };
@@ -446,6 +450,7 @@ class AsanaIntegrationService {
           Authorization: `Bearer ${integration.accessToken}`,
           Accept: "application/json",
         },
+        signal: AbortSignal.timeout(15000),
       },
     );
 
@@ -547,6 +552,7 @@ class AsanaIntegrationService {
         Accept: "application/json",
       },
       body: JSON.stringify(payload),
+      signal: AbortSignal.timeout(15000),
     });
 
     const responseText = await response.text();

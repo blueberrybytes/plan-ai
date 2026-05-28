@@ -1,5 +1,4 @@
 import { Worker, Job } from "bullmq";
-import Redis from "ioredis";
 import * as Sentry from "@sentry/node";
 import EnvUtils from "../utils/EnvUtils";
 import { logger } from "../utils/logger";
@@ -18,11 +17,9 @@ import { z } from "zod";
 import { checkSubscription } from "../services/subscriptionGuard";
 
 const prisma = new PrismaClient();
-const REDIS_URL = EnvUtils.get("REDIS_URL") || "redis://localhost:6379";
+import { createWorkerConnection } from "../queue/redisConnection";
 
-const connection = new Redis(REDIS_URL, {
-  maxRetriesPerRequest: null,
-});
+const connection = createWorkerConnection();
 
 export const contextDocumentWorker = new Worker<ContextDocumentJobPayload>(
   "ContextDocumentQueue",
@@ -315,7 +312,12 @@ Rules:
       }
     });
   },
-  { connection, concurrency: 2 },
+  {
+    connection,
+    concurrency: 2,
+    lockDuration: 180_000,    // 3 minutes — LLM keyword extraction + formatting can take 60-90s
+    stalledInterval: 90_000,  // Check for stalled jobs every 90 seconds
+  },
 );
 
 contextDocumentWorker.on("completed", (job) => {

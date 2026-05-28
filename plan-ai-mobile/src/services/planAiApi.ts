@@ -61,6 +61,18 @@ async function handleResponseWithRetry<T>(
     return json.data !== undefined ? json.data : json;
   }
 
+  // 429 = rate limit — show a friendly message instead of a raw error
+  if (res.status === 429) {
+    const body = await res.json().catch(() => ({ error: res.statusText }));
+    const data = body as Record<string, unknown>;
+    if (data.code === "usage_limit_exceeded") {
+      const limitType = data.limitType as string;
+      const friendly = limitType === "llm" ? "AI token" : limitType === "recording" ? "recording hour" : "generation";
+      throw new Error(`You've reached your monthly ${friendly} limit. Upgrade your plan or wait until next billing cycle.`);
+    }
+    throw new Error("Rate limit reached. Please wait a moment before trying again.");
+  }
+
   if (!res.ok) {
     const body = await res.json().catch(() => ({ message: res.statusText }));
     throw new Error((body as { message?: string }).message ?? `HTTP ${res.status}`);

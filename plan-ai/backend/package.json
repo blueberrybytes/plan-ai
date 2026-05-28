@@ -68,6 +68,7 @@
     "duck-duck-scrape": "^2.2.7",
     "express": "^4.19.2",
     "express-basic-auth": "^1.2.1",
+    "express-rate-limit": "^8.5.2",
     "express-validator": "^7.1.0",
     "firebase-admin": "^13.6.0",
     "googleapis": "^171.4.0",

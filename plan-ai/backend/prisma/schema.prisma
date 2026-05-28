@@ -317,6 +317,8 @@ model Transcript {
   @@index([projectId])
   @@index([workspaceId])
   @@index([source])
+  @@index([userId])
+  @@index([createdAt])
 }
 
 model Task {
@@ -358,6 +360,7 @@ model Task {
   @@index([status])
   @@index([lane, position])
   @@index([assigneeId])
+  @@index([createdAt])
 }
 
 model TaskDependency {
@@ -439,6 +442,7 @@ model ChatThread {
 
   @@index([userId])
   @@index([workspaceId])
+  @@index([createdAt])
 }
 
 model ChatMessage {
@@ -702,4 +706,7 @@ model AiUsageLog {
   @@index([userId])
   @@index([workspaceId])
   @@index([feature])
+  @@index([createdAt])
+  @@index([projectId])
+  @@index([workspaceId, createdAt])
 }

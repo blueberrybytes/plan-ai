@@ -33,6 +33,7 @@ class ContextService {
       where: { workspaceId },
       orderBy: { createdAt: "desc" },
       include: { files: { orderBy: { createdAt: "desc" } } },
+      take: 100,
     });
   }
 

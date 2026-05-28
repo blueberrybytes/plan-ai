@@ -620,6 +620,7 @@ export class TranscriptsController extends BaseWorkspaceController {
           select: { dependsOnTaskId: true },
         },
       },
+      take: 200,
     });
 
     const mappedTasks = rawTasks.map((t) => mapTaskResponse(t as unknown as TaskWithRelations));
@@ -631,7 +632,8 @@ export class TranscriptsController extends BaseWorkspaceController {
         },
         workspaceId,
       },
-      include: { theme: true }
+      include: { theme: true },
+      take: 50,
     });
 
     return {

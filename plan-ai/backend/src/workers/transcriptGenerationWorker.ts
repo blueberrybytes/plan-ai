@@ -1,5 +1,4 @@
 import { Worker, Job } from "bullmq";
-import Redis from "ioredis";
 import * as Sentry from "@sentry/node";
 import EnvUtils from "../utils/EnvUtils";
 import { logger } from "../utils/logger";
@@ -9,11 +8,9 @@ import { PrismaClient, Prisma } from "@prisma/client";
 import { checkSubscription } from "../services/subscriptionGuard";
 
 const prisma = new PrismaClient();
-const REDIS_URL = EnvUtils.get("REDIS_URL") || "redis://localhost:6379";
+import { createWorkerConnection } from "../queue/redisConnection";
 
-const connection = new Redis(REDIS_URL, {
-  maxRetriesPerRequest: null,
-});
+const connection = createWorkerConnection();
 
 export const transcriptGenerationWorker = new Worker<TranscriptGenerationJobPayload>(
   "TranscriptGenerationQueue",
@@ -119,7 +116,12 @@ export const transcriptGenerationWorker = new Worker<TranscriptGenerationJobPayl
       }
     });
   },
-  { connection, concurrency: 2 }, // Limit concurrency to avoid hitting LLM API rate limits
+  {
+    connection,
+    concurrency: 2, // Limit concurrency to avoid hitting LLM API rate limits
+    lockDuration: 600_000,    // 10 minutes — transcript processing takes 40-300s
+    stalledInterval: 300_000, // Check for stalled jobs every 5 minutes
+  },
 );
 
 transcriptGenerationWorker.on("completed", (job) => {

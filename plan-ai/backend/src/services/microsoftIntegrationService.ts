@@ -93,6 +93,7 @@ export class MicrosoftIntegrationService {
       headers: {
         "Content-Type": "application/x-www-form-urlencoded",
       },
+      timeout: 15000,
     });
 
     const { access_token, refresh_token, expires_in } = tokenResponse.data;
@@ -104,6 +105,7 @@ export class MicrosoftIntegrationService {
       headers: {
         Authorization: `Bearer ${access_token}`,
       },
+      timeout: 15000,
     });
 
     const userEmail = profileResponse.data.userPrincipalName || profileResponse.data.mail;
@@ -200,6 +202,7 @@ export class MicrosoftIntegrationService {
     try {
       const tokenResponse = await axios.post(tokenUrl, params, {
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        timeout: 15000,
       });
 
       const { access_token, refresh_token, expires_in } = tokenResponse.data;
@@ -235,6 +238,7 @@ export class MicrosoftIntegrationService {
   ): Promise<{ name: string; mimeType: string; size: number }> {
     const response = await axios.get(`https://graph.microsoft.com/v1.0/me/drive/items/${fileId}`, {
       headers: { Authorization: `Bearer ${accessToken}` },
+      timeout: 15000,
     });
     return {
       name: response.data.name,
@@ -249,6 +253,7 @@ export class MicrosoftIntegrationService {
       {
         headers: { Authorization: `Bearer ${accessToken}` },
         responseType: "arraybuffer",
+        timeout: 15000,
       },
     );
     return Buffer.from(response.data);
@@ -293,6 +298,7 @@ export class MicrosoftIntegrationService {
         Authorization: `Bearer ${accessToken}`,
         "Content-Type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
       },
+      timeout: 15000,
     });
 
     return response.data.webUrl || "";
@@ -320,7 +326,7 @@ export class MicrosoftIntegrationService {
         const { accessToken } = await this.refreshTokenIfExpired(workspaceId);
         const res = await axios.get(
           `https://graph.microsoft.com/v1.0/me/drive/items/${folderId}?select=name`,
-          { headers: { Authorization: `Bearer ${accessToken}` } },
+          { headers: { Authorization: `Bearer ${accessToken}` }, timeout: 15000 },
         );
         resolvedName = res.data.name || folderName;
       } catch (e) {
