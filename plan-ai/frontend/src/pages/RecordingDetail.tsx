@@ -572,29 +572,30 @@ const RecordingDetail: React.FC = () => {
                   refresh automatically when finished.
                 </Typography>
               </Box>
-            ) : isFailedTranscript ? (
-              <Alert
-                severity="error"
-                sx={{ mt: 2 }}
-                action={
-                  <Button
-                    color="inherit"
-                    size="small"
-                    startIcon={
-                      isReprocessing ? <CircularProgress size={16} color="inherit" /> : <RefreshIcon />
-                    }
-                    onClick={handleReprocess}
-                    disabled={isReprocessing}
-                  >
-                    {isReprocessing ? "Retrying…" : "Retry"}
-                  </Button>
-                }
-              >
-                {transcript.data?.metadata?.errorMessage ||
-                  "The AI worker encountered an error while processing this transcript. Tasks and summaries could not be generated."}
-              </Alert>
             ) : (
               <>
+                {isFailedTranscript && (
+                  <Alert
+                    severity="error"
+                    sx={{ mt: 2, mb: 3 }}
+                    action={
+                      <Button
+                        color="inherit"
+                        size="small"
+                        startIcon={
+                          isReprocessing ? <CircularProgress size={16} color="inherit" /> : <RefreshIcon />
+                        }
+                        onClick={handleReprocess}
+                        disabled={isReprocessing}
+                      >
+                        {isReprocessing ? "Retrying…" : "Retry"}
+                      </Button>
+                    }
+                  >
+                    {transcript.data?.metadata?.errorMessage ||
+                      "The AI worker encountered an error while processing this transcript. Tasks and summaries could not be generated."}
+                  </Alert>
+                )}
                 {transcript.data?.metadata?.processingStatus === "REFINING_TASKS" && (
                   <Alert severity="info" sx={{ mb: 2 }} icon={<CircularProgress size={16} />}>
                     Enriching tickets with codebase context… Tasks are usable now and will be updated shortly.

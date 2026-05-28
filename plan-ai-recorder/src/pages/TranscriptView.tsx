@@ -587,41 +587,42 @@ const TranscriptView: React.FC = () => {
                   The page will refresh automatically when finished.
                 </Typography>
               </Box>
-            ) : transcript.metadata?.processingStatus === "FAILED" ? (
-              <Alert 
-                severity="error" 
-                sx={{ mt: 6 }}
-                action={
-                  <Button 
-                    color="inherit" 
-                    size="small" 
-                    onClick={async () => {
-                      if (!id) return;
-                      try {
-                        setLoading(true);
-                        await api.reprocessTranscript(id);
-                        await fetchTranscript(false);
-                      } catch (e: any) {
-                        setError(e.message || "Failed to restart processing");
-                        setLoading(false);
-                      }
-                    }}
-                  >
-                    Retry
-                  </Button>
-                }
-              >
-                We have encountered an error while processing this transcript:{" "}
-                <strong>
-                  {transcript.metadata?.errorMessage ||
-                    "Could not complete the process"}
-                </strong>
-                <br />
-                <br />
-                Tasks and summaries could not be generated.
-              </Alert>
             ) : (
               <>
+                {transcript.metadata?.processingStatus === "FAILED" && (
+                  <Alert 
+                    severity="error" 
+                    sx={{ mt: 2, mb: 4 }}
+                    action={
+                      <Button 
+                        color="inherit" 
+                        size="small" 
+                        onClick={async () => {
+                          if (!id) return;
+                          try {
+                            setLoading(true);
+                            await api.reprocessTranscript(id);
+                            await fetchTranscript(false);
+                          } catch (e: any) {
+                            setError(e.message || "Failed to restart processing");
+                            setLoading(false);
+                          }
+                        }}
+                      >
+                        Retry
+                      </Button>
+                    }
+                  >
+                    We have encountered an error while processing this transcript:{" "}
+                    <strong>
+                      {transcript.metadata?.errorMessage ||
+                        "Could not complete the process"}
+                    </strong>
+                    <br />
+                    <br />
+                    Tasks and summaries could not be generated.
+                  </Alert>
+                )}
                 <SyncBadges tasks={transcript.metadata?.postMeetingTasks} />
                 {transcript.metadata?.processingStatus === "EXTRACTING_TASKS" && (
                   <Alert severity="info" sx={{ mb: 2, mt: 2 }}>

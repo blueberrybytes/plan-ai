@@ -571,32 +571,34 @@ const ProjectTranscriptDetail: React.FC = () => {
                   </Typography>
                 </CardContent>
               </Card>
-            ) : isFailedTranscript ? (
-              <Alert
-                severity="error"
-                sx={{ mt: 2 }}
-                action={
-                  <Button
-                    color="inherit"
-                    size="small"
-                    startIcon={
-                      isReprocessing ? <CircularProgress size={16} color="inherit" /> : <RefreshIcon />
-                    }
-                    onClick={handleReprocess}
-                    disabled={isReprocessing}
-                  >
-                    {isReprocessing ? "Retrying…" : "Retry"}
-                  </Button>
-                }
-              >
-                The AI worker encountered an error while processing this transcript:{" "}
-                <strong>{(transcript.metadata as any)?.errorMessage || "Unknown Error"}</strong>
-                <br />
-                <br />
-                Tasks and summaries could not be generated.
-              </Alert>
             ) : (
-              <Card variant="outlined">
+              <>
+                {isFailedTranscript && (
+                  <Alert
+                    severity="error"
+                    sx={{ mt: 2, mb: 3 }}
+                    action={
+                      <Button
+                        color="inherit"
+                        size="small"
+                        startIcon={
+                          isReprocessing ? <CircularProgress size={16} color="inherit" /> : <RefreshIcon />
+                        }
+                        onClick={handleReprocess}
+                        disabled={isReprocessing}
+                      >
+                        {isReprocessing ? "Retrying…" : "Retry"}
+                      </Button>
+                    }
+                  >
+                    The AI worker encountered an error while processing this transcript:{" "}
+                    <strong>{(transcript.metadata as any)?.errorMessage || "Unknown Error"}</strong>
+                    <br />
+                    <br />
+                    Tasks and summaries could not be generated.
+                  </Alert>
+                )}
+                <Card variant="outlined">
                 <CardContent>
                   <Stack spacing={2}>
                     {(transcript.metadata as any)?.processingStatus === "EXTRACTING_TASKS" && (
@@ -758,6 +760,7 @@ const ProjectTranscriptDetail: React.FC = () => {
                   </Stack>
                 </CardContent>
               </Card>
+              </>
             )}
 
             <PostMeetingTasksPanel
