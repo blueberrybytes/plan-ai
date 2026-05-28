@@ -1,6 +1,5 @@
 import { Worker, Job } from "bullmq";
 import * as Sentry from "@sentry/node";
-import EnvUtils from "../utils/EnvUtils";
 import { logger } from "../utils/logger";
 import { ContextDocumentJobPayload } from "../queue/contextDocumentQueue";
 import { PrismaClient, Prisma } from "@prisma/client";
@@ -138,6 +137,8 @@ ${rawText.slice(0, 20000)}`;
         temperature: 0.1,
         abortSignal: AbortSignal.timeout(30000),
         output: Output.object({
+          name: "DocumentKeywordExtraction",
+          description: "Extracts unique keywords, entities, and acronyms from the document for future AI transcription boosting.",
           schema: z.object({
             keywords: z.array(z.string()).describe("The extracted unique keywords and terms."),
           }),

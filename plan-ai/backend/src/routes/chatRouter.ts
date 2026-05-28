@@ -277,7 +277,13 @@ ${contextText}
         maxRetries: 3,
         ...(gitnexusTools
           ? { tools: gitnexusTools, stopWhen: stepCountIs(5) }
-          : { output: Output.object({ schema: ResponseSchema }) }),
+          : {
+              output: Output.object({
+                name: "StreamedChatResponse",
+                description: "Outputs a conversational response along with precise context citations.",
+                schema: ResponseSchema,
+              }),
+            }),
         onFinish: async ({ text, usage }) => {
           try {
             if (usage) {

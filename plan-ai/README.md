@@ -269,7 +269,6 @@ Supported slide types: `title_only`, `text_block`, `text_image`, `bullet_list`, 
 - Streaming with Vercel AI SDK `streamObject()`
 - Prompt includes template metadata, tone, audience, and RAG context chunks
 - Optional `numSlides` parameter (1–15); defaults to AI-chosen slide count
-- Falls back to `generateObject()` if streaming fails
 
 ### RAG chat & Knowledge Base
 

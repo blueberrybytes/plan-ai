@@ -149,7 +149,11 @@ export class ChatService {
       model,
       system: dynamicSystemPrompt,
       messages,
-      output: Output.object({ schema: ResponseSchema }),
+      output: Output.object({
+        name: "ChatResponseWithCitations",
+        description: "Outputs a conversational response along with precise context citations.",
+        schema: ResponseSchema,
+      }),
       maxRetries: 3,
     });
 

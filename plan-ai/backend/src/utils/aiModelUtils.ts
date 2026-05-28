@@ -22,9 +22,9 @@ export class MissingApiKeyError extends Error {
 /**
  * Returns a configured model instance dynamically with an optional API key.
  */
-export function getConfiguredModel(modelKey?: string, apiKey?: string) {
+export function getConfiguredModel(modelKey?: string, apiKey?: string, disableFallbacks: boolean = false) {
   const primaryModel = modelKey && modelKey.length > 0 ? modelKey : DEFAULT_AI_MODEL;
-  const fallbacks = FALLBACK_MODELS.filter((m) => m !== primaryModel);
+  const fallbacks = disableFallbacks ? [] : FALLBACK_MODELS.filter((m) => m !== primaryModel);
 
   const openrouter = createOpenRouter({
     apiKey: apiKey || EnvUtils.get("OPENROUTER_API_KEY"),
@@ -36,7 +36,7 @@ export function getConfiguredModel(modelKey?: string, apiKey?: string) {
 /**
  * Helper to fetch a Workspace's OpenRouter API key and return a configured model.
  */
-export async function getWorkspaceModel(workspaceId: string, modelKey?: string) {
+export async function getWorkspaceModel(workspaceId: string, modelKey?: string, disableFallbacks: boolean = false) {
   let apiKey: string | undefined = undefined;
   let isCourtesy = false;
 
@@ -67,7 +67,7 @@ export async function getWorkspaceModel(workspaceId: string, modelKey?: string) 
     throw new MissingApiKeyError();
   }
 
-  return getConfiguredModel(modelKey, apiKey);
+  return getConfiguredModel(modelKey, apiKey, disableFallbacks);
 }
 
 /**

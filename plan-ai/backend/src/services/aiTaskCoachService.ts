@@ -112,7 +112,11 @@ Generate the refined version strictly following the instructed template.`;
     const response = await generateText({
       model,
       providerOptions,
-      output: Output.object({ schema: TaskCoachRefinementSchema }),
+      output: Output.object({
+        name: "TaskCoachRefinement",
+        description: "Refines a raw task into a perfectly structured, actionable ticket based on its type.",
+        schema: TaskCoachRefinementSchema,
+      }),
       system: systemPrompt,
       prompt: userPrompt,
       temperature: 0.2, // Low temp for more deterministic formatting

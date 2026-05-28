@@ -16,7 +16,7 @@ import {
   FAST_AI_MODEL,
   getMaxContextChunks,
 } from "../utils/aiModelUtils";
-import { generateText, generateObject, stepCountIs } from "ai";
+import { generateText, generateObject, stepCountIs, Output } from "ai";
 import { z, type ZodTypeAny } from "zod";
 import { DeepgramClient } from "@deepgram/sdk";
 import { logger } from "../utils/logger";
@@ -544,13 +544,17 @@ export class ProjectTranscriptService {
     // PHASE 1: Fast Summary to Unlock UI Early
     try {
       const fastModel = await getWorkspaceModel(input.workspaceId, "openai/gpt-4o-mini");
-      const { object: fastParsed, usage } = await generateObject({
+      const { output: fastParsed, usage } = await generateText({
         model: fastModel,
         providerOptions: getFallbackProviderOptions("openai/gpt-4o-mini"),
-        schema: z.object({
-          title: z.string(),
-          language: z.string(),
-          summary: z.string(),
+        output: Output.object({
+          name: "TranscriptQuickSummary",
+          description: "Extracts a fast high-level title, language, and 2-sentence summary for the transcript.",
+          schema: z.object({
+            title: z.string(),
+            language: z.string(),
+            summary: z.string(),
+          }),
         }),
         system:
           "Extract a short title (max 6 words), language (e.g. 'english'), and a 2-sentence summary.",
@@ -1035,7 +1039,7 @@ export class ProjectTranscriptService {
     // automatic model fallback does NOT recover from. Callers can still pass
     // an explicit `modelKey` to override.
     const activeModel = modelKey || FAST_AI_MODEL;
-    const model = await getWorkspaceModel(workspaceId, activeModel);
+    const model = await getWorkspaceModel(workspaceId, activeModel, true);
     const todayIso = new Date().toISOString().split("T")[0];
 
     // RAG vs Fast-Track Router
@@ -1241,16 +1245,20 @@ ${content}`;
 
     while (attempt < maxManualRetries) {
       try {
-        const result = await generateObject({
+        const result = await generateText({
           model,
-          providerOptions: getFallbackProviderOptions(activeModel),
-          schema: transcriptAnalysisSchemaForGeneration,
+
+          output: Output.object({
+            name: "TranscriptFullAnalysis",
+            description: "Performs deep extraction of meeting tasks, key points, and metadata from the transcript.",
+            schema: transcriptAnalysisSchemaForGeneration,
+          }),
           prompt,
 
           temperature: 0.2,
           maxRetries: 2,
         });
-        object = result.object;
+        object = result.output;
         totalUsage = result.usage;
         break;
       } catch (error: any) {
@@ -1454,10 +1462,14 @@ ${transcriptForLLM}`;
 
     try {
       const model = await getWorkspaceModel(workspaceId, modelKey || DEFAULT_AI_MODEL);
-      const { object, usage } = await generateObject({
+      const { output, usage } = await generateText({
         model,
         providerOptions: getFallbackProviderOptions(modelKey || DEFAULT_AI_MODEL),
-        schema: SpeakersResponseSchema,
+        output: Output.object({
+          name: "SpeakerIdentification",
+          description: "Matches transcript speakers to their most likely labels based on context and dialogue.",
+          schema: SpeakersResponseSchema,
+        }),
         temperature: 0.1,
         prompt,
       });
@@ -1479,7 +1491,7 @@ ${transcriptForLLM}`;
       // Merge LLM output with deterministic stats. Make sure every label
       // appears even if the LLM dropped one.
       const byLabel = new Map<string, z.infer<typeof SpeakerSchema>>();
-      for (const s of object.speakers) byLabel.set(s.label, s);
+      for (const s of output.speakers) byLabel.set(s.label, s);
 
       return speakerLabels.map((label) => {
         const ai = byLabel.get(label);
@@ -2102,10 +2114,14 @@ ${transcriptForLLM}`;
       .join("\n\n---\n\n");
 
     try {
-      const { object, usage } = await generateObject({
+      const { output, usage } = await generateText({
         model,
         providerOptions: getFallbackProviderOptions(activeModel),
-        schema: TaskRefinementSchema,
+        output: Output.object({
+          name: "CodebaseTaskRefinement",
+          description: "Enriches agile tasks with precise technical context gathered from the codebase.",
+          schema: TaskRefinementSchema,
+        }),
         temperature: 0.15,
         prompt: `You are enriching existing agile tickets with codebase intelligence. Below is codebase investigation context gathered from the project's knowledge graph, followed by the existing tasks.
 
@@ -2140,7 +2156,7 @@ ${taskSummaries}`,
       // Batch task enrichment updates into a single $transaction instead of
       // sequential findUnique+update per task.
       const updateOps: ReturnType<typeof prisma.task.update>[] = [];
-      for (const enrichedTask of object.tasks) {
+      for (const enrichedTask of output.tasks) {
         const existingTask = topLevelTasks.find((t) => t.id === enrichedTask.id);
         if (!existingTask) continue;
 

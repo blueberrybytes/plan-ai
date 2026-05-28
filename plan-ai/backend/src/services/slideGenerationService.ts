@@ -169,7 +169,11 @@ export class SlideGenerationService {
           const generationResult = await generateText({
             model,
             providerOptions: getFallbackProviderOptions(),
-            output: Output.object({ schema: SlideOutlineSchema }),
+            output: Output.object({
+              name: "SlideOutlinePlan",
+              description: "Generates an outline of the presentation slides and their specific intents.",
+              schema: SlideOutlineSchema,
+            }),
             prompt:
               attempt > 1
                 ? aiPrompt +
@@ -252,7 +256,11 @@ CRITICAL PRESENTATION RULE: Slides must be easily readable. Do NOT write long pa
             const slideGen = await generateText({
               model,
               providerOptions: getFallbackProviderOptions(),
-              output: Output.object({ schema: slideDef.parametersSchema }),
+              output: Output.object({
+                name: "SlideParameters",
+                description: "Generates specific structured content parameters for a single presentation slide.",
+                schema: slideDef.parametersSchema,
+              }),
               prompt: slidePrompt,
               temperature: 0.2 + attempt * 0.1,
               maxRetries: 3,
@@ -397,6 +405,8 @@ Select ONLY ONE slide type that best fits this request, and define a clear inten
           model,
           providerOptions: getFallbackProviderOptions(),
           output: Output.object({
+            name: "SlideTypeDecision",
+            description: "Decides the most appropriate slide type and intent for a new slide based on the user's request.",
             schema: z.object({
               slideTypeKey: z
                 .string()
@@ -454,7 +464,11 @@ CRITICAL PRESENTATION RULE: Slides must be easily readable. Do NOT write long pa
         const slideGen = await generateText({
           model,
           providerOptions: getFallbackProviderOptions(),
-          output: Output.object({ schema: slideDef.parametersSchema }),
+          output: Output.object({
+            name: "SlideParameters",
+            description: "Generates specific structured content parameters for a single presentation slide.",
+            schema: slideDef.parametersSchema,
+          }),
           prompt: slidePrompt,
           temperature: 0.2 + attempt * 0.1,
           maxRetries: 3,

@@ -1,6 +1,6 @@
 import axios from "axios";
 import * as cheerio from "cheerio";
-import { generateObject } from "ai";
+import { generateText, Output } from "ai";
 import { z } from "zod";
 import { getWorkspaceModel } from "../utils/aiModelUtils";
 
@@ -327,13 +327,16 @@ ${googleFontNames.length > 0 ? googleFontNames.join(", ") : "(none found)"}
 `;
 
     // ── 9. Call AI ────────────────────────────────────────────────────────
-    const model = await getWorkspaceModel(workspaceId);
+    const model = await getWorkspaceModel(workspaceId, undefined, true);
 
-    const result = await generateObject({
+    const result = await generateText({
       model,
       system: systemPrompt,
       prompt: userPrompt,
-      schema: z.object({
+      output: Output.object({
+        name: "ExtractBrandTheme",
+        description: "Analyzes the provided CSS and HTML to determine the core brand colors and typography.",
+        schema: z.object({
         suggestedName: z.string().describe("A short brand/company name suitable as a theme name, derived from the website title or domain (e.g. 'Stripe', 'Notion', 'Acme Corp')"),
         primaryColor: z.string().describe("Hex color code for the primary brand color (NOT black or white)"),
         secondaryColor: z.string().describe("Hex color code for the secondary/accent brand color"),
@@ -341,9 +344,10 @@ ${googleFontNames.length > 0 ? googleFontNames.join(", ") : "(none found)"}
         headingFont: z.string().describe("The best matching Google Font for headings from the allowed list"),
         bodyFont: z.string().describe("The best matching Google Font for body text from the allowed list"),
         candidateLogos: z.array(z.string()).describe("Up to 5 image/icon URLs most likely to be the logo, ordered by probability"),
+        }),
       }),
     });
 
-    return result.object;
+    return result.output;
   }
 }

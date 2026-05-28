@@ -38,7 +38,7 @@
     "rollup": "4.52.5"
   },
   "dependencies": {
-    "@ai-sdk/openai": "^3.0.64",
+    "@ai-sdk/openai": "^3.0.66",
     "@bull-board/api": "^6.20.6",
     "@bull-board/express": "^6.20.6",
     "@deepgram/sdk": "^4.11.3",
@@ -53,11 +53,11 @@
     "@notionhq/client": "^5.21.0",
     "@octokit/auth-app": "^8.2.0",
     "@octokit/webhooks": "^14.2.0",
-    "@openrouter/ai-sdk-provider": "^2.2.3",
+    "@openrouter/ai-sdk-provider": "^2.9.0",
     "@prisma/client": "^6.12.0",
     "@qdrant/js-client-rest": "^1.15.1",
     "@sentry/node": "^10.48.0",
-    "ai": "^6.0.185",
+    "ai": "^6.0.192",
     "axios": "^1.15.0",
     "bullmq": "^5.73.0",
     "cheerio": "^1.2.0",
