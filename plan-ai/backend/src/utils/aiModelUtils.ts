@@ -4,9 +4,10 @@ import { AI_MODEL_LIMITS } from "../services/aiContextRouter";
 import prisma from "../prisma/prismaClient";
 import { logger } from "./logger";
 
-export const DEFAULT_AI_MODEL = "anthropic/claude-sonnet-4.6";
+export const DEFAULT_AI_MODEL = "minimax/minimax-m2.7";
 export const FAST_AI_MODEL = "google/gemini-2.5-flash";
 export const FALLBACK_MODELS = [
+  "qwen/qwen3.5-flash-02-23",
   "openai/gpt-5.5",
   "google/gemini-2.5-flash",
   "google/gemini-3.1-pro-preview",
