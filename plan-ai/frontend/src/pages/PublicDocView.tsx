@@ -235,9 +235,9 @@ const PublicDocView: React.FC = () => {
           gap: { xs: 2, sm: 0 },
         }}
       >
-        <Box>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
           <Typography
-            variant="h4"
+            variant="subtitle1"
             fontWeight={700}
             sx={(muiTheme) => {
               const bgHeader = theme?.backgroundColor || muiTheme.palette.background.paper;
@@ -247,10 +247,10 @@ const PublicDocView: React.FC = () => {
                 textHeader = muiTheme.palette.getContrastText(bgHeader);
               }
 
-              return { color: textHeader };
+              return { color: textHeader, opacity: 0.7 };
             }}
           >
-            {doc.title}
+            Plan AI
           </Typography>
         </Box>
         <Stack
@@ -351,16 +351,68 @@ const PublicDocView: React.FC = () => {
           position: "relative",
         }}
       >
-        {theme?.logoUrl && (
-          <Box sx={{ mb: 2, display: "flex", justifyContent: "flex-end" }}>
-            <img
-              src={theme.logoUrl}
-              alt="Brand Logo"
-              style={{ height: 48, objectFit: "contain" }}
-              crossOrigin="anonymous"
+        {/* Document Header */}
+        <Box
+          sx={{
+            mb: 4,
+            borderRadius: 3,
+            overflow: "hidden",
+            bgcolor: theme ? markdownBg : "transparent",
+            border: theme ? `1px solid ${accent}20` : "none",
+          }}
+        >
+          {theme && (
+            <Box
+              sx={{
+                height: 4,
+                background: `linear-gradient(90deg, ${primary}, ${accent})`,
+              }}
             />
+          )}
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 3,
+              px: { xs: 3, md: 4 },
+              py: { xs: 2.5, md: 3 },
+            }}
+          >
+            <Typography
+              variant="h3"
+              sx={{
+                fontWeight: 700,
+                fontFamily: theme?.headingFont ?? "inherit",
+                color: theme ? headerColor : text,
+                flex: 1,
+                minWidth: 0,
+                lineHeight: 1.3,
+                fontSize: { xs: "1.75rem", md: `${2.5 * scaleMultiplier}rem` },
+              }}
+            >
+              {doc.title}
+            </Typography>
+            {theme?.logoUrl && (
+              <Box sx={{ flexShrink: 0 }}>
+                <img
+                  src={theme.logoUrl}
+                  alt="Brand Logo"
+                  style={{
+                    height: 44,
+                    maxWidth: 160,
+                    objectFit: "contain",
+                    opacity: 0.9,
+                  }}
+                  crossOrigin="anonymous"
+                />
+              </Box>
+            )}
           </Box>
-        )}
+          {!theme && <Divider />}
+        </Box>
+
+        {/* Document Body */}
         <Paper
           elevation={0}
           sx={{

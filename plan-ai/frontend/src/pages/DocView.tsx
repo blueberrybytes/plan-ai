@@ -467,32 +467,88 @@ const DocView: React.FC = () => {
         </Box>
 
         <Box id="pdf-content" sx={{ position: "relative" }}>
-          {theme?.logoUrl && (
-            <Box sx={{ mb: 2, display: "flex", justifyContent: "flex-end" }}>
-              <img
-                src={theme.logoUrl}
-                alt="Brand Logo"
-                style={{ height: 48, objectFit: "contain" }}
+          {/* Document Header */}
+          {isEditMode ? (
+            <>
+              {theme?.logoUrl && (
+                <Box sx={{ mb: 1, display: "flex", justifyContent: "flex-end" }}>
+                  <img
+                    src={theme.logoUrl}
+                    alt="Brand Logo"
+                    style={{ height: 40, objectFit: "contain" }}
+                  />
+                </Box>
+              )}
+              <TextField
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                variant="standard"
+                fullWidth
+                inputProps={{ style: { fontSize: 28, fontWeight: 700 } }}
+                sx={{ mb: 2 }}
               />
+              <Divider sx={{ mb: 3 }} />
+            </>
+          ) : (
+            <Box
+              sx={{
+                mb: 4,
+                borderRadius: 3,
+                overflow: "hidden",
+                bgcolor: theme ? bg : "transparent",
+                border: theme ? `1px solid ${accent}20` : "none",
+              }}
+            >
+              {/* Accent gradient bar */}
+              {theme && (
+                <Box
+                  sx={{
+                    height: 4,
+                    background: `linear-gradient(90deg, ${primary}, ${accent})`,
+                  }}
+                />
+              )}
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: 3,
+                  px: { xs: 3, md: 4 },
+                  py: { xs: 2.5, md: 3 },
+                }}
+              >
+                <Typography
+                  variant="h3"
+                  sx={{
+                    fontWeight: 700,
+                    fontFamily: theme?.headingFont ?? "inherit",
+                    color: theme ? headerColor : "text.primary",
+                    flex: 1,
+                    minWidth: 0,
+                    lineHeight: 1.3,
+                  }}
+                >
+                  {title}
+                </Typography>
+                {theme?.logoUrl && (
+                  <Box sx={{ flexShrink: 0 }}>
+                    <img
+                      src={theme.logoUrl}
+                      alt="Brand Logo"
+                      style={{
+                        height: 44,
+                        maxWidth: 160,
+                        objectFit: "contain",
+                        opacity: 0.9,
+                      }}
+                    />
+                  </Box>
+                )}
+              </Box>
+              {!theme && <Divider />}
             </Box>
           )}
-          {/* Title */}
-          {isEditMode ? (
-            <TextField
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              variant="standard"
-              fullWidth
-              inputProps={{ style: { fontSize: 28, fontWeight: 700 } }}
-              sx={{ mb: 2 }}
-            />
-          ) : (
-            <Typography variant="h3" fontWeight={700} sx={{ mb: 2 }}>
-              {title}
-            </Typography>
-          )}
-
-          <Divider sx={{ mb: 3 }} />
 
           {/* Content */}
           <Box>
