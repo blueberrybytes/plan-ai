@@ -38,7 +38,7 @@ export function isSupportedUploadMimeType(mimeType: string): mimeType is Support
   return SUPPORTED_MIME_TYPES.includes(mimeType as SupportedUploadMimeType);
 }
 
-const ADDITIONAL_CONTEXT_MIME_TYPES = new Set<string>(["application/json"]);
+const ADDITIONAL_CONTEXT_MIME_TYPES = new Set<string>(["application/json", "application/xml"]);
 
 export function isSupportedContextFileMimeType(mimeType: string): boolean {
   if (isSupportedUploadMimeType(mimeType)) {
@@ -59,6 +59,7 @@ export const CONTEXT_SUPPORTED_FILE_LABELS = [
   "TXT",
   "CSV",
   "JSON",
+  "XML",
   "XLSX",
   "PPTX",
   "PPT",

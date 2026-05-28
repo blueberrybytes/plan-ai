@@ -1633,7 +1633,13 @@ ${transcriptForLLM}`;
       try {
         if (integration.provider === IntegrationProvider.JIRA && options?.syncToJira !== false) {
           const meta = integration.metadata as unknown as JiraIntegrationMetadata | null;
-          if (!meta?.defaultProjectId) continue;
+          if (!meta?.defaultProjectId) {
+            await this.setPostMeetingTaskStatus(transcript.id, "jira", {
+              status: "FAILED",
+              error: "No default Jira project configured. Go to Integrations → Jira to select a project.",
+            });
+            continue;
+          }
           await this.setPostMeetingTaskStatus(transcript.id, "jira", { status: "PENDING" });
           let firstTaskUrl: string | undefined;
           for (const task of tasks) {
@@ -1659,7 +1665,13 @@ ${transcriptForLLM}`;
           options?.syncToLinear !== false
         ) {
           const meta = integration.metadata as unknown as LinearIntegrationMetadata | null;
-          if (!meta?.defaultTeamId) continue;
+          if (!meta?.defaultTeamId) {
+            await this.setPostMeetingTaskStatus(transcript.id, "linear", {
+              status: "FAILED",
+              error: "No default Linear team configured. Go to Integrations → Linear to select a team.",
+            });
+            continue;
+          }
           await this.setPostMeetingTaskStatus(transcript.id, "linear", { status: "PENDING" });
           let firstTaskUrl: string | undefined;
           for (const task of tasks) {
@@ -1685,7 +1697,13 @@ ${transcriptForLLM}`;
           options?.syncToTrello !== false
         ) {
           const meta = integration.metadata as unknown as TrelloIntegrationMetadata | null;
-          if (!meta?.defaultBoardId || !meta?.defaultListId) continue;
+          if (!meta?.defaultBoardId || !meta?.defaultListId) {
+            await this.setPostMeetingTaskStatus(transcript.id, "trello", {
+              status: "FAILED",
+              error: "No default Trello board/list configured. Go to Integrations → Trello to select a board and list.",
+            });
+            continue;
+          }
           await this.setPostMeetingTaskStatus(transcript.id, "trello", { status: "PENDING" });
           let firstTaskUrl: string | undefined;
           for (const task of tasks) {
@@ -1741,7 +1759,13 @@ ${transcriptForLLM}`;
           options?.syncToAsana !== false
         ) {
           const meta = integration.metadata as unknown as AsanaIntegrationMetadata | null;
-          if (!meta?.defaultProjectGid) continue;
+          if (!meta?.defaultProjectGid) {
+            await this.setPostMeetingTaskStatus(transcript.id, "asana", {
+              status: "FAILED",
+              error: "No default Asana project configured. Go to Integrations → Asana to select a project.",
+            });
+            continue;
+          }
           await this.setPostMeetingTaskStatus(transcript.id, "asana", { status: "PENDING" });
           let firstTaskUrl: string | undefined;
           for (const task of tasks) {

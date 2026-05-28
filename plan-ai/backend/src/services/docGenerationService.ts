@@ -173,7 +173,7 @@ export class DocGenerationService {
 
     // Step 1: Optional Agentic Investigation via MCP
     const tools = mcpClientService.getAiTools();
-    console.log("🚀 ~ DocGenerationService ~ generateBackground ~ tools:", tools);
+
 
     if (tools) {
       try {

@@ -176,7 +176,6 @@ const PROVIDER_CONFIGS: ProviderConfig[] = [
     connectCtaKey: "integrationsPage.providers.asana.connectCta",
     comingSoon: false,
     notConnectedKey: "integrationsPage.providers.asana.notConnected",
-    isBeta: true,
     isWorkspaceLevel: true,
   },
   {
@@ -1097,140 +1096,141 @@ const Integrations: React.FC = () => {
             </Typography>
           </Box>
 
-          <Box>
-            <Tabs
-              value={activeTab}
-              onChange={handleChangeTab}
-              variant="scrollable"
-              allowScrollButtonsMobile
-            >
-              {PROVIDER_CONFIGS.map((config) => {
-                const isConnected = integrations.some(
-                  (i) => i.provider === config.provider && i.status === "CONNECTED",
+          <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1.5, mb: 1 }}>
+            {PROVIDER_CONFIGS.map((config) => {
+              const isConnected = integrations.some(
+                (i) => i.provider === config.provider && i.status === "CONNECTED",
+              );
+
+              const hasError = integrations.some(
+                (i) => i.provider === config.provider && i.status === "ERROR",
+              );
+
+              const hasWarning = false; // No database requirement for Notion anymore
+
+              let iconEl = null;
+              switch (config.tabValue) {
+                case "github":
+                  iconEl = <img src={githubSvg} alt="GitHub" width={16} height={16} />;
+                  break;
+                case "jira":
+                  iconEl = <img src={jiraSvg} alt="Jira" width={16} height={16} />;
+                  break;
+                case "linear":
+                  iconEl = <img src={linearSvg} alt="Linear" width={16} height={16} />;
+                  break;
+                case "notion":
+                  iconEl = <img src={notionSvg} alt="Notion" width={16} height={16} />;
+                  break;
+                case "trello":
+                  iconEl = <img src={trelloSvg} alt="Trello" width={16} height={16} />;
+                  break;
+                case "google":
+                  iconEl = <img src={googleDriveSvg} alt="Google Drive" width={16} height={16} />;
+                  break;
+                case "microsoft":
+                  iconEl = <img src={oneDriveSvg} alt="Microsoft" width={16} height={16} />;
+                  break;
+                case "asana":
+                  iconEl = <img src={asanaSvg} alt="Asana" width={16} height={16} />;
+                  break;
+              }
+
+              if (iconEl && theme.palette.mode === "dark") {
+                iconEl = (
+                  <Box
+                    sx={{
+                      width: 24,
+                      height: 24,
+                      bgcolor: "white",
+                      borderRadius: "50%",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    {iconEl}
+                  </Box>
                 );
+              }
 
-                const hasError = integrations.some(
-                  (i) => i.provider === config.provider && i.status === "ERROR",
-                );
+              const isActive = activeTab === config.tabValue;
 
-                const hasWarning = false; // No database requirement for Notion anymore
-
-                let iconEl = null;
-                switch (config.tabValue) {
-                  case "github":
-                    iconEl = <img src={githubSvg} alt="GitHub" width={16} height={16} />;
-                    break;
-                  case "jira":
-                    iconEl = <img src={jiraSvg} alt="Jira" width={16} height={16} />;
-                    break;
-                  case "linear":
-                    iconEl = <img src={linearSvg} alt="Linear" width={16} height={16} />;
-                    break;
-                  case "notion":
-                    iconEl = <img src={notionSvg} alt="Notion" width={16} height={16} />;
-                    break;
-                  case "trello":
-                    iconEl = <img src={trelloSvg} alt="Trello" width={16} height={16} />;
-                    break;
-                  case "google":
-                    iconEl = <img src={googleDriveSvg} alt="Google Drive" width={16} height={16} />;
-                    break;
-                  case "microsoft":
-                    iconEl = <img src={oneDriveSvg} alt="Microsoft" width={16} height={16} />;
-                    break;
-                  case "asana":
-                    iconEl = <img src={asanaSvg} alt="Asana" width={16} height={16} />;
-                    break;
-                }
-
-                if (iconEl && theme.palette.mode === "dark") {
-                  iconEl = (
-                    <Box
-                      sx={{
-                        width: 24,
-                        height: 24,
-                        bgcolor: "white",
-                        borderRadius: "50%",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                      }}
-                    >
+              return (
+                <Chip
+                  key={config.tabValue}
+                  onClick={(e) => handleChangeTab(e, config.tabValue)}
+                  variant={isActive ? "filled" : "outlined"}
+                  color={isActive ? "primary" : "default"}
+                  sx={{ py: 2.5, px: 0.5, borderRadius: 2 }}
+                  label={
+                    <Stack direction="row" alignItems="center" spacing={1}>
                       {iconEl}
-                    </Box>
-                  );
-                }
-
-                return (
-                  <Tab
-                    key={config.tabValue}
-                    label={
-                      <Stack direction="row" alignItems="center" spacing={1}>
-                        {iconEl}
-                        <Typography variant="body2" sx={{ fontWeight: "inherit" }}>
-                          {t(config.labelKey)}
-                        </Typography>
-                        {isConnected && !hasWarning && !hasError && (
+                      <Typography variant="body2" sx={{ fontWeight: "inherit" }}>
+                        {t(config.labelKey)}
+                      </Typography>
+                      {isConnected && !hasWarning && !hasError && (
+                        <Box
+                          sx={{
+                            width: 8,
+                            height: 8,
+                            borderRadius: "50%",
+                            bgcolor: "success.main",
+                          }}
+                        />
+                      )}
+                      {hasError && (
+                        <Tooltip title="Action required: connection expired. Please reconnect.">
                           <Box
                             sx={{
                               width: 8,
                               height: 8,
                               borderRadius: "50%",
-                              bgcolor: "success.main",
+                              bgcolor: "error.main",
                             }}
                           />
-                        )}
-                        {hasError && (
-                          <Tooltip title="Action required: connection expired. Please reconnect.">
-                            <Box
-                              sx={{
-                                width: 8,
-                                height: 8,
-                                borderRadius: "50%",
-                                bgcolor: "error.main",
-                              }}
-                            />
-                          </Tooltip>
-                        )}
-                        {hasWarning && (
-                          <Tooltip title="Action required: No databases found">
-                            <WarningAmberIcon sx={{ fontSize: 16, color: "warning.main" }} />
-                          </Tooltip>
-                        )}
-                        {config.isBeta && (
-                          <Chip
-                            label="BETA"
-                            size="small"
-                            color="secondary"
-                            sx={{ height: 18, fontSize: "0.65rem", fontWeight: "bold" }}
-                          />
-                        )}
-                      </Stack>
-                    }
-                    value={config.tabValue}
-                  />
-                );
-              })}
+                        </Tooltip>
+                      )}
+                      {hasWarning && (
+                        <Tooltip title="Action required: No databases found">
+                          <WarningAmberIcon sx={{ fontSize: 16, color: "warning.main" }} />
+                        </Tooltip>
+                      )}
+                      {config.isBeta && (
+                        <Chip
+                          label="BETA"
+                          size="small"
+                          color="secondary"
+                          sx={{ height: 18, fontSize: "0.65rem", fontWeight: "bold" }}
+                        />
+                      )}
+                    </Stack>
+                  }
+                />
+              );
+            })}
 
-              {/* Plan AI MCP tab */}
-              <Tab
-                value="plan-ai-mcp"
-                label={
-                  <Stack direction="row" alignItems="center" spacing={1}>
-                    <CodeIcon sx={{ fontSize: 16 }} />
-                    <Typography variant="body2" sx={{ fontWeight: "inherit" }}>
-                      Plan AI MCP
-                    </Typography>
-                    <Chip
-                      label="NEW"
-                      size="small"
-                      color="primary"
-                      sx={{ height: 18, fontSize: "0.65rem", fontWeight: "bold" }}
-                    />
-                  </Stack>
-                }
-              />
-            </Tabs>
+            {/* Plan AI MCP tab */}
+            <Chip
+              onClick={(e) => handleChangeTab(e, "plan-ai-mcp")}
+              variant={activeTab === "plan-ai-mcp" ? "filled" : "outlined"}
+              color={activeTab === "plan-ai-mcp" ? "primary" : "default"}
+              sx={{ py: 2.5, px: 0.5, borderRadius: 2 }}
+              label={
+                <Stack direction="row" alignItems="center" spacing={1}>
+                  <CodeIcon sx={{ fontSize: 16 }} />
+                  <Typography variant="body2" sx={{ fontWeight: "inherit" }}>
+                    Plan AI MCP
+                  </Typography>
+                  <Chip
+                    label="NEW"
+                    size="small"
+                    color="primary"
+                    sx={{ height: 18, fontSize: "0.65rem", fontWeight: "bold" }}
+                  />
+                </Stack>
+              }
+            />
           </Box>
 
           {isSuccessStatus || isErrorStatus ? (

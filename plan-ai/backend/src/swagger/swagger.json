@@ -7036,7 +7036,7 @@
 	},
 	"info": {
 		"title": "backend",
-		"version": "3.6.0",
+		"version": "3.7.0",
 		"license": {
 			"name": "BUSL-1.1"
 		},

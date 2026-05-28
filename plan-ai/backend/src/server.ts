@@ -44,6 +44,11 @@ const PORT = EnvUtils.get("PORT") || 8080;
 const QDRANT_URL = EnvUtils.get("QDRANT_URL") || "http://127.0.0.1:6333";
 
 // Middlewares
+
+// Trust the first proxy hop (nginx, ALB, Cloud Run, etc.) so Express reads
+// the real client IP from X-Forwarded-For. Required for express-rate-limit to
+// work correctly behind a reverse proxy.
+app.set("trust proxy", 1);
 app.use(helmet());
 
 // CORS — in production set CORS_ORIGINS="https://plan-ai.blueberrybytes.com,https://other.domain"
