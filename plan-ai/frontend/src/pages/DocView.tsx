@@ -355,12 +355,17 @@ const DocView: React.FC = () => {
     <SidebarLayout>
       <style>{`
         @media print {
+          /* Reset all ancestor containers that clip content */
+          html, body { height: auto !important; overflow: visible !important; }
           body * { visibility: hidden; }
           #pdf-content, #pdf-content * { visibility: visible; }
-          #pdf-content { position: absolute; left: 0; top: 0; margin: 0; padding: 0; max-width: 100% !important; }
+          #pdf-content { position: static !important; width: 100% !important; max-width: 100% !important; margin: 0 !important; padding: 20px !important; }
           .no-print { display: none !important; }
+          /* Let long elements break across pages instead of clipping */
           pre, code, blockquote, img, svg, table, tr { page-break-inside: avoid !important; break-inside: avoid !important; }
           h1, h2, h3 { page-break-after: avoid !important; break-after: avoid !important; }
+          /* Release height/overflow locks from SidebarLayout ancestors */
+          #pdf-content, #pdf-content * { overflow: visible !important; }
         }
       `}</style>
       <Box
