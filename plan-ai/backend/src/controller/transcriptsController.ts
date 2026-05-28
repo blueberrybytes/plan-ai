@@ -695,15 +695,16 @@ export class TranscriptsController extends BaseWorkspaceController {
     }
 
     // Reset status to PENDING so the UI reflects it immediately
+    const newMetadata = { ...(existing.metadata as Record<string, unknown>) };
+    newMetadata.processingStatus = "PENDING";
+    delete newMetadata.postMeetingTasks;
+
     const updated = await prisma.transcript.update({
       where: { id },
       data: {
         summary: null,
         sentiment: null,
-        metadata: {
-          ...(existing.metadata as Record<string, unknown>),
-          processingStatus: "PENDING",
-        } as Prisma.JsonObject,
+        metadata: newMetadata as Prisma.JsonObject,
       },
     });
 

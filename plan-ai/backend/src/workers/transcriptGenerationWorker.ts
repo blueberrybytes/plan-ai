@@ -1,6 +1,6 @@
 import { Worker, Job } from "bullmq";
 import * as Sentry from "@sentry/node";
-import EnvUtils from "../utils/EnvUtils";
+
 import { logger } from "../utils/logger";
 import { TranscriptGenerationJobPayload } from "../queue/transcriptGenerationQueue";
 import { projectTranscriptService } from "../services/projectTranscriptService";
@@ -101,10 +101,27 @@ export const transcriptGenerationWorker = new Worker<TranscriptGenerationJobPayl
           meta.processingStatus = "FAILED";
           meta.errorMessage = error instanceof Error ? error.message : String(error);
 
+          const tasks: Record<string, unknown> = (meta.postMeetingTasks as Record<string, unknown>) || {};
+          const failedStatus = {
+            status: "FAILED",
+            error: "Skipped due to AI processing failure.",
+          };
+          if (job.data.syncToJira) tasks.jira = failedStatus;
+          if (job.data.syncToLinear) tasks.linear = failedStatus;
+          if (job.data.syncToTrello) tasks.trello = failedStatus;
+          if (job.data.syncToNotion) tasks.notion = failedStatus;
+          if (job.data.syncToAsana) tasks.asana = failedStatus;
+          if (job.data.createDoc) tasks.doc = failedStatus;
+          if (job.data.createSlides) tasks.slides = failedStatus;
+          if (job.data.exportToGoogleDrive) tasks.googleDrive = failedStatus;
+          if (job.data.exportToOneDrive) tasks.oneDrive = failedStatus;
+
+          meta.postMeetingTasks = tasks as unknown as Prisma.JsonObject;
+
           await prisma.transcript.update({
             where: { id: job.data.transcriptId },
             data: {
-              metadata: meta,
+              metadata: meta as Prisma.InputJsonValue,
               title:
                 transcript.title === "Generating Transcript..."
                   ? "Failed Transcript"
