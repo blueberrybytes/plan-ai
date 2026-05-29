@@ -16,7 +16,7 @@ import {
   FAST_AI_MODEL,
   getMaxContextChunks,
 } from "../utils/aiModelUtils";
-import { generateText, generateObject, stepCountIs, Output } from "ai";
+import { generateText, stepCountIs, Output } from "ai";
 import { z, type ZodTypeAny } from "zod";
 import { DeepgramClient } from "@deepgram/sdk";
 import { logger } from "../utils/logger";
@@ -62,6 +62,17 @@ const TASK_PRIORITY_LIST = TASK_PRIORITY_VALUES.join(", ");
 const TASK_STATUS_SET = new Set<string>(TASK_STATUS_VALUES);
 const TASK_PRIORITY_SET = new Set<string>(TASK_PRIORITY_VALUES);
 
+// NOTE on `.nullable()` vs `.optional()`:
+// These schemas are sent to the LLM as `response_format: json_schema`. OpenAI /
+// Azure *strict* structured-output mode requires that `required` contains EVERY
+// key in `properties` — Zod's `.optional()` omits the field from `required`,
+// which those providers reject with a 400 ("Invalid schema ... 'required' is
+// required to be supplied and to be an array including every key in properties.
+// Missing 'priority'."). Some routed providers (minimax, gemini) are lenient and
+// accept it, but our fallback chain includes OpenAI/Azure, so any fallback would
+// hard-fail. The portable, OpenAI-documented pattern for an "optional" field is
+// required-but-nullable (`.nullable()`): the key stays in `required` and the
+// model may return `null`. We coerce those nulls back to `undefined` downstream.
 const TranscriptTaskRawSchema = z.object({
   title: z.string().min(1),
   summary: z.string().min(1),
@@ -72,36 +83,37 @@ const TranscriptTaskRawSchema = z.object({
     .describe(
       "A JSON array of discrete acceptance-criteria strings. Each element MUST be a single, atomic verifiable condition (e.g. 'The endpoint returns 200 when X'). NEVER use markdown bullets ('- foo') inside elements. NEVER return a single concatenated string.",
     ),
-  priority: z.string().optional(),
-  status: z.string().optional(),
+  priority: z.string().nullable(),
+  status: z.string().nullable(),
   type: z
     .string()
-    .optional()
+    .nullable()
     .describe(
       'One of: "TASK", "BUG", "STORY", "EPIC". Use EPIC ONLY for macro/parent tasks that have a non-empty subtasks array. Standalone work uses TASK | BUG | STORY.',
     ),
   category: z
     .enum(["engineering", "design", "support", "ops", "research"])
-    .optional()
+    .nullable()
     .describe(
       "Work category. Use 'engineering' for code/dev work, 'design' for design/UX/mocks, 'support' for customer outreach + admin flags, 'ops' for infra/devops, 'research' for spike/investigation. Customers can filter their ticket board by this.",
     ),
-  dueDate: z.string().optional(),
+  dueDate: z.string().nullable(),
   storyPoints: z
     .number()
-    .optional()
+    .nullable()
     .describe("Fibonacci agile story points (1, 2, 3, 5, 8) estimated by complexity."),
   dependencies: z
     .array(z.string())
-    .optional()
+    .nullable()
     .describe("A list of other task titles that this task depends on."),
 });
 
 // Since nested self-referencing Zod schemas crash Gemini API JSON_schema generation, we limit it to 1 level of static depth:
 const TranscriptTaskRawSchemaWithSubtasks = TranscriptTaskRawSchema.extend({
-  subtasks: z.array(TranscriptTaskRawSchema).optional(),
+  subtasks: z.array(TranscriptTaskRawSchema).nullable(),
 });
 
+// `.nullable()` (not `.optional()`) — see the note above TranscriptTaskRawSchema.
 const TranscriptAnalysisRawSchema = z.object({
   chainOfThought: z
     .string()
@@ -109,23 +121,23 @@ const TranscriptAnalysisRawSchema = z.object({
       "Your step-by-step internal reasoning. Think through the transcript context, persona context, and goals out loud before extracting tasks or summaries.",
     ),
   language: z.string().min(1),
-  title: z.string().optional(),
-  summary: z.string().optional(),
+  title: z.string().nullable(),
+  summary: z.string().nullable(),
   keyPoints: z
     .array(z.string())
-    .optional()
+    .nullable()
     .describe(
       "A list of 3-7 key points, pain points, or critical insights discussed in the meeting.",
     ),
   sentiment: z
     .string()
-    .optional()
+    .nullable()
     .describe(
       "Analyze the user's emotion or tone. MUST be one of: POSITIVE, NEUTRAL, NEGATIVE, MIXED",
     ),
   sentimentExplanation: z
     .string()
-    .optional()
+    .nullable()
     .describe(
       "A 1-2 sentence text explanation of the overall sentiment, mood, and tone of the transcript.",
     ),
@@ -139,23 +151,23 @@ const transcriptAnalysisSchemaForGeneration: ZodTypeAny = z.object({
       "Your step-by-step internal reasoning. Think through the transcript context, persona context, and goals out loud before extracting tasks or summaries.",
     ),
   language: z.string().min(1),
-  title: z.string().optional(),
-  summary: z.string().optional(),
+  title: z.string().nullable(),
+  summary: z.string().nullable(),
   keyPoints: z
     .array(z.string())
-    .optional()
+    .nullable()
     .describe(
       "A list of 3-7 key points, pain points, or critical insights discussed in the meeting.",
     ),
   sentiment: z
     .string()
-    .optional()
+    .nullable()
     .describe(
       "Analyze the user's emotion or tone. MUST be one of: POSITIVE, NEUTRAL, NEGATIVE, MIXED",
     ),
   sentimentExplanation: z
     .string()
-    .optional()
+    .nullable()
     .describe(
       "A 1-2 sentence text explanation of the overall sentiment, mood, and tone of the transcript.",
     ),
@@ -1299,10 +1311,12 @@ ${content}`;
       return {
         chainOfThought: parsed.chainOfThought,
         language: parsed.language,
-        title: parsed.title,
-        summary: parsed.summary,
-        sentiment: parsed.sentiment,
-        sentimentExplanation: parsed.sentimentExplanation,
+        // Schemas use `.nullable()` for strict structured-output mode, so coerce
+        // the resulting `null`s back to `undefined` to match TranscriptAnalysis.
+        title: parsed.title ?? undefined,
+        summary: parsed.summary ?? undefined,
+        sentiment: parsed.sentiment ?? undefined,
+        sentimentExplanation: parsed.sentimentExplanation ?? undefined,
         tasks: parsed.tasks.map((task) => {
           const ac = joinAcceptanceCriteria(task.acceptanceCriteria);
           return {
@@ -1314,10 +1328,10 @@ ${content}`;
             priority: this.normalizeTaskPriority(task.priority),
             status: this.normalizeTaskStatus(task.status),
             type: this.normalizeTaskType(task.type),
-            category: task.category as TaskCategory | undefined,
-            dueDate: task.dueDate,
-            storyPoints: task.storyPoints,
-            dependencies: task.dependencies,
+            category: task.category ?? undefined,
+            dueDate: task.dueDate ?? undefined,
+            storyPoints: task.storyPoints ?? undefined,
+            dependencies: task.dependencies ?? undefined,
             subtasks: task.subtasks?.map((subtask) => {
               const subAc = joinAcceptanceCriteria(subtask.acceptanceCriteria);
               return {
@@ -1329,10 +1343,10 @@ ${content}`;
                 priority: this.normalizeTaskPriority(subtask.priority),
                 status: this.normalizeTaskStatus(subtask.status),
                 type: this.normalizeTaskType(subtask.type),
-                category: subtask.category as TaskCategory | undefined,
-                dueDate: subtask.dueDate,
-                storyPoints: subtask.storyPoints,
-                dependencies: subtask.dependencies,
+                category: subtask.category ?? undefined,
+                dueDate: subtask.dueDate ?? undefined,
+                storyPoints: subtask.storyPoints ?? undefined,
+                dependencies: subtask.dependencies ?? undefined,
               };
             }),
           };
@@ -1421,10 +1435,11 @@ ${content}`;
         .describe(
           "Real name inferred from greetings ('Hi Sarah'), introductions, signatures. Null if unsure — DO NOT GUESS.",
         ),
+      // `.nullable()` (not `.optional()`) for strict structured-output mode —
+      // see the note above TranscriptTaskRawSchema.
       role: z
         .string()
         .nullable()
-        .optional()
         .describe(
           "Role / title / function inferred from context ('Engineer', 'Product Manager', 'Client'). Null if not inferable.",
         ),
@@ -1434,11 +1449,11 @@ ${content}`;
       keyQuotes: z
         .array(z.string())
         .max(3)
-        .optional()
-        .describe("Up to 3 verbatim short quotes that best represent this speaker. Optional."),
+        .nullable()
+        .describe("Up to 3 verbatim short quotes that best represent this speaker. Null if none."),
       sentiment: z
         .enum(["POSITIVE", "NEUTRAL", "NEGATIVE", "MIXED"])
-        .optional()
+        .nullable()
         .describe("Emotional tone of this speaker through the meeting."),
     });
 
@@ -1503,7 +1518,7 @@ ${transcriptForLLM}`;
           isPrincipalSpeaker: principalSpeakerLabel === label,
           summary: ai?.summary ?? "",
           keyQuotes: ai?.keyQuotes ?? [],
-          sentiment: ai?.sentiment,
+          sentiment: ai?.sentiment ?? undefined,
           speakingTimeSeconds: Math.round(seconds),
           utteranceCount: count,
         } satisfies SpeakerInsight;
@@ -1573,7 +1588,7 @@ ${transcriptForLLM}`;
     return null;
   }
 
-  private normalizeTaskPriority(priority?: string): TaskPriority | undefined {
+  private normalizeTaskPriority(priority?: string | null): TaskPriority | undefined {
     if (!priority) {
       return undefined;
     }
@@ -1586,7 +1601,7 @@ ${transcriptForLLM}`;
     return undefined;
   }
 
-  private normalizeTaskStatus(status?: string): TaskStatus | undefined {
+  private normalizeTaskStatus(status?: string | null): TaskStatus | undefined {
     if (!status) {
       return undefined;
     }
@@ -1608,7 +1623,7 @@ ${transcriptForLLM}`;
     return TaskType.TASK;
   }
 
-  private normalizeTaskType(type?: string): TaskType | undefined {
+  private normalizeTaskType(type?: string | null): TaskType | undefined {
     if (!type) return undefined;
     const normalized = type.toUpperCase().replace(/\s+/g, "_");
     if (Object.values(TaskType).includes(normalized as TaskType)) {

@@ -7,6 +7,11 @@ import {
   getFallbackProviderOptions,
   DEFAULT_AI_MODEL,
 } from "../utils/aiModelUtils";
+// `.nullable()` (not `.optional()`): OpenAI/Azure strict structured-output mode
+// requires every property to appear in `required`. `.optional()` omits the field
+// from `required` and those providers reject the schema with a 400. The portable
+// pattern for an "optional" field is required-but-nullable; we coerce the null
+// back to undefined when building the result below.
 const TaskCoachRefinementSchema = z.object({
   refinedTitle: z.string().describe("A concise, actionable title for the task."),
   structuredDescription: z
@@ -16,15 +21,15 @@ const TaskCoachRefinementSchema = z.object({
     ),
   acceptanceCriteria: z
     .string()
-    .optional()
+    .nullable()
     .describe("Clear, testable acceptance criteria as a bulleted list."),
   storyPoints: z
     .number()
-    .optional()
+    .nullable()
     .describe("Suggested agile story points (e.g. 1, 2, 3, 5, 8) based on inferred complexity."),
   estimatedMinutes: z
     .number()
-    .optional()
+    .nullable()
     .describe("Suggested estimated time in minutes if story points aren't appropriate."),
 });
 
@@ -122,7 +127,16 @@ Generate the refined version strictly following the instructed template.`;
       temperature: 0.2, // Low temp for more deterministic formatting
     });
 
-    const result = response.output as RefineTaskOutput;
+    // Schema fields are `.nullable()` for strict-mode compatibility — coerce the
+    // resulting nulls back to undefined to match RefineTaskOutput's optionals.
+    const raw = response.output;
+    const result: RefineTaskOutput = {
+      refinedTitle: raw.refinedTitle,
+      structuredDescription: raw.structuredDescription,
+      acceptanceCriteria: raw.acceptanceCriteria ?? undefined,
+      storyPoints: raw.storyPoints ?? undefined,
+      estimatedMinutes: raw.estimatedMinutes ?? undefined,
+    };
 
     if (response.totalUsage) {
       await aiUsageService.logUsage({

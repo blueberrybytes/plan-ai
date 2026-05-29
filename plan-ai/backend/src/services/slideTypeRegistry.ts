@@ -4,6 +4,14 @@ import { z, ZodObject, ZodRawShape } from "zod";
  * Built-in slide type definitions.
  * Each type defines its structure, constraints, and a Zod schema for validation.
  * The AI uses the descriptions + parameter constraints to pick the right type.
+ *
+ * NOTE: parameter fields use `.nullable()` rather than `.optional()`. These
+ * schemas are sent to the LLM as `response_format: json_schema`, and OpenAI /
+ * Azure *strict* structured-output mode requires every property (including
+ * nested object properties) to appear in `required`. `.optional()` omits the
+ * field from `required` and those providers reject the schema with a 400. The
+ * portable pattern is required-but-nullable; the renderer treats a missing field
+ * and a `null` field identically (falsy checks), so this is behavior-preserving.
  */
 
 export interface SlideTypeDefinition {
@@ -20,10 +28,10 @@ export const SLIDE_TYPE_DEFINITIONS: SlideTypeDefinition[] = [
     description:
       "Opening or closing slide with a large title, optional subtitle, optional badge, and optional iconName. Best for section dividers or cover slides.",
     parametersSchema: z.object({
-      badge: z.string().optional(),
-      iconName: z.string().optional(),
+      badge: z.string().nullable(),
+      iconName: z.string().nullable(),
       title: z.string(),
-      subtitle: z.string().optional(),
+      subtitle: z.string().nullable(),
     }),
   },
   {
@@ -32,10 +40,10 @@ export const SLIDE_TYPE_DEFINITIONS: SlideTypeDefinition[] = [
     description:
       "Full-width text content with a title, optional subtitle, optional icon, and body paragraph. Best for explanations, introductions, or summaries.",
     parametersSchema: z.object({
-      badge: z.string().optional(),
-      iconName: z.string().optional(),
+      badge: z.string().nullable(),
+      iconName: z.string().nullable(),
       title: z.string(),
-      subtitle: z.string().optional(),
+      subtitle: z.string().nullable(),
       body: z.string(),
     }),
   },
@@ -45,10 +53,10 @@ export const SLIDE_TYPE_DEFINITIONS: SlideTypeDefinition[] = [
     description:
       "Split layout with text on the left and an image on the right. Best for illustrating a concept with a visual.",
     parametersSchema: z.object({
-      badge: z.string().optional(),
+      badge: z.string().nullable(),
       title: z.string(),
       body: z.string(),
-      imageQuery: z.string().optional(),
+      imageQuery: z.string().nullable(),
     }),
   },
   {
@@ -57,9 +65,9 @@ export const SLIDE_TYPE_DEFINITIONS: SlideTypeDefinition[] = [
     description:
       "Title with an optional subtitle and a list of up to 8 bullet points. Best for enumerating features, steps, or key points.",
     parametersSchema: z.object({
-      badge: z.string().optional(),
+      badge: z.string().nullable(),
       title: z.string(),
-      subtitle: z.string().optional(),
+      subtitle: z.string().nullable(),
       bullets: z.array(z.string()),
     }),
   },
@@ -69,11 +77,11 @@ export const SLIDE_TYPE_DEFINITIONS: SlideTypeDefinition[] = [
     description:
       "Two-column layout with a title. Best for comparisons, pros/cons, or side-by-side information.",
     parametersSchema: z.object({
-      badge: z.string().optional(),
+      badge: z.string().nullable(),
       title: z.string(),
-      leftTitle: z.string().optional(),
+      leftTitle: z.string().nullable(),
       leftBody: z.string(),
-      rightTitle: z.string().optional(),
+      rightTitle: z.string().nullable(),
       rightBody: z.string(),
     }),
   },
@@ -83,7 +91,7 @@ export const SLIDE_TYPE_DEFINITIONS: SlideTypeDefinition[] = [
     description:
       "Grid of team member cards with name, role, and short bio. Best for showing 2 to 4 people.",
     parametersSchema: z.object({
-      badge: z.string().optional(),
+      badge: z.string().nullable(),
       title: z.string(),
       members: z.array(
         z.object({
@@ -100,9 +108,9 @@ export const SLIDE_TYPE_DEFINITIONS: SlideTypeDefinition[] = [
     description:
       "Large image with a title and caption. Best for product screenshots, demos, or hero visuals.",
     parametersSchema: z.object({
-      badge: z.string().optional(),
+      badge: z.string().nullable(),
       title: z.string(),
-      imageQuery: z.string().optional(),
+      imageQuery: z.string().nullable(),
       caption: z.string(),
     }),
   },
@@ -112,7 +120,7 @@ export const SLIDE_TYPE_DEFINITIONS: SlideTypeDefinition[] = [
     description:
       "Display key metrics or statistics prominently. Best for numbers, KPIs, or data highlights.",
     parametersSchema: z.object({
-      badge: z.string().optional(),
+      badge: z.string().nullable(),
       title: z.string(),
       stats: z.array(
         z.object({
@@ -128,14 +136,14 @@ export const SLIDE_TYPE_DEFINITIONS: SlideTypeDefinition[] = [
     description:
       "Split layout with a full vertical image on the left, and a title, descriptions, and multiple large KPIs on the right. Best for high-impact metric presentations.",
     parametersSchema: z.object({
-      badge: z.string().optional(),
+      badge: z.string().nullable(),
       title: z.string(),
-      imageQuery: z.string().optional(),
+      imageQuery: z.string().nullable(),
       kpis: z.array(
         z.object({
           value: z.string(),
           label: z.string(),
-          description: z.string().optional(),
+          description: z.string().nullable(),
         }),
       ),
     }),
@@ -146,14 +154,14 @@ export const SLIDE_TYPE_DEFINITIONS: SlideTypeDefinition[] = [
     description:
       "Split layout with a full vertical image on the left, and a title followed by a stack or grid of descriptive cards on the right.",
     parametersSchema: z.object({
-      badge: z.string().optional(),
+      badge: z.string().nullable(),
       title: z.string(),
-      imageQuery: z.string().optional(),
+      imageQuery: z.string().nullable(),
       cards: z.array(
         z.object({
           title: z.string(),
           body: z.string(),
-          iconName: z.string().optional(), // mapped to material ui icon
+          iconName: z.string().nullable(), // mapped to material ui icon
         }),
       ),
     }),
@@ -164,15 +172,15 @@ export const SLIDE_TYPE_DEFINITIONS: SlideTypeDefinition[] = [
     description:
       "Medium image on the left, and a distinct feature list stack on the right. Better for features, workflows, and benefits.",
     parametersSchema: z.object({
-      badge: z.string().optional(),
+      badge: z.string().nullable(),
       title: z.string(),
-      body: z.string().optional(),
-      imageQuery: z.string().optional(),
+      body: z.string().nullable(),
+      imageQuery: z.string().nullable(),
       features: z.array(
         z.object({
           title: z.string(),
-          description: z.string().optional(),
-          iconName: z.string().optional(),
+          description: z.string().nullable(),
+          iconName: z.string().nullable(),
         }),
       ),
     }),
@@ -183,14 +191,14 @@ export const SLIDE_TYPE_DEFINITIONS: SlideTypeDefinition[] = [
     description:
       "Centered top header with three distinct equal columns below containing titles and descriptions. Great for pricing, tiers, or three-step processes.",
     parametersSchema: z.object({
-      badge: z.string().optional(),
+      badge: z.string().nullable(),
       title: z.string(),
-      subtitle: z.string().optional(),
+      subtitle: z.string().nullable(),
       columns: z.array(
         z.object({
           title: z.string(),
           body: z.string(),
-          iconName: z.string().optional(),
+          iconName: z.string().nullable(),
         }),
       ),
     }),
@@ -201,10 +209,10 @@ export const SLIDE_TYPE_DEFINITIONS: SlideTypeDefinition[] = [
     description:
       "High impact split layout containing a massive quote or statement on one side, and a full-bleed visual on the other.",
     parametersSchema: z.object({
-      badge: z.string().optional(),
+      badge: z.string().nullable(),
       statement: z.string(),
-      author: z.string().optional(),
-      imageQuery: z.string().optional(),
+      author: z.string().nullable(),
+      imageQuery: z.string().nullable(),
     }),
   },
   {
@@ -213,7 +221,7 @@ export const SLIDE_TYPE_DEFINITIONS: SlideTypeDefinition[] = [
     description:
       "A large generative Mermaid.js diagram. Best for visualizing Roadmaps (Timeline), User Journeys, Effort/Impact matrices (Quadrant), flowcharts, architectures, pie charts, Sankey cash-flows, and Kanban boards. Always output strictly valid Mermaid syntax for the chosen type.",
     parametersSchema: z.object({
-      badge: z.string().optional(),
+      badge: z.string().nullable(),
       title: z.string(),
       mermaidCode: z.string(),
     }),
