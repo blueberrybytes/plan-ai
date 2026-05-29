@@ -1,5 +1,5 @@
 import { streamText } from "ai";
-import { getConfiguredModel, getFallbackProviderOptions } from "../utils/aiModelUtils";
+import { getConfiguredModel, getFallbackProviderOptions, DIAGRAM_MODEL } from "../utils/aiModelUtils";
 import prisma from "../prisma/prismaClient";
 import { logger } from "../utils/logger";
 import { queryContexts } from "../vector/contextFileVectorService";
@@ -96,7 +96,7 @@ class DiagramGenerationService {
       logger.info(`Starting diagram generation for ${diagramId}`);
 
       const { textStream, usage } = await streamText({
-        model: getConfiguredModel(),
+        model: getConfiguredModel(DIAGRAM_MODEL),
         providerOptions: getFallbackProviderOptions(),
         system: systemPrompt,
         prompt: `User Request: ${prompt}`,
@@ -130,7 +130,7 @@ class DiagramGenerationService {
           workspaceId,
           feature: "DIAGRAM",
           provider: "openrouter",
-          model: getConfiguredModel().modelId || "anthropic/claude-sonnet-4.6",
+          model: getConfiguredModel(DIAGRAM_MODEL).modelId || "anthropic/claude-sonnet-4.6",
           inputTokens: usageData.inputTokens || 0,
           outputTokens: usageData.outputTokens || 0,
         });
@@ -212,7 +212,7 @@ ${transcriptContent ? `## Source Transcripts\n${transcriptContent}` : ""}`;
       logger.info(`Starting diagram improvement for ${diagramId}`);
 
       const { textStream, usage } = await streamText({
-        model: getConfiguredModel(),
+        model: getConfiguredModel(DIAGRAM_MODEL),
         providerOptions: getFallbackProviderOptions(),
         system: systemPrompt,
         prompt: `Please apply this instruction to the diagram: ${instruction}`,
@@ -247,7 +247,7 @@ ${transcriptContent ? `## Source Transcripts\n${transcriptContent}` : ""}`;
           workspaceId,
           feature: "DIAGRAM",
           provider: "openrouter",
-          model: getConfiguredModel().modelId || "anthropic/claude-sonnet-4.6",
+          model: getConfiguredModel(DIAGRAM_MODEL).modelId || "anthropic/claude-sonnet-4.6",
           inputTokens: usageData.inputTokens || 0,
           outputTokens: usageData.outputTokens || 0,
         });

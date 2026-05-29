@@ -12,8 +12,11 @@ import {
 import {
   getWorkspaceModel,
   getFallbackProviderOptions,
+  getCachedContextModel,
+  getCachedContextProviderOptions,
+  CACHED_CONTEXT_MODEL,
+  TICKET_MODEL,
   DEFAULT_AI_MODEL,
-  FAST_AI_MODEL,
   getMaxContextChunks,
 } from "../utils/aiModelUtils";
 import { generateText, stepCountIs, Output } from "ai";
@@ -1130,7 +1133,7 @@ export class ProjectTranscriptService {
     // "Provider returned error" on structured output, which OpenRouter's
     // automatic model fallback does NOT recover from. Callers can still pass
     // an explicit `modelKey` to override.
-    const activeModel = modelKey || FAST_AI_MODEL;
+    const activeModel = modelKey || TICKET_MODEL;
     const model = await getWorkspaceModel(workspaceId, activeModel);
     const todayIso = new Date().toISOString().split("T")[0];
 
@@ -2090,6 +2093,100 @@ ${transcriptForLLM}`;
    * Called by the TaskRefinementWorker. If this fails, the fast-pass tasks
    * remain usable — refinement is best-effort.
    */
+  /**
+   * Big-context cached code investigation (the preferred path for projects with
+   * a connected GitHub repo). If the project's context contains a repomix repo
+   * that fits the budget, read it directly with a cached Gemini call and return
+   * a plain-text investigation (relevant files, functions, likely root causes,
+   * edge cases — with real file/symbol references).
+   *
+   * Why this design:
+   *  - `generateText` (no json_schema) sidesteps Gemini's weakness with nested
+   *    structured-output schemas — the part that historically crashed.
+   *  - No GitNexus/MCP dependency, so it can't silently no-op when the MCP
+   *    server is down.
+   *  - Prompt layout is [stable system + repo] → [variable transcript], so the
+   *    large repo prefix stays warm in Gemini's implicit prompt cache across a
+   *    meeting's burst of calls (cheap on repeat).
+   *
+   * Returns null when there's no connected repo or it's too large to inject —
+   * the caller then falls back to the GitNexus MCP path.
+   */
+  private async investigateRepoWithCache(payload: {
+    workspaceId: string;
+    userId: string;
+    content: string;
+    contextIds?: string[];
+    objective?: string;
+  }): Promise<string | null> {
+    const { workspaceId, userId, content, contextIds, objective } = payload;
+    if (!contextIds || contextIds.length === 0) return null;
+
+    // Only proceed if a GitHub repo is actually connected to this context.
+    const githubFile = await prisma.contextFile.findFirst({
+      where: {
+        contextId: { in: contextIds },
+        metadata: { path: ["source"], equals: "GITHUB_SYNC" },
+      },
+      select: { id: true },
+    });
+    if (!githubFile) return null;
+
+    // The repomix XML lives in the vector store as chunks; pull the full payload.
+    const payloads = await getFullContextPayloads(contextIds);
+    const repoText = payloads.join("\n\n");
+    if (!repoText.trim()) return null;
+
+    // Budget guard. ~700k tokens ≈ 2.8M chars, leaving room for the transcript
+    // + response inside Gemini's 1M window. Larger repos fall back to MCP/RAG.
+    const MAX_REPO_CHARS = 2_800_000;
+    if (repoText.length > MAX_REPO_CHARS) {
+      logger.info(
+        `[TaskRefinement] Connected repo too large for cached injection (${repoText.length} chars) — falling back to MCP/RAG`,
+      );
+      return null;
+    }
+
+    try {
+      const model = await getCachedContextModel(workspaceId);
+      const result = await generateText({
+        model,
+        providerOptions: getCachedContextProviderOptions(),
+        // Stable prefix (system + repo) first; variable transcript last → the
+        // repo prefix stays cacheable across calls for the same project.
+        system:
+          "You are a senior software architect. You are given the FULL source code of a project (below), followed by a meeting transcript. Analyze the code in light of what the meeting discusses. Identify the specific files, functions, classes and modules involved, the likely root cause of any bug mentioned, edge cases, and concrete technical risks. ALWAYS cite real file paths and symbol names taken from the provided code — never invent them. Be precise and technical; this feeds an engineering ticket generator. If the transcript is genuinely non-technical, reply exactly 'No codebase context needed.'",
+        prompt: `PROJECT SOURCE CODE:\n${repoText}\n\n---\n\nMEETING TRANSCRIPT:\n${content}\n\nObjective: ${objective ?? "Produce engineering tickets"}\n\nProvide your code investigation.`,
+        maxRetries: 2,
+      });
+
+      aiUsageService
+        .logUsage({
+          userId,
+          workspaceId,
+          feature: "TASK_EXTRACTION",
+          provider: "openrouter",
+          model: CACHED_CONTEXT_MODEL,
+          inputTokens: result.totalUsage?.inputTokens || 0,
+          outputTokens: result.totalUsage?.outputTokens || 0,
+        })
+        .catch(() => {});
+
+      const text = result.text?.trim();
+      if (!text || text === "No codebase context needed.") return null;
+      logger.info(
+        `[TaskRefinement] Repomix-cached investigation produced ${text.length} chars (model=${CACHED_CONTEXT_MODEL})`,
+      );
+      return text;
+    } catch (err) {
+      logger.warn(
+        "[TaskRefinement] Repomix-cached investigation failed — falling back to MCP",
+        err,
+      );
+      return null;
+    }
+  }
+
   public async refineTasksWithInvestigation(payload: {
     transcriptId: string;
     workspaceId: string;
@@ -2112,9 +2209,16 @@ ${transcriptForLLM}`;
       `[TaskRefinement] Starting agentic investigation for transcript ${transcriptId} (${taskIds.length} tasks)`,
     );
 
-    // Step 1: Run the agentic MCP investigation
-    const tools = mcpClientService.getAiTools();
-    let investigationContext = "";
+    // Step 1: Gather codebase investigation context.
+    // Preferred path: a connected GitHub repo (repomix) read directly with a
+    // cached Gemini call — cheap, reliable, and independent of GitNexus/MCP.
+    let investigationContext =
+      (await this.investigateRepoWithCache({ workspaceId, userId, content, contextIds, objective })) ??
+      "";
+
+    // Fallback path: the GitNexus MCP agentic investigation (only if the
+    // repomix path produced nothing — no connected repo, too large, or failed).
+    const tools = investigationContext ? undefined : mcpClientService.getAiTools();
 
     if (tools) {
       try {
@@ -2166,7 +2270,7 @@ ${transcriptForLLM}`;
     }
 
     // Step 2: For each existing task, enrich with investigation context
-    const activeModel = modelKey || DEFAULT_AI_MODEL;
+    const activeModel = modelKey || TICKET_MODEL;
     const model = await getWorkspaceModel(workspaceId, activeModel);
 
     const tasks = await prisma.task.findMany({

@@ -2,7 +2,8 @@ import { DocDocument, BrandTheme } from "@prisma/client";
 import {
   getConfiguredModel,
   getFallbackProviderOptions,
-  DEFAULT_AI_MODEL,
+  DOC_MODEL,
+  DIAGRAM_MODEL,
   getMaxContextChunks,
 } from "../utils/aiModelUtils";
 import { streamText, generateText, stepCountIs } from "ai";
@@ -139,7 +140,7 @@ export class DocGenerationService {
         const chunks = await queryContexts(
           input.contextIds,
           input.prompt ?? "",
-          getMaxContextChunks(DEFAULT_AI_MODEL),
+          getMaxContextChunks(DOC_MODEL),
         );
         contextChunks.push(...chunks);
       } catch (err) {
@@ -169,7 +170,7 @@ export class DocGenerationService {
       transcriptTexts,
       personaInstructions,
     );
-    const model = getConfiguredModel();
+    const model = getConfiguredModel(DOC_MODEL);
 
     // Step 1: Optional Agentic Investigation via MCP
     const tools = mcpClientService.getAiTools();
@@ -197,7 +198,7 @@ export class DocGenerationService {
           workspaceId,
           feature: "DOC",
           provider: "openrouter",
-          model: DEFAULT_AI_MODEL,
+          model: DOC_MODEL,
           inputTokens: investigation.totalUsage?.inputTokens || 0,
           outputTokens: investigation.totalUsage?.outputTokens || 0,
         }).catch(() => {});
@@ -274,7 +275,7 @@ export class DocGenerationService {
         workspaceId,
         feature: "DOC",
         provider: "openrouter",
-        model: DEFAULT_AI_MODEL,
+        model: DOC_MODEL,
         inputTokens: usageData.inputTokens || 0,
         outputTokens: usageData.outputTokens || 0,
       });
@@ -286,7 +287,9 @@ export class DocGenerationService {
   }
 
   public async fixMermaidSyntax(userId: string, workspaceId: string, brokenSyntax: string): Promise<string> {
-    const model = getConfiguredModel();
+    // Mermaid repair uses the stronger diagram model — a cheap model is what
+    // produced the broken syntax in the first place.
+    const model = getConfiguredModel(DIAGRAM_MODEL);
     const prompt = `You are an expert at writing Mermaid.js diagrams. The following Mermaid syntax crashes the renderer due to syntax constraints, invalid characters, or formatting errors.
 Please fix it so it is completely valid Mermaid code.
 
@@ -318,7 +321,7 @@ If you return the exact same broken code without quotes around parentheses and a
       workspaceId,
       feature: "DOC",
       provider: "openrouter",
-      model: DEFAULT_AI_MODEL,
+      model: DIAGRAM_MODEL,
       inputTokens: totalUsage?.inputTokens || 0,
       outputTokens: totalUsage?.outputTokens || 0,
     }).catch(() => {});

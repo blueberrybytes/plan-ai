@@ -4,7 +4,7 @@ import { BrandTheme, Prisma } from "@prisma/client";
 export type PresentationWithRelations = Prisma.PresentationGetPayload<{
   include: { template: true; theme: true };
 }>;
-import { getConfiguredModel, getFallbackProviderOptions, DEFAULT_AI_MODEL } from "../utils/aiModelUtils";
+import { getConfiguredModel, getFallbackProviderOptions, SLIDE_MODEL } from "../utils/aiModelUtils";
 import { generateText, Output } from "ai";
 import { z } from "zod";
 import { logger } from "../utils/logger";
@@ -34,7 +34,7 @@ const SlideOutlineSchema = z.object({
 });
 
 export class SlideGenerationService {
-  private readonly modelName = DEFAULT_AI_MODEL;
+  private readonly modelName = SLIDE_MODEL;
 
   /**
    * Generate a presentation from a template, context, and user prompt.
