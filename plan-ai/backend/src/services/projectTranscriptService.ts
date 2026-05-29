@@ -660,6 +660,47 @@ export class ProjectTranscriptService {
     // PHASE 2: FAST Task Extraction (NO agentic investigation) + Speaker Insights (in parallel).
     // The agentic GitNexus investigation is deferred to a background BullMQ job
     // (TaskRefinementQueue) so users see basic tickets in ~30-40s instead of 300s.
+
+    // --- GitHub Engineering Auto-Detection ---
+    // If the project's knowledge base contains a GitHub-synced repo (sourceType=GITHUB_SYNC),
+    // we know this is an engineering context. Automatically elevate persona to DEVELOPER so
+    // the AI writes code-aware engineering tickets (file refs, function names, technical AC)
+    // instead of generic business tickets.
+    let effectivePersona = input.persona ?? undefined;
+    let effectiveObjective = input.objective ?? undefined;
+    const contextIdsForCheck = input.contextIds ?? [];
+    if (!effectivePersona && contextIdsForCheck.length > 0) {
+      try {
+        const githubFile = await prisma.contextFile.findFirst({
+          where: {
+            contextId: { in: contextIdsForCheck },
+            metadata: { path: ["source"], equals: "GITHUB_SYNC" },
+          },
+          select: { id: true, metadata: true },
+        });
+        if (githubFile) {
+          effectivePersona = "DEVELOPER";
+          // Inject an explicit engineering objective if user didn't provide one.
+          // This steers the LLM toward producing deep technical tickets with file
+          // paths, function names, and verifiable code-level acceptance criteria.
+          if (!effectiveObjective) {
+            effectiveObjective =
+              "This is an engineering transcript from a project with a connected GitHub repository. " +
+              "Analyze deeply and produce engineering-grade tickets. Each ticket MUST include: " +
+              "specific file paths or module names where applicable, function/class names that need changing, " +
+              "concrete acceptance criteria with testable technical conditions (e.g. 'endpoint returns 401 on missing token', " +
+              "'migration runs without errors', 'unit test covers edge case X'). " +
+              "If a bug is mentioned, identify the likely root cause and include it in the description.";
+            logger.info(
+              `[processPendingTranscript] GitHub repo detected in context — auto-elevated persona to DEVELOPER for transcript ${transcriptId}`,
+            );
+          }
+        }
+      } catch (err) {
+        logger.warn("[processPendingTranscript] Failed to detect GitHub context for persona auto-elevation", err);
+      }
+    }
+
     const [analysisRaw, speakerInsights] = await Promise.all([
       this.analyzeTranscript(
         input.userId,
@@ -667,8 +708,8 @@ export class ProjectTranscriptService {
         processedContent,
         input.contextPrompt ?? "",
         input.contextIds,
-        input.persona ?? undefined,
-        input.objective ?? undefined,
+        effectivePersona,
+        effectiveObjective,
         input.complexityLevel ?? undefined,
         input.modelKey ?? undefined,
         input.taskStrategy ?? undefined,
@@ -1044,8 +1085,8 @@ export class ProjectTranscriptService {
           content: processedContent,
           contextIds: input.contextIds,
           contextPrompt: input.contextPrompt ?? undefined,
-          persona: input.persona ?? undefined,
-          objective: input.objective ?? undefined,
+          persona: effectivePersona,
+          objective: effectiveObjective,
           complexityLevel: input.complexityLevel ?? undefined,
           modelKey: input.modelKey ?? undefined,
           taskIds: result.createdTasks.map((t) => t.id),
