@@ -4,7 +4,7 @@
 
 ## Video Demo (click on the image to watch it)
 
-[![Plan AI Demo](https://img.youtube.com/vi/NqpvMhQBYqU/hqdefault.jpg)](https://www.youtube.com/watch?v=NqpvMhQBYqU)
+[![Plan AI Demo](https://img.youtube.com/vi/qJBdLCjMD28/hqdefault.jpg)](https://www.youtube.com/watch?v=qJBdLCjMD28)
 
 ## 🎯 Who is this for?
 

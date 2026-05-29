@@ -2,7 +2,7 @@
 
 Plan AI is an open-source, AI-assisted meeting planning and execution platform designed specifically for software agencies, engineering teams, and Technical Project Managers (TPMs). 
 
-[![Plan AI Demo](https://img.youtube.com/vi/NqpvMhQBYqU/maxresdefault.jpg)](https://www.youtube.com/watch?v=NqpvMhQBYqU)
+[![Plan AI Demo](https://img.youtube.com/vi/qJBdLCjMD28/maxresdefault.jpg)](https://www.youtube.com/watch?v=qJBdLCjMD28)
 
 Unlike generic consumer chatbots, Plan AI is a **contextual engine** that connects your codebases, your tracking boards, and your private meetings to automate the most tedious parts of software development.
 

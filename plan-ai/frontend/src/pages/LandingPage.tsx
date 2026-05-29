@@ -312,7 +312,7 @@ export default function LandingPage() {
               <Box sx={{ position: "relative", paddingTop: "56.25%" }}>
                 <iframe 
                   style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", border: 0 }} 
-                  src="https://www.youtube.com/embed/NqpvMhQBYqU?rel=0&amp;modestbranding=1" 
+                  src="https://www.youtube.com/embed/qJBdLCjMD28?rel=0&amp;modestbranding=1" 
                   title="Plan AI Demo" 
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
                   allowFullScreen
