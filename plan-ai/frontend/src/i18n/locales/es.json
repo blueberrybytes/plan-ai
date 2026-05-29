@@ -707,6 +707,10 @@
       }
     }
   },
+  "themeSelect": {
+    "label": "Tema de marca",
+    "none": "Ninguno"
+  },
   "projectInfo": {
     "breadcrumbs": {
       "aria": "Navegación de migas de pan",
@@ -729,6 +733,12 @@
       "updated": "Actualizado",
       "started": "Iniciado",
       "ended": "Finalizado"
+    },
+    "theme": {
+      "label": "Tema de marca por defecto",
+      "helper": "Los documentos y diapositivas generados por IA a partir de las reuniones de este proyecto usarán este tema.",
+      "saved": "Tema por defecto actualizado",
+      "error": "No se pudo actualizar el tema. Inténtalo de nuevo."
     },
     "table": {
       "title": "Título",

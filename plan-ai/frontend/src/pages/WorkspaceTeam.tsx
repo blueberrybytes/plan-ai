@@ -29,6 +29,7 @@ import InsightsIcon from "@mui/icons-material/Insights";
 import { useTranslation } from "react-i18next";
 import { useSelector, useDispatch } from "react-redux";
 import SidebarLayout from "../components/layout/SidebarLayout";
+import ThemeSelect from "../components/theme/ThemeSelect";
 import { AiUsageContent } from "./AiUsage";
 import WorkspaceMembersModal from "../components/layout/WorkspaceMembersModal";
 import EditWorkspaceMemberModal from "../components/layout/EditWorkspaceMemberModal";
@@ -62,12 +63,14 @@ const WorkspaceSettingsSection: React.FC<{ activeWorkspace: WorkspaceResponse }>
   const [openRouterKey, setOpenRouterKey] = useState("");
   const [deepgramKey, setDeepgramKey] = useState("");
   const [tokenLimit, setTokenLimit] = useState("");
+  const [defaultThemeId, setDefaultThemeId] = useState<string | null>(null);
 
   React.useEffect(() => {
     if (activeWorkspace) {
       setOpenRouterKey(activeWorkspace.openRouterKey || "");
       setDeepgramKey(activeWorkspace.deepgramKey || "");
       setTokenLimit(activeWorkspace.monthlyTokenLimit?.toString() || "200000");
+      setDefaultThemeId(activeWorkspace.defaultThemeId ?? null);
     }
   }, [activeWorkspace]);
 
@@ -79,6 +82,7 @@ const WorkspaceSettingsSection: React.FC<{ activeWorkspace: WorkspaceResponse }>
     try {
       const payload: UpdateWorkspaceSettingsRequest = {
         monthlyTokenLimit: parseInt(tokenLimit, 10) || 200000,
+        defaultThemeId,
       };
       if (!activeWorkspace.isCourtesy) {
         payload.openRouterKey = openRouterKey;
@@ -176,6 +180,21 @@ const WorkspaceSettingsSection: React.FC<{ activeWorkspace: WorkspaceResponse }>
             sx: { color: "success.main", fontWeight: 600, ml: 0 },
           }}
         />
+
+        <Typography variant="subtitle2" gutterBottom sx={{ mt: 1 }}>
+          Default Brand Theme
+        </Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+          Used for AI-generated docs & slides when a meeting has no project theme
+          (e.g. standalone recordings). Projects can override this.
+        </Typography>
+        <Box sx={{ mb: 3, maxWidth: 360 }}>
+          <ThemeSelect
+            value={defaultThemeId}
+            onChange={setDefaultThemeId}
+            label="Workspace default theme"
+          />
+        </Box>
 
         <Button variant="contained" onClick={handleSave} disabled={isLoading}>
           {isLoading ? "Saving..." : "Save Settings"}

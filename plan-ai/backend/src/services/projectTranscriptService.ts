@@ -475,6 +475,37 @@ export class ProjectTranscriptService {
     }
   }
 
+  /**
+   * Resolve which BrandTheme to use for AI-generated docs/slides.
+   * Cascade: explicit choice → project default → workspace default → none.
+   * Returns `undefined` when nothing is configured (generation stays unthemed).
+   * Standalone recordings (no project) resolve straight to the workspace default.
+   */
+  private async resolveGenerationThemeId(
+    workspaceId: string,
+    projectId?: string | null,
+    explicitThemeId?: string | null,
+  ): Promise<string | undefined> {
+    if (explicitThemeId) return explicitThemeId;
+    try {
+      if (projectId) {
+        const project = await prisma.project.findUnique({
+          where: { id: projectId },
+          select: { themeId: true },
+        });
+        if (project?.themeId) return project.themeId;
+      }
+      const workspace = await prisma.workspace.findUnique({
+        where: { id: workspaceId },
+        select: { defaultThemeId: true },
+      });
+      return workspace?.defaultThemeId ?? undefined;
+    } catch (err) {
+      logger.warn("Failed to resolve generation theme; proceeding unthemed", err);
+      return undefined;
+    }
+  }
+
   public async processPendingTranscript(
     transcriptId: string,
     input: CreateTranscriptInput,
@@ -877,6 +908,13 @@ export class ProjectTranscriptService {
       });
     }
 
+    // Resolve the brand theme once for both doc + slide auto-generation.
+    // Cascade: project default → workspace default → none (see helper).
+    const generatedThemeId =
+      input.createDoc || input.createSlides
+        ? await this.resolveGenerationThemeId(input.workspaceId, result.transcript.projectId)
+        : undefined;
+
     // Auto-Generate Document
     if (input.createDoc) {
       void this.setPostMeetingTaskStatus(result.transcript.id, "doc", { status: "PENDING" });
@@ -899,6 +937,7 @@ export class ProjectTranscriptService {
           prompt: `Generate a comprehensive meeting document based on the following transcript summary and extracted tasks. Ensure the language and style are highly corporate, formal, and professional.`,
           transcriptIds: [result.transcript.id],
           contextIds: input.contextIds,
+          themeId: generatedThemeId,
         })
         .then(async (doc) => {
           logger.info(`Auto-generated document ${doc.id} for transcript ${result.transcript.id}`);
@@ -948,7 +987,7 @@ export class ProjectTranscriptService {
           input.userId,
           input.workspaceId,
           undefined, // templateId
-          undefined, // themeId
+          generatedThemeId, // themeId (project/workspace default cascade)
           input.contextIds ?? [],
           [result.transcript.id], // transcriptIds
           `Create a presentation summarizing the key points, decisions, and action items from the meeting.`,
@@ -1916,11 +1955,13 @@ ${transcriptForLLM}`;
     if (kind === "doc") {
       fireAndForget(async () => {
         try {
+          const themeId = await this.resolveGenerationThemeId(workspaceId, transcript.projectId);
           const doc = await docGenerationService.startGeneration(userId, workspaceId, {
             title: transcript.title || "Meeting Document",
             prompt: `Generate a comprehensive meeting document based on the following transcript summary and extracted tasks. Ensure the language and style are highly corporate, formal, and professional.`,
             transcriptIds: [transcriptId],
             contextIds: [],
+            themeId,
           });
           await this.setPostMeetingTaskStatus(transcriptId, "doc", {
             status: "OK",
@@ -1943,11 +1984,12 @@ ${transcriptForLLM}`;
     if (kind === "slides") {
       fireAndForget(async () => {
         try {
+          const themeId = await this.resolveGenerationThemeId(workspaceId, transcript.projectId);
           const pres = await slideGenerationService.startPresentationGeneration(
             userId,
             workspaceId,
             undefined,
-            undefined,
+            themeId,
             [],
             [transcriptId],
             `Create a presentation summarizing the key points, decisions, and action items from the meeting.`,

@@ -530,6 +530,11 @@
 						"type": "number",
 						"format": "double",
 						"description": "Number of files in the paired Context."
+					},
+					"themeId": {
+						"type": "string",
+						"nullable": true,
+						"description": "Default brand theme for AI-generated docs & slides. Null = unthemed."
 					}
 				},
 				"required": [
@@ -544,7 +549,8 @@
 					"updatedAt",
 					"contextId",
 					"hasFiles",
-					"fileCount"
+					"fileCount",
+					"themeId"
 				],
 				"type": "object",
 				"additionalProperties": false
@@ -1444,6 +1450,11 @@
 							}
 						],
 						"nullable": true
+					},
+					"themeId": {
+						"type": "string",
+						"nullable": true,
+						"description": "Default brand theme for AI-generated docs & slides from this project's meetings."
 					}
 				},
 				"required": [
@@ -1481,6 +1492,11 @@
 							}
 						],
 						"nullable": true
+					},
+					"themeId": {
+						"type": "string",
+						"nullable": true,
+						"description": "Default brand theme. Pass null to clear; omit to leave unchanged."
 					}
 				},
 				"type": "object",
@@ -6545,6 +6561,11 @@
 					},
 					"isCourtesy": {
 						"type": "boolean"
+					},
+					"defaultThemeId": {
+						"type": "string",
+						"nullable": true,
+						"description": "Workspace-wide default brand theme for AI-generated docs & slides. Null = none."
 					}
 				},
 				"required": [
@@ -6719,6 +6740,11 @@
 					},
 					"isCourtesy": {
 						"type": "boolean"
+					},
+					"defaultThemeId": {
+						"type": "string",
+						"nullable": true,
+						"description": "Workspace-wide default brand theme. Pass null to clear; omit to leave unchanged."
 					}
 				},
 				"type": "object",
@@ -7036,7 +7062,7 @@
 	},
 	"info": {
 		"title": "backend",
-		"version": "3.7.0",
+		"version": "3.8.1",
 		"license": {
 			"name": "BUSL-1.1"
 		},

@@ -352,64 +352,58 @@ const PublicDocView: React.FC = () => {
         }}
       >
         {/* Document Header */}
-        <Box
-          sx={{
-            mb: 4,
-            borderRadius: 3,
-            overflow: "hidden",
-            bgcolor: theme ? markdownBg : "transparent",
-            border: theme ? `1px solid ${accent}20` : "none",
-          }}
-        >
-          {theme && (
-            <Box
-              sx={{
-                height: 4,
-                background: `linear-gradient(90deg, ${primary}, ${accent})`,
-              }}
-            />
-          )}
+        <Box sx={{ mb: 5, pt: 1 }}>
           <Box
             sx={{
               display: "flex",
-              alignItems: "center",
+              alignItems: "flex-start",
               justifyContent: "space-between",
               gap: 3,
-              px: { xs: 3, md: 4 },
-              py: { xs: 2.5, md: 3 },
+              mb: 1.5,
             }}
           >
             <Typography
-              variant="h3"
+              variant="h1"
               sx={{
-                fontWeight: 700,
+                fontWeight: 800,
                 fontFamily: theme?.headingFont ?? "inherit",
                 color: theme ? headerColor : text,
                 flex: 1,
                 minWidth: 0,
-                lineHeight: 1.3,
-                fontSize: { xs: "1.75rem", md: `${2.5 * scaleMultiplier}rem` },
+                lineHeight: 1.2,
+                fontSize: { xs: "2rem", md: `${Math.min(3, 2.5 * scaleMultiplier)}rem` },
+                letterSpacing: "-0.02em",
               }}
             >
               {doc.title}
             </Typography>
             {theme?.logoUrl && (
-              <Box sx={{ flexShrink: 0 }}>
+              <Box sx={{ flexShrink: 0, mt: 0.5 }}>
                 <img
                   src={theme.logoUrl}
                   alt="Brand Logo"
                   style={{
-                    height: 44,
-                    maxWidth: 160,
+                    height: 40,
+                    maxWidth: 140,
                     objectFit: "contain",
-                    opacity: 0.9,
+                    opacity: 0.85,
                   }}
                   crossOrigin="anonymous"
                 />
               </Box>
             )}
           </Box>
-          {!theme && <Divider />}
+          {/* Subtle accent underline */}
+          <Box
+            sx={{
+              height: 3,
+              borderRadius: 2,
+              background: theme
+                ? `linear-gradient(90deg, ${primary}, ${accent}60, transparent)`
+                : `linear-gradient(90deg, ${primary}80, transparent)`,
+              maxWidth: 300,
+            }}
+          />
         </Box>
 
         {/* Document Body */}

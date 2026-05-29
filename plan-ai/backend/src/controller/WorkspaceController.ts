@@ -24,6 +24,8 @@ export interface WorkspaceResponse {
   openRouterKey?: string;
   deepgramKey?: string;
   isCourtesy?: boolean;
+  /** Workspace-wide default brand theme for AI-generated docs & slides. Null = none. */
+  defaultThemeId?: string | null;
 }
 
 export interface UpdateWorkspaceSettingsRequest {
@@ -31,6 +33,8 @@ export interface UpdateWorkspaceSettingsRequest {
   deepgramKey?: string | null;
   monthlyTokenLimit?: number;
   isCourtesy?: boolean;
+  /** Workspace-wide default brand theme. Pass null to clear; omit to leave unchanged. */
+  defaultThemeId?: string | null;
 }
 
 export interface InviteMemberRequest {
@@ -110,6 +114,7 @@ export class WorkspaceController extends BaseWorkspaceController {
       isCourtesy: m.workspace.isCourtesy,
       openRouterKey: m.role === "OWNER" ? (m.workspace.openRouterKey ? "••••••••••••••••" : undefined) : undefined,
       deepgramKey: m.role === "OWNER" ? (m.workspace.deepgramKey ? "••••••••••••••••" : undefined) : undefined,
+      defaultThemeId: m.workspace.defaultThemeId,
     }));
   }
 
@@ -505,6 +510,22 @@ export class WorkspaceController extends BaseWorkspaceController {
     }
     if (body.monthlyTokenLimit !== undefined) updateData.monthlyTokenLimit = body.monthlyTokenLimit;
     if (body.isCourtesy !== undefined) updateData.isCourtesy = body.isCourtesy;
+    if (body.defaultThemeId !== undefined) {
+      // Validate the theme belongs to this workspace (null clears it).
+      if (body.defaultThemeId) {
+        const theme = await prisma.brandTheme.findFirst({
+          where: { id: body.defaultThemeId, workspaceId },
+          select: { id: true },
+        });
+        if (!theme) {
+          this.setStatus(400);
+          throw { status: 400, message: "Theme not found in this workspace" };
+        }
+      }
+      updateData.defaultTheme = body.defaultThemeId
+        ? { connect: { id: body.defaultThemeId } }
+        : { disconnect: true };
+    }
 
     await prisma.workspace.update({
       where: { id: workspaceId },

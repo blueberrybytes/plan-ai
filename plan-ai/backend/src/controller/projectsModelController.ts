@@ -64,6 +64,8 @@ interface ProjectResponse {
   hasFiles: boolean;
   /** Number of files in the paired Context. */
   fileCount: number;
+  /** Default brand theme for AI-generated docs & slides. Null = unthemed. */
+  themeId: string | null;
 }
 
 interface ProjectListResponse {
@@ -77,6 +79,8 @@ interface CreateProjectRequest {
   status?: ProjectStatus;
   startedAt?: Date | null;
   metadata?: TsoaJsonObject | null;
+  /** Default brand theme for AI-generated docs & slides from this project's meetings. */
+  themeId?: string | null;
 }
 
 interface UpdateProjectRequest {
@@ -86,6 +90,8 @@ interface UpdateProjectRequest {
   startedAt?: Date | null;
   endedAt?: Date | null;
   metadata?: TsoaJsonObject | null;
+  /** Default brand theme. Pass null to clear; omit to leave unchanged. */
+  themeId?: string | null;
 }
 
 interface CreateTranscriptRequest {
@@ -932,6 +938,7 @@ export class ProjectsModelController extends BaseWorkspaceController {
     @Body() body: CreateProjectRequest,
   ): Promise<ApiResponse<ProjectResponse>> {
     const { user, workspaceId } = await this.getAuthorizedWorkspaceAccess(request);
+    await this.assertThemeInWorkspace(workspaceId, body.themeId);
 
     // Project + 1:1 Context are created atomically. The Context backs the
     // user-facing "Files" tab on the project.
@@ -944,6 +951,7 @@ export class ProjectsModelController extends BaseWorkspaceController {
           description: body.description,
           status: body.status ?? ProjectStatus.ACTIVE,
           startedAt: body.startedAt ?? new Date(),
+          themeId: body.themeId ?? null,
           ...(body.metadata === undefined
             ? {}
             : { metadata: (body.metadata as Prisma.InputJsonValue) ?? Prisma.JsonNull }),
@@ -981,6 +989,7 @@ export class ProjectsModelController extends BaseWorkspaceController {
   ): Promise<ApiResponse<ProjectResponse>> {
     const { workspaceId } = await this.getAuthorizedWorkspaceAccess(request);
     await this.getProjectForWorkspace(request, projectId, workspaceId);
+    await this.assertThemeInWorkspace(workspaceId, body.themeId);
 
     const project = await prisma.project.update({
       where: { id: projectId },
@@ -990,6 +999,8 @@ export class ProjectsModelController extends BaseWorkspaceController {
         status: body.status,
         startedAt: body.startedAt,
         endedAt: body.endedAt,
+        // null clears the link; undefined leaves it unchanged.
+        ...(body.themeId === undefined ? {} : { themeId: body.themeId }),
         ...(body.metadata === undefined
           ? {}
           : { metadata: (body.metadata as Prisma.InputJsonValue) ?? Prisma.JsonNull }),
@@ -1151,6 +1162,7 @@ export class ProjectsModelController extends BaseWorkspaceController {
     metadata: TsoaJsonObject | null;
     createdAt: Date;
     updatedAt: Date;
+    themeId?: string | null;
     context?: { id: string; _count?: { files: number } } | null;
   }): ProjectResponse {
     const fileCount = project.context?._count?.files ?? 0;
@@ -1167,7 +1179,28 @@ export class ProjectsModelController extends BaseWorkspaceController {
       contextId: project.context?.id ?? null,
       hasFiles: fileCount > 0,
       fileCount,
+      themeId: project.themeId ?? null,
     };
+  }
+
+  /**
+   * Guard that a themeId (if provided) belongs to the caller's workspace.
+   * Passing null/undefined is allowed (clears / leaves the link). Throws 400
+   * for an unknown or cross-workspace theme.
+   */
+  private async assertThemeInWorkspace(
+    workspaceId: string,
+    themeId: string | null | undefined,
+  ): Promise<void> {
+    if (!themeId) return;
+    const theme = await prisma.brandTheme.findFirst({
+      where: { id: themeId, workspaceId },
+      select: { id: true },
+    });
+    if (!theme) {
+      this.setStatus(400);
+      throw { status: 400, message: "Theme not found in this workspace" };
+    }
   }
 
   private mapTranscriptResponse(transcript: {

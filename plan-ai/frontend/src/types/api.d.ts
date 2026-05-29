@@ -2626,6 +2626,8 @@ export interface components {
              * @description Number of files in the paired Context.
              */
             fileCount: number;
+            /** @description Default brand theme for AI-generated docs & slides. Null = unthemed. */
+            themeId: string | null;
         };
         ProjectListResponse: {
             projects: components["schemas"]["ProjectResponse"][];
@@ -2862,6 +2864,8 @@ export interface components {
             /** Format: date-time */
             startedAt?: string | null;
             metadata?: components["schemas"]["TsoaJsonObject"] | null;
+            /** @description Default brand theme for AI-generated docs & slides from this project's meetings. */
+            themeId?: string | null;
         };
         UpdateProjectRequest: {
             title?: string;
@@ -2872,6 +2876,8 @@ export interface components {
             /** Format: date-time */
             endedAt?: string | null;
             metadata?: components["schemas"]["TsoaJsonObject"] | null;
+            /** @description Default brand theme. Pass null to clear; omit to leave unchanged. */
+            themeId?: string | null;
         };
         CreateTranscriptRequest: {
             content?: string;
@@ -4254,6 +4260,8 @@ export interface components {
             openRouterKey?: string;
             deepgramKey?: string;
             isCourtesy?: boolean;
+            /** @description Workspace-wide default brand theme for AI-generated docs & slides. Null = none. */
+            defaultThemeId?: string | null;
         };
         /** @enum {string} */
         "_36_Enums.UserPersona": "PROJECT_MANAGER" | "SOFTWARE_ENGINEER" | "DESIGNER" | "PRODUCT_MANAGER" | "EXECUTIVE" | "OTHER";
@@ -4296,6 +4304,8 @@ export interface components {
             /** Format: double */
             monthlyTokenLimit?: number;
             isCourtesy?: boolean;
+            /** @description Workspace-wide default brand theme. Pass null to clear; omit to leave unchanged. */
+            defaultThemeId?: string | null;
         };
         CreateMcpTokenResponse: {
             /** @description The raw token — shown ONCE, never retrievable again */

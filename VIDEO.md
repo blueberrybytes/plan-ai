@@ -58,7 +58,7 @@
 > **🎥 RECORD REAL PRODUCT (no AI):** split screen — transcript mentioning `verifyToken` / the auth service, plus the GitNexus code graph and the **Contexts** tab where repos/architecture docs are attached.
 
 > **🤖 AI VIDEO — ▶ Clip 4 (optional concept cutaway, ~5s):**
-> *Abstract macro visualization, cinematic premium tech look on a deep charcoal void (#18181B). Soft glowing blue (#4361EE) audio waveforms flow forward and transform into an elegant 3D network of interconnected nodes and thin light filaments — a knowledge graph forming. Nodes pulse in electric blue and lavender-purple (#a78bfa); connections light up sequentially as if understanding is forming. Slow cinematic orbit, shallow depth of field, drifting particles, soft bloom, subtle grain. Photoreal. No readable text, code, or UI. Ambient hum only. 16:9, 5 seconds.*
+> *yToken. 16:9, 5 seconds.*
 
 ---
 

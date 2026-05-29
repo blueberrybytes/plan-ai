@@ -40,16 +40,23 @@ export const TwoColumnsSlide: React.FC<SlideProps> = ({
 
   const cardFilter = brandColors?.cardStyle === "glass" ? "blur(12px)" : "none";
 
+  const leftBodyText = data.leftBody as string ?? "";
+  const rightBodyText = data.rightBody as string ?? "";
+
+  // Dynamically shrink font when content is long so it fits the card
+  const maxChars = Math.max(leftBodyText.length, rightBodyText.length);
+  const bodyFontSize = maxChars > 600 ? 13 : maxChars > 400 ? 14 : maxChars > 250 ? 15 : 16;
+
   return (
     <SlideFrame brandColors={brandColors} fonts={fonts} scale={scale}>
-      <Box sx={{ textAlign: "center" }}>
+      <Box sx={{ textAlign: "center", flexShrink: 0 }}>
         <SlideBadge text={data.badge as string} primary={primary} animate={animate} />
         <AnimatedText
           animate={animate}
           sx={{
             fontSize: 36,
             fontWeight: 700,
-            mb: 4,
+            mb: 2,
             color: primary,
             fontFamily: `'${fonts?.heading || "Inter"}', sans-serif`,
           }}
@@ -57,7 +64,7 @@ export const TwoColumnsSlide: React.FC<SlideProps> = ({
           {data.title as string}
         </AnimatedText>
       </Box>
-      <Box sx={{ display: "flex", gap: 4 }}>
+      <Box sx={{ display: "flex", gap: 4, flex: 1, minHeight: 0 }}>
         <Box
           sx={{
             flex: 1,
@@ -69,23 +76,26 @@ export const TwoColumnsSlide: React.FC<SlideProps> = ({
             boxShadow: brandColors?.cardStyle === "glass" ? "0 8px 32px rgba(0,0,0,0.2)" : "none",
             animation: animate ? `slideInUp 0.6s ease-out forwards 0.2s` : "none",
             opacity: animate ? 0 : 1,
+            overflow: "hidden",
+            minHeight: 0,
           }}
         >
           {data.leftTitle ? (
-            <Typography sx={{ fontSize: 22, fontWeight: 700, mb: 2, color: primary }}>
+            <Typography sx={{ fontSize: 20, fontWeight: 700, mb: 1.5, color: primary, flexShrink: 0 }}>
               {String(data.leftTitle)}
             </Typography>
           ) : null}
           <Typography
             sx={{
-              fontSize: 16,
-              lineHeight: 1.7,
+              fontSize: bodyFontSize,
+              lineHeight: 1.6,
               color: "inherit",
               opacity: 0.85,
               whiteSpace: "pre-wrap",
+              overflow: "hidden",
             }}
           >
-            {data.leftBody as string}
+            {leftBodyText}
           </Typography>
         </Box>
         <Box
@@ -99,23 +109,26 @@ export const TwoColumnsSlide: React.FC<SlideProps> = ({
             boxShadow: brandColors?.cardStyle === "glass" ? "0 8px 32px rgba(0,0,0,0.2)" : "none",
             animation: animate ? `slideInUp 0.6s ease-out forwards 0.3s` : "none",
             opacity: animate ? 0 : 1,
+            overflow: "hidden",
+            minHeight: 0,
           }}
         >
           {data.rightTitle ? (
-            <Typography sx={{ fontSize: 22, fontWeight: 700, mb: 2, color: primary }}>
+            <Typography sx={{ fontSize: 20, fontWeight: 700, mb: 1.5, color: primary, flexShrink: 0 }}>
               {String(data.rightTitle)}
             </Typography>
           ) : null}
           <Typography
             sx={{
-              fontSize: 16,
-              lineHeight: 1.7,
+              fontSize: bodyFontSize,
+              lineHeight: 1.6,
               color: "inherit",
               opacity: 0.85,
               whiteSpace: "pre-wrap",
+              overflow: "hidden",
             }}
           >
-            {data.rightBody as string}
+            {rightBodyText}
           </Typography>
         </Box>
       </Box>

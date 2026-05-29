@@ -713,6 +713,10 @@
       }
     }
   },
+  "themeSelect": {
+    "label": "Brand theme",
+    "none": "None"
+  },
   "projectInfo": {
     "breadcrumbs": {
       "aria": "Breadcrumb navigation",
@@ -735,6 +739,12 @@
       "updated": "Updated",
       "started": "Started",
       "ended": "Ended"
+    },
+    "theme": {
+      "label": "Default brand theme",
+      "helper": "Auto-generated docs & slides from this project's meetings use this theme.",
+      "saved": "Default theme updated",
+      "error": "Could not update the theme. Please try again."
     },
     "table": {
       "title": "Title",

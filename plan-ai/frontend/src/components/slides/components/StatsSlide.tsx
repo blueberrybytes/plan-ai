@@ -1,5 +1,5 @@
 import React from "react";
-import { Box, Typography } from "@mui/material";
+import { Box, Typography, useTheme } from "@mui/material";
 import SlideFrame from "./SlideFrame";
 import AnimatedText from "./AnimatedText";
 import SlideBadge from "./SlideBadge";
@@ -15,6 +15,9 @@ export const StatsSlide: React.FC<SlideProps> = ({
 }) => {
   const primary = brandColors?.primary || "#6366f1";
   const secondary = brandColors?.secondary || primary;
+  const muiTheme = useTheme();
+  const bg = brandColors?.background || "#0f172a";
+  const isDark = muiTheme.palette.getContrastText(bg) === "#fff";
   const rawStats = data.stats;
   const stats: { label: string; value: string }[] = Array.isArray(rawStats)
     ? rawStats.map((s: unknown) => {
@@ -24,14 +27,16 @@ export const StatsSlide: React.FC<SlideProps> = ({
     : [];
   const cardBg =
     brandColors?.cardStyle === "glass"
-      ? "rgba(255,255,255,0.03)"
+      ? isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.03)"
       : brandColors?.cardStyle === "outline"
         ? "transparent"
-        : "rgba(0,0,0,0.2)";
+        : isDark
+          ? "rgba(255,255,255,0.06)"
+          : "rgba(0,0,0,0.04)";
 
   const cardBorder =
     brandColors?.cardStyle === "glass"
-      ? "1px solid rgba(255,255,255,0.1)"
+      ? isDark ? "1px solid rgba(255,255,255,0.12)" : "1px solid rgba(0,0,0,0.1)"
       : brandColors?.cardStyle === "outline"
         ? `1px solid ${primary}40`
         : "1px solid transparent";
@@ -74,7 +79,7 @@ export const StatsSlide: React.FC<SlideProps> = ({
               textAlign: "center",
               p: 4,
               borderRadius: 4,
-              bgcolor: brandColors?.cardStyle === "glass" ? "rgba(255,255,255,0.03)" : `color-mix(in srgb, ${primary} 5%, transparent)`,
+              bgcolor: cardBg,
               border: cardBorder,
               borderTop: `4px solid ${primary}`,
               backdropFilter: cardFilter,
@@ -86,9 +91,11 @@ export const StatsSlide: React.FC<SlideProps> = ({
           >
             <Typography
               sx={{
-                fontSize: stat.value.length > 8 ? 32 : 48, // scale down long values like "~19.7M Tokens"
+                fontSize: stat.value.length > 8 ? 32 : 48,
                 fontWeight: 800,
-                color: "text.primary",
+                // Use inherit so SlideFrame's contrast-derived text color applies
+                // correctly regardless of theme background (dark or light).
+                color: "inherit",
                 mb: 1.5,
                 lineHeight: 1.1,
                 wordBreak: "break-word",

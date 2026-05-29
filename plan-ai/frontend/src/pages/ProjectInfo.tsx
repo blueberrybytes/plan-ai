@@ -26,8 +26,15 @@ import {
   LibraryBooksOutlined,
 } from "@mui/icons-material";
 import SidebarLayout from "../components/layout/SidebarLayout";
-import { useGetProjectQuery, useListProjectTranscriptsQuery } from "../store/apis/projectApi";
+import {
+  useGetProjectQuery,
+  useListProjectTranscriptsQuery,
+  useUpdateProjectMutation,
+} from "../store/apis/projectApi";
 import { useTranslation } from "react-i18next";
+import { useDispatch } from "react-redux";
+import { setToastMessage } from "../store/slices/app/appSlice";
+import ThemeSelect from "../components/theme/ThemeSelect";
 
 const ProjectInfo: React.FC = () => {
   const params = useParams();
@@ -52,6 +59,29 @@ const ProjectInfo: React.FC = () => {
     { projectId: projectId ?? "", params: undefined },
     { skip: !projectId },
   );
+
+  const dispatch = useDispatch();
+  const [updateProject, { isLoading: isUpdatingTheme }] = useUpdateProjectMutation();
+
+  const handleThemeChange = async (themeId: string | null) => {
+    if (!projectId) return;
+    try {
+      await updateProject({ projectId, body: { themeId } }).unwrap();
+      dispatch(
+        setToastMessage({
+          message: t("projectInfo.theme.saved", "Default theme updated"),
+          severity: "success",
+        }),
+      );
+    } catch {
+      dispatch(
+        setToastMessage({
+          message: t("projectInfo.theme.error", "Could not update the theme. Please try again."),
+          severity: "error",
+        }),
+      );
+    }
+  };
 
   if (!projectId) {
     return <Navigate to="/projects" replace />;
@@ -229,6 +259,24 @@ const ProjectInfo: React.FC = () => {
                       </Typography>
                     </Stack>
                   </Stack>
+
+                  <Divider flexItem />
+
+                  <Box sx={{ maxWidth: 360 }}>
+                    <Typography variant="overline" color="text.secondary">
+                      {t("projectInfo.theme.label", "Default brand theme")}
+                    </Typography>
+                    <ThemeSelect
+                      value={project.themeId}
+                      onChange={handleThemeChange}
+                      disabled={isUpdatingTheme}
+                      label={t("projectInfo.theme.label", "Default brand theme")}
+                      helperText={t(
+                        "projectInfo.theme.helper",
+                        "Auto-generated docs & slides from this project's meetings use this theme.",
+                      )}
+                    />
+                  </Box>
 
                   <Box>
                     <Typography variant="overline" color="text.secondary">

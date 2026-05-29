@@ -12,12 +12,8 @@ export type InviteMemberRequest = components["schemas"]["InviteMemberRequest"];
 export type UpdateMemberRequest = components["schemas"]["UpdateMemberRequest"];
 export type CreateWorkspaceRequest = components["schemas"]["CreateWorkspaceRequest"];
 export type WorkspaceTeamResponse = components["schemas"]["WorkspaceTeamResponse"];
-export interface UpdateWorkspaceSettingsRequest {
-  openRouterKey?: string | null;
-  deepgramKey?: string | null;
-  monthlyTokenLimit?: number;
-  isCourtesy?: boolean;
-}
+export type UpdateWorkspaceSettingsRequest =
+  components["schemas"]["UpdateWorkspaceSettingsRequest"];
 
 export const workspaceApi = createApi({
   reducerPath: "workspaceApi",
