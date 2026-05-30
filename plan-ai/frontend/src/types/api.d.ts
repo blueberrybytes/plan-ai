@@ -4259,6 +4259,8 @@ export interface components {
             monthlyTokenLimit?: number;
             openRouterKey?: string;
             deepgramKey?: string;
+            /** @description OpenAI key (BYOK) used only for embeddings/RAG. Returned masked. */
+            openaiKey?: string;
             isCourtesy?: boolean;
             /** @description Workspace-wide default brand theme for AI-generated docs & slides. Null = none. */
             defaultThemeId?: string | null;
@@ -4301,6 +4303,8 @@ export interface components {
         UpdateWorkspaceSettingsRequest: {
             openRouterKey?: string | null;
             deepgramKey?: string | null;
+            /** @description OpenAI key (BYOK) for embeddings/RAG. Pass null to clear; omit to leave unchanged. */
+            openaiKey?: string | null;
             /** Format: double */
             monthlyTokenLimit?: number;
             isCourtesy?: boolean;

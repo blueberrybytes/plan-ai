@@ -15,6 +15,14 @@ export interface LogUsageParams {
   model: string;
   inputTokens: number;
   outputTokens: number;
+  /**
+   * Real cost in USD from OpenRouter usage accounting. When present it's used
+   * verbatim (it already reflects prompt-cache discounts), bypassing the
+   * estimated pricingMap calculation.
+   */
+  cost?: number;
+  /** Prompt tokens served from cache — logged for visibility (not persisted). */
+  cachedTokens?: number;
 }
 
 export class AiUsageService {
@@ -34,7 +42,16 @@ export class AiUsageService {
     let estimatedCost = 0;
     const pricingMap = pricingCacheService.getAllPricing();
 
-    if (pricingMap[params.model]) {
+    if (typeof params.cost === "number" && params.cost >= 0) {
+      // Real cost from OpenRouter usage accounting — already reflects any
+      // prompt-cache discount, so prefer it over the estimate.
+      estimatedCost = params.cost;
+      if (params.cachedTokens && params.cachedTokens > 0) {
+        logger.info(
+          `[aiUsage] ${params.model}: ${params.cachedTokens} cached prompt tokens (real cost $${params.cost.toFixed(6)})`,
+        );
+      }
+    } else if (pricingMap[params.model]) {
       const { prompt, completion } = pricingMap[params.model];
       estimatedCost = params.inputTokens * prompt + params.outputTokens * completion;
     } else if (params.model.toLowerCase().includes("whisper")) {

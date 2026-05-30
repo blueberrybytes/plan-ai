@@ -2092,6 +2092,7 @@ const models: TsoaRoute.Models = {
             "monthlyTokenLimit": {"dataType":"double"},
             "openRouterKey": {"dataType":"string"},
             "deepgramKey": {"dataType":"string"},
+            "openaiKey": {"dataType":"string"},
             "isCourtesy": {"dataType":"boolean"},
             "defaultThemeId": {"dataType":"union","subSchemas":[{"dataType":"string"},{"dataType":"enum","enums":[null]}]},
         },
@@ -2168,6 +2169,7 @@ const models: TsoaRoute.Models = {
         "properties": {
             "openRouterKey": {"dataType":"union","subSchemas":[{"dataType":"string"},{"dataType":"enum","enums":[null]}]},
             "deepgramKey": {"dataType":"union","subSchemas":[{"dataType":"string"},{"dataType":"enum","enums":[null]}]},
+            "openaiKey": {"dataType":"union","subSchemas":[{"dataType":"string"},{"dataType":"enum","enums":[null]}]},
             "monthlyTokenLimit": {"dataType":"double"},
             "isCourtesy": {"dataType":"boolean"},
             "defaultThemeId": {"dataType":"union","subSchemas":[{"dataType":"string"},{"dataType":"enum","enums":[null]}]},

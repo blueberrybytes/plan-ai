@@ -1,4 +1,4 @@
-import { createOpenRouter } from "@openrouter/ai-sdk-provider";
+import { createOpenRouter, type OpenRouterUsageAccounting } from "@openrouter/ai-sdk-provider";
 import EnvUtils from "./EnvUtils";
 import { AI_MODEL_LIMITS } from "../services/aiContextRouter";
 import prisma from "../prisma/prismaClient";
@@ -101,6 +101,58 @@ export async function getWorkspaceModel(workspaceId: string, modelKey?: string) 
 }
 
 /**
+ * Resolve the OpenAI API key used for EMBEDDINGS (BYOK). Order:
+ *   1. The workspace's own `openaiKey` (must look like `sk-`).
+ *   2. The global `OPENAI_API_KEY` for courtesy workspaces.
+ *   3. Safety-net fallback to the global key (with a warning) so RAG keeps
+ *      working for workspaces that haven't configured their key yet.
+ * Returns `{ apiKey, usedFallback }`; `usedFallback` flags that the cost lands
+ * on the platform key rather than the customer's (useful for usage logging).
+ */
+export async function resolveWorkspaceOpenAIKey(
+  workspaceId: string,
+): Promise<{ apiKey: string; usedFallback: boolean }> {
+  let apiKey: string | undefined = undefined;
+  let isCourtesy = false;
+
+  try {
+    const workspace = await prisma.workspace.findUnique({
+      where: { id: workspaceId },
+      select: { openaiKey: true, isCourtesy: true },
+    });
+    if (workspace?.isCourtesy) isCourtesy = true;
+    // Only accept valid-looking OpenAI keys (sk-…), not an OpenRouter key.
+    if (
+      workspace?.openaiKey &&
+      workspace.openaiKey.trim().startsWith("sk-") &&
+      !workspace.openaiKey.trim().startsWith("sk-or-")
+    ) {
+      return { apiKey: workspace.openaiKey.trim(), usedFallback: false };
+    }
+  } catch (error) {
+    logger.error(`[resolveWorkspaceOpenAIKey] Failed to fetch workspace ${workspaceId}`, error);
+  }
+
+  // Courtesy workspaces use the global key by design.
+  if (isCourtesy) {
+    apiKey = EnvUtils.get("OPENAI_API_KEY");
+    if (apiKey) return { apiKey, usedFallback: false };
+  }
+
+  // Safety net: fall back to the global key so RAG doesn't break for workspaces
+  // that haven't set their OpenAI key. Cost lands on the platform — flagged.
+  apiKey = EnvUtils.get("OPENAI_API_KEY");
+  if (apiKey) {
+    logger.warn(
+      `[resolveWorkspaceOpenAIKey] Workspace ${workspaceId} has no OpenAI key — falling back to the platform key for embeddings.`,
+    );
+    return { apiKey, usedFallback: true };
+  }
+
+  throw new MissingApiKeyError();
+}
+
+/**
  * Model for the "big-context cached" route — injecting a whole repo / large
  * stable context that should stay warm in the provider's prompt cache across a
  * burst of calls (ticket + doc + slides + chat for one meeting).
@@ -127,7 +179,12 @@ export async function getCachedContextModel(workspaceId: string) {
  * for call sites that pass providerOptions explicitly (generateText/generateObject).
  */
 export function getCachedContextProviderOptions() {
-  return { openrouter: { provider: { allow_fallbacks: false } } };
+  return {
+    openrouter: {
+      provider: { allow_fallbacks: false },
+      usage: { include: true },
+    },
+  };
 }
 
 /**
@@ -136,9 +193,47 @@ export function getCachedContextProviderOptions() {
 export function getFallbackProviderOptions(modelKey?: string) {
   const primaryModel = modelKey && modelKey.length > 0 ? modelKey : DEFAULT_AI_MODEL;
   const fallbacks = FALLBACK_MODELS.filter((m) => m !== primaryModel);
-  return fallbacks.length > 0
-    ? { openrouter: { models: fallbacks } }
-    : undefined;
+  // `usage: { include: true }` turns on OpenRouter usage accounting so the
+  // response carries the REAL cost + cached-token breakdown (see
+  // extractOpenRouterUsage). Always enabled, even without model fallbacks.
+  return {
+    openrouter: {
+      ...(fallbacks.length > 0 ? { models: fallbacks } : {}),
+      usage: { include: true },
+    },
+  };
+}
+
+export interface ExtractedUsage {
+  inputTokens: number;
+  outputTokens: number;
+  /** Prompt tokens served from the provider's cache (Gemini/Anthropic). */
+  cachedTokens: number;
+  /** Real cost in USD reported by OpenRouter, when usage accounting is on. */
+  cost?: number;
+}
+
+/**
+ * Pull real usage out of a generateText/generateObject result. Prefers
+ * OpenRouter's usage accounting (real cost + cached tokens, requires
+ * `usage: { include: true }`) and falls back to the SDK's basic token counts.
+ */
+export function extractOpenRouterUsage(result: {
+  usage?: { inputTokens?: number; outputTokens?: number };
+  totalUsage?: { inputTokens?: number; outputTokens?: number };
+  providerMetadata?: Record<string, unknown>;
+}): ExtractedUsage {
+  const openrouterMeta = result.providerMetadata?.openrouter as
+    | { usage?: OpenRouterUsageAccounting }
+    | undefined;
+  const orUsage = openrouterMeta?.usage;
+  const base = result.totalUsage ?? result.usage;
+  return {
+    inputTokens: orUsage?.promptTokens ?? base?.inputTokens ?? 0,
+    outputTokens: orUsage?.completionTokens ?? base?.outputTokens ?? 0,
+    cachedTokens: orUsage?.promptTokensDetails?.cachedTokens ?? 0,
+    cost: orUsage?.cost,
+  };
 }
 
 /**

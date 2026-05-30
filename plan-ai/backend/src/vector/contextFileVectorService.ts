@@ -1,8 +1,8 @@
 import type { Express } from "express";
 import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
 import { OpenAIEmbeddings } from "@langchain/openai";
-import EnvUtils from "../utils/EnvUtils";
 import { logger } from "../utils/logger";
+import { resolveWorkspaceOpenAIKey } from "../utils/aiModelUtils";
 import prisma from "../prisma/prismaClient";
 import { aiUsageService } from "../services/aiUsageService";
 import {
@@ -22,12 +22,16 @@ const EMBEDDING_DIMENSION = Number.parseInt(process.env.OPENAI_EMBEDDING_DIMENSI
 const TEXT_CHUNK_SIZE = Number.parseInt(process.env.CONTEXT_VECTOR_CHUNK_SIZE ?? "800", 10);
 const TEXT_CHUNK_OVERLAP = Number.parseInt(process.env.CONTEXT_VECTOR_CHUNK_OVERLAP ?? "160", 10);
 
-const embeddings = new OpenAIEmbeddings({
-  openAIApiKey: EnvUtils.get("OPENAI_API_KEY"),
-  model: EMBEDDING_MODEL,
-  maxRetries: 2,
-  timeout: 60000,
-});
+// BYOK embeddings: build a client per workspace key (resolved at call time)
+// instead of a global singleton, so each customer's embeddings bill their own
+// OpenAI key. See resolveWorkspaceOpenAIKey.
+const buildEmbeddings = (apiKey: string) =>
+  new OpenAIEmbeddings({
+    openAIApiKey: apiKey,
+    model: EMBEDDING_MODEL,
+    maxRetries: 2,
+    timeout: 60000,
+  });
 
 const textSplitter = new RecursiveCharacterTextSplitter({
   chunkSize: TEXT_CHUNK_SIZE,
@@ -130,6 +134,16 @@ export const indexRawText = async (args: IndexRawTextArgs): Promise<void> => {
       return;
     }
 
+    // Resolve the workspace + its BYOK OpenAI key up front so embeddings bill
+    // the customer's key (not the platform's). Also reused for usage logging.
+    const contextRecord = await prisma.context.findUnique({ where: { id: contextId } });
+    if (!contextRecord) {
+      logger.warn(`Skipping vector index for context file ${fileId}; context ${contextId} not found.`);
+      return;
+    }
+    const { apiKey: embeddingApiKey } = await resolveWorkspaceOpenAIKey(contextRecord.workspaceId);
+    const embeddings = buildEmbeddings(embeddingApiKey);
+
     await ensureCollectionIfNeeded();
 
     // 1. Delete previous vectors for this file
@@ -177,9 +191,8 @@ export const indexRawText = async (args: IndexRawTextArgs): Promise<void> => {
       `Successfully indexed ${totalIndexed} vector chunks for context ${contextId} file ${fileId}.`,
     );
 
-    // Track AI Usage centrally for all embeddings
-    const contextRecord = await prisma.context.findUnique({ where: { id: contextId } });
-    if (contextRecord && totalIndexed > 0) {
+    // Track AI Usage centrally for all embeddings (contextRecord resolved above)
+    if (totalIndexed > 0) {
       const estimatedTokens = Math.ceil(normalizedText.length / 4);
       await aiUsageService
         .logUsage({
@@ -248,12 +261,20 @@ export const queryContexts = async (
   }
 
   try {
+    // Resolve the workspace + its BYOK OpenAI key before embedding the query.
+    const contextRecord = await prisma.context.findUnique({ where: { id: contextIds[0] } });
+    if (!contextRecord) {
+      logger.warn(`queryContexts: context ${contextIds[0]} not found — skipping.`);
+      return [];
+    }
+    const { apiKey: embeddingApiKey } = await resolveWorkspaceOpenAIKey(contextRecord.workspaceId);
+    const embeddings = buildEmbeddings(embeddingApiKey);
+
     const vector = await embeddings.embedQuery(queryText);
     const points = await queryVectors(contextIds, vector, limit);
 
     // Track AI Usage centrally for querying embeddings
-    const contextRecord = await prisma.context.findUnique({ where: { id: contextIds[0] } });
-    if (contextRecord) {
+    {
       const estimatedTokens = Math.ceil(queryText.length / 4);
       aiUsageService
         .logUsage({

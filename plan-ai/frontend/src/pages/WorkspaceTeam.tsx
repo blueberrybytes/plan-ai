@@ -62,6 +62,7 @@ const WorkspaceSettingsSection: React.FC<{ activeWorkspace: WorkspaceResponse }>
 
   const [openRouterKey, setOpenRouterKey] = useState("");
   const [deepgramKey, setDeepgramKey] = useState("");
+  const [openaiKey, setOpenaiKey] = useState("");
   const [tokenLimit, setTokenLimit] = useState("");
   const [defaultThemeId, setDefaultThemeId] = useState<string | null>(null);
 
@@ -69,6 +70,7 @@ const WorkspaceSettingsSection: React.FC<{ activeWorkspace: WorkspaceResponse }>
     if (activeWorkspace) {
       setOpenRouterKey(activeWorkspace.openRouterKey || "");
       setDeepgramKey(activeWorkspace.deepgramKey || "");
+      setOpenaiKey(activeWorkspace.openaiKey || "");
       setTokenLimit(activeWorkspace.monthlyTokenLimit?.toString() || "200000");
       setDefaultThemeId(activeWorkspace.defaultThemeId ?? null);
     }
@@ -87,6 +89,7 @@ const WorkspaceSettingsSection: React.FC<{ activeWorkspace: WorkspaceResponse }>
       if (!activeWorkspace.isCourtesy) {
         payload.openRouterKey = openRouterKey;
         payload.deepgramKey = deepgramKey;
+        payload.openaiKey = openaiKey;
       }
       await updateSettings(payload).unwrap();
       dispatch(setToastMessage({ message: "Workspace settings updated", severity: "success" }));
@@ -143,7 +146,7 @@ const WorkspaceSettingsSection: React.FC<{ activeWorkspace: WorkspaceResponse }>
               type="password"
               value={deepgramKey}
               onChange={(e) => setDeepgramKey(e.target.value)}
-              sx={{ mb: 3 }}
+              sx={{ mb: 2 }}
               size="small"
               helperText={
                 <span>
@@ -154,6 +157,27 @@ const WorkspaceSettingsSection: React.FC<{ activeWorkspace: WorkspaceResponse }>
                     rel="noopener noreferrer"
                   >
                     console.deepgram.com
+                  </Link>
+                </span>
+              }
+            />
+            <TextField
+              fullWidth
+              label="OpenAI API Key"
+              type="password"
+              value={openaiKey}
+              onChange={(e) => setOpenaiKey(e.target.value)}
+              sx={{ mb: 3 }}
+              size="small"
+              helperText={
+                <span>
+                  Used only for embeddings (RAG / codebase search). Get your key at{" "}
+                  <Link
+                    href="https://platform.openai.com/api-keys"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    platform.openai.com
                   </Link>
                 </span>
               }

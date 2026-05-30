@@ -56,6 +56,11 @@ model Workspace {
   updatedAt         DateTime      @updatedAt
   openRouterKey     String?
   deepgramKey       String?
+  // BYOK key used ONLY for embeddings (RAG). The workspace's openRouterKey
+  // can't be used for embeddings — OpenRouter doesn't serve them — so we ask
+  // for a dedicated OpenAI key. Falls back to the global key for courtesy
+  // workspaces (and as a safety net to avoid breaking RAG).
+  openaiKey         String?
   isCourtesy        Boolean       @default(false)
   monthlyTokenLimit Int           @default(200000)
   // Workspace-wide default brand theme. Used for AI-generated docs & slides

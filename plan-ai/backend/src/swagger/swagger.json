@@ -6559,6 +6559,10 @@
 					"deepgramKey": {
 						"type": "string"
 					},
+					"openaiKey": {
+						"type": "string",
+						"description": "OpenAI key (BYOK) used only for embeddings/RAG. Returned masked."
+					},
 					"isCourtesy": {
 						"type": "boolean"
 					},
@@ -6733,6 +6737,11 @@
 					"deepgramKey": {
 						"type": "string",
 						"nullable": true
+					},
+					"openaiKey": {
+						"type": "string",
+						"nullable": true,
+						"description": "OpenAI key (BYOK) for embeddings/RAG. Pass null to clear; omit to leave unchanged."
 					},
 					"monthlyTokenLimit": {
 						"type": "number",

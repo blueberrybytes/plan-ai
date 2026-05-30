@@ -23,6 +23,8 @@ export interface WorkspaceResponse {
   monthlyTokenLimit?: number;
   openRouterKey?: string;
   deepgramKey?: string;
+  /** OpenAI key (BYOK) used only for embeddings/RAG. Returned masked. */
+  openaiKey?: string;
   isCourtesy?: boolean;
   /** Workspace-wide default brand theme for AI-generated docs & slides. Null = none. */
   defaultThemeId?: string | null;
@@ -31,6 +33,8 @@ export interface WorkspaceResponse {
 export interface UpdateWorkspaceSettingsRequest {
   openRouterKey?: string | null;
   deepgramKey?: string | null;
+  /** OpenAI key (BYOK) for embeddings/RAG. Pass null to clear; omit to leave unchanged. */
+  openaiKey?: string | null;
   monthlyTokenLimit?: number;
   isCourtesy?: boolean;
   /** Workspace-wide default brand theme. Pass null to clear; omit to leave unchanged. */
@@ -114,6 +118,7 @@ export class WorkspaceController extends BaseWorkspaceController {
       isCourtesy: m.workspace.isCourtesy,
       openRouterKey: m.role === "OWNER" ? (m.workspace.openRouterKey ? "••••••••••••••••" : undefined) : undefined,
       deepgramKey: m.role === "OWNER" ? (m.workspace.deepgramKey ? "••••••••••••••••" : undefined) : undefined,
+      openaiKey: m.role === "OWNER" ? (m.workspace.openaiKey ? "••••••••••••••••" : undefined) : undefined,
       defaultThemeId: m.workspace.defaultThemeId,
     }));
   }
@@ -507,6 +512,9 @@ export class WorkspaceController extends BaseWorkspaceController {
     }
     if (body.deepgramKey !== undefined && body.deepgramKey !== "••••••••••••••••") {
       updateData.deepgramKey = body.deepgramKey;
+    }
+    if (body.openaiKey !== undefined && body.openaiKey !== "••••••••••••••••") {
+      updateData.openaiKey = body.openaiKey;
     }
     if (body.monthlyTokenLimit !== undefined) updateData.monthlyTokenLimit = body.monthlyTokenLimit;
     if (body.isCourtesy !== undefined) updateData.isCourtesy = body.isCourtesy;

@@ -21,7 +21,7 @@ Plan AI is **purpose-built for software teams**. It's the meeting tool that know
 - Sales calls, customer success conversations, recruiting interviews — for those, use [Fathom](https://fathom.video/) or [Granola](https://granola.ai/). They're great at it.
 - Marketing meetings, board meetings, generic business calls — Plan AI's value compounds with technical context. Without code, you're paying for capabilities you don't use.
 
-If you've ever said *"we discussed this in standup, then nobody wrote it down"* — that's the problem Plan AI is built to delete.
+If you've ever said _"we discussed this in standup, then nobody wrote it down"_ — that's the problem Plan AI is built to delete.
 
 ## 🌐 Try It Live
 
@@ -35,10 +35,16 @@ If you've ever said *"we discussed this in standup, then nobody wrote it down"* 
 
 This software has been developed by [BlueberryBytes](https://blueberrybytes.com).
 
-The engineer and CEO of the Company:
+## The creators:
+
+### Xavier Mas Leszkiewicz
 
 - Linkedin: [Xavier Mas Leszkiewicz](https://www.linkedin.com/in/xavier-mas-leszkiewicz)
 - Github: [masosky](https://github.com/masosky)
+
+### Noelia Tolavi Flores
+
+- Linkedin [Noelia Tolavi Flores](https://www.linkedin.com/in/noelia-tolavi-6766b2176)
 
 ## 📥 Downloads
 

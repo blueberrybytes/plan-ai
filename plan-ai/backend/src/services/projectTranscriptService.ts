@@ -18,6 +18,7 @@ import {
   TICKET_MODEL,
   DEFAULT_AI_MODEL,
   getMaxContextChunks,
+  extractOpenRouterUsage,
 } from "../utils/aiModelUtils";
 import { generateText, stepCountIs, Output } from "ai";
 import { z, type ZodTypeAny } from "zod";
@@ -590,7 +591,7 @@ export class ProjectTranscriptService {
     // PHASE 1: Fast Summary to Unlock UI Early
     try {
       const fastModel = await getWorkspaceModel(input.workspaceId, "openai/gpt-4o-mini");
-      const { output: fastParsed, usage } = await generateText({
+      const { output: fastParsed, usage, providerMetadata } = await generateText({
         model: fastModel,
         providerOptions: getFallbackProviderOptions("openai/gpt-4o-mini"),
         output: Output.object({
@@ -609,6 +610,7 @@ export class ProjectTranscriptService {
       });
 
       if (usage) {
+        const fastUsage = extractOpenRouterUsage({ usage, providerMetadata });
         aiUsageService
           .logUsage({
             userId: input.userId,
@@ -616,8 +618,10 @@ export class ProjectTranscriptService {
             feature: "TASK_EXTRACTION",
             provider: "openrouter", // or get fallback provider
             model: "openai/gpt-4o-mini",
-            inputTokens: usage.inputTokens || 0,
-            outputTokens: usage.outputTokens || 0,
+            inputTokens: fastUsage.inputTokens,
+            outputTokens: fastUsage.outputTokens,
+            cost: fastUsage.cost,
+            cachedTokens: fastUsage.cachedTokens,
           })
           .catch(() => {});
       }
@@ -1234,6 +1238,7 @@ export class ProjectTranscriptService {
           finalContextSection += `\n\n### Codebase Investigation Context:\n${investigation.text}\n`;
         }
 
+        const investUsage = extractOpenRouterUsage(investigation);
         aiUsageService
           .logUsage({
             userId,
@@ -1241,8 +1246,10 @@ export class ProjectTranscriptService {
             feature: "TASK_EXTRACTION",
             provider: "openrouter",
             model: "openai/gpt-4o-mini",
-            inputTokens: investigation.totalUsage?.inputTokens || 0,
-            outputTokens: investigation.totalUsage?.outputTokens || 0,
+            inputTokens: investUsage.inputTokens,
+            outputTokens: investUsage.outputTokens,
+            cost: investUsage.cost,
+            cachedTokens: investUsage.cachedTokens,
           })
           .catch(() => {});
       } catch (err) {
@@ -1332,7 +1339,7 @@ Transcript/Request:
 ${content}`;
 
     let object;
-    let totalUsage;
+    let extractedUsage: ReturnType<typeof extractOpenRouterUsage> | undefined;
 
     try {
       let attempt = 0;
@@ -1354,7 +1361,7 @@ ${content}`;
           maxRetries: 2,
         });
         object = result.output;
-        totalUsage = result.usage;
+        extractedUsage = extractOpenRouterUsage(result);
         break;
       } catch (error: any) {
         attempt++;
@@ -1372,7 +1379,7 @@ ${content}`;
       }
     }
 
-      if (totalUsage) {
+      if (extractedUsage) {
         aiUsageService
           .logUsage({
             userId,
@@ -1380,8 +1387,10 @@ ${content}`;
             feature: "TRANSCRIPT",
             provider: "openrouter",
             model: activeModel,
-            inputTokens: totalUsage.inputTokens || 0,
-            outputTokens: totalUsage.outputTokens || 0,
+            inputTokens: extractedUsage.inputTokens,
+            outputTokens: extractedUsage.outputTokens,
+            cost: extractedUsage.cost,
+            cachedTokens: extractedUsage.cachedTokens,
           })
           .catch(() => {});
       }
@@ -1560,7 +1569,7 @@ ${transcriptForLLM}`;
 
     try {
       const model = await getWorkspaceModel(workspaceId, modelKey || DEFAULT_AI_MODEL);
-      const { output, usage } = await generateText({
+      const { output, usage, providerMetadata } = await generateText({
         model,
         providerOptions: getFallbackProviderOptions(modelKey || DEFAULT_AI_MODEL),
         output: Output.object({
@@ -1573,6 +1582,7 @@ ${transcriptForLLM}`;
       });
 
       if (usage) {
+        const speakerUsage = extractOpenRouterUsage({ usage, providerMetadata });
         aiUsageService
           .logUsage({
             userId: "system",
@@ -1580,8 +1590,10 @@ ${transcriptForLLM}`;
             feature: "TASK_EXTRACTION",
             provider: "openrouter",
             model: modelKey || DEFAULT_AI_MODEL,
-            inputTokens: usage.inputTokens || 0,
-            outputTokens: usage.outputTokens || 0,
+            inputTokens: speakerUsage.inputTokens,
+            outputTokens: speakerUsage.outputTokens,
+            cost: speakerUsage.cost,
+            cachedTokens: speakerUsage.cachedTokens,
           })
           .catch(() => {});
       }
@@ -2160,6 +2172,7 @@ ${transcriptForLLM}`;
         maxRetries: 2,
       });
 
+      const repoUsage = extractOpenRouterUsage(result);
       aiUsageService
         .logUsage({
           userId,
@@ -2167,8 +2180,10 @@ ${transcriptForLLM}`;
           feature: "TASK_EXTRACTION",
           provider: "openrouter",
           model: CACHED_CONTEXT_MODEL,
-          inputTokens: result.totalUsage?.inputTokens || 0,
-          outputTokens: result.totalUsage?.outputTokens || 0,
+          inputTokens: repoUsage.inputTokens,
+          outputTokens: repoUsage.outputTokens,
+          cost: repoUsage.cost,
+          cachedTokens: repoUsage.cachedTokens,
         })
         .catch(() => {});
 
@@ -2237,6 +2252,7 @@ ${transcriptForLLM}`;
           investigationContext = investigation.text;
         }
 
+        const investUsage = extractOpenRouterUsage(investigation);
         aiUsageService
           .logUsage({
             userId,
@@ -2244,8 +2260,10 @@ ${transcriptForLLM}`;
             feature: "TASK_EXTRACTION",
             provider: "openrouter",
             model: "openai/gpt-4o-mini",
-            inputTokens: investigation.totalUsage?.inputTokens || 0,
-            outputTokens: investigation.totalUsage?.outputTokens || 0,
+            inputTokens: investUsage.inputTokens,
+            outputTokens: investUsage.outputTokens,
+            cost: investUsage.cost,
+            cachedTokens: investUsage.cachedTokens,
           })
           .catch(() => {});
       } catch (err) {
@@ -2316,7 +2334,7 @@ ${transcriptForLLM}`;
       .join("\n\n---\n\n");
 
     try {
-      const { output, usage } = await generateText({
+      const { output, usage, providerMetadata } = await generateText({
         model,
         providerOptions: getFallbackProviderOptions(activeModel),
         output: Output.object({
@@ -2342,6 +2360,7 @@ ${taskSummaries}`,
       });
 
       if (usage) {
+        const enrichUsage = extractOpenRouterUsage({ usage, providerMetadata });
         aiUsageService
           .logUsage({
             userId,
@@ -2349,8 +2368,10 @@ ${taskSummaries}`,
             feature: "TASK_EXTRACTION",
             provider: "openrouter",
             model: activeModel,
-            inputTokens: usage.inputTokens || 0,
-            outputTokens: usage.outputTokens || 0,
+            inputTokens: enrichUsage.inputTokens,
+            outputTokens: enrichUsage.outputTokens,
+            cost: enrichUsage.cost,
+            cachedTokens: enrichUsage.cachedTokens,
           })
           .catch(() => {});
       }
