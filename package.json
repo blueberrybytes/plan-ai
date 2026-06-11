@@ -1,0 +1,95 @@
+{
+  "name": "plan-ai",
+  "version": "4.1.5",
+  "description": "Plan AI - AI-assisted meeting planning & execution platform by Blueberrybytes",
+  "main": "index.js",
+  "engines": {
+    "node": "22.17.1"
+  },
+  "scripts": {
+    "clean:install": "rm -rf node_modules yarn.lock && yarn install && (cd plan-ai/backend && yarn install) && (cd plan-ai/frontend && yarn install) && (cd plan-ai-recorder && yarn install) && (cd plan-ai-mobile && yarn install) && (cd docs && yarn install) && (cd plan-ai/voice-ai && rm -rf .venv && uv sync)",
+    "dev": "concurrently --kill-others-on-fail --prefix-colors \"bgBlue.bold,bgGreen.bold,bgCyan.bold,bgMagenta.bold\" --prefix \"[{name}]\" --names \"frontend,backend,gitnexus,voice\" \"cd plan-ai/frontend && yarn start\" \"cd plan-ai/backend && yarn dev\" \"npx gitnexus serve\" \"yarn dev:voice\"",
+    "set:version": "node scripts/set-version.js",
+    "setup:env": "cp plan-ai/backend/.env.template plan-ai/backend/.env && cp plan-ai/frontend/.env.template plan-ai/frontend/.env && touch plan-ai-mobile/.env && touch plan-ai-recorder/.env",
+    "update": "yarn format && cd plan-ai/backend && yarn generate:swagger && yarn prisma:migrate && cd ../frontend && yarn generate:types:local && yarn prisma:generate && cd ../../plan-ai-recorder && yarn generate:types && cd ../plan-ai-mobile && yarn generate:types && cd .. && echo '✅ Types synced. Re-indexing codebase in background...' && yarn gitnexus:all &",
+    "prepare": "husky",
+    "gitnexus:all": "npx gitnexus analyze && yarn gitnexus:group",
+    "gitnexus:setup": "mkdir -p ~/.gitnexus/groups/plan-ai && cp .gitnexus/group.yaml ~/.gitnexus/groups/plan-ai/group.yaml",
+    "gitnexus:group": "yarn gitnexus:setup && yarn gitnexus:backend && yarn gitnexus:frontend && yarn gitnexus:recorder && yarn gitnexus:mobile && npx gitnexus group sync plan-ai",
+    "gitnexus:backend": "cd plan-ai/backend && npx gitnexus analyze --skip-git --name plan-backend",
+    "gitnexus:frontend": "cd plan-ai/frontend && npx gitnexus analyze --skip-git --name plan-frontend",
+    "gitnexus:recorder": "cd plan-ai-recorder && npx gitnexus analyze --skip-git --name plan-recorder",
+    "gitnexus:mobile": "cd plan-ai-mobile && npx gitnexus analyze --skip-git --name plan-mobile",
+    "typecheck:all": "concurrently --prefix-colors \"bgBlue,bgGreen,bgMagenta,bgYellow\" --prefix \"[{name}]\" --names \"backend,frontend,recorder,mobile\" \"yarn --cwd plan-ai/backend build:ts\" \"yarn --cwd plan-ai/frontend build:ts\" \"yarn --cwd plan-ai-recorder typecheck\" \"yarn --cwd plan-ai-mobile typecheck\"",
+    "build:all": "yarn --cwd plan-ai/backend build:ts && yarn --cwd plan-ai/frontend build:ts && yarn --cwd plan-ai-recorder typecheck",
+    "docker": "cd plan-ai/backend && docker compose up -d",
+    "db:migrate": "cd plan-ai/backend && yarn prisma:migrate",
+    "db:seed": "cd plan-ai/backend && yarn prisma:seed",
+    "install:all": "yarn && (cd plan-ai/backend && yarn) && (cd plan-ai/frontend && yarn) && (cd plan-ai-recorder && yarn) && (cd plan-ai-mobile && yarn) && (cd docs && yarn) && (cd plan-ai/voice-ai && uv sync)",
+    "dev:voice": "cd plan-ai/voice-ai && uv run uvicorn main:app --reload --port 8001",
+    "dev:recorder": "cd plan-ai-recorder && yarn dev",
+    "package:recorder": "cd plan-ai-recorder && yarn package",
+    "dev:mobile": "cd plan-ai-mobile && yarn start",
+    "dev:docs": "cd docs && npm run docs:dev",
+    "tunnel-frontend": "cloudflared tunnel --url http://localhost:3000",
+    "tunnel-backend": "cloudflared tunnel run --url http://localhost:8080 my-backend",
+    "repomix": "bash ./repomix.sh",
+    "repomix:single": "npx repomix . --output repomix_output/plan-ai-full.xml --style xml --compress --ignore '**/tests/**,**/*.test.*,**/*.spec.*,**/android/**,**/ios/**,**/.next/**,**/dist/**,**/build/**,**/.expo/**,**/coverage/**,**/jest/**,**/__tests__/**,**/*.pbxproj,**/*.xcworkspacedata,**/*.storyboard,**/node_modules/**,**/.venv/**,**/voice-ai/.venv/**,**/.git/**,**/repomix_output/**'",
+    "kill-ports": "echo 'Killing ports 3000, 8080, 4747, 8000, 8001 and electron...' && lsof -ti:3000 | xargs -r kill -9 && lsof -ti:8080 | xargs -r kill -9 && lsof -ti:4747 | xargs -r kill -9 && lsof -ti:8000 | xargs -r kill -9 && lsof -ti:8001 | xargs -r kill -9 && (pkill -9 -if electron || true) && echo 'All ports killed successfully!'",
+    "lint": "yarn lint:backend && yarn lint:frontend",
+    "lint:backend": "yarn --cwd plan-ai/backend lint",
+    "lint:frontend": "yarn --cwd plan-ai/frontend lint",
+    "lint:fix": "yarn --cwd plan-ai/backend lint:fix && yarn --cwd plan-ai/frontend lint:fix",
+    "format": "yarn --cwd plan-ai/backend format && yarn --cwd plan-ai/frontend format",
+    "test:backend": "yarn --cwd plan-ai/backend test",
+    "test:frontend": "yarn --cwd plan-ai/frontend test",
+    "test:coverage": "yarn --cwd plan-ai/backend test:coverage && yarn --cwd plan-ai/frontend test:coverage",
+    "coverage": "yarn --cwd plan-ai/backend test:coverage && yarn --cwd plan-ai/frontend test:coverage",
+    "register-protocol": "/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -r -domain local -domain system -domain user",
+    "studio": "cd plan-ai/backend && npx prisma studio",
+    "push-tag": "bash -c 'git tag $1 && git push origin $1' --"
+  },
+  "keywords": [
+    "plan-ai",
+    "ai",
+    "ai-jira",
+    "meeting-notes",
+    "openai",
+    "firebase",
+    "typescript",
+    "blueberrybytes"
+  ],
+  "author": "Xavier Masleszkiewicz",
+  "license": "BUSL-1.1",
+  "devDependencies": {
+    "@types/node": "^22.15.17",
+    "concurrently": "^9.2.1",
+    "env-cmd": "^10.1.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^15.2.2",
+    "prettier": "^3.5.3",
+    "repomix": "^1.14.0",
+    "ts-node": "^10.9.2"
+  },
+  "dependencies": {
+    "http-server": "^14.1.1",
+    "zod": "^3.24.4"
+  },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx,json,md,css,scss,yml,yaml}": [
+      "prettier --write"
+    ],
+    "backend/src/**/*.{ts,tsx}": [
+      "yarn --cwd backend lint:fix"
+    ],
+    "frontend/src/**/*.{ts,tsx,js,jsx}": [
+      "yarn --cwd frontend lint:fix"
+    ],
+    "plan-ai-recorder/src/**/*.{ts,tsx,js,jsx}": [
+      "yarn --cwd plan-ai-recorder eslint --fix"
+    ],
+    "plan-ai-mobile/src/**/*.{ts,tsx,js,jsx}": [
+      "yarn --cwd plan-ai-mobile expo lint"
+    ]
+  }
+}

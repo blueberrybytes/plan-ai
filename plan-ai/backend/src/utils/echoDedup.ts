@@ -1,0 +1,394 @@
+/**
+ * Cross-channel echo dedup for the recorder.
+ *
+ * Problem: when the user listens through SPEAKERS (no headphones), the meeting
+ * audio physically re-enters their microphone. The mic Deepgram channel then
+ * transcribes the OTHER participants' words, which get labeled as the user's
+ * ("User: …") — duplicating what the system channel already produced
+ * ("Others: …").
+ *
+ * Matching is done at the WORD level using Deepgram's per-word timestamps,
+ * because real-world logs showed utterance-level comparison is fragile:
+ * the sys capture starts ~2s after the mic (native binary spin-up), and the
+ * two channels segment continuous speech at different boundaries, so utterance
+ * starts don't correspond across channels. Word times do: both channels hear
+ * the same physical audio in real time, so a bleed word carries ~the same
+ * wall-clock time on both channels.
+ *
+ * Direction guard (per word): a sys word can only "cover" a mic word if it
+ * occurred no later than `leadMs` (150ms) after it. True bleed: sys ≈
+ * simultaneous (digital capture) → matches. The user's own voice coming BACK
+ * through sys (far-end echo via a remote participant's speakers / platform
+ * echo) arrives ≥~300ms later → never matches → the user's speech is never
+ * dropped. Sys words may be up to `earlierMs` (2s) older than the mic word to
+ * absorb clock anchoring error — earlier is always safe (only bleed looks
+ * earlier).
+ *
+ * Conservative by design:
+ *  - mic segments shorter than MIN_TOKENS words are never dropped,
+ *  - ≥ `threshold` (default 0.8) of the mic words must match (bag-of-words
+ *    with time windows: echoed audio is muffled, the ASR may transcribe a
+ *    word or two differently).
+ */
+
+const DEFAULT_WINDOW_MS = 10000;
+const DEFAULT_THRESHOLD = 0.8;
+// Backstop posture: the recorder's worklet echo gate is now the PRIMARY defense
+// (it silences faint speaker bleed before it ever reaches Deepgram). This
+// server-side pass only catches the residual case — LOUD bleed that cleared the
+// gate — which is a near-perfect duplicate of the sys channel. Raising the
+// minimum-token floor keeps short user utterances (backchannels, brief replies)
+// from ever being dropped here, since those are exactly where the time-based
+// matcher is most prone to a false positive against the user's own speech.
+const MIN_TOKENS = 4;
+/** A sys word may occur at most this much AFTER the mic word and still match. */
+const DEFAULT_LEAD_MS = 150;
+/** A sys word may occur at most this much BEFORE the mic word (clock slop). */
+const DEFAULT_EARLIER_MS = 2000;
+
+/** Lowercase, strip punctuation/diacritics, split into word tokens. */
+export function tokenize(text: string): string[] {
+  return text
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "") // diacritics
+    .replace(/[^\p{L}\p{N}\s]/gu, " ") // punctuation → space
+    .split(/\s+/)
+    .filter(Boolean);
+}
+
+export interface TimedWord {
+  token: string;
+  /** When this word's AUDIO occurred, ms on a clock shared by both channels. */
+  startMs: number;
+  /**
+   * Index of the source Deepgram word this token came from. Lets word-level
+   * subtraction map token matches back to whole words (one word may tokenize
+   * into several tokens, e.g. "que-tal").
+   */
+  ref?: number;
+}
+
+/** Deepgram live/prerecorded word shape (only the fields we use). */
+export interface DeepgramWordLike {
+  word?: string;
+  punctuated_word?: string;
+  /** Seconds from the start of that stream's audio. */
+  start?: number;
+}
+
+/**
+ * Convert Deepgram words to TimedWords on the shared wall clock.
+ * `epochMs` = wall-clock of that stream's audio t=0.
+ */
+export function wordsFromDeepgram(
+  words: DeepgramWordLike[] | undefined,
+  epochMs: number,
+): TimedWord[] {
+  if (!words) return [];
+  const out: TimedWord[] = [];
+  for (let i = 0; i < words.length; i++) {
+    const w = words[i];
+    const raw = w.punctuated_word ?? w.word ?? "";
+    const start = typeof w.start === "number" ? w.start : null;
+    if (start === null) continue;
+    for (const token of tokenize(raw)) {
+      out.push({ token, startMs: epochMs + start * 1000, ref: i });
+    }
+  }
+  return out;
+}
+
+/** Fallback when no per-word timings exist: every token at the segment start. */
+export function wordsFromText(text: string, startMs: number): TimedWord[] {
+  return tokenize(text).map((token) => ({ token, startMs }));
+}
+
+export interface MicEchoVerdict {
+  isEcho: boolean;
+  reason: "below-min-tokens" | "no-sys-words" | "coverage";
+  coverage: number;
+  micTokenCount: number;
+  matchedTokens: number;
+  /** Sys words currently inside the look-back window. */
+  sysWordsInWindow: number;
+  /**
+   * Per-token match flags, parallel to the evaluated `micWords`. A `true` means
+   * that token was found in the recent sys audio (i.e. it is echo). Used by
+   * `subtractEcho` to strip only the echoed words.
+   */
+  matched: boolean[];
+}
+
+export interface EchoSubtractionResult {
+  /** Text to emit with echoed words removed. Empty string ⇒ drop entirely. */
+  keptText: string;
+  /** Segment-level verdict (coverage, counts) — handy for diagnostics/logging. */
+  verdict: MicEchoVerdict;
+  /** How many Deepgram words were stripped as echo. */
+  removedWords: number;
+  /** Total Deepgram words considered. */
+  totalWords: number;
+}
+
+export class EchoDeduper {
+  /** token → sorted-ish list of occurrence times (ms). */
+  private sysWordTimes = new Map<string, number[]>();
+  /** Dedup keys so repeated interims don't multiply the same word. */
+  private seen = new Set<string>();
+  private latestSysMs = 0;
+
+  constructor(
+    private readonly windowMs: number = DEFAULT_WINDOW_MS,
+    private readonly threshold: number = DEFAULT_THRESHOLD,
+    private readonly leadMs: number = DEFAULT_LEAD_MS,
+    private readonly earlierMs: number = DEFAULT_EARLIER_MS,
+  ) {}
+
+  /**
+   * Record words heard on the system (others) channel. Safe to call with
+   * interim results: repeats of the same word at the same audio time are
+   * deduped (Deepgram keeps word timings stable across interim updates).
+   */
+  noteSystemWords(words: TimedWord[]): void {
+    for (const w of words) {
+      // Round to 100ms so floating jitter across interims doesn't defeat dedup.
+      const key = `${w.token}@${Math.round(w.startMs / 100)}`;
+      if (this.seen.has(key)) continue;
+      this.seen.add(key);
+      const list = this.sysWordTimes.get(w.token);
+      if (list) list.push(w.startMs);
+      else this.sysWordTimes.set(w.token, [w.startMs]);
+      if (w.startMs > this.latestSysMs) this.latestSysMs = w.startMs;
+    }
+    this.prune();
+  }
+
+  /**
+   * Decide whether a mic segment is speaker bleed. Each mic word matches an
+   * unused sys word with the same token occurring in
+   * [micStart - earlierMs, micStart + leadMs].
+   */
+  evaluateMicWords(micWords: TimedWord[]): MicEchoVerdict {
+    const micTokenCount = micWords.length;
+    let sysWordsInWindow = 0;
+    for (const list of this.sysWordTimes.values()) sysWordsInWindow += list.length;
+
+    if (micTokenCount < MIN_TOKENS) {
+      return {
+        isEcho: false,
+        reason: "below-min-tokens",
+        coverage: 0,
+        micTokenCount,
+        matchedTokens: 0,
+        sysWordsInWindow,
+        matched: new Array(micTokenCount).fill(false),
+      };
+    }
+    if (sysWordsInWindow === 0) {
+      return {
+        isEcho: false,
+        reason: "no-sys-words",
+        coverage: 0,
+        micTokenCount,
+        matchedTokens: 0,
+        sysWordsInWindow,
+        matched: new Array(micTokenCount).fill(false),
+      };
+    }
+
+    // Greedy time-windowed matching; consume each sys occurrence once.
+    const used = new Map<string, Set<number>>(); // token → consumed indices
+    const matched = new Array(micTokenCount).fill(false);
+    let matchedCount = 0;
+    for (let m = 0; m < micWords.length; m++) {
+      const mw = micWords[m];
+      const times = this.sysWordTimes.get(mw.token);
+      if (!times) continue;
+      const consumed = used.get(mw.token) ?? new Set<number>();
+      let best = -1;
+      let bestDist = Infinity;
+      for (let i = 0; i < times.length; i++) {
+        if (consumed.has(i)) continue;
+        const delta = times[i] - mw.startMs; // >0 → sys later than mic
+        if (delta > this.leadMs || delta < -this.earlierMs) continue;
+        const dist = Math.abs(delta);
+        if (dist < bestDist) {
+          bestDist = dist;
+          best = i;
+        }
+      }
+      if (best >= 0) {
+        consumed.add(best);
+        used.set(mw.token, consumed);
+        matched[m] = true;
+        matchedCount++;
+      }
+    }
+
+    const coverage = matchedCount / micTokenCount;
+    return {
+      isEcho: coverage >= this.threshold,
+      reason: "coverage",
+      coverage,
+      micTokenCount,
+      matchedTokens: matchedCount,
+      sysWordsInWindow,
+      matched,
+    };
+  }
+
+  /**
+   * Word-level echo subtraction for the LIVE mic channel.
+   *
+   * The old behaviour was all-or-nothing: if a mic segment was ≥ `threshold`
+   * echo, the WHOLE segment was dropped — which deleted the user's own words
+   * when they spoke OVER the other person (double-talk), because their few
+   * unique words rode along inside a segment dominated by bleed.
+   *
+   * Instead, when a segment is predominantly echo we remove ONLY the individual
+   * Deepgram words that matched recent sys audio and keep the rest. The user's
+   * unique words don't match anything on the sys channel, so they survive. The
+   * per-word direction guard (inherited from `evaluateMicWords`) still protects
+   * the user's own far-end echo from being treated as bleed.
+   *
+   * Segments BELOW threshold are kept verbatim — we never pepper-strip genuine
+   * speech just because it shares a few common words ("the", "to", …) with the
+   * sys channel.
+   *
+   * Falls back to the whole-segment decision when per-word timings are missing
+   * (rare on live Deepgram), since there's nothing to rebuild from.
+   */
+  subtractEcho(
+    dgWords: DeepgramWordLike[],
+    epochMs: number,
+    transcript: string,
+    fallbackStartMs: number,
+  ): EchoSubtractionResult {
+    const hasWordTimes = dgWords.some((w) => typeof w.start === "number");
+
+    if (!hasWordTimes) {
+      const verdict = this.evaluateMicWords(wordsFromText(transcript, fallbackStartMs));
+      return {
+        keptText: verdict.isEcho ? "" : transcript,
+        verdict,
+        removedWords: verdict.isEcho ? dgWords.length : 0,
+        totalWords: dgWords.length,
+      };
+    }
+
+    const timed = wordsFromDeepgram(dgWords, epochMs);
+    const verdict = this.evaluateMicWords(timed);
+
+    // Predominantly genuine speech → keep the whole thing untouched.
+    if (!verdict.isEcho) {
+      return { keptText: transcript, verdict, removedWords: 0, totalWords: dgWords.length };
+    }
+
+    // A Deepgram word is echo iff it produced ≥1 token and ALL of its tokens
+    // matched recent sys audio. Aggregate the token-level match flags by `ref`.
+    const perWord = new Map<number, { total: number; matched: number }>();
+    timed.forEach((tw, i) => {
+      if (tw.ref === undefined) return;
+      const agg = perWord.get(tw.ref) ?? { total: 0, matched: 0 };
+      agg.total++;
+      if (verdict.matched[i]) agg.matched++;
+      perWord.set(tw.ref, agg);
+    });
+
+    const kept: string[] = [];
+    let removedWords = 0;
+    dgWords.forEach((w, i) => {
+      const agg = perWord.get(i);
+      const isEchoWord = agg !== undefined && agg.total > 0 && agg.matched === agg.total;
+      if (isEchoWord) {
+        removedWords++;
+        return;
+      }
+      const text = w.punctuated_word ?? w.word ?? "";
+      if (text) kept.push(text);
+    });
+
+    return {
+      keptText: kept.join(" ").trim(),
+      verdict,
+      removedWords,
+      totalWords: dgWords.length,
+    };
+  }
+
+  // ── Text-level conveniences (fallback when per-word timings are missing) ──
+
+  noteSystemText(text: string, startMs: number): void {
+    this.noteSystemWords(wordsFromText(text, startMs));
+  }
+
+  isMicEcho(text: string, micStartMs: number): boolean {
+    return this.evaluateMicWords(wordsFromText(text, micStartMs)).isEcho;
+  }
+
+  private prune(): void {
+    const cutoff = this.latestSysMs - this.windowMs;
+    for (const [token, times] of this.sysWordTimes) {
+      const kept = times.filter((t) => t >= cutoff);
+      if (kept.length === 0) this.sysWordTimes.delete(token);
+      else if (kept.length !== times.length) this.sysWordTimes.set(token, kept);
+    }
+    // `seen` only grows during a session; cap it to avoid unbounded memory on
+    // very long meetings (keys are tiny, but be tidy).
+    if (this.seen.size > 50_000) this.seen.clear();
+  }
+}
+
+// ─── Batch variant for prerecorded/diarized audio (reprocess + uploads) ──────
+
+export interface TimedSegment {
+  transcript: string;
+  /** Seconds from the start of the recording. */
+  start: number;
+  end: number;
+  /** Optional per-word timings (preferred when available). */
+  words?: DeepgramWordLike[];
+}
+
+/**
+ * Batch echo dedup for diarized utterances (the reprocess/upload path, where we
+ * re-transcribe the stored mic + sys audio separately and merge by time).
+ *
+ * Uses the same word-level matcher as live when per-word timings exist
+ * (Deepgram prerecorded always provides them), with a wider lead window
+ * (`leadSeconds`, default 0.75s) because the two stored files may not start at
+ * exactly the same instant.
+ *
+ * Returns the mic utterances to KEEP (non-echo).
+ */
+export function dropEchoUtterances<T extends TimedSegment>(
+  micUtterances: T[],
+  sysUtterances: TimedSegment[],
+  opts: { threshold?: number; leadSeconds?: number; earlierSeconds?: number } = {},
+): T[] {
+  if (sysUtterances.length === 0) return micUtterances;
+  const threshold = opts.threshold ?? DEFAULT_THRESHOLD;
+  // Lead stays tight (far-end echo of the user arrives ≥~300ms later on sys);
+  // `earlier` is generous: the stored sys file may start seconds after the mic
+  // file (native binary spin-up), which shifts sys word times EARLIER — and
+  // earlier is always safe (only true bleed looks earlier).
+  const leadMs = (opts.leadSeconds ?? 0.3) * 1000;
+  const earlierMs = (opts.earlierSeconds ?? 3.0) * 1000;
+
+  // Files share the recording timeline → epoch 0 for both.
+  const deduper = new EchoDeduper(Number.POSITIVE_INFINITY, threshold, leadMs, earlierMs);
+  for (const sys of sysUtterances) {
+    const words = sys.words?.length
+      ? wordsFromDeepgram(sys.words, 0)
+      : wordsFromText(sys.transcript, sys.start * 1000);
+    deduper.noteSystemWords(words);
+  }
+
+  return micUtterances.filter((mic) => {
+    const words = mic.words?.length
+      ? wordsFromDeepgram(mic.words, 0)
+      : wordsFromText(mic.transcript, mic.start * 1000);
+    return !deduper.evaluateMicWords(words).isEcho;
+  });
+}

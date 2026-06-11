@@ -1,0 +1,161 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { createApi } from "@reduxjs/toolkit/query/react";
+import { baseQueryWithReauth } from "../../utils/baseQuery";
+import { components } from "../../types/api";
+
+export interface ChatAttachment {
+  url: string;
+  type: string;
+  name: string;
+  size?: number;
+}
+
+export interface ChatMessage {
+  id: string;
+  threadId: string;
+  role: "USER" | "ASSISTANT";
+  content: string;
+  attachments?: ChatAttachment[] | null;
+  createdAt: string;
+}
+
+export interface ChatThread {
+  id: string;
+  userId: string;
+  title: string;
+  /** Legacy field: internal context IDs (1:1 with projects). UI should prefer projectIds. */
+  contextIds: string[];
+  /** User-facing project IDs the chat references (resolved from contextIds on the backend). */
+  projectIds?: string[];
+  complexityLevel?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  messages?: ChatMessage[];
+}
+
+export const chatApi = createApi({
+  reducerPath: "chatApi",
+  baseQuery: baseQueryWithReauth,
+  tagTypes: ["ChatThread"],
+  endpoints: (builder) => ({
+    listThreads: builder.query<ChatThread[], void>({
+      query: () => "/api/chat/threads",
+      transformResponse: (res: any) => {
+        if (Array.isArray(res)) return res;
+        if (res?.data && Array.isArray(res.data)) return res.data;
+        return [];
+      },
+      providesTags: (result) =>
+        result
+          ? [
+              ...result.map(({ id }) => ({ type: "ChatThread" as const, id })),
+              { type: "ChatThread", id: "LIST" },
+            ]
+          : [{ type: "ChatThread", id: "LIST" }],
+    }),
+    getThread: builder.query<ChatThread & { messages: ChatMessage[] }, string>({
+      query: (threadId: string) => `/api/chat/threads/${threadId}`,
+      transformResponse: (res: { data: ChatThread & { messages?: ChatMessage[] } }) => ({
+        ...res.data,
+        messages: res.data?.messages || [],
+      }),
+      providesTags: (result, error, id) => [{ type: "ChatThread", id }],
+    }),
+    createThread: builder.mutation<
+      ChatThread,
+      {
+        title?: string;
+        /** Preferred: user-facing project IDs. Backend resolves to contexts. */
+        projectIds?: string[];
+        /** Legacy: direct context IDs. */
+        contextIds?: string[];
+        complexityLevel?: string;
+      }
+    >({
+      query: (body) => ({
+        url: "/api/chat/threads",
+        method: "POST",
+        body,
+      }),
+      transformResponse: (res: { data: ChatThread }) => res.data,
+      invalidatesTags: [{ type: "ChatThread", id: "LIST" }],
+    }),
+    sendMessage: builder.mutation<
+      { message: ChatMessage; response: ChatMessage },
+      { threadId: string; content: string }
+    >({
+      query: ({ threadId, content }: { threadId: string; content: string }) => ({
+        url: `/api/chat/threads/${threadId}/messages`,
+        method: "POST",
+        body: { content },
+      }),
+      transformResponse: (res: { data: { message: ChatMessage; response: ChatMessage } }) =>
+        res.data,
+      invalidatesTags: (result, error, { threadId }) => [
+        { type: "ChatThread", id: threadId },
+        { type: "ChatThread", id: "LIST" },
+      ],
+    }),
+    updateThread: builder.mutation<
+      ChatThread,
+      {
+        threadId: string;
+        title?: string;
+        /** Preferred: user-facing project IDs. */
+        projectIds?: string[];
+        /** Legacy: direct context IDs. */
+        contextIds?: string[];
+        complexityLevel?: string;
+      }
+    >({
+      query: ({ threadId, ...body }) => ({
+        url: `/api/chat/threads/${threadId}`,
+        method: "PUT",
+        body,
+      }),
+      transformResponse: (res: { data: ChatThread }) => res.data,
+      invalidatesTags: (result, error, { threadId }) => [
+        { type: "ChatThread", id: threadId },
+        { type: "ChatThread", id: "LIST" },
+      ],
+    }),
+    deleteThread: builder.mutation<{ success: boolean }, string>({
+      query: (threadId) => ({
+        url: `/api/chat/threads/${threadId}`,
+        method: "DELETE",
+      }),
+      transformResponse: (res: { data: { success: boolean } }) => res.data,
+      invalidatesTags: (result, error, threadId) => [
+        { type: "ChatThread", id: threadId },
+        { type: "ChatThread", id: "LIST" },
+      ],
+    }),
+    getAssistantSkills: builder.query<components["schemas"]["SkillsResponse"]["skills"], void>({
+      query: () => "/api/chat/assistant/skills",
+      transformResponse: (res: components["schemas"]["ApiResponse_SkillsResponse_"]) =>
+        res.data?.skills || [],
+    }),
+    // Stateless one-shot chat (no thread persisted server-side). Used by the
+    // meetings quick-chat sidebar: history lives only in the browser.
+    sendLiveChatMessage: builder.mutation<string, components["schemas"]["LiveChatMessageRequest"]>({
+      query: (body) => ({
+        url: "/api/chat/live",
+        method: "POST",
+        body,
+      }),
+      transformResponse: (res: components["schemas"]["ApiResponse_LiveChatMessageResponse_"]) =>
+        res.data?.response ?? "",
+    }),
+  }),
+});
+
+export const {
+  useListThreadsQuery,
+  useGetThreadQuery,
+  useCreateThreadMutation,
+  useSendMessageMutation,
+  useUpdateThreadMutation,
+  useDeleteThreadMutation,
+  useGetAssistantSkillsQuery,
+  useSendLiveChatMessageMutation,
+} = chatApi;

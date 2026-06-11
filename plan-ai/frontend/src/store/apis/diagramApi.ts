@@ -1,0 +1,108 @@
+import { createApi } from "@reduxjs/toolkit/query/react";
+import type { components } from "../../types/api";
+import { baseQueryWithReauth } from "../../utils/baseQuery";
+
+export type DiagramResponse = components["schemas"]["DiagramResponse"];
+export type CreateDiagramRequest = components["schemas"]["CreateDiagramRequest"];
+export type UpdateDiagramRequest = components["schemas"]["UpdateDiagramRequest"];
+export type DiagramAssistantRequest = components["schemas"]["DiagramAssistantRequest"];
+export type DiagramListResponse = components["schemas"]["DiagramListResponse"];
+
+export const diagramApi = createApi({
+  reducerPath: "diagramApi",
+  baseQuery: baseQueryWithReauth,
+  tagTypes: ["Diagrams"],
+  endpoints: (builder) => ({
+    getUserDiagrams: builder.query<DiagramListResponse, void>({
+      query: () => `/api/diagrams`,
+      providesTags: (result) =>
+        result?.diagrams
+          ? [
+              ...result.diagrams.map(({ id }) => ({ type: "Diagrams" as const, id })),
+              { type: "Diagrams", id: "LIST" },
+            ]
+          : [{ type: "Diagrams", id: "LIST" }],
+    }),
+    getDiagram: builder.query<DiagramResponse, string>({
+      query: (diagramId) => `/api/diagrams/${diagramId}`,
+      providesTags: (_result, _error, id) => [{ type: "Diagrams", id }],
+    }),
+    getPublicDiagram: builder.query<DiagramResponse, string>({
+      query: (diagramId) => `/api/public/diagrams/${diagramId}`,
+    }),
+    createDiagram: builder.mutation<DiagramResponse, CreateDiagramRequest>({
+      query: (body) => ({
+        url: "/api/diagrams",
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: [{ type: "Diagrams", id: "LIST" }],
+    }),
+    updateDiagram: builder.mutation<DiagramResponse, { id: string; body: UpdateDiagramRequest }>({
+      query: ({ id, body }) => ({
+        url: `/api/diagrams/${id}`,
+        method: "PUT",
+        body,
+      }),
+      async onQueryStarted({ id }, { dispatch, queryFulfilled }) {
+        try {
+          const { data: updatedDiagram } = await queryFulfilled;
+          dispatch(
+            diagramApi.util.updateQueryData("getDiagram", id, (draft) => {
+              Object.assign(draft, updatedDiagram);
+            }),
+          );
+        } catch (error) {
+          console.error("Failed to update diagram", error);
+        }
+      },
+      invalidatesTags: (_result, _error, { id }) => [
+        { type: "Diagrams", id },
+        { type: "Diagrams", id: "LIST" },
+      ],
+    }),
+    deleteDiagram: builder.mutation<void, { id: string }>({
+      query: ({ id }) => ({
+        url: `/api/diagrams/${id}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: (_result, _error, { id }) => [
+        { type: "Diagrams", id },
+        { type: "Diagrams", id: "LIST" },
+      ],
+    }),
+    improveDiagram: builder.mutation<
+      DiagramResponse,
+      { id: string; body: DiagramAssistantRequest }
+    >({
+      query: ({ id, body }) => ({
+        url: `/api/diagrams/${id}/assistant`,
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: (_result, _error, { id }) => [{ type: "Diagrams", id }],
+      async onQueryStarted({ id }, { dispatch, queryFulfilled }) {
+        const patchResult = dispatch(
+          diagramApi.util.updateQueryData("getDiagram", id, (draft) => {
+            draft.status = "GENERATING";
+          }),
+        );
+        try {
+          await queryFulfilled;
+        } catch {
+          patchResult.undo();
+        }
+      },
+    }),
+  }),
+});
+
+export const {
+  useGetUserDiagramsQuery,
+  useGetDiagramQuery,
+  useGetPublicDiagramQuery,
+  useCreateDiagramMutation,
+  useUpdateDiagramMutation,
+  useDeleteDiagramMutation,
+  useImproveDiagramMutation,
+} = diagramApi;

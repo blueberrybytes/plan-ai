@@ -1,0 +1,466 @@
+version: 1
+name: plan-ai
+description: "Plan AI: AI-assisted meeting planning & execution platform — monorepo with backend, web frontend, desktop recorder, and mobile app"
+
+repos:
+  backend: plan-backend
+  frontend: plan-frontend
+  recorder: plan-recorder
+  mobile: plan-mobile
+
+links:
+  # ── Web Frontend → Backend (RTK Query endpoints) ────────────────
+  # RTK Query's createApi + fetchBaseQuery pattern is NOT detected
+  # by GitNexus's HTTP consumer extractor. All three frontends share
+  # api.d.ts types generated from the backend's TSOA swagger spec.
+
+  # Session / Auth
+  - from: frontend
+    to: backend
+    type: http
+    contract: "POST::/api/session/login"
+    role: consumer
+  - from: frontend
+    to: backend
+    type: http
+    contract: "GET::/api/session/me"
+    role: consumer
+  - from: frontend
+    to: backend
+    type: http
+    contract: "POST::/api/session/desktop-token"
+    role: consumer
+
+  # Transcripts
+  - from: frontend
+    to: backend
+    type: http
+    contract: "GET::/api/transcripts"
+    role: consumer
+  - from: frontend
+    to: backend
+    type: http
+    contract: "GET::/api/transcripts/{param}"
+    role: consumer
+
+  # Projects
+  - from: frontend
+    to: backend
+    type: http
+    contract: "GET::/api/projects"
+    role: consumer
+  - from: frontend
+    to: backend
+    type: http
+    contract: "POST::/api/projects"
+    role: consumer
+
+  # Documents
+  - from: frontend
+    to: backend
+    type: http
+    contract: "GET::/api/documents"
+    role: consumer
+  - from: frontend
+    to: backend
+    type: http
+    contract: "POST::/api/documents"
+    role: consumer
+
+  # Contexts
+  - from: frontend
+    to: backend
+    type: http
+    contract: "GET::/api/contexts"
+    role: consumer
+  - from: frontend
+    to: backend
+    type: http
+    contract: "POST::/api/contexts"
+    role: consumer
+
+  # Diagrams
+  - from: frontend
+    to: backend
+    type: http
+    contract: "GET::/api/diagrams"
+    role: consumer
+  - from: frontend
+    to: backend
+    type: http
+    contract: "POST::/api/diagrams"
+    role: consumer
+
+  # Workspaces
+  - from: frontend
+    to: backend
+    type: http
+    contract: "GET::/api/workspaces"
+    role: consumer
+  - from: frontend
+    to: backend
+    type: http
+    contract: "PUT::/api/workspaces/settings"
+    role: consumer
+  - from: frontend
+    to: backend
+    type: http
+    contract: "POST::/api/workspaces/members/invite"
+    role: consumer
+
+  # Chat
+  - from: frontend
+    to: backend
+    type: http
+    contract: "GET::/api/chat/threads"
+    role: consumer
+
+  # Integrations
+  - from: frontend
+    to: backend
+    type: http
+    contract: "GET::/api/integrations"
+    role: consumer
+
+  # AI
+  - from: frontend
+    to: backend
+    type: http
+    contract: "GET::/api/ai/models"
+    role: consumer
+
+  # AI Usage
+  - from: frontend
+    to: backend
+    type: http
+    contract: "GET::/api/ai-usage"
+    role: consumer
+
+  # Brand Themes
+  - from: frontend
+    to: backend
+    type: http
+    contract: "GET::/api/brand-themes"
+    role: consumer
+
+  # Presentations
+  - from: frontend
+    to: backend
+    type: http
+    contract: "POST::/api/presentations/generate"
+    role: consumer
+
+  # Slide Templates
+  - from: frontend
+    to: backend
+    type: http
+    contract: "GET::/api/slide-templates"
+    role: consumer
+
+  # Analytics
+  - from: frontend
+    to: backend
+    type: http
+    contract: "GET::/api/analytics/dashboard"
+    role: consumer
+
+  # Account
+  - from: frontend
+    to: backend
+    type: http
+    contract: "GET::/account/self"
+    role: consumer
+  - from: frontend
+    to: backend
+    type: http
+    contract: "PUT::/account/theme"
+    role: consumer
+
+  # Onboarding
+  - from: frontend
+    to: backend
+    type: http
+    contract: "POST::/api/onboarding/complete"
+    role: consumer
+
+  # Trello
+  - from: frontend
+    to: backend
+    type: http
+    contract: "POST::/api/trello/auth"
+    role: consumer
+  - from: frontend
+    to: backend
+    type: http
+    contract: "GET::/api/trello/summary"
+    role: consumer
+  - from: frontend
+    to: backend
+    type: http
+    contract: "GET::/api/trello/boards"
+    role: consumer
+
+  # Jira
+  - from: frontend
+    to: backend
+    type: http
+    contract: "POST::/api/jira/auth"
+    role: consumer
+  - from: frontend
+    to: backend
+    type: http
+    contract: "GET::/api/jira/summary"
+    role: consumer
+  - from: frontend
+    to: backend
+    type: http
+    contract: "GET::/api/jira/projects"
+    role: consumer
+
+  # Linear
+  - from: frontend
+    to: backend
+    type: http
+    contract: "GET::/api/linear/auth-url"
+    role: consumer
+  - from: frontend
+    to: backend
+    type: http
+    contract: "GET::/api/linear/summary"
+    role: consumer
+  - from: frontend
+    to: backend
+    type: http
+    contract: "GET::/api/linear/teams"
+    role: consumer
+
+  # Notion
+  - from: frontend
+    to: backend
+    type: http
+    contract: "GET::/api/notion/auth-url"
+    role: consumer
+  - from: frontend
+    to: backend
+    type: http
+    contract: "GET::/api/notion/summary"
+    role: consumer
+  - from: frontend
+    to: backend
+    type: http
+    contract: "GET::/api/notion/databases"
+    role: consumer
+
+  # Google
+  - from: frontend
+    to: backend
+    type: http
+    contract: "GET::/api/google/default-folder"
+    role: consumer
+
+  # Microsoft
+  - from: frontend
+    to: backend
+    type: http
+    contract: "GET::/api/microsoft/default-folder"
+    role: consumer
+
+  # ── Desktop Recorder → Backend ──────────────────────────────────
+  - from: recorder
+    to: backend
+    type: http
+    contract: "GET::/api/session/me"
+    role: consumer
+  - from: recorder
+    to: backend
+    type: http
+    contract: "GET::/api/ai/models"
+    role: consumer
+  - from: recorder
+    to: backend
+    type: http
+    contract: "GET::/api/workspaces"
+    role: consumer
+  - from: recorder
+    to: backend
+    type: http
+    contract: "GET::/api/projects"
+    role: consumer
+  - from: recorder
+    to: backend
+    type: http
+    contract: "GET::/api/integrations"
+    role: consumer
+  - from: recorder
+    to: backend
+    type: http
+    contract: "GET::/api/transcripts"
+    role: consumer
+  - from: recorder
+    to: backend
+    type: http
+    contract: "POST::/api/transcripts/recorder-upload"
+    role: consumer
+  - from: recorder
+    to: backend
+    type: http
+    contract: "POST::/api/audio/transcribe-chunk"
+    role: consumer
+  - from: recorder
+    to: backend
+    type: http
+    contract: "POST::/api/audio/stream"
+    role: consumer
+  - from: recorder
+    to: backend
+    type: http
+    contract: "POST::/api/chat/live"
+    role: consumer
+  - from: recorder
+    to: backend
+    type: http
+    contract: "POST::/api/chat/live-summary"
+    role: consumer
+  - from: recorder
+    to: backend
+    type: http
+    contract: "GET::/api/contexts"
+    role: consumer
+  - from: recorder
+    to: backend
+    type: http
+    contract: "POST::/api/tasks/auto-sync-transcript/{param}"
+    role: consumer
+
+  # ── Mobile App → Backend ────────────────────────────────────────
+  - from: mobile
+    to: backend
+    type: http
+    contract: "GET::/api/session/me"
+    role: consumer
+  - from: mobile
+    to: backend
+    type: http
+    contract: "GET::/api/session/me/voice-profile"
+    role: consumer
+  - from: mobile
+    to: backend
+    type: http
+    contract: "GET::/api/ai/models"
+    role: consumer
+  - from: mobile
+    to: backend
+    type: http
+    contract: "GET::/api/workspaces"
+    role: consumer
+  - from: mobile
+    to: backend
+    type: http
+    contract: "GET::/api/projects"
+    role: consumer
+  - from: mobile
+    to: backend
+    type: http
+    contract: "POST::/api/projects"
+    role: consumer
+  - from: mobile
+    to: backend
+    type: http
+    contract: "GET::/api/integrations"
+    role: consumer
+  - from: mobile
+    to: backend
+    type: http
+    contract: "GET::/api/transcripts"
+    role: consumer
+  - from: mobile
+    to: backend
+    type: http
+    contract: "POST::/api/transcripts/recorder-upload"
+    role: consumer
+  - from: mobile
+    to: backend
+    type: http
+    contract: "POST::/api/audio/transcribe-chunk"
+    role: consumer
+  - from: mobile
+    to: backend
+    type: http
+    contract: "POST::/api/audio/stream"
+    role: consumer
+  - from: mobile
+    to: backend
+    type: http
+    contract: "POST::/api/chat/live"
+    role: consumer
+  - from: mobile
+    to: backend
+    type: http
+    contract: "POST::/api/chat/live-summary"
+    role: consumer
+  - from: mobile
+    to: backend
+    type: http
+    contract: "GET::/api/contexts"
+    role: consumer
+  - from: mobile
+    to: backend
+    type: http
+    contract: "POST::/api/contexts"
+    role: consumer
+  - from: mobile
+    to: backend
+    type: http
+    contract: "GET::/api/documents"
+    role: consumer
+  - from: mobile
+    to: backend
+    type: http
+    contract: "POST::/api/documents"
+    role: consumer
+  - from: mobile
+    to: backend
+    type: http
+    contract: "POST::/api/tasks/auto-sync-transcript/{param}"
+    role: consumer
+
+  # ── Shared Types (api.d.ts) ─────────────────────────────────────
+  # All three frontends import types generated from the backend's
+  # TSOA swagger spec. This is a lib-level dependency.
+  - from: frontend
+    to: backend
+    type: lib
+    contract: "api.d.ts"
+    role: consumer
+  - from: recorder
+    to: backend
+    type: lib
+    contract: "api.d.ts"
+    role: consumer
+  - from: mobile
+    to: backend
+    type: lib
+    contract: "api.d.ts"
+    role: consumer
+
+packages: {}
+
+detect:
+  http: true
+  grpc: false
+  thrift: false
+  topics: false
+  shared_libs: true
+  embedding_fallback: false
+  includes: false
+  workspace_deps: false
+
+matching:
+  bm25_threshold: 0.7
+  embedding_threshold: 0.65
+  max_candidates_per_step: 3
+  exclude_links_paths:
+    - /api/healthcheck
+    - /api/sentry-error
+    - /api/version
+  exclude_links_param_only_paths: true

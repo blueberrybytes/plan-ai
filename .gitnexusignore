@@ -1,0 +1,32 @@
+# GitNexus ignore — monorepo root
+# Syntax is identical to .gitignore
+
+# iOS CocoaPods — generated, not our code, causes worker timeouts
+plan-ai-mobile/ios/Pods/
+plan-ai-mobile/ios/build/
+plan-ai-mobile/ios/.xcode.env.local
+plan-ai-mobile/ios/DerivedData/
+
+# Android build artifacts
+plan-ai-mobile/android/build/
+plan-ai-mobile/android/.gradle/
+plan-ai-mobile/android/app/build/
+
+# Expo / React Native generated
+plan-ai-mobile/.expo/
+
+# Node modules (all sub-projects)
+node_modules/
+plan-ai/frontend/node_modules/
+plan-ai/backend/node_modules/
+plan-ai-mobile/node_modules/
+plan-ai-recorder/node_modules/
+
+# Build / dist outputs
+plan-ai/frontend/build/
+plan-ai/frontend/dist/
+plan-ai/backend/dist/
+plan-ai-recorder/dist/
+
+# Generated / vendored
+plan-ai/backend/src/swagger/swagger.json

@@ -1,0 +1,10 @@
+# GitNexus ignore — plan-ai-recorder
+# Paths relative to plan-ai-recorder/
+
+node_modules/
+dist/
+build/
+out/
+
+# Generated types
+src/types/api.d.ts

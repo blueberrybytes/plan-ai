@@ -1,0 +1,256 @@
+import { z, ZodObject, ZodRawShape } from "zod";
+
+/**
+ * Built-in slide type definitions.
+ * Each type defines its structure, constraints, and a Zod schema for validation.
+ * The AI uses the descriptions + parameter constraints to pick the right type.
+ *
+ * NOTE: parameter fields use `.nullable()` rather than `.optional()`. These
+ * schemas are sent to the LLM as `response_format: json_schema`, and OpenAI /
+ * Azure *strict* structured-output mode requires every property (including
+ * nested object properties) to appear in `required`. `.optional()` omits the
+ * field from `required` and those providers reject the schema with a 400. The
+ * portable pattern is required-but-nullable; the renderer treats a missing field
+ * and a `null` field identically (falsy checks), so this is behavior-preserving.
+ */
+
+export interface SlideTypeDefinition {
+  key: string;
+  name: string;
+  description: string;
+  parametersSchema: ZodObject<ZodRawShape>;
+}
+
+export const SLIDE_TYPE_DEFINITIONS: SlideTypeDefinition[] = [
+  {
+    key: "title_only",
+    name: "Title Slide",
+    description:
+      "Opening or closing slide with a large title, optional subtitle, optional badge, and optional iconName. Best for section dividers or cover slides.",
+    parametersSchema: z.object({
+      badge: z.string().nullable(),
+      iconName: z.string().nullable(),
+      title: z.string(),
+      subtitle: z.string().nullable(),
+    }),
+  },
+  {
+    key: "text_block",
+    name: "Text Block",
+    description:
+      "Full-width text content with a title, optional subtitle, optional icon, and body paragraph. Best for explanations, introductions, or summaries.",
+    parametersSchema: z.object({
+      badge: z.string().nullable(),
+      iconName: z.string().nullable(),
+      title: z.string(),
+      subtitle: z.string().nullable(),
+      body: z.string(),
+    }),
+  },
+  {
+    key: "text_image",
+    name: "Text + Image",
+    description:
+      "Split layout with text on the left and an image on the right. Best for illustrating a concept with a visual.",
+    parametersSchema: z.object({
+      badge: z.string().nullable(),
+      title: z.string(),
+      body: z.string(),
+      imageQuery: z.string().nullable(),
+    }),
+  },
+  {
+    key: "bullet_list",
+    name: "Bullet List",
+    description:
+      "Title with an optional subtitle and a list of up to 8 bullet points. Best for enumerating features, steps, or key points.",
+    parametersSchema: z.object({
+      badge: z.string().nullable(),
+      title: z.string(),
+      subtitle: z.string().nullable(),
+      bullets: z.array(z.string()),
+    }),
+  },
+  {
+    key: "two_columns",
+    name: "Two Columns",
+    description:
+      "Two-column layout with a title. Best for comparisons, pros/cons, or side-by-side information.",
+    parametersSchema: z.object({
+      badge: z.string().nullable(),
+      title: z.string(),
+      leftTitle: z.string().nullable(),
+      leftBody: z.string(),
+      rightTitle: z.string().nullable(),
+      rightBody: z.string(),
+    }),
+  },
+  {
+    key: "team_grid",
+    name: "Team Members",
+    description:
+      "Grid of team member cards with name, role, and short bio. Best for showing 2 to 4 people.",
+    parametersSchema: z.object({
+      badge: z.string().nullable(),
+      title: z.string(),
+      members: z.array(
+        z.object({
+          name: z.string(),
+          role: z.string(),
+          bio: z.string(),
+        }),
+      ),
+    }),
+  },
+  {
+    key: "showcase",
+    name: "Showcase",
+    description:
+      "Large image with a title and caption. Best for product screenshots, demos, or hero visuals.",
+    parametersSchema: z.object({
+      badge: z.string().nullable(),
+      title: z.string(),
+      imageQuery: z.string().nullable(),
+      caption: z.string(),
+    }),
+  },
+  {
+    key: "stats",
+    name: "Key Stats",
+    description:
+      "Display key metrics or statistics prominently. Best for numbers, KPIs, or data highlights.",
+    parametersSchema: z.object({
+      badge: z.string().nullable(),
+      title: z.string(),
+      stats: z.array(
+        z.object({
+          label: z.string(),
+          value: z.string(),
+        }),
+      ),
+    }),
+  },
+  {
+    key: "split_kpi",
+    name: "Split KPI",
+    description:
+      "Split layout with a full vertical image on the left, and a title, descriptions, and multiple large KPIs on the right. Best for high-impact metric presentations.",
+    parametersSchema: z.object({
+      badge: z.string().nullable(),
+      title: z.string(),
+      imageQuery: z.string().nullable(),
+      kpis: z.array(
+        z.object({
+          value: z.string(),
+          label: z.string(),
+          description: z.string().nullable(),
+        }),
+      ),
+    }),
+  },
+  {
+    key: "split_cards",
+    name: "Split Cards",
+    description:
+      "Split layout with a full vertical image on the left, and a title followed by a stack or grid of descriptive cards on the right.",
+    parametersSchema: z.object({
+      badge: z.string().nullable(),
+      title: z.string(),
+      imageQuery: z.string().nullable(),
+      cards: z.array(
+        z.object({
+          title: z.string(),
+          body: z.string(),
+          iconName: z.string().nullable(), // mapped to material ui icon
+        }),
+      ),
+    }),
+  },
+  {
+    key: "image_with_list",
+    name: "Image with List",
+    description:
+      "Medium image on the left, and a distinct feature list stack on the right. Better for features, workflows, and benefits.",
+    parametersSchema: z.object({
+      badge: z.string().nullable(),
+      title: z.string(),
+      body: z.string().nullable(),
+      imageQuery: z.string().nullable(),
+      features: z.array(
+        z.object({
+          title: z.string(),
+          description: z.string().nullable(),
+          iconName: z.string().nullable(),
+        }),
+      ),
+    }),
+  },
+  {
+    key: "three_columns",
+    name: "Three Columns",
+    description:
+      "Centered top header with three distinct equal columns below containing titles and descriptions. Great for pricing, tiers, or three-step processes.",
+    parametersSchema: z.object({
+      badge: z.string().nullable(),
+      title: z.string(),
+      subtitle: z.string().nullable(),
+      columns: z.array(
+        z.object({
+          title: z.string(),
+          body: z.string(),
+          iconName: z.string().nullable(),
+        }),
+      ),
+    }),
+  },
+  {
+    key: "quote_showcase",
+    name: "Quote Showcase",
+    description:
+      "High impact split layout containing a massive quote or statement on one side, and a full-bleed visual on the other.",
+    parametersSchema: z.object({
+      badge: z.string().nullable(),
+      statement: z.string(),
+      author: z.string().nullable(),
+      imageQuery: z.string().nullable(),
+    }),
+  },
+  {
+    key: "diagram_slide",
+    name: "System Diagram",
+    description:
+      "A large generative Mermaid.js diagram. Best for visualizing Roadmaps (Timeline), User Journeys, Effort/Impact matrices (Quadrant), flowcharts, architectures, pie charts, Sankey cash-flows, and Kanban boards. Always output strictly valid Mermaid syntax for the chosen type.",
+    parametersSchema: z.object({
+      badge: z.string().nullable(),
+      title: z.string(),
+      mermaidCode: z.string(),
+    }),
+  },
+];
+
+/**
+ * Lookup a slide type definition by key.
+ */
+export function getSlideTypeDefinition(key: string): SlideTypeDefinition | undefined {
+  return SLIDE_TYPE_DEFINITIONS.find((d) => d.key === key);
+}
+
+/**
+ * Build a catalog string for the AI system prompt.
+ * Lists all available slide types with descriptions and parameter constraints.
+ */
+export function buildSlideTypeCatalog(enabledTypes?: string[]): string {
+  const types = enabledTypes
+    ? SLIDE_TYPE_DEFINITIONS.filter((d) => enabledTypes.includes(d.key))
+    : SLIDE_TYPE_DEFINITIONS;
+
+  return types
+    .map((def) => {
+      const shape = def.parametersSchema.shape;
+      const params = Object.entries(shape)
+        .map(([key]) => `    - ${key}`)
+        .join("\n");
+      return `- **${def.key}** ("${def.name}"): ${def.description}\n  Parameters:\n${params}`;
+    })
+    .join("\n\n");
+}

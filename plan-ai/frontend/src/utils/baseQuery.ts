@@ -1,0 +1,384 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { fetchBaseQuery } from "@reduxjs/toolkit/query/react";
+import type { BaseQueryFn, FetchArgs, FetchBaseQueryError } from "@reduxjs/toolkit/query";
+import { RootState } from "../store/store";
+import { selectUser } from "../store/slices/auth/authSelector";
+import { selectActiveWorkspaceId } from "../store/slices/app/appSelector";
+import { TokenService } from "../services/tokenService";
+import { logout } from "../store/slices/auth/authSlice";
+import { setToastMessage } from "../store/slices/app/appSlice";
+import { clientLogger } from "./clientLogger";
+import i18n from "../i18n";
+
+// Function to create a configured fetchBaseQuery with optional custom baseUrl
+const createBaseQuery = (customBaseUrl?: string) =>
+  fetchBaseQuery({
+    baseUrl: customBaseUrl || process.env.REACT_APP_API_BACKEND_URL || "",
+    prepareHeaders: (headers, { getState, endpoint }) => {
+      const user = selectUser(getState() as RootState);
+      const activeWorkspaceId = selectActiveWorkspaceId(getState() as RootState);
+
+      // Add path info to help with debugging
+      const currentPath = window.location.pathname;
+      headers.set("X-Current-Path", currentPath);
+
+      // Inject Workspace Header
+      if (activeWorkspaceId) {
+        headers.set("X-Workspace-Id", activeWorkspaceId);
+      }
+
+      if (user?.token) {
+        headers.set("Authorization", `Bearer ${user.token}`);
+      } else {
+        console.warn(
+          `No token available for request to ${endpoint}, path: ${currentPath}. Authentication may fail.`,
+        );
+        console.debug("Current authentication state:", {
+          hasUser: !!user,
+          endpoint,
+          currentPath,
+        });
+      }
+
+      const multipartEndpoints = new Set(["speechToText"]);
+      if (!multipartEndpoints.has(endpoint ?? "")) {
+        headers.set("Content-Type", "application/json");
+      } else {
+        headers.delete("Content-Type");
+      }
+      return headers;
+    },
+  });
+
+/**
+ * This function handles reactive token refresh when API calls fail due to auth errors.
+ * It works alongside the proactive refresh in useTokenRefresh hook which refreshes
+ * tokens before they expire to minimize authentication failures.
+ */
+// Options interface for baseQueryWithReauth
+export interface BaseQueryWithReauthOptions {
+  baseUrl?: string;
+}
+
+// TokenService is already imported at the top of the file
+
+// Factory function that creates a baseQueryWithReauth with the given options
+const createBaseQueryWithReauth =
+  (
+    options?: BaseQueryWithReauthOptions,
+  ): BaseQueryFn<string | FetchArgs, unknown, FetchBaseQueryError> =>
+  async (args, api, extraOptions) => {
+    // Use the baseQuery with the provided baseUrl or default
+    const customBaseQuery = createBaseQuery(options?.baseUrl);
+
+    // Check if token refresh is already in progress before making the request
+    if (TokenService.isRefreshing && TokenService.refreshPromise) {
+      try {
+        await TokenService.refreshPromise;
+      } catch (error) {
+        console.error("Error while waiting for token refresh:", error);
+        clientLogger.error("Error while waiting for token refresh", error as Error, {
+          endpoint: typeof args === "string" ? args : args.url,
+        });
+      }
+    }
+
+    // Make the request with current token (which should now be fresh)
+    let result = await customBaseQuery(args, api, extraOptions);
+
+    // Get the request URL for platform detection
+    const requestUrl = typeof args === "string" ? args : args.url;
+
+    // Helper to get the actual HTTP status code, handling PARSING_ERROR
+    const getHttpStatus = (error: any): number | undefined => {
+      if (!error) return undefined;
+      if (typeof error.status === "number") return error.status;
+      if (error.status === "PARSING_ERROR" && typeof error.originalStatus === "number")
+        return error.originalStatus;
+      return undefined;
+    };
+
+    const httpStatus = getHttpStatus(result.error);
+
+    // Handle unauthorized responses (token expired)
+    if (result.error && httpStatus === 401) {
+      console.warn(`401 Unauthorized received for ${requestUrl}, attempting token refresh...`);
+
+      if (!TokenService.isRefreshing) {
+        // We are the first to encounter the 401, initiate refresh
+        const newToken = await TokenService.handleTokenRefresh(api.dispatch);
+
+        if (newToken) {
+          console.log(`Token refresh successful, retrying request to ${requestUrl}`);
+          // Wait longer for the auth state to fully propagate and stabilize
+          await new Promise((resolve) => setTimeout(resolve, 2000));
+
+          // Verify we still have a user and token before retrying
+          const updatedUser = selectUser(api.getState() as RootState);
+
+          if (updatedUser?.token) {
+            // Retry the initial query with new token
+            result = await customBaseQuery(args, api, extraOptions);
+          } else {
+            console.error("Token refreshed but user state is missing, skipping retry.");
+            api.dispatch(logout());
+          }
+        } else {
+          // Token refresh failed or returned null (e.g. user deleted or no firebase user)
+          console.error("Token refresh failed. Logging out.");
+          // Show session expired message and logout
+          api.dispatch(
+            setToastMessage({
+              message: i18n.t("login.errors.sessionExpired"),
+              severity: "error",
+              autoHideDuration: 6000,
+            }),
+          );
+          api.dispatch(logout());
+        }
+      } else {
+        // Another request is already refreshing the token, wait for it
+        console.log(`Waiting for existing token refresh to complete before retrying ${requestUrl}`);
+        try {
+          await TokenService.refreshPromise;
+        } catch (e) {
+          console.error("Awaited refreshPromise rejected:", e);
+        }
+
+        // Wait longer for the auth state to fully propagate and stabilize across reducers
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+
+        // CRITICAL FIX: Only retry if the store actually has a valid user token and workspace
+        // If the refresh failed, the primary request dispatched logout(), wiping the store.
+        // Retrying now would send a request without headers, resulting in 400 Bad Request spam.
+        const currentState = api.getState() as RootState;
+        const updatedUser = selectUser(currentState);
+
+        if (updatedUser?.token) {
+          console.log(`Token refresh finished, retrying request to ${requestUrl}`);
+          result = await customBaseQuery(args, api, extraOptions);
+        } else {
+          console.warn(
+            `Skipping retry for ${requestUrl} because user session was lost after refresh wait.`,
+          );
+        }
+      }
+    }
+
+    // Handle 402 Payment Required (subscription guard rejected the request).
+    // We surface a toast so the user knows why their action silently failed,
+    // and the always-visible SubscriptionBanner provides the "Choose a plan"
+    // CTA. Navigation from baseQuery would be brittle (no router context),
+    // so we deliberately keep this as a passive notification.
+    if (result.error && httpStatus === 402) {
+      const errorData = result.error.data as { message?: string } | undefined;
+      const message = errorData?.message || i18n.t("billing.toast.subscriptionRequired");
+      clientLogger.warn("Subscription required for request", {
+        endpoint: typeof args === "string" ? args : args.url,
+        status: 402,
+      });
+      api.dispatch(
+        setToastMessage({
+          message,
+          severity: "warning",
+          autoHideDuration: 7000,
+        }),
+      );
+    }
+
+    // Handle rate limit responses (429 Too Many Requests)
+    if (result.error && httpStatus === 429) {
+      const errorData = result.error.data as Record<string, unknown> | undefined;
+
+      // Usage limit exceeded — managed plan enforcement (distinct from external API rate limits)
+      if (errorData?.code === "usage_limit_exceeded") {
+        const limitType = errorData.limitType as string;
+        const friendlyType =
+          limitType === "llm"
+            ? "AI token"
+            : limitType === "recording"
+              ? "recording hour"
+              : "generation";
+        api.dispatch(
+          setToastMessage({
+            message: `You've reached your monthly ${friendlyType} limit. Upgrade your plan or wait until next billing cycle.`,
+            severity: "warning",
+            autoHideDuration: 10000,
+          }),
+        );
+      } else {
+        // Generic external API rate limit (LinkedIn, etc.)
+        console.warn(
+          `Rate limit error (429) detected for request:`,
+          requestUrl,
+          "Error details:",
+          result.error,
+        );
+        clientLogger.warn("API rate limit detected", {
+          requestUrl,
+          status: httpStatus,
+          error: result.error,
+        });
+
+        let platform = "API";
+        if (requestUrl.includes("/linkedin") || requestUrl.includes("/linkedin-community")) {
+          platform = "LinkedIn";
+        } else if (requestUrl.includes("/facebook")) {
+          platform = "Facebook";
+        } else if (requestUrl.includes("/instagram")) {
+          platform = "Instagram";
+        } else if (requestUrl.includes("/twitter") || requestUrl.includes("/x")) {
+          platform = "Twitter/X";
+        }
+
+        const retryAfter = (errorData as Record<string, unknown>)?.headers
+          ? ((errorData as Record<string, unknown>).headers as Record<string, string>)[
+              "retry-after"
+            ] || "3600"
+          : "3600";
+        const retryMinutes = Math.ceil(parseInt(retryAfter, 10) / 60);
+        const retryMessage =
+          retryMinutes > 60 ? "later today" : `in approximately ${retryMinutes} minutes`;
+
+        api.dispatch(
+          setToastMessage({
+            message: `${platform} API rate limit reached. Please try again ${retryMessage}.`,
+            severity: "warning",
+            autoHideDuration: 8000,
+          }),
+        );
+      }
+    }
+
+    // Handle unauthorized responses (token expired)
+    if (result.error && httpStatus === 401) {
+      console.warn(
+        `Auth error 401 detected for request:`,
+        typeof args === "string" ? args : args.url,
+        "Error details:",
+        result.error,
+      );
+      clientLogger.warn("Authentication error during API request", {
+        status: 401,
+        endpoint: typeof args === "string" ? args : args.url,
+        error: result.error,
+      });
+
+      // Check if we have a user in the store before attempting to refresh the token
+      const user = selectUser(api.getState() as RootState);
+      if (user?.token) {
+        try {
+          // Use TokenService to handle token refresh
+          const newToken = await TokenService.handleTokenRefresh(api.dispatch);
+
+          if (newToken) {
+            // Wait longer for the auth state to fully propagate and stabilize
+            // This is critical for ensuring the new token is properly set
+
+            await new Promise((resolve) => setTimeout(resolve, 2000)); // Increased to 2 seconds
+
+            // Verify we still have a user and token before retrying
+            const updatedUser = selectUser(api.getState() as RootState);
+            if (!updatedUser?.token) {
+              console.warn("No user/token found after refresh, skipping retry");
+              return result;
+            }
+
+            // Retry the initial query with new token
+
+            const retryResult = await customBaseQuery(args, api, extraOptions);
+            const retryHttpStatus = getHttpStatus(retryResult.error);
+
+            if (retryResult.error && retryHttpStatus === 401) {
+              console.warn("Request still failed after token refresh - auth issue may persist");
+              console.warn("Retry error details:", retryResult.error);
+              clientLogger.warn("Request failed after token refresh", {
+                status: retryHttpStatus,
+                endpoint: typeof args === "string" ? args : args.url,
+                error: retryResult.error,
+              });
+
+              // If retry still fails, wait a bit more and try once more
+
+              await new Promise((resolve) => setTimeout(resolve, 1000));
+
+              const finalRetryResult = await customBaseQuery(args, api, extraOptions);
+              const finalRetryHttpStatus = getHttpStatus(finalRetryResult.error);
+              if (finalRetryResult.error && finalRetryHttpStatus === 401) {
+                console.error("Final retry also failed - returning original error");
+                clientLogger.error(
+                  "Final retry after token refresh failed",
+                  finalRetryResult.error,
+                  {
+                    endpoint: typeof args === "string" ? args : args.url,
+                  },
+                );
+
+                // Show session expired message and logout
+                api.dispatch(
+                  setToastMessage({
+                    message: i18n.t("login.errors.sessionExpired"),
+                    severity: "error",
+                    autoHideDuration: 6000,
+                  }),
+                );
+                api.dispatch(logout());
+
+                return result; // Return original error
+              } else {
+                return finalRetryResult;
+              }
+            } else {
+              return retryResult;
+            }
+          } else {
+            // If token refresh fails or returns null, the TokenService will have already handled the situation
+
+            clientLogger.warn("Token refresh did not return a token after auth error", {
+              endpoint: typeof args === "string" ? args : args.url,
+            });
+
+            // Show session expired message and logout
+            api.dispatch(
+              setToastMessage({
+                message: i18n.t("login.errors.sessionExpired"),
+                severity: "error",
+                autoHideDuration: 6000,
+              }),
+            );
+            api.dispatch(logout());
+          }
+        } catch (error) {
+          console.error("Error in token refresh process:", error);
+          clientLogger.error("Token refresh process threw an error", error as Error, {
+            endpoint: typeof args === "string" ? args : args.url,
+          });
+          // Error is already handled by TokenService, no need to dispatch logout here
+        }
+      } else {
+        clientLogger.warn("Auth error encountered but no user present for token refresh", {
+          endpoint: typeof args === "string" ? args : args.url,
+        });
+        // No user in store, so no need to attempt token refresh
+      }
+    }
+
+    // Handle generic server errors (500+)
+    if (result.error && httpStatus !== undefined && httpStatus >= 500) {
+      clientLogger.error(`API Server Error ${httpStatus}`, result.error, {
+        endpoint: typeof args === "string" ? args : args.url,
+      });
+    }
+
+    return result;
+  };
+
+// Export the default baseQueryWithReauth for backward compatibility
+export const baseQueryWithReauth: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQueryError> =
+  createBaseQueryWithReauth();
+
+// Export the factory function for creating custom baseQueryWithReauth instances with proper typing
+export const createCustomBaseQuery = (
+  options?: BaseQueryWithReauthOptions,
+): BaseQueryFn<string | FetchArgs, unknown, FetchBaseQueryError> =>
+  createBaseQueryWithReauth(options);

@@ -1,0 +1,19 @@
+# GitNexus ignore file for plan-ai-mobile
+# Paths are relative to plan-ai-mobile/ (where yarn gitnexus:mobile runs)
+
+# iOS CocoaPods dependencies — gigantic, slow to parse, not our code
+ios/Pods/
+ios/build/
+ios/DerivedData/
+ios/.xcode.env.local
+
+# Android build artifacts
+android/build/
+android/.gradle/
+android/app/build/
+
+# Expo / React Native generated
+.expo/
+
+# Dependencies
+node_modules/

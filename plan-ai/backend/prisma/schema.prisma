@@ -1,0 +1,738 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["fullTextSearchPostgres"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum WorkspaceRole {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+enum UserPersona {
+  PROJECT_MANAGER
+  SOFTWARE_ENGINEER
+  DESIGNER
+  PRODUCT_MANAGER
+  EXECUTIVE
+  OTHER
+}
+
+enum WorkspaceTier {
+  FREE
+  PRO
+  BUSINESS
+  ENTERPRISE
+  AGENCY
+}
+
+enum SubscriptionStatus {
+  INCOMPLETE
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  CANCELED
+  UNPAID
+  PAUSED
+}
+
+enum SubscriptionTrack {
+  BYOK
+  MANAGED
+}
+
+model Workspace {
+  id                String        @id @default(cuid())
+  name              String
+  stripeId          String?
+  tier              WorkspaceTier @default(FREE)
+  maxInvitations    Int           @default(5)
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  openRouterKey     String?
+  deepgramKey       String?
+  // LEGACY / OPTIONAL: embeddings now run through the workspace's openRouterKey
+  // (OpenRouter shipped an OpenAI-compatible embeddings endpoint), so BYOK needs
+  // only OpenRouter + Deepgram. This column is kept for backward compatibility —
+  // workspaces that already set an OpenAI key still use it as an embeddings
+  // fallback. New workspaces don't need it.
+  openaiKey         String?
+  isCourtesy        Boolean       @default(false)
+  monthlyTokenLimit Int           @default(200000)
+  // Workspace-wide default brand theme. Used for AI-generated docs & slides
+  // when neither an explicit theme nor the project's theme is set — covers
+  // standalone recordings (recorder/mobile) that have no project.
+  defaultThemeId    String?
+
+  // Stripe billing
+  stripeCustomerId        String?             @unique
+  stripeSubscriptionId    String?             @unique
+  subscriptionStatus      SubscriptionStatus?
+  subscriptionTrack       SubscriptionTrack?
+  subscriptionPriceId     String?
+  subscriptionSeats       Int                 @default(1)
+  subscriptionCurrentPeriodEnd DateTime?
+  subscriptionCancelAtPeriodEnd Boolean       @default(false)
+
+  members        WorkspaceMember[]
+  integrations   WorkspaceIntegration[]
+  projects       Project[]
+  contexts       Context[]
+  transcripts    Transcript[]
+  slideTemplates SlideTemplate[]
+  presentations  Presentation[]
+  brandThemes    BrandTheme[]          @relation("WorkspaceThemes")
+  defaultTheme   BrandTheme?           @relation("WorkspaceDefaultTheme", fields: [defaultThemeId], references: [id], onDelete: SetNull)
+  docDocuments   DocDocument[]
+  diagrams       Diagram[]
+  aiUsageLogs    AiUsageLog[]
+  chatThreads    ChatThread[]
+  invitations    WorkspaceInvitation[]
+  mcpTokens      McpToken[]
+  billingEvents  BillingEvent[]
+
+  @@index([defaultThemeId])
+}
+
+/// Audit log of Stripe webhook events processed for this workspace.
+/// Useful for debugging billing issues and replaying state.
+model BillingEvent {
+  id              String   @id @default(cuid())
+  workspaceId     String
+  stripeEventId   String   @unique
+  eventType       String
+  payload         Json
+  processedAt     DateTime @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+  @@index([eventType])
+}
+
+model WorkspaceMember {
+  id           String        @id @default(cuid())
+  workspaceId  String
+  userId       String
+  role         WorkspaceRole @default(MEMBER)
+  personas     UserPersona[] @default([])
+  personaNotes String?       @db.Text
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, userId])
+  @@index([userId])
+}
+
+model WorkspaceIntegration {
+  id           String              @id @default(cuid())
+  workspaceId  String
+  provider     IntegrationProvider
+  status       IntegrationStatus   @default(CONNECTED)
+  accessToken  String
+  refreshToken String?
+  expiresAt    DateTime?
+  scope        String?
+  accountId    String?
+  accountName  String?
+  metadata     Json?
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, provider])
+}
+
+model WorkspaceInvitation {
+  id           String        @id @default(cuid())
+  email        String
+  role         WorkspaceRole
+  personas     UserPersona[] @default([])
+  personaNotes String?       @db.Text
+  workspaceId  String
+  workspace    Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  inviterId    String
+  inviter      User          @relation("InvitationSender", fields: [inviterId], references: [id], onDelete: Cascade)
+  status       String        @default("PENDING") // PENDING | ACCEPTED
+  expiresAt    DateTime?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  @@unique([email, workspaceId])
+  @@index([email])
+}
+
+model User {
+  id                   String                @id @default(cuid())
+  firebaseUid          String                @unique
+  email                String                @unique
+  name                 String?
+  avatarUrl            String?
+  googleId             String?               @unique
+  appleId              String?               @unique
+  microsoftId          String?               @unique
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  role                 Role                  @default(PENDING)
+  isGoogleAccount      Boolean               @default(false)
+  isAppleAccount       Boolean               @default(false)
+  isMicrosoftAccount   Boolean               @default(false)
+  hasVoiceProfile      Boolean               @default(false)
+  hasCompletedHomeTour Boolean               @default(false)
+  voiceProfileUrl      String?
+  threads              ChatThread[]
+  contexts             Context[]
+  customTheme          CustomTheme?
+  documents            DocDocument[]
+  brandThemes          BrandTheme[]
+  slideTemplates       SlideTemplate[]
+  assignedTasks        Task[]                @relation("TaskAssignee")
+  transcripts          Transcript[]
+  integrations         UserIntegration[]
+  sentInvitations      WorkspaceInvitation[] @relation("InvitationSender")
+  projects             Project[]
+  diagrams             Diagram[]
+  desktopAuthCodes     DesktopAuthCode[]
+  aiUsageLogs          AiUsageLog[]
+  workspaceMembers     WorkspaceMember[]
+  mcpTokens            McpToken[]
+}
+
+model DesktopAuthCode {
+  id        String   @id @default(cuid())
+  userId    String
+  code      String   @unique @db.VarChar(64)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([code])
+  @@index([userId])
+}
+
+model McpToken {
+  id          String    @id @default(cuid())
+  userId      String
+  workspaceId String
+  name        String
+  tokenHash   String    @unique
+  prefix      String
+  lastUsedAt  DateTime?
+  createdAt   DateTime  @default(now())
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([workspaceId])
+  @@index([tokenHash])
+}
+
+model UserIntegration {
+  id           String              @id @default(cuid())
+  userId       String
+  provider     IntegrationProvider
+  status       IntegrationStatus   @default(CONNECTED)
+  accessToken  String
+  refreshToken String?
+  expiresAt    DateTime?
+  scope        String?
+  accountId    String?
+  accountName  String?
+  metadata     Json?
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+  user         User                @relation(fields: [userId], references: [id])
+
+  @@unique([userId, provider])
+}
+
+model CustomTheme {
+  id                 String   @id @default(cuid())
+  userId             String   @unique
+  primaryColor       String?
+  secondaryColor     String?
+  backgroundColor    String?
+  surfaceColor       String?
+  textPrimaryColor   String?
+  textSecondaryColor String?
+  fontFamily         String?
+  headingFontFamily  String?
+  borderRadius       Float?
+  density            Int?
+  configJson         Json?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Project {
+  id          String        @id @default(cuid())
+  userId      String
+  title       String
+  description String?
+  status      ProjectStatus @default(ACTIVE)
+  startedAt   DateTime?
+  endedAt     DateTime?
+  metadata    Json?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  workspaceId String
+  // Default brand theme for AI-generated docs & slides created from this
+  // project's meetings. SetNull so deleting the theme just unlinks it.
+  themeId     String?
+
+  workspace   Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  theme       BrandTheme?  @relation(fields: [themeId], references: [id], onDelete: SetNull)
+  tasks       Task[]
+  transcripts Transcript[]
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  aiUsageLogs AiUsageLog[]
+  context     Context?
+  documents   DocDocument[]
+
+  @@index([userId])
+  @@index([workspaceId])
+  @@index([status])
+  @@index([themeId])
+  @@map("projects")
+}
+
+model Transcript {
+  id              String           @id @default(cuid())
+  title           String?
+  source          TranscriptSource @default(MANUAL)
+  language        String?
+  summary         String?
+  transcript      String?
+  utterances      Json?
+  rawMicUrl       String?
+  rawSysUrl       String?
+  durationSeconds Int?
+  speakerCount    Int?
+  sentiment       String?          @db.VarChar(24)
+  metadata        Json?
+  recordedAt      DateTime?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  projectId       String?
+  contextIds      String[]
+  userId          String
+  workspaceId     String
+
+  workspace  Workspace            @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  taskLinks  TaskTranscriptLink[]
+  chatThread ChatThread?
+  project    Project?             @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user       User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@index([workspaceId])
+  @@index([source])
+  @@index([userId])
+  @@index([createdAt])
+}
+
+model Task {
+  id                 String               @id @default(cuid())
+  title              String
+  description        String?
+  status             TaskStatus           @default(BACKLOG)
+  priority           TaskPriority         @default(MEDIUM)
+  type               TaskType             @default(TASK)
+  lane               String?              @db.VarChar(64)
+  position           Int                  @default(0)
+  canvasX            Float?               @map("canvas_x")
+  canvasY            Float?               @map("canvas_y")
+  canvasWidth        Float?               @map("canvas_width")
+  canvasHeight       Float?               @map("canvas_height")
+  startDate          DateTime?
+  dueDate            DateTime?
+  completedAt        DateTime?
+  estimatedMinutes   Int?
+  actualMinutes      Int?
+  storyPoints        Float?
+  metadata           Json?
+  assigneeId         String?
+  parentId           String?
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  acceptanceCriteria String?
+  summary            String?
+  projectId          String
+  assignee           User?                @relation("TaskAssignee", fields: [assigneeId], references: [id])
+  parent             Task?                @relation("TaskHierarchy", fields: [parentId], references: [id])
+  subtasks           Task[]               @relation("TaskHierarchy")
+  project            Project              @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  dependencies       TaskDependency[]     @relation("TaskDependencyDependants")
+  dependants         TaskDependency[]     @relation("TaskDependencyDependencies")
+  transcriptLinks    TaskTranscriptLink[]
+
+  @@index([projectId])
+  @@index([status])
+  @@index([lane, position])
+  @@index([assigneeId])
+  @@index([createdAt])
+}
+
+model TaskDependency {
+  id              String         @id @default(cuid())
+  taskId          String
+  dependsOnTaskId String
+  type            DependencyType @default(BLOCKS)
+  createdAt       DateTime       @default(now())
+  dependsOn       Task           @relation("TaskDependencyDependants", fields: [dependsOnTaskId], references: [id], onDelete: Cascade)
+  task            Task           @relation("TaskDependencyDependencies", fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@unique([taskId, dependsOnTaskId])
+}
+
+model TaskTranscriptLink {
+  taskId       String
+  transcriptId String
+  relevance    Float?
+  task         Task       @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  transcript   Transcript @relation(fields: [transcriptId], references: [id], onDelete: Cascade)
+
+  @@id([taskId, transcriptId])
+}
+
+model Context {
+  id          String   @id @default(cuid())
+  userId      String
+  name        String   @db.VarChar(120)
+  description String?
+  color       String?  @db.VarChar(24)
+  metadata    Json?
+  keywords    String[] @default([])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  workspaceId String
+  // 1:1 link to Project. Nullable during migration; after backfill every Context
+  // should have a projectId. Project ⇄ Context is auto-created on project create.
+  projectId   String?  @unique
+
+  workspace Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  files     ContextFile[]
+  project   Project?      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([userId, name])
+  @@index([workspaceId])
+  @@index([projectId])
+}
+
+model ContextFile {
+  id         String   @id @default(cuid())
+  contextId  String
+  bucketPath String   @db.VarChar(255)
+  fileName   String   @db.VarChar(180)
+  mimeType   String   @db.VarChar(128)
+  sizeBytes  Int      @default(0)
+  metadata   Json?
+  createdAt  DateTime @default(now())
+  context    Context  @relation(fields: [contextId], references: [id], onDelete: Cascade)
+
+  @@index([contextId])
+}
+
+model ChatThread {
+  id              String   @id @default(cuid())
+  userId          String
+  title           String   @default("New Chat")
+  contextIds      String[]
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  complexityLevel String?
+  transcriptId    String?  @unique
+  workspaceId     String
+
+  workspace  Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  messages   ChatMessage[]
+  user       User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transcript Transcript?   @relation(fields: [transcriptId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([workspaceId])
+  @@index([createdAt])
+}
+
+model ChatMessage {
+  id          String     @id @default(cuid())
+  threadId    String
+  role        ChatRole
+  content     String
+  attachments Json?
+  createdAt   DateTime   @default(now())
+  thread      ChatThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+
+  @@index([threadId])
+}
+
+model SlideTemplate {
+  id          String   @id @default(cuid())
+  userId      String
+  name        String   @db.VarChar(120)
+  description String?
+  logoUrl     String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  workspaceId String
+
+  workspace     Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  presentations Presentation[]
+  user          User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  slideTypes    SlideTypeConfig[]
+
+  @@index([userId])
+  @@index([workspaceId])
+}
+
+model SlideTypeConfig {
+  id               String        @id @default(cuid())
+  templateId       String
+  slideTypeKey     String        @db.VarChar(64)
+  displayName      String        @db.VarChar(120)
+  description      String?
+  parametersSchema Json
+  position         Int           @default(0)
+  createdAt        DateTime      @default(now())
+  template         SlideTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@index([templateId])
+}
+
+model Presentation {
+  id          String   @id @default(cuid())
+  userId      String
+  templateId  String?
+  themeId     String?
+  title       String
+  prompt      String?  @db.Text
+  slidesJson  Json
+  contextIds  String[]
+  status      String   @default("DRAFT") @db.VarChar(24)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  workspaceId String
+
+  workspace Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  template  SlideTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  theme     BrandTheme?    @relation(fields: [themeId], references: [id])
+
+  @@index([workspaceId])
+}
+
+model BrandTheme {
+  id              String   @id @default(cuid())
+  userId          String
+  name            String   @db.VarChar(120)
+  logoUrl         String?
+  headingFont     String   @default("Inter") @db.VarChar(80)
+  bodyFont        String   @default("Inter") @db.VarChar(80)
+  primaryColor    String   @default("#4361EE") @db.VarChar(24)
+  secondaryColor  String   @default("#a78bfa") @db.VarChar(24)
+  backgroundColor String   @default("#ffffff") @db.VarChar(24)
+  textColor       String   @default("#0f172a") @db.VarChar(24)
+  backgroundStyle String?  @default("solid") @db.VarChar(24)
+  cardStyle       String?  @default("flat") @db.VarChar(24)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  workspaceId     String
+
+  workspace     Workspace      @relation("WorkspaceThemes", fields: [workspaceId], references: [id], onDelete: Cascade)
+  documents     DocDocument[]
+  presentations Presentation[]
+  diagrams      Diagram[]
+  // Projects that use this theme as their default for generated docs/slides.
+  projects      Project[]
+  // Workspaces that use this theme as their workspace-wide default.
+  defaultForWorkspaces Workspace[] @relation("WorkspaceDefaultTheme")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([workspaceId])
+}
+
+model DocDocument {
+  id            String   @id @default(cuid())
+  userId        String
+  themeId       String?
+  projectId     String?
+  title         String
+  content       String
+  status        String   @default("DRAFT") @db.VarChar(24)
+  isPublic      Boolean  @default(false)
+  contextIds    String[]
+  transcriptIds String[]
+  prompt        String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  workspaceId   String
+
+  workspace Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  theme     BrandTheme? @relation(fields: [themeId], references: [id])
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project   Project?    @relation(fields: [projectId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([isPublic])
+  @@index([workspaceId])
+  @@index([projectId])
+}
+
+enum DiagramType {
+  AUTO
+  FLOWCHART
+  SEQUENCE
+  GANTT
+  MINDMAP
+  CLASS
+  ER
+  ARCHITECTURE
+  STATE
+  JOURNEY
+  GIT
+  TIMELINE
+  PIE
+  XYCHART
+  QUADRANT
+  KANBAN
+  SANKEY
+  BLOCK
+}
+
+enum DiagramStatus {
+  GENERATING
+  DRAFT
+  FAILED
+}
+
+model Diagram {
+  id            String        @id @default(cuid())
+  userId        String
+  title         String
+  prompt        String
+  mermaidCode   String?
+  type          DiagramType
+  status        DiagramStatus @default(DRAFT)
+  themeId       String?
+  contextIds    String[]
+  transcriptIds String[]
+  isPublic      Boolean       @default(false)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  workspaceId   String
+
+  workspace Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  theme     BrandTheme? @relation(fields: [themeId], references: [id])
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([workspaceId])
+}
+
+enum Role {
+  ADMIN
+  PREMIUM
+  CLIENT
+  PENDING
+}
+
+enum ProjectStatus {
+  ACTIVE
+  COMPLETED
+  ARCHIVED
+}
+
+enum TranscriptSource {
+  MANUAL
+  RECORDING
+  UPLOAD
+  IMPORTED
+}
+
+enum TaskStatus {
+  BACKLOG
+  IN_PROGRESS
+  BLOCKED
+  COMPLETED
+  ARCHIVED
+}
+
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum TaskType {
+  TASK
+  BUG
+  STORY
+  EPIC
+}
+
+enum DependencyType {
+  BLOCKS
+  RELATES_TO
+  DUPLICATES
+}
+
+enum IntegrationProvider {
+  JIRA
+  LINEAR
+  GITHUB
+  GOOGLE_DRIVE
+  TRELLO
+  NOTION
+  ONEDRIVE
+  ASANA
+}
+
+enum IntegrationStatus {
+  CONNECTED
+  DISCONNECTED
+  ERROR
+}
+
+enum ChatRole {
+  USER
+  ASSISTANT
+}
+
+model AiUsageLog {
+  id              String   @id @default(cuid())
+  userId          String
+  projectId       String?
+  feature         String   @db.VarChar(64)
+  provider        String   @db.VarChar(64)
+  model           String   @db.VarChar(128)
+  inputTokens     Int      @default(0)
+  outputTokens    Int      @default(0)
+  totalTokens     Int      @default(0)
+  estimatedCost   Float    @default(0)
+  blueberryTokens Int      @default(0)
+  createdAt       DateTime @default(now())
+  workspaceId     String
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project   Project?  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([workspaceId])
+  @@index([feature])
+  @@index([createdAt])
+  @@index([projectId])
+  @@index([workspaceId, createdAt])
+}

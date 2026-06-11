@@ -1,0 +1,41 @@
+node_modules
+*.env
+dist
+build
+.expo
+.next
+out
+plan-ai-recorder/release
+.DS_Store
+# GitNexus — ignore binary index but version-control the group definition
+.gitnexus/parsedfile-cache
+.gitnexus/parsedfile-store
+.gitnexus/*.db
+.gitnexus/*.db-shm
+.gitnexus/*.db-wal
+.claude
+repomix_output
+__pycache__
+plan-ai/voice-ai/.venv
+*.csr
+*.key
+*.cer
+*.p12
+*.pem
+*codesign*
+docs/src/.vitepress/dist
+docs/src/.vitepress/cache
+plan-ai-mobile/google-services.json
+plan-ai-mobile/GoogleService-Info.plist
+!plan-ai-mobile/expo-env.d.ts
+no_commit
+xavi
+# Private working notes — never publish (the repo is public)
+memory/
+
+# Signing credentials — never commit (a cert password leaked in old history once)
+credentials.json
+**/credentials/
+*.p12
+*.mobileprovision
+*.keystore

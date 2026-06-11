@@ -1,0 +1,12 @@
+# GitNexus ignore — plan-ai/backend
+# Paths relative to plan-ai/backend/
+
+node_modules/
+dist/
+build/
+
+# Generated Swagger/OpenAPI — huge JSON, not source code
+src/swagger/swagger.json
+
+# Prisma generated client (vendored)
+node_modules/.prisma/

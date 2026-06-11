@@ -1,0 +1,9 @@
+# GitNexus ignore — plan-ai/frontend
+# Paths relative to plan-ai/frontend/
+
+node_modules/
+dist/
+build/
+
+# Generated types from openapi-typescript — not source code
+src/types/api.d.ts

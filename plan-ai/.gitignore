@@ -1,0 +1,12 @@
+node_modules
+TODO.md
+.idea
+.vscode
+settings.local.json
+.env
+recorder/dist
+recorder/dist-electron
+recorder/release
+data
+.gitnexus
+.venv

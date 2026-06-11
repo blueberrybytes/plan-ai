@@ -1,0 +1,32 @@
+node_modules
+dist
+release
+dist-electron
+
+.env
+.env.production
+.env.local
+*.env.*
+!.env.template
+
+# Certificates and Provisioning Profiles
+*.cer
+*.certSigningRequest
+*.p12
+*.provisionprofile
+build/*.provisionprofile/*.certSigningRequest
+
+# Apple Developer
+*.p8
+
+# Sentry Config File
+.env.sentry-build-plugin
+
+# TypeScript build info caching
+*.tsbuildinfo
+.gitnexus
+
+# Compiled native macOS binaries — rebuilt from the .swift sources by
+# scripts/prebuild-native.js on every build. Never commit them.
+macos/AudioCapture
+macos/MicActivity
