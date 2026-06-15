@@ -1,19 +1,17 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import {
   Box,
   AppBar,
   Toolbar,
   Typography,
   Chip,
-  Paper,
   CircularProgress,
   TextField,
   IconButton,
   Button,
   Tooltip,
   Alert,
-  Collapse,
 } from "@mui/material";
 import {
   Send as SendIcon,
@@ -26,92 +24,15 @@ import {
   Close as CloseIcon,
   PictureAsPdf as PdfIcon,
   InsertDriveFile as FileIcon,
-  Psychology as PsychologyIcon,
-  ExpandLess as ExpandLessIcon,
-  ExpandMore as ExpandMoreIcon,
 } from "@mui/icons-material";
-import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import { useTranslation } from "react-i18next";
 import { ChatAttachment, ChatMessage, ChatThread } from "../../store/apis/chatApi";
-import AssistantMessageRenderer from "./AssistantMessageRenderer";
-import CitationChip from "./CitationChip";
-import { AiGraphTrace, ContextGraph } from "../project/ContextGraph";
-import ThinkingIndicator from "./ThinkingIndicator";
+import ChatMessageItem from "./ChatMessageItem";
 import { useListProjectsQuery } from "../../store/apis/projectApi";
 import { useSelector } from "react-redux";
 import { RootState } from "../../store/store";
 import { useNavigate } from "react-router-dom";
 import AiModelSelector from "../common/AiModelSelector";
-
-/**
- * Collapsible "Thinking" panel that shows the model's streamed reasoning
- * (chain-of-thought). Auto-expanded while the model is still thinking (no answer
- * yet), and collapses once the answer starts — but the user can toggle it.
- */
-const ThinkingPanel: React.FC<{ thinking: string; streaming: boolean }> = ({
-  thinking,
-  streaming,
-}) => {
-  const [open, setOpen] = useState(streaming);
-  // Collapse automatically once the answer begins (streaming → false).
-  useEffect(() => {
-    if (!streaming) setOpen(false);
-  }, [streaming]);
-
-  return (
-    <Box
-      sx={{
-        mb: 1,
-        border: 1,
-        borderColor: "divider",
-        borderRadius: 1.5,
-        bgcolor: "action.hover",
-        overflow: "hidden",
-      }}
-    >
-      <Box
-        onClick={() => setOpen((o) => !o)}
-        sx={{
-          display: "flex",
-          alignItems: "center",
-          gap: 0.5,
-          px: 1.5,
-          py: 0.5,
-          cursor: "pointer",
-        }}
-      >
-        <PsychologyIcon sx={{ fontSize: 16, color: "text.secondary" }} />
-        <Typography variant="caption" sx={{ fontWeight: 600, color: "text.secondary", flex: 1 }}>
-          {streaming ? "Thinking…" : "Thinking"}
-        </Typography>
-        {open ? (
-          <ExpandLessIcon sx={{ fontSize: 18, color: "text.secondary" }} />
-        ) : (
-          <ExpandMoreIcon sx={{ fontSize: 18, color: "text.secondary" }} />
-        )}
-      </Box>
-      <Collapse in={open}>
-        <Typography
-          variant="caption"
-          sx={{
-            display: "block",
-            px: 1.5,
-            pb: 1,
-            whiteSpace: "pre-wrap",
-            color: "text.secondary",
-            fontStyle: "italic",
-            lineHeight: 1.5,
-          }}
-        >
-          {thinking}
-        </Typography>
-      </Collapse>
-    </Box>
-  );
-};
-
-// Feature flag — set to true to re-enable the AI Graph Trace visualization in chat replies.
-const SHOW_AI_GRAPH_TRACE = false;
 
 interface ChatWindowProps {
   activeThread: ChatThread | null;
@@ -324,6 +245,16 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
     }
   };
 
+  // Stable identity for the per-message send callback. handleSend is recreated
+  // on every render (it closes over input/state), so passing it directly would
+  // bust ChatMessageItem's memo on every keystroke. The ref keeps the latest
+  // handleSend while the callback identity stays constant.
+  const handleSendRef = useRef(handleSend);
+  handleSendRef.current = handleSend;
+  const stableSend = useCallback((m: string) => {
+    void handleSendRef.current(m);
+  }, []);
+
   const handleExport = () => {
     if (!activeThread) return;
 
@@ -427,314 +358,14 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
         ref={scrollRef}
         onScroll={handleScroll}
       >
-        {allMessages.map((msg) => {
-          // Split the streamed reasoning (<think>…</think>) out of the assistant
-          // message so it renders in a collapsible panel, not the answer body.
-          // The block can be unclosed while the model is still thinking (live stream).
-          let thinking: string | null = null;
-          let rawContent = msg.content;
-          if (msg.role !== "USER") {
-            const thinkMatch = rawContent.match(/<think>([\s\S]*?)(<\/think>|$)/);
-            if (thinkMatch) {
-              thinking = thinkMatch[1].trim() || null;
-              rawContent = rawContent.slice(thinkMatch[0].length);
-            }
-          }
-
-          let contentToRender = rawContent;
-          let citations: Array<{ filename: string; lines: string }> = [];
-          let latencyMs: number | undefined;
-          let toolsUsed: string[] = [];
-          let aiGraphTrace: AiGraphTrace | null = null;
-
-          if (msg.role !== "USER") {
-            try {
-              const parsed = JSON.parse(rawContent);
-              if (parsed.text) {
-                contentToRender = parsed.text;
-              }
-              if (Array.isArray(parsed.citations)) {
-                citations = parsed.citations;
-              }
-              if (typeof parsed.latencyMs === "number") {
-                latencyMs = parsed.latencyMs;
-              }
-              if (Array.isArray(parsed.tools)) {
-                toolsUsed = parsed.tools;
-              }
-              if (parsed.aiGraphTrace && Array.isArray(parsed.aiGraphTrace.nodes)) {
-                aiGraphTrace = parsed.aiGraphTrace;
-              }
-            } catch {
-              // Not JSON, fallback to raw content.
-              contentToRender = rawContent;
-
-              // Handle partial JSON from streamObject streaming raw stringified chunks
-              const textMatch = rawContent.match(/"text"\s*:\s*"((?:\\.|[^"\\])*)/);
-              if (textMatch) {
-                try {
-                  contentToRender = JSON.parse(`"${textMatch[1]}"`);
-                } catch {
-                  contentToRender = textMatch[1].replace(/\\n/g, "\n").replace(/\\"/g, '"');
-                }
-              }
-            }
-          }
-
-          if (typeof contentToRender === "string") {
-            // Clean inline citations stringified from old messages
-            contentToRender = contentToRender.replace(/\[\s*\{\s*"filename"[\s\S]*?\]/g, "");
-            // Also strip ---CITATIONS--- entirely if it was streamed before the update
-            contentToRender = contentToRender.split("---CITATIONS---")[0].trim();
-          }
-
-          console.log(`[DEBUG Chat Message ${msg.id}]`, {
-            role: msg.role,
-            hasContent: !!contentToRender,
-            citationsCount: citations.length,
-            toolsUsed: toolsUsed,
-            rawContent: msg.content.substring(0, 50) + "...",
-          });
-
-          return (
-            <Box
-              key={msg.id}
-              sx={{
-                display: "flex",
-                justifyContent: msg.role === "USER" ? "flex-end" : "flex-start",
-                mb: 2,
-              }}
-            >
-              <Paper
-                sx={{
-                  p: 2,
-                  maxWidth: "85%",
-                  overflowX: "auto",
-                  wordBreak: "break-word",
-                  bgcolor: msg.role === "USER" ? "primary.main" : "background.paper",
-                  color: msg.role === "USER" ? "primary.contrastText" : "text.primary",
-                  opacity: msg.id.startsWith("temp-user") ? 0.7 : 1,
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "flex-start",
-                }}
-              >
-                {msg.role !== "USER" && thinking && (
-                  <Box sx={{ width: "100%" }}>
-                    <ThinkingPanel thinking={thinking} streaming={!contentToRender} />
-                  </Box>
-                )}
-                {msg.attachments && msg.attachments.length > 0 && (
-                  <Box
-                    sx={{
-                      display: "flex",
-                      flexWrap: "wrap",
-                      gap: 1,
-                      mb: contentToRender ? 1 : 0,
-                      width: "100%",
-                    }}
-                  >
-                    {msg.attachments.map((att, idx) => {
-                      const isImage = att.type.startsWith("image/");
-                      return isImage ? (
-                        <Box
-                          key={`${att.url}-${idx}`}
-                          component="a"
-                          href={att.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          sx={{
-                            display: "block",
-                            maxWidth: 220,
-                            maxHeight: 220,
-                            borderRadius: 1,
-                            overflow: "hidden",
-                            border: 1,
-                            borderColor: "divider",
-                          }}
-                        >
-                          <Box
-                            component="img"
-                            src={att.url}
-                            alt={att.name}
-                            sx={{ display: "block", maxWidth: "100%", maxHeight: 220 }}
-                          />
-                        </Box>
-                      ) : (
-                        <Box
-                          key={`${att.url}-${idx}`}
-                          component="a"
-                          href={att.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          sx={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 1,
-                            p: 1,
-                            border: 1,
-                            borderColor: "divider",
-                            borderRadius: 1,
-                            bgcolor: "background.default",
-                            textDecoration: "none",
-                            color: "text.primary",
-                            "&:hover": { bgcolor: "action.hover" },
-                          }}
-                        >
-                          {att.type === "application/pdf" ? (
-                            <PdfIcon color="error" />
-                          ) : (
-                            <FileIcon color="action" />
-                          )}
-                          <Typography variant="caption" sx={{ maxWidth: 180 }} noWrap>
-                            {att.name}
-                          </Typography>
-                        </Box>
-                      );
-                    })}
-                  </Box>
-                )}
-                <Box sx={{ display: "flex", width: "100%", gap: 1 }}>
-                  <Box sx={{ flexGrow: 1, minWidth: 0, overflowX: "auto" }}>
-                    {msg.role === "ASSISTANT" && !contentToRender && isStreaming ? (
-                      <ThinkingIndicator />
-                    ) : (
-                      <AssistantMessageRenderer
-                        content={contentToRender}
-                        onSendMessage={(msg) => handleSend(msg)}
-                        isStreaming={isStreaming && msg.id.startsWith("temp-ai")}
-                      />
-                    )}
-                  </Box>
-                  {contentToRender && msg.role === "USER" && (
-                    <Tooltip title={t("chat.window.copyResponse")}>
-                      <IconButton
-                        onClick={() => navigator.clipboard.writeText(contentToRender)}
-                        size="small"
-                        sx={{
-                          alignSelf: "flex-start",
-                          opacity: 0.7,
-                          "&:hover": { opacity: 1 },
-                          color: "inherit",
-                          mt: -1,
-                          mr: -1,
-                        }}
-                      >
-                        <ContentCopyIcon fontSize="small" />
-                      </IconButton>
-                    </Tooltip>
-                  )}
-                </Box>
-
-                {citations.length > 0 && (
-                  <Box sx={{ mt: 2, pt: 1, borderTop: 1, borderColor: "divider" }}>
-                    <Typography
-                      variant="caption"
-                      color="text.secondary"
-                      sx={{ display: "block", mb: 0.5, fontWeight: 500 }}
-                    >
-                      Sources
-                    </Typography>
-                    <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
-                      {(() => {
-                        const groupedCitations = citations.reduce(
-                          (acc, cite) => {
-                            if (!acc[cite.filename]) acc[cite.filename] = [];
-                            acc[cite.filename].push(cite.lines);
-                            return acc;
-                          },
-                          {} as Record<string, string[]>,
-                        );
-                        return Object.entries(groupedCitations).map(([filename, linesArray]) => (
-                          <CitationChip
-                            key={filename}
-                            filename={filename}
-                            lines={(linesArray as string[]).join(", ")}
-                          />
-                        ));
-                      })()}
-                    </Box>
-                  </Box>
-                )}
-
-                {/* AI Graph Trace temporarily hidden — flip SHOW_AI_GRAPH_TRACE to re-enable. */}
-                {SHOW_AI_GRAPH_TRACE && aiGraphTrace && aiGraphTrace.nodes.length > 0 && (
-                  <Box sx={{ mt: 2, pt: 1, borderTop: 1, borderColor: "divider" }}>
-                    <Box sx={{ mt: 1, minWidth: { xs: "250px", sm: "400px" }, width: "100%" }}>
-                      <Typography
-                        variant="caption"
-                        color="primary.main"
-                        sx={{ display: "block", mb: 1, fontWeight: 600 }}
-                      >
-                        ✨ AI Graph Trace
-                      </Typography>
-                      <ContextGraph
-                        height={250}
-                        nodes={aiGraphTrace.nodes}
-                        links={aiGraphTrace.links}
-                      />
-                    </Box>
-                  </Box>
-                )}
-
-                {msg.role === "ASSISTANT" && contentToRender && (
-                  <Box
-                    sx={{
-                      mt: 1,
-                      pt: 1,
-                      borderTop: citations.length > 0 ? 0 : 1,
-                      borderColor: "divider",
-                      display: "flex",
-                      gap: 1,
-                      alignItems: "center",
-                      flexWrap: "wrap",
-                    }}
-                  >
-                    <Tooltip title={t("chat.window.copyResponse")}>
-                      <Button
-                        size="small"
-                        variant="outlined"
-                        startIcon={<ContentCopyIcon fontSize="small" />}
-                        onClick={() => navigator.clipboard.writeText(contentToRender)}
-                        sx={{
-                          minWidth: 0,
-                          py: 0.25,
-                          px: 1,
-                          fontSize: "0.7rem",
-                          textTransform: "none",
-                          color: "text.secondary",
-                          borderColor: "divider",
-                        }}
-                      >
-                        {t("chat.window.copyResponse")}
-                      </Button>
-                    </Tooltip>
-                    {latencyMs && (
-                      <Typography variant="caption" color="text.secondary">
-                        ⏱️ {(latencyMs / 1000).toFixed(1)}s
-                      </Typography>
-                    )}
-                    {toolsUsed.length > 0 &&
-                      toolsUsed.map((toolName) => (
-                        <Chip
-                          key={toolName}
-                          label={toolName}
-                          size="small"
-                          variant="outlined"
-                          sx={{
-                            fontSize: "0.65rem",
-                            height: 18,
-                            color: "text.secondary",
-                            borderColor: "divider",
-                          }}
-                        />
-                      ))}
-                  </Box>
-                )}
-              </Paper>
-            </Box>
-          );
-        })}
+        {allMessages.map((msg) => (
+          <ChatMessageItem
+            key={msg.id}
+            msg={msg}
+            streaming={isStreaming && msg.id.startsWith("temp-ai")}
+            onSendMessage={stableSend}
+          />
+        ))}
         {isSending && (
           <Box sx={{ display: "flex", justifyContent: "flex-start", mb: 2 }}>
             <CircularProgress size={20} />

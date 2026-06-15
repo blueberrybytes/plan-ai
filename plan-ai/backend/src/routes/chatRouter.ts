@@ -21,8 +21,45 @@ import {
   SubscriptionRequiredError,
 } from "../services/subscriptionGuard";
 import { checkUsageLimit, UsageLimitExceededError } from "../services/usageLimitGuard";
+import { extractTextFromBuffer } from "../utils/documentTextExtractor";
 
 const router = Router();
+
+// Cap per-attachment extracted text injected into the prompt (~25k tokens).
+const MAX_ATTACHMENT_CHARS = 100_000;
+// Cache extracted attachment text by URL. Document content is immutable per
+// URL (Firebase paths are uuid-stamped), so long threads — which replay every
+// past attachment on every message — extract each file only ONCE instead of
+// re-fetching + re-parsing it on every turn.
+const attachmentTextCache = new Map<string, string>();
+
+/**
+ * Fetch a non-image/non-PDF chat attachment from its (public) URL and extract
+ * its text so the model can actually read it. Returns "" on any failure — a
+ * broken attachment must never break the chat. Images and PDFs are handled
+ * natively by the multimodal message and never reach here.
+ */
+async function extractAttachmentText(url: string, type: string, name: string): Promise<string> {
+  const cached = attachmentTextCache.get(url);
+  if (cached !== undefined) return cached;
+  let out = "";
+  try {
+    const res = await fetch(url, { signal: AbortSignal.timeout(15000) });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const buf = Buffer.from(await res.arrayBuffer());
+    let text = await extractTextFromBuffer(buf, type);
+    if (text.length > MAX_ATTACHMENT_CHARS) {
+      text = `${text.slice(0, MAX_ATTACHMENT_CHARS)}\n…[truncated — attachment longer than ${MAX_ATTACHMENT_CHARS} chars]`;
+    }
+    out = text;
+  } catch (err) {
+    logger.warn(`Failed to read chat attachment "${name}" (${type})`, err);
+    out = "";
+  }
+  if (attachmentTextCache.size > 500) attachmentTextCache.clear();
+  attachmentTextCache.set(url, out);
+  return out;
+}
 
 // POST /api/chat/threads/:threadId/stream
 router.post(
@@ -69,15 +106,13 @@ router.post(
         await checkUsageLimit(workspaceId, "llm");
       } catch (err) {
         if (err instanceof UsageLimitExceededError) {
-          return res
-            .status(err.status)
-            .json({
-              code: err.code,
-              message: err.message,
-              limitType: err.limitType,
-              used: err.used,
-              allowed: err.allowed,
-            });
+          return res.status(err.status).json({
+            code: err.code,
+            message: err.message,
+            limitType: err.limitType,
+            used: err.used,
+            allowed: err.allowed,
+          });
         }
         throw err;
       }
@@ -205,8 +240,14 @@ ${contextText}
       type AttachmentRef = { url: string; type: string; name: string; size?: number };
 
       // Build a multimodal user message for the LLM when an attachment is
-      // present. Falls back to plain text content otherwise.
-      const buildUserMessage = (text: string, atts?: AttachmentRef[] | null): ModelMessage => {
+      // present. Images/PDFs go to the model natively; every OTHER document
+      // type (CSV, TXT, MD, JSON, XLSX, DOCX, …) is read back from storage and
+      // inlined as text — without this, those attachments were silently
+      // dropped and the model replied "I don't see the attachment".
+      const buildUserMessage = async (
+        text: string,
+        atts?: AttachmentRef[] | null,
+      ): Promise<ModelMessage> => {
         if (!atts || atts.length === 0) {
           return { role: "user", content: text };
         }
@@ -221,14 +262,21 @@ ${contextText}
             parts.push({ type: "image", image: new URL(a.url) });
           } else if (a.type === "application/pdf") {
             parts.push({ type: "file", data: new URL(a.url), mediaType: a.type });
+          } else {
+            const extracted = await extractAttachmentText(a.url, a.type, a.name);
+            parts.push({
+              type: "text",
+              text: extracted
+                ? `\n\n[Attachment: ${a.name}]\n${extracted}`
+                : `\n\n[Attachment: ${a.name} — could not be read]`,
+            });
           }
         }
         return { role: "user", content: parts };
       };
 
-      const messages: ModelMessage[] = [
-        { role: "system", content: systemPrompt },
-        ...thread.messages.map<ModelMessage>((m) => {
+      const historyMessages = await Promise.all(
+        thread.messages.map<Promise<ModelMessage>>(async (m) => {
           let cleanContent = m.content;
           if (m.role === "ASSISTANT") {
             try {
@@ -247,7 +295,12 @@ ${contextText}
           }
           return { role: "assistant", content: cleanContent };
         }),
-        buildUserMessage(content, attachments),
+      );
+
+      const messages: ModelMessage[] = [
+        { role: "system", content: systemPrompt },
+        ...historyMessages,
+        await buildUserMessage(content, attachments),
       ];
 
       const requestedModelKey = modelKey && modelKey.length > 0 ? modelKey : DEFAULT_AI_MODEL;
@@ -475,15 +528,13 @@ router.post("/assistant/stream", authenticateUser, async (req: AuthenticatedRequ
       await checkUsageLimit(workspaceId, "llm");
     } catch (err) {
       if (err instanceof UsageLimitExceededError) {
-        return res
-          .status(err.status)
-          .json({
-            code: err.code,
-            message: err.message,
-            limitType: err.limitType,
-            used: err.used,
-            allowed: err.allowed,
-          });
+        return res.status(err.status).json({
+          code: err.code,
+          message: err.message,
+          limitType: err.limitType,
+          used: err.used,
+          allowed: err.allowed,
+        });
       }
       throw err;
     }

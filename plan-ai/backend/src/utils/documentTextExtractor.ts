@@ -96,38 +96,46 @@ function extractTextFromExcel(buffer: Buffer): string {
 }
 
 export async function extractTextFromUpload(file: Express.Multer.File): Promise<string> {
-  if (isSupportedContextFileMimeType(file.mimetype)) {
-    if (
-      file.mimetype.startsWith("text/") ||
-      file.mimetype === "application/json" ||
-      file.mimetype === "application/xml"
-    ) {
-      return file.buffer.toString("utf-8").trim();
-    }
+  return extractTextFromBuffer(file.buffer, file.mimetype);
+}
+
+/**
+ * Buffer-based text extraction — same logic as `extractTextFromUpload` but
+ * works from raw bytes + mime type. Used by the chat path to read document
+ * attachments (CSV/TXT/MD/JSON/XLSX/DOCX/…) back out of Firebase Storage so
+ * their content reaches the model (images/PDFs go to the model natively).
+ */
+export async function extractTextFromBuffer(buffer: Buffer, mimetype: string): Promise<string> {
+  if (
+    mimetype.startsWith("text/") ||
+    mimetype === "application/json" ||
+    mimetype === "application/xml"
+  ) {
+    return buffer.toString("utf-8").trim();
   }
 
-  if (!isSupportedUploadMimeType(file.mimetype)) {
-    throw new Error(`Unsupported file type: ${file.mimetype}`);
+  if (!isSupportedUploadMimeType(mimetype)) {
+    throw new Error(`Unsupported file type: ${mimetype}`);
   }
 
-  if (file.mimetype === "application/pdf") {
-    const parsed = await pdfParse(file.buffer);
+  if (mimetype === "application/pdf") {
+    const parsed = await pdfParse(buffer);
     return parsed.text.trim();
   }
 
   if (
-    file.mimetype === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ||
-    file.mimetype === "application/vnd.ms-excel"
+    mimetype === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ||
+    mimetype === "application/vnd.ms-excel"
   ) {
-    return extractTextFromExcel(file.buffer);
+    return extractTextFromExcel(buffer);
   }
 
   if (
-    file.mimetype === "application/vnd.openxmlformats-officedocument.presentationml.presentation" ||
-    file.mimetype === "application/vnd.ms-powerpoint"
+    mimetype === "application/vnd.openxmlformats-officedocument.presentationml.presentation" ||
+    mimetype === "application/vnd.ms-powerpoint"
   ) {
     try {
-      const parsedText = await officeparser.parseOffice(file.buffer);
+      const parsedText = await officeparser.parseOffice(buffer);
       return parsedText?.toText() || "";
     } catch (e: any) {
       console.error("Failed to parse PPTX using officeparser", e);
@@ -135,10 +143,10 @@ export async function extractTextFromUpload(file: Express.Multer.File): Promise<
     }
   }
 
-  if (file.mimetype === "application/msword") {
+  if (mimetype === "application/msword") {
     try {
       const extractor = new WordExtractor();
-      const extracted = await extractor.extract(file.buffer);
+      const extracted = await extractor.extract(buffer);
       return extracted.getBody().trim();
     } catch (e: any) {
       console.error("Failed to parse legacy DOC using word-extractor", e);
@@ -146,6 +154,6 @@ export async function extractTextFromUpload(file: Express.Multer.File): Promise<
     }
   }
 
-  const result = await mammoth.extractRawText({ buffer: file.buffer });
+  const result = await mammoth.extractRawText({ buffer });
   return result.value.trim();
 }
