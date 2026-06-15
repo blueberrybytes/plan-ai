@@ -3,6 +3,48 @@ import { logger } from "../utils/logger";
 
 const DEFAULT_DISTANCE = "Cosine";
 
+/** Transient = a network blip worth retrying (Railway internal hiccups). */
+const isTransientNetworkError = (err: unknown): boolean =>
+  err instanceof Error &&
+  (err.message.includes("fetch failed") ||
+    err.message.includes("ECONNREFUSED") ||
+    err.message.includes("ECONNRESET") ||
+    err.message.includes("ETIMEDOUT") ||
+    err.message.includes("socket hang up") ||
+    err.message.includes("EAI_AGAIN"));
+
+/**
+ * Run a Qdrant operation with retry + exponential backoff on transient network
+ * errors. Qdrant runs on Railway's internal network, which occasionally drops a
+ * connection ("fetch failed"); without this a single blip failed the whole
+ * github sync job (prod incident 2026-06-15: upsert during indexRawText). A
+ * genuine outage still surfaces after the retries are exhausted.
+ */
+async function withQdrantRetry<T>(
+  label: string,
+  fn: () => Promise<T>,
+  retries = 3,
+  delayMs = 1000,
+): Promise<T> {
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      return await fn();
+    } catch (err) {
+      if (isTransientNetworkError(err) && attempt < retries) {
+        const wait = delayMs * Math.pow(2, attempt - 1); // 1s, 2s, 4s
+        logger.warn(
+          `[Qdrant] ${label} transient error (attempt ${attempt}/${retries}), retrying in ${wait}ms: ${(err as Error).message}`,
+        );
+        await new Promise((resolve) => setTimeout(resolve, wait));
+      } else {
+        throw err;
+      }
+    }
+  }
+  // Unreachable (always returns or throws), but satisfies TS control flow.
+  throw new Error(`[Qdrant] ${label} retry loop exhausted unexpectedly`);
+}
+
 export type ContextVectorPayload = {
   contextId: string;
   fileId: string;
@@ -77,19 +119,23 @@ export const ensureContextCollection = async (
   distance: "Cosine" | "Dot" | "Euclid" = DEFAULT_DISTANCE,
 ): Promise<void> => {
   const name = getContextCollectionName();
-  const existing = (await qdrantClient.getCollections()) as QdrantCollectionInfo;
+  const existing = (await withQdrantRetry("getCollections", () =>
+    qdrantClient.getCollections(),
+  )) as QdrantCollectionInfo;
   const alreadyExists = existing.collections?.some((c) => c.name === name) ?? false;
 
   if (alreadyExists) {
     return;
   }
 
-  await qdrantClient.createCollection(name, {
-    vectors: {
-      size: dimension,
-      distance,
-    },
-  });
+  await withQdrantRetry("createCollection", () =>
+    qdrantClient.createCollection(name, {
+      vectors: {
+        size: dimension,
+        distance,
+      },
+    }),
+  );
   logger.info(`Created Qdrant collection ${name} (dimension=${dimension}, distance=${distance})`);
 };
 
@@ -105,26 +151,32 @@ export const upsertContextVectors = async (points: ContextVectorPoint[]): Promis
     payload: toQdrantPayload(point.payload),
   }));
 
-  await qdrantClient.upsert(name, {
-    wait: true,
-    points: payloadPoints,
-  });
+  await withQdrantRetry("upsert", () =>
+    qdrantClient.upsert(name, {
+      wait: true,
+      points: payloadPoints,
+    }),
+  );
 };
 
 export const deleteVectorsByFile = async (contextId: string, fileId: string): Promise<void> => {
   const name = getContextCollectionName();
-  await qdrantClient.delete(name, {
-    wait: true,
-    filter: toFilterByFile(contextId, fileId),
-  });
+  await withQdrantRetry("delete(byFile)", () =>
+    qdrantClient.delete(name, {
+      wait: true,
+      filter: toFilterByFile(contextId, fileId),
+    }),
+  );
 };
 
 export const deleteVectorsByContext = async (contextId: string): Promise<void> => {
   const name = getContextCollectionName();
-  await qdrantClient.delete(name, {
-    wait: true,
-    filter: toFilterByContext(contextId),
-  });
+  await withQdrantRetry("delete(byContext)", () =>
+    qdrantClient.delete(name, {
+      wait: true,
+      filter: toFilterByContext(contextId),
+    }),
+  );
 };
 
 export interface QdrantScoredPoint {
@@ -153,12 +205,14 @@ export const queryVectors = async (
   };
 
   const name = getContextCollectionName();
-  const results = await qdrantClient.search(name, {
-    vector,
-    filter,
-    limit,
-    with_payload: true,
-  });
+  const results = await withQdrantRetry("search", () =>
+    qdrantClient.search(name, {
+      vector,
+      filter,
+      limit,
+      with_payload: true,
+    }),
+  );
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return results.map((res: any) => ({
@@ -209,42 +263,16 @@ async function scrollAll(
   const all: ContextVectorPayload[] = [];
   let offset: QdrantScrollResult["next_page_offset"] = undefined;
 
-  // Retry helper for transient network errors (e.g. Railway ECONNREFUSED hiccups)
-  const scrollWithRetry = async (retries = 3, delayMs = 1000): Promise<QdrantScrollResult> => {
-    for (let attempt = 1; attempt <= retries; attempt++) {
-      try {
-        return await qdrantClient.scroll(name, {
-          filter,
-          limit: pageSize,
-          with_payload: true,
-          with_vector: false,
-          ...(offset !== undefined ? { offset } : {}),
-        });
-      } catch (err) {
-        const isTransient =
-          err instanceof Error &&
-          (err.message.includes("ECONNREFUSED") ||
-            err.message.includes("fetch failed") ||
-            err.message.includes("ECONNRESET") ||
-            err.message.includes("ETIMEDOUT"));
-
-        if (isTransient && attempt < retries) {
-          const wait = delayMs * Math.pow(2, attempt - 1); // 1s, 2s, 4s
-          logger.warn(
-            `[scrollAll] Qdrant transient error (attempt ${attempt}/${retries}), retrying in ${wait}ms: ${(err as Error).message}`,
-          );
-          await new Promise((resolve) => setTimeout(resolve, wait));
-        } else {
-          throw err;
-        }
-      }
-    }
-    // Should never be reached (always returns or throws), but required by TS
-    throw new Error("[scrollAll] Retry loop exhausted unexpectedly");
-  };
-
   do {
-    const page = await scrollWithRetry();
+    const page = await withQdrantRetry("scroll", () =>
+      qdrantClient.scroll(name, {
+        filter,
+        limit: pageSize,
+        with_payload: true,
+        with_vector: false,
+        ...(offset !== undefined ? { offset } : {}),
+      }),
+    );
 
     if (page.points && page.points.length > 0) {
       for (const p of page.points) {
