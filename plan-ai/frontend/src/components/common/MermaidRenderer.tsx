@@ -84,93 +84,188 @@ const MermaidRenderer: React.FC<MermaidRendererProps> = ({
         setHasError(false);
         setErrorMessage("");
         if (onErrorStateChange) onErrorStateChange(false);
-        // Initialize mermaid with dynamic theme variables.
+
+        // Mermaid's theme engine ONLY honours hex colours (named colours and
+        // rgba() are silently ignored). MUI's getContrastText returns "#fff"
+        // or "rgba(0,0,0,0.87)", so coerce the contrast-derived colours to hex
+        // — otherwise the native `base` theme drops them. `transparent` also
+        // isn't a hex, so the few genuine transparencies stay in the residual
+        // CSS (injectMermaidThemeStyles), not here.
+        const hx = (c: string, darkText = "#1a1a1a") =>
+          /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(c) ? c : darkText;
+        const bgHex = hx(bg, isDark ? "#0b0d11" : "#ffffff");
+        const primHex = hx(primary, "#3b82f6");
+        const secHex = hx(secondary, "#64748b");
+        const txt = hx(canvasTextColor); // canvas / label text over the background
+        const nodeTxt = hx(nodeTextColor); // text painted ON primary-filled nodes
+        const secTxt = hx(secondaryTextColor); // text on secondary fills (notes)
+        // Repeating colour scales (pie/git/cScale wrap the 10-colour palette).
+        const scale = (prefix: string, n: number, from = 0) =>
+          Object.fromEntries(
+            Array.from({ length: n }, (_, i) => [`${prefix}${from + i}`, palette[i % palette.length]]),
+          );
+        const constScale = (prefix: string, n: number, value: string, from = 0) =>
+          Object.fromEntries(Array.from({ length: n }, (_, i) => [`${prefix}${from + i}`, value]));
+
+        // theme: 'base' is the ONLY customizable theme — themeVariables apply
+        // fully here (they were largely ignored on default/dark before, which
+        // is why everything was force-painted via injected CSS). darkMode drives
+        // the engine's derived-colour maths.
         mermaid.initialize({
           startOnLoad: false,
-          theme: isDark ? "dark" : "default",
+          theme: "base",
+          darkMode: isDark,
+          fontFamily: '"Inter", "Roboto", sans-serif',
           themeVariables: {
-            primaryColor: primary,
-            mainBkg: bg,
-            primaryBorderColor: secondary,
-            nodeBorder: secondary,
-            lineColor: secondary,
-            nodeTextColor: nodeTextColor,
-            clusterBkg: bg,
-            clusterBorder: secondary,
+            darkMode: isDark,
+            background: bgHex,
             fontFamily: '"Inter", "Roboto", sans-serif',
             fontSize: "14px",
-            edgeLabelBackground: bg, // Ensure Mermaid natively sets edge label bg to canvas color
 
-            // Text color helpers for native contrast computations (Journey, Timeline, etc)
-            taskTextDarkColor: "#0f172a",
-            taskTextLightColor: "#f8fafc",
-            taskTextOutsideColor: canvasTextColor,
+            // ── Core (flowchart/state/class nodes, edges, clusters, text) ──
+            primaryColor: primHex,
+            primaryTextColor: nodeTxt,
+            primaryBorderColor: secHex,
+            secondaryColor: secHex,
+            secondaryBorderColor: secHex,
+            secondaryTextColor: secTxt,
+            tertiaryColor: bgHex,
+            tertiaryBorderColor: secHex,
+            tertiaryTextColor: txt,
+            mainBkg: primHex,
+            nodeBkg: primHex,
+            nodeBorder: secHex,
+            nodeTextColor: nodeTxt,
+            clusterBkg: bgHex,
+            clusterBorder: secHex,
+            lineColor: secHex,
+            defaultLinkColor: secHex,
+            arrowheadColor: secHex,
+            textColor: txt,
+            titleColor: txt,
+            edgeLabelBackground: bgHex,
+            labelBackgroundColor: bgHex,
+            noteBkgColor: secHex,
+            noteTextColor: secTxt,
+            noteBorderColor: primHex,
+            classText: nodeTxt,
 
-            // Gantt native variables
-            taskBkgColor: primary,
-            taskBorderColor: secondary,
-            taskTextColor: nodeTextColor,
+            // ── Sequence ──
+            actorBkg: primHex,
+            actorBorder: secHex,
+            actorTextColor: nodeTxt,
+            actorLineColor: secHex,
+            signalColor: secHex,
+            signalTextColor: txt,
+            labelBoxBkgColor: bgHex,
+            labelBoxBorderColor: secHex,
+            labelTextColor: txt,
+            loopTextColor: txt,
+            activationBkgColor: primHex,
+            activationBorderColor: secHex,
+            sequenceNumberColor: nodeTxt,
 
-            // General text fallback
-            textColor: canvasTextColor,
+            // ── State ──
+            stateBkg: primHex,
+            stateLabelColor: nodeTxt,
+            labelColor: nodeTxt,
+            altBackground: bgHex,
+            compositeBackground: bgHex,
+            compositeBorder: secHex,
+            compositeTitleBackground: bgHex,
+            transitionColor: secHex,
+            transitionLabelColor: txt,
+            specialStateColor: secHex,
 
-            // Timeline & Journey text variables (some versions use these)
-            cScaleLabel0: isDark ? "#ffffff" : "#0f172a",
-            cScaleLabel1: isDark ? "#ffffff" : "#0f172a",
-            cScaleLabel2: isDark ? "#ffffff" : "#0f172a",
-            cScaleLabel3: isDark ? "#ffffff" : "#0f172a",
-            cScaleLabel4: isDark ? "#ffffff" : "#0f172a",
-            cScaleLabel5: isDark ? "#ffffff" : "#0f172a",
+            // ── ER (boxes also via the er.{fill,stroke} config below) ──
+            attributeBackgroundColorOdd: primHex,
+            attributeBackgroundColorEven: primHex,
+            relationColor: secHex,
+            relationLabelBackground: bgHex,
+            relationLabelColor: txt,
 
-            // Pie Charts
-            pie1: palette[0],
-            pie2: palette[1],
-            pie3: palette[2],
-            pie4: palette[3],
-            pie5: palette[4],
-            pie6: palette[5],
-            pie7: palette[6],
-            pie8: palette[7],
-            pie9: palette[8],
-            pie10: palette[9],
+            // ── Gantt ──
+            sectionBkgColor: bgHex,
+            sectionBkgColor2: bgHex,
+            altSectionBkgColor: bgHex,
+            taskBkgColor: primHex,
+            taskBorderColor: secHex,
+            taskTextColor: nodeTxt,
+            taskTextLightColor: txt,
+            taskTextDarkColor: txt,
+            taskTextOutsideColor: txt,
+            activeTaskBkgColor: primHex,
+            activeTaskBorderColor: secHex,
+            doneTaskBkgColor: secHex,
+            doneTaskBorderColor: secHex,
+            critBkgColor: secHex,
+            critBorderColor: secHex,
+            gridColor: secHex,
+            todayLineColor: primHex,
+
+            // ── Quadrant (the transparent square fill stays in residual CSS) ──
+            quadrantPointFill: primHex,
+            quadrantPointTextFill: txt,
+            quadrantTitleFill: txt,
+            quadrantXAxisTextFill: txt,
+            quadrantYAxisTextFill: txt,
+            quadrantInternalBorderStrokeFill: secHex,
+            quadrantExternalBorderStrokeFill: secHex,
+
+            // ── Architecture (label text contrast stays in residual CSS) ──
+            archEdgeColor: secHex,
+            archEdgeArrowColor: secHex,
+            archGroupBorderColor: secHex,
+
+            // ── Pie ──
+            ...scale("pie", 12, 1),
             pieTitleTextSize: "16px",
-            pieTitleTextColor: canvasTextColor,
+            pieTitleTextColor: txt,
             pieSectionTextSize: "12px",
-            pieSectionTextColor: canvasTextColor,
+            pieSectionTextColor: txt,
             pieLegendTextSize: "14px",
-            pieLegendTextColor: canvasTextColor,
-            pieStrokeColor: bg,
+            pieLegendTextColor: txt,
+            pieStrokeColor: bgHex,
             pieStrokeWidth: "2px",
             pieOuterStrokeWidth: "2px",
-            pieOuterStrokeColor: bg,
+            pieOuterStrokeColor: bgHex,
+            pieOpacity: "0.85",
 
-            // XYChart
+            // ── Journey / Timeline / Mindmap colour scales ──
+            ...scale("fillType", 8),
+            ...scale("cScale", 12),
+            ...constScale("cScaleLabel", 12, txt),
+
+            // ── Git graph ──
+            ...scale("git", 8),
+            ...constScale("gitBranchLabel", 8, txt),
+            commitLabelColor: txt,
+            commitLabelBackground: bgHex,
+
+            // ── XYChart (object — colours live here, geometry in xyChart config) ──
             xyChart: {
               backgroundColor: "transparent",
-              titleColor: canvasTextColor,
-              dataLabelColor: canvasTextColor,
-              xAxisLabelColor: canvasTextColor,
-              xAxisTitleColor: canvasTextColor,
-              xAxisTickColor: secondary,
-              xAxisLineColor: secondary,
-              yAxisLabelColor: canvasTextColor,
-              yAxisTitleColor: canvasTextColor,
-              yAxisTickColor: secondary,
-              yAxisLineColor: secondary,
+              titleColor: txt,
+              dataLabelColor: txt,
+              xAxisLabelColor: txt,
+              xAxisTitleColor: txt,
+              xAxisTickColor: secHex,
+              xAxisLineColor: secHex,
+              yAxisLabelColor: txt,
+              yAxisTitleColor: txt,
+              yAxisTickColor: secHex,
+              yAxisLineColor: secHex,
               plotColorPalette: palette.join(", "),
             } as any,
           },
-          flowchart: {
-            htmlLabels: true,
-            useMaxWidth: true,
-          },
-          sequence: {
-            wrap: true,
-            showSequenceNumbers: false,
-          },
+          flowchart: { htmlLabels: true, useMaxWidth: true },
+          sequence: { wrap: true, showSequenceNumbers: false },
+          // Per-diagram colour config (these colours are NOT themeVariables).
+          er: { fill: primHex, stroke: secHex } as any,
+          sankey: { linkColor: primHex } as any,
           securityLevel: "loose",
-          logLevel: 5, // Suppress verbose mermaid logs
-          suppressErrorRendering: true, // Force Mermaid not to render SVGs for syntax errors
+          logLevel: 5,
+          suppressErrorRendering: true,
         });
 
         // Pre-validate syntax so mermaid doesn't successfully render an error SVG

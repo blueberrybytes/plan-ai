@@ -85,98 +85,32 @@ export interface MermaidThemeOptions {
   secondaryTextColor: string;
 }
 
+/**
+ * RESIDUAL theme CSS — only for what Mermaid's `base` themeVariables genuinely
+ * can't express. After the 2026-06 migration, all well-supported diagram types
+ * (flowchart, sequence, class, state, ER, gantt, pie, notes, quadrant/xychart
+ * colours) are themed NATIVELY via themeVariables in MermaidRenderer. What
+ * stays here:
+ *   1. transparencies — `transparent` is not a hex, so it can't be a themeVariable;
+ *   2. beta diagrams with no theme-variable support (sankey nodes, kanban, block,
+ *      mindmap, timeline/journey section text, architecture label tspans).
+ * If you find yourself adding a rule for a well-supported type, set the
+ * themeVariable instead — that's the whole point of the migration.
+ */
 export const injectMermaidThemeStyles = (svg: string, options: MermaidThemeOptions): string => {
-  const {
-    id,
-    bg,
-    primary,
-    secondary,
-    canvasTextColor,
-    canvasContrastText,
-    nodeTextColor,
-    secondaryTextColor,
-  } = options;
+  const { id, bg, primary, secondary, canvasTextColor, canvasContrastText, nodeTextColor } = options;
 
   return svg.replace(
     /(<svg[^>]*>)/i,
     `$1<style>
-      /* Base canvas text - don't blanket override all elements with * to protect flowcharts */
-      #${id} > g > text, #${id} > g > foreignObject { 
-        fill: ${canvasTextColor} !important; 
-        color: ${canvasTextColor} !important; 
-      }
-      
-      /* Edge lines (Flowchart/State) */
-      #${id} .edgePath .path, #${id} .edgeTerminals .path, #${id} .transition { stroke: ${secondary} !important; }
-      
-      /* Edge labels */
-      #${id} .edgeLabel { background-color: ${bg} !important; }
-      #${id} .edgeLabel rect { fill: ${bg} !important; opacity: 0.8; }
-      #${id} .edgeLabel text, #${id} .edgeLabel span { color: ${canvasTextColor} !important; fill: ${canvasTextColor} !important; }
+      /* ── Transparencies (cannot be hex themeVariables) ── */
+      #${id} .quadrant { fill: transparent !important; }
+      #${id} [class*="xychart-bg"] { fill: transparent !important; }
 
-
-      /* Flowcharts */
-      #${id} .node rect, #${id} .node circle, #${id} .node ellipse, #${id} .node polygon, #${id} .node path { fill: ${primary} !important; stroke: ${secondary} !important; stroke-width: 1px !important; }
-      #${id} .node text, #${id} .node tspan, #${id} .node foreignObject div, #${id} .node .label { fill: ${nodeTextColor} !important; color: ${nodeTextColor} !important; }
-      #${id} .cluster rect { fill: ${bg} !important; stroke: ${secondary} !important; stroke-width: 1px !important; opacity: 0.8; }
-      #${id} .cluster text, #${id} .cluster tspan, #${id} .cluster .label { fill: ${canvasTextColor} !important; color: ${canvasTextColor} !important; }
-      
-      /* State Diagrams */
-      #${id} .stateGroup rect, #${id} .stateGroup circle, #${id} .stateGroup ellipse, #${id} .stateGroup polygon, #${id} .state-node rect, #${id} .state-node polygon { fill: ${primary} !important; stroke: ${secondary} !important; }
-      #${id} .stateGroup text, #${id} .stateGroup tspan, #${id} .stateGroup foreignObject div, #${id} .state-node text, #${id} .state-node tspan, #${id} .state-node .label { fill: ${nodeTextColor} !important; color: ${nodeTextColor} !important; }
-      #${id} .stateGroup .cluster rect { fill: ${bg} !important; opacity: 0.8; }
-      #${id} .stateGroup .cluster text { fill: ${canvasTextColor} !important; color: ${canvasTextColor} !important; }
-
-      /* Sequence Diagram Actors */
-      #${id} .actor { fill: ${primary} !important; stroke: ${secondary} !important; stroke-width: 2px !important; }
-      #${id} text.actor > tspan { fill: ${nodeTextColor} !important; }
-      
-      /* Sequence Diagram Lines */
-      #${id} .actor-line { stroke: ${secondary} !important; }
-      #${id} rect[class^="activation"] { fill: ${primary} !important; opacity: 0.2; }
-      #${id} .messageLine0, #${id} .messageLine1 { stroke: ${secondary} !important; stroke-width: 2px !important; }
-      #${id} .labelBox { fill: ${bg} !important; stroke: ${secondary} !important; }
-      #${id} .labelText { fill: ${canvasTextColor} !important; }
-      #${id} .loopText, #${id} .loopText > tspan { fill: ${canvasTextColor} !important; }
-      #${id} .messageText { fill: ${canvasTextColor} !important; stroke: none !important; }
-
-      /* Gantt Charts */
-      #${id} .grid .tick line { stroke: ${secondary} !important; opacity: 0.3; }
-      #${id} .today { stroke: ${primary} !important; stroke-width: 2px !important; }
-      #${id} .section { fill: none !important; stroke: ${secondary} !important; }
-      #${id} .sectionTitle, #${id} .tick text, #${id} .titleText { fill: ${canvasTextColor} !important; color: ${canvasTextColor} !important; }
-
-      /* Class Diagrams */
-      #${id} .classGroup rect { fill: ${primary} !important; stroke: ${secondary} !important; }
-      #${id} .classGroup text, #${id} .classGroup tspan, #${id} .classLabel .label { fill: ${nodeTextColor} !important; color: ${nodeTextColor} !important; }
-      #${id} .classGroup line { stroke: ${secondary} !important; stroke-width: 1; }
-      
-      /* ER Diagrams */
-      #${id} .entityBox, #${id} .attributeBoxOdd, #${id} .attributeBoxEven { fill: ${primary} !important; stroke: ${secondary} !important; }
-      #${id} .entityLabel, #${id} .entityLabel text, #${id} .entityLabel tspan { fill: ${nodeTextColor} !important; color: ${nodeTextColor} !important; }
-      #${id} .attributeBoxOdd ~ text, #${id} .attributeBoxEven ~ text, #${id} .er.entityLabel text { fill: ${nodeTextColor} !important; color: ${nodeTextColor} !important; }
-      #${id} .er.relationshipLine { stroke: ${secondary} !important; }
-      #${id} .er.relationshipLabelBox { fill: ${bg} !important; }
-      #${id} .er.relationshipLabel { fill: ${canvasTextColor} !important; }
-      
-      /* Mindmap Diagrams */
-      #${id} .mindmap-node rect, #${id} .mindmap-bg { fill: ${primary} !important; stroke: ${secondary} !important; }
-      #${id} .mindmap-node text, #${id} .mindmap-node tspan, #${id} .mindmap-node foreignObject div { fill: ${nodeTextColor} !important; color: ${nodeTextColor} !important; }
-      #${id} .mindmap-edges path { stroke: ${secondary} !important; stroke-width: 2px !important; }
-      
-      /* Sankey Diagrams */
-      #${id} .sankey-link { fill: ${primary} !important; fill-opacity: 0.3 !important; stroke: none !important; }
-      #${id} .sankey-node rect { fill: ${primary} !important; stroke: ${secondary} !important; }
-      #${id} .sankey-node text { fill: ${canvasTextColor} !important; color: ${canvasTextColor} !important; }
-
-      /* Architecture (architecture-beta).
-         Service & group labels are <text><tspan class="text-outer-tspan"><tspan
-         class="text-inner-tspan"> inside .architecture-services / .architecture-groups.
-         They carry NO color class and inherit the root SVG fill (white), so they
-         vanish on light backgrounds. Force the canvas-contrast color on those tspans.
-         Scoped to architecture containers so it can't touch other diagram types.
-         NOTE: do NOT fill .node-bkg — in architecture it's the (transparent) group
-         box; filling it opaque paints over the icons and blanks the diagram. */
+      /* ── Architecture (beta): service/group label tspans carry no colour
+         class and inherit the root SVG fill, so they vanish on some backgrounds.
+         No theme variable exists for them — force the canvas-contrast colour.
+         Never fill .node-bkg (it's the transparent group box; filling it hides icons). */
       #${id} .architecture-services text,
       #${id} .architecture-services .text-inner-tspan,
       #${id} .architecture-services .text-outer-tspan,
@@ -186,40 +120,27 @@ export const injectMermaidThemeStyles = (svg: string, options: MermaidThemeOptio
         fill: ${canvasContrastText} !important;
         color: ${canvasContrastText} !important;
       }
-      /* Architecture group outlines (dashed boxes) + edges — stroke only, never fill. */
-      #${id} .architecture-groups .node-bkg { stroke: ${secondary} !important; }
-      #${id} .architecture-edges .edge, #${id} [class*="archEdge"], #${id} .arch-edge { stroke: ${secondary} !important; }
-      
-      /* XYChart Diagrams */
-      #${id} [class*="xychart-xaxis-line"], #${id} [class*="xychart-yaxis-line"] { stroke: ${secondary} !important; opacity: 0.5; }
-      #${id} [class*="xychart-bg"] { fill: transparent !important; }
-      
-      /* Notes */
-      #${id} .note { fill: ${secondary} !important; stroke: ${primary} !important; }
-      #${id} .noteText, #${id} .noteText > tspan { fill: ${secondaryTextColor} !important; stroke: none !important; }
 
-      /* Pie Charts */
-      #${id} .pieTitleText, #${id} .legend text { fill: ${canvasTextColor} !important; color: ${canvasTextColor} !important; }
-      #${id} .slice { stroke: ${bg} !important; stroke-width: 2px !important; }
+      /* ── Sankey (beta): only linkColor has config; node fill + text have no theme support. ── */
+      #${id} .sankey-link { fill: ${primary} !important; fill-opacity: 0.3 !important; stroke: none !important; }
+      #${id} .sankey-node rect { fill: ${primary} !important; stroke: ${secondary} !important; }
+      #${id} .sankey-node text { fill: ${canvasTextColor} !important; color: ${canvasTextColor} !important; }
 
-      /* Quadrant Charts */
-      #${id} .quadrant { fill: transparent !important; }
-      #${id} .quadrant-text, #${id} .axis-text, #${id} .quadrant-point-text { fill: ${canvasTextColor} !important; color: ${canvasTextColor} !important; }
-      #${id} .axis-path, #${id} .axis-tick { stroke: ${secondary} !important; opacity: 0.5; }
-      #${id} circle.point { fill: ${primary} !important; stroke: ${secondary} !important; }
+      /* ── Mindmap (beta): no theme variables for node/edge colours. ── */
+      #${id} .mindmap-node rect, #${id} .mindmap-bg { fill: ${primary} !important; stroke: ${secondary} !important; }
+      #${id} .mindmap-node text, #${id} .mindmap-node tspan, #${id} .mindmap-node foreignObject div { fill: ${nodeTextColor} !important; color: ${nodeTextColor} !important; }
+      #${id} .mindmap-edges path { stroke: ${secondary} !important; stroke-width: 2px !important; }
 
-      /* Timeline & Journey */
-      #${id} .journey-section { fill: ${primary} !important; stroke: ${secondary} !important; }
-      #${id} .journey-section text { fill: ${canvasTextColor} !important; color: ${canvasTextColor} !important; }
-      
-      /* Timeline Specifics */
-      #${id} .event text, #${id} .time text, #${id} .section-title, #${id} .section-title text { fill: ${canvasTextColor} !important; color: ${canvasTextColor} !important; stroke: none !important; }
-      #${id} .task-line { stroke: ${secondary} !important; stroke-width: 2px !important; }
-      
-      /* Kanban & Block */
+      /* ── Kanban & Block (beta): no theme variables. ── */
       #${id} .kanban-card, #${id} .block-node, #${id} .kanban-item { fill: ${primary} !important; stroke: ${secondary} !important; }
       #${id} .kanban-card text, #${id} .kanban-card .label, #${id} .kanban-item text, #${id} .block-node text { fill: ${nodeTextColor} !important; color: ${nodeTextColor} !important; }
       #${id} .kanban-column, #${id} .kanban-board { fill: ${bg} !important; stroke: ${secondary} !important; stroke-opacity: 0.3 !important; }
+
+      /* ── Timeline & Journey: section text contrast (section fills come from the
+         palette via cScale/fillType, but their label colour needs forcing). ── */
+      #${id} .journey-section text { fill: ${canvasTextColor} !important; color: ${canvasTextColor} !important; }
+      #${id} .event text, #${id} .time text, #${id} .section-title, #${id} .section-title text { fill: ${canvasTextColor} !important; color: ${canvasTextColor} !important; stroke: none !important; }
+      #${id} .task-line { stroke: ${secondary} !important; stroke-width: 2px !important; }
     </style>`,
   );
 };
@@ -239,6 +160,16 @@ export const injectMermaidThemeStyles = (svg: string, options: MermaidThemeOptio
  * first) consumes each node as one unit and prevents that corruption.
  */
 export const repairMermaidSyntax = (chart: string): string => {
+  // The repairs below target FLOWCHART/graph node + edge syntax (A[label],
+  // A((label)), -->|label|). Other diagram types have their own grammar, and
+  // running the flowchart repair on them CORRUPTS valid syntax — e.g. an
+  // xychart's `x-axis ["Jan", "Feb"]` array gets its quotes escaped to
+  // `["Jan&quot;, …]`, crashing the parser (reported 2026-06-15). Only repair
+  // flowcharts; pass known non-flowchart types through untouched. Unknown
+  // (null) types keep the old behaviour to avoid regressing edge cases.
+  const detectedType = detectMermaidType(chart);
+  if (detectedType && detectedType !== "FLOWCHART") return chart;
+
   // Chars that break an UNQUOTED node label and therefore force quoting.
   const FORBIDDEN_IN_LABEL = /[(){}&%/\-:#;]/;
 
