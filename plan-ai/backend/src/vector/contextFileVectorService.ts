@@ -25,6 +25,13 @@ import { extractTextFromUpload, isSupportedUploadMimeType } from "../utils/docum
 const EMBEDDING_DIMENSION = Number.parseInt(process.env.OPENAI_EMBEDDING_DIMENSION ?? "1536", 10);
 const TEXT_CHUNK_SIZE = Number.parseInt(process.env.CONTEXT_VECTOR_CHUNK_SIZE ?? "800", 10);
 const TEXT_CHUNK_OVERLAP = Number.parseInt(process.env.CONTEXT_VECTOR_CHUNK_OVERLAP ?? "160", 10);
+// Cap on the text embedded for a RAG QUERY. text-embedding-3-small accepts
+// 8191 tokens; a user can paste a 60KB+ message, which blows past that — the
+// provider then returns a degenerate 200 and langchain crashes reading
+// data[0] (prod incident 2026-06-15). A RAG query only needs the INTENT, and
+// the signal lives in the head, so 8000 chars (~2000 tokens, ~4× margin) is
+// plenty and safe even for token-dense (CJK/code) input.
+const MAX_EMBED_QUERY_CHARS = Number.parseInt(process.env.MAX_EMBED_QUERY_CHARS ?? "8000", 10);
 
 // BYOK embeddings: build a client per workspace config (resolved at call time)
 // instead of a global singleton, so each customer's embeddings bill their own
@@ -278,12 +285,21 @@ export const queryContexts = async (
     const embeddingConfig = await resolveWorkspaceEmbeddingConfig(contextRecord.workspaceId);
     const embeddings = buildEmbeddings(embeddingConfig);
 
-    const vector = await embeddings.embedQuery(queryText);
+    // Truncate before embedding so an oversized paste can't blow the model's
+    // token limit (and crash langchain). RAG only needs the query's intent.
+    const safeQueryText = queryText.slice(0, MAX_EMBED_QUERY_CHARS);
+    if (queryText.length > MAX_EMBED_QUERY_CHARS) {
+      logger.info(
+        `queryContexts: truncated query from ${queryText.length} to ${MAX_EMBED_QUERY_CHARS} chars before embedding.`,
+      );
+    }
+
+    const vector = await embeddings.embedQuery(safeQueryText);
     const points = await queryVectors(contextIds, vector, limit);
 
     // Track AI Usage centrally for querying embeddings
     {
-      const estimatedTokens = Math.ceil(queryText.length / 4);
+      const estimatedTokens = Math.ceil(safeQueryText.length / 4);
       aiUsageService
         .logUsage({
           userId: contextRecord.userId,
