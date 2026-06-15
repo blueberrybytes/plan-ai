@@ -252,6 +252,13 @@ export class AudioRecorder {
             new CustomEvent("plan-ai-audio-level", { detail: event.data }),
           );
 
+          // Echo-gate diagnostics every ~10s (worklet emits debug every ~3.4s).
+          // The message carries gate/floor/sysActivity — the values deciding
+          // whether the user's voice passes. Grep console for [EchoDbg].
+          if (debugMicCounter % 3 === 0 && event.data.message) {
+            console.log("[EchoDbg]", event.data.message);
+          }
+
           // Periodic diagnostic: every ~10 seconds
           if (debugMicCounter % 100 === 0) {
             const elapsed = ((Date.now() - lastMicDiagTime) / 1000).toFixed(1);

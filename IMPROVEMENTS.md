@@ -284,6 +284,10 @@ Re-running the 4 transcripts should now show `Files: 3-5/6` and `Syms: 4-6/6` pe
 
  
 
+## 28.5 Live transcript translation toggle (recorder)
+**Problem:** users who don't fully master the meeting's language struggle to follow the live transcript (field feedback 2026-06-11).
+**Solution:** per-recording toggle that translates each CONSOLIDATED final block (not interims) to the user's language via a cheap model (Gemini Flash — cents per meeting), rendered in dimmed text under the original. Post-freeze feature.
+
 ## 28 Per-Repo GitNexus Analysis ("Ladybug per repo")
 
 ### Context

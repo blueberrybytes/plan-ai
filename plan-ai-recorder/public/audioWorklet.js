@@ -113,12 +113,22 @@ class PCMProcessor extends AudioWorkletProcessor {
       const speechThreshold = Math.max(ABS_SPEECH_FLOOR, this.micFloor * SPEECH_MARGIN);
       const nearEnd = this.micEnvelope > speechThreshold;
 
-      // Adaptive floor: minimum-follower with a slow upward leak. Only pinned
-      // down while NOT near-end, so real speech never inflates it; the leak lets
-      // it recover if the room/bleed gets louder.
-      this.micFloor *= 1.000005;
-      if (!nearEnd && this.micEnvelope < this.micFloor) this.micFloor = this.micEnvelope;
+      // Adaptive floor: minimum-follower with a slow upward leak.
+      // FIELD BUG (2026-06-11): the leak used to run UNCONDITIONALLY — at
+      // ~12%/s compounded it overtook the speaker's own level during long
+      // monologues (no silences to re-pin the minimum), and the gate cut the
+      // user's voice "after a while". Two guards now bound it:
+      //  1. the leak only runs while NOT speaking, and
+      //  2. the floor is hard-capped at ABS_SPEECH_FLOOR, so the speech
+      //     threshold can never exceed ABS_SPEECH_FLOOR * SPEECH_MARGIN
+      //     (≈0.035) — far below any real voice at the mic. Loud bleed that
+      //     clears that cap is the server-side word-dedup's job, not ours.
+      if (!nearEnd) {
+        this.micFloor *= 1.000005;
+        if (this.micEnvelope < this.micFloor) this.micFloor = this.micEnvelope;
+      }
       if (this.micFloor < 1e-4) this.micFloor = 1e-4;
+      if (this.micFloor > ABS_SPEECH_FLOOR) this.micFloor = ABS_SPEECH_FLOOR;
 
       // Hangover so word tails and brief pauses inside speech aren't clipped.
       if (nearEnd) this.hangover = this.hangoverSamples;

@@ -49,6 +49,12 @@ export interface TranscriptBlock {
   id: string;
   source: "mic" | "sys";
   text: string;
+  /**
+   * When the first segment of this bubble was SPOKEN (epoch ms). Deferred mic
+   * commits (grace queue) insert at this position, so the transcript always
+   * reads in true conversation order even when text consolidates late.
+   */
+  ts: number;
 }
 
 const LANGUAGE_OPTIONS = [
@@ -195,17 +201,74 @@ const normalizeForCompare = (s: string): string =>
     .replace(/\s+/g, " ")
     .trim();
 
-/** Overlap coefficient on word sets — robust to small transcription differences. */
-const echoSimilarity = (a: string, b: string): number => {
-  const ta = new Set(a.split(" ").filter(Boolean));
-  const tb = new Set(b.split(" ").filter(Boolean));
-  if (ta.size === 0 || tb.size === 0) return 0;
-  let inter = 0;
-  ta.forEach((tok) => {
-    if (tb.has(tok)) inter += 1;
+// Stopwords carry no identity. Matching on raw tokens let a LONG "Others"
+// segment (macOS sys chunks merge into big finals) swallow any short genuine
+// "Me" utterance made mostly of common words — the user's own speech vanished
+// from the UI (field report 2026-06-11). Similarity is now computed on
+// CONTENT words only.
+const ECHO_STOPWORDS = new Set([
+  // Spanish
+  "el","la","los","las","un","una","unos","unas","de","del","al","a","en","y","o","u",
+  "que","qué","no","sí","si","es","está","estás","esta","este","esto","con","por","para",
+  "se","me","te","le","lo","mi","tu","su","nos","os","les","pero","como","cómo","más",
+  "menos","muy","ya","hay","ha","he","has","han","ser","son","era","fue","yo","tú","él",
+  "ella","eso","esa","ese","cuando","cuándo","donde","dónde","porque","pues","también",
+  "bien","vale","ahora","luego","entonces","aquí","ahí","allí",
+  // English
+  "the","a","an","of","to","in","on","at","and","or","is","are","was","were","be","been",
+  "it","its","this","that","these","those","i","you","he","she","we","they","my","your",
+  "his","her","our","their","not","no","yes","do","does","did","have","has","had","but",
+  "so","if","then","there","here","what","when","where","why","how","with","for","as",
+  "by","about","just","like","okay","ok","right","well","now",
+]);
+
+const contentTokens = (normalized: string): Set<string> =>
+  new Set(normalized.split(" ").filter((t) => t && !ECHO_STOPWORDS.has(t)));
+
+/** Minimum CONTENT words on each side before an echo match is even possible. */
+const ECHO_MIN_CONTENT_WORDS = 3;
+
+/** Echo-pipeline debug logging — grep the console for [EchoDbg]. */
+const echoDbg = (...args: unknown[]) => console.log("[EchoDbg]", ...args);
+
+// ── Deferred mic-final commit ───────────────────────────────────────────────
+// LOUD speaker bleed defeats the energy gate (indistinguishable from real
+// speech by level), and on macOS its sys twin arrives 2–5s LATE, so checking
+// "is this an echo?" at mic-final time always answers "no". Instead of ever
+// deleting painted text (forbidden — product decision), we HOLD mic finals in
+// a pending queue while the far side is active: the interim line stays visible
+// (live feedback intact), and after the grace period we either commit the
+// bubble or — if the late sys twin arrived and matches — never paint it.
+const ECHO_PENDING_GRACE_MS = 6500; // covers observed macOS sys lag (2–5s) + margin
+const FAR_SIDE_ACTIVE_MS = 8000; // any sys interim/final this recent ⇒ defer mic commits
+
+interface EchoScore {
+  score: number;
+  micContent: number;
+  sysContent: number;
+  shared: string[];
+  eligible: boolean;
+}
+
+/**
+ * Overlap coefficient on CONTENT-word sets. Both sides must carry enough
+ * content words — short/filler-only utterances never match (too risky).
+ * Returns the full breakdown so the decision can be logged.
+ */
+const echoScore = (micNorm: string, sysNorm: string): EchoScore => {
+  const mic = contentTokens(micNorm);
+  const sys = contentTokens(sysNorm);
+  const shared: string[] = [];
+  mic.forEach((tok) => {
+    if (sys.has(tok)) shared.push(tok);
   });
-  return inter / Math.min(ta.size, tb.size);
+  const eligible = mic.size >= ECHO_MIN_CONTENT_WORDS && sys.size >= ECHO_MIN_CONTENT_WORDS;
+  const score = eligible ? shared.length / Math.min(mic.size, sys.size) : 0;
+  return { score, micContent: mic.size, sysContent: sys.size, shared, eligible };
 };
+
+const isEchoMatch = (micNorm: string, sysNorm: string): boolean =>
+  echoScore(micNorm, sysNorm).score >= ECHO_SIMILARITY;
 
 const Recording: React.FC = () => {
   const navigate = useNavigate();
@@ -286,6 +349,10 @@ const Recording: React.FC = () => {
   const [copied, setCopied] = useState(false);
   // Recent finalized system ("Others") segments, used to detect mic echo.
   const recentSysSegmentsRef = useRef<{ text: string; ts: number }[]>([]);
+  // Mic finals waiting out the grace period (far side active) before painting.
+  const pendingMicRef = useRef<{ text: string; normalized: string; ts: number }[]>([]);
+  // Last time ANY system audio activity (interim or final) was observed.
+  const lastSysSeenRef = useRef(0);
   const chatBoxRef = useRef<HTMLDivElement>(null);
 
   const handleTranscriptScroll = () => {
@@ -341,6 +408,26 @@ const Recording: React.FC = () => {
     }
   };
 
+  // Insert finalized text into the transcript at its CHRONOLOGICAL position
+  // (by spoken-at timestamp), merging into an adjacent same-speaker bubble.
+  // The ONLY place that paints final text. Deferred commits from the grace
+  // queue land where they were actually said — never misordered at the end.
+  const appendBlock = useCallback((source: "mic" | "sys", text: string, ts: number) => {
+    setBlocks((prev) => {
+      // Position: after every block spoken at or before `ts`.
+      let idx = prev.length;
+      while (idx > 0 && prev[idx - 1].ts > ts) idx--;
+      if (idx > 0 && prev[idx - 1].source === source) {
+        const updated = [...prev];
+        updated[idx - 1] = { ...updated[idx - 1], text: `${updated[idx - 1].text} ${text}` };
+        return updated;
+      }
+      const updated = [...prev];
+      updated.splice(idx, 0, { id: Math.random().toString(), source, text, ts });
+      return updated;
+    });
+  }, []);
+
   const handleTranscript = useCallback(
     (source: "mic" | "sys", text: string, isFinal: boolean) => {
       const cleanText = text.trim();
@@ -362,52 +449,79 @@ const Recording: React.FC = () => {
       if (isFinal) {
         const normalized = normalizeForCompare(cleanText);
         const now = Date.now();
+        echoDbg(`FINAL ${source} @${new Date(now).toISOString().slice(11, 23)} "${cleanText}"`);
 
         if (source === "sys") {
+          lastSysSeenRef.current = now;
           // Remember recent system speech so we can spot its mic echo later.
           recentSysSegmentsRef.current.push({ text: normalized, ts: now });
           recentSysSegmentsRef.current = recentSysSegmentsRef.current.filter(
             (s) => now - s.ts <= ECHO_WINDOW_MS,
           );
+          echoDbg(
+            `  sys noted. contentWords=${contentTokens(normalized).size} window=[${recentSysSegmentsRef.current
+              .map((s) => `${((now - s.ts) / 1000).toFixed(1)}s`)
+              .join(", ")}]`,
+          );
+
+          // NOTE — deliberately NO retroactive cleanup here. We tried erasing
+          // the already-painted "Me" copy when its late "Others" twin arrived
+          // (macOS sys lags 2–5s), and it ate the user's REAL speech on fuzzy
+          // matches. Product decision (2026-06-11): a duplicate line is
+          // cosmetic, lost words are unrecoverable — the UI never deletes
+          // text it has already shown. Bleed that slips through stays visible.
         } else if (source === "mic") {
-          // Drop the mic segment if it's an echo of recent system audio.
+          // Drop the mic segment if it's an OBVIOUS echo of sys audio we
+          // already have (sys arrived first — the easy direction).
           const wordCount = normalized.split(" ").filter(Boolean).length;
           if (wordCount >= ECHO_MIN_WORDS) {
-            const isEcho = recentSysSegmentsRef.current.some(
-              (s) =>
-                now - s.ts <= ECHO_WINDOW_MS &&
-                echoSimilarity(normalized, s.text) >= ECHO_SIMILARITY,
-            );
-            if (isEcho) {
+            let dropped = false;
+            for (const s of recentSysSegmentsRef.current) {
+              const age = now - s.ts;
+              if (age > ECHO_WINDOW_MS) continue;
+              const sc = echoScore(normalized, s.text);
+              echoDbg(
+                `  mic-vs-sys(age=${(age / 1000).toFixed(1)}s): score=${sc.score.toFixed(2)} ` +
+                  `micContent=${sc.micContent} sysContent=${sc.sysContent} eligible=${sc.eligible} ` +
+                  `shared=[${sc.shared.join(",")}] sys="${s.text.slice(0, 60)}"`,
+              );
+              if (sc.score >= ECHO_SIMILARITY) {
+                dropped = true;
+                break;
+              }
+            }
+            if (dropped) {
+              echoDbg(`  mic verdict: DROPPED (echo already on sys) words=${wordCount}`);
               setMicDelta("");
               return; // speaker echo — already captured on the "Others" track
             }
           }
+
+          // Hard direction (macOS): LOUD bleed beats the gate AND its sys twin
+          // hasn't arrived yet. While the far side is active, hold this final
+          // in the grace queue — the interim text stays on screen, and the
+          // flusher either paints it or (if the late twin matches) never does.
+          const farSideActive = now - lastSysSeenRef.current <= FAR_SIDE_ACTIVE_MS;
+          if (farSideActive) {
+            pendingMicRef.current.push({ text: cleanText, normalized, ts: now });
+            echoDbg(
+              `  mic verdict: DEFERRED ${ECHO_PENDING_GRACE_MS / 1000}s (far side active) pending=${pendingMicRef.current.length}`,
+            );
+            return; // micDelta stays visible — live feedback is not lost
+          }
+          echoDbg(`  mic verdict: KEPT (no far-side activity) words=${wordCount}`);
         }
 
-        setBlocks((prev) => {
-          if (prev.length > 0 && prev[prev.length - 1].source === source) {
-            // Group contiguous speech from the same person into a single graphical paragraph
-            const last = prev[prev.length - 1];
-            const updated = [...prev];
-            updated[updated.length - 1] = {
-              ...last,
-              text: `${last.text} ${cleanText}`,
-            };
-            return updated;
-          }
-          // Speaker changed (Or first block), create a new bubble
-          return [
-            ...prev,
-            { id: Math.random().toString(), source, text: cleanText },
-          ];
-        });
+        appendBlock(source, cleanText, now);
         if (source === "mic") setMicDelta("");
         if (source === "sys") setSysDelta("");
         setChunkCount((n) => n + 1);
       } else {
         if (source === "mic") setMicDelta(cleanText);
-        if (source === "sys") setSysDelta(cleanText);
+        if (source === "sys") {
+          setSysDelta(cleanText);
+          lastSysSeenRef.current = Date.now();
+        }
       }
 
       // Auto-scroll
@@ -420,6 +534,40 @@ const Recording: React.FC = () => {
     },
     [token],
   );
+
+  // ── Grace-queue flusher: paint or discard deferred mic finals ──
+  // Every 500ms, mic finals older than the grace period are resolved: if a
+  // late-arriving sys segment matches (the macOS bleed case), the text is
+  // never painted; otherwise it's committed. Nothing visible is ever removed.
+  useEffect(() => {
+    const iv = setInterval(() => {
+      if (pendingMicRef.current.length === 0) return;
+      const now = Date.now();
+      const ready = pendingMicRef.current.filter((p) => now - p.ts >= ECHO_PENDING_GRACE_MS);
+      if (ready.length === 0) return;
+      pendingMicRef.current = pendingMicRef.current.filter(
+        (p) => now - p.ts < ECHO_PENDING_GRACE_MS,
+      );
+      for (const p of ready) {
+        const twin = recentSysSegmentsRef.current.find(
+          (s) => s.ts >= p.ts - 1000 && isEchoMatch(p.normalized, s.text),
+        );
+        if (twin) {
+          echoDbg(
+            `flush DROP (late sys twin +${((twin.ts - p.ts) / 1000).toFixed(1)}s) "${p.text}"`,
+          );
+        } else {
+          echoDbg(`flush COMMIT "${p.text}"`);
+          appendBlock("mic", p.text, p.ts);
+          setChunkCount((n) => n + 1);
+        }
+      }
+      // Clear the stale interim once the queue drains (a fresh interim repaints
+      // within ~300ms if the user is still talking).
+      if (pendingMicRef.current.length === 0) setMicDelta("");
+    }, 500);
+    return () => clearInterval(iv);
+  }, [appendBlock]);
 
   // ── Crash recovery: persist the transcript continuously while recording ──
   // Blocks only change when an utterance FINALIZES (every few seconds), so
@@ -468,6 +616,17 @@ const Recording: React.FC = () => {
       let fullPayload = blocks
         .map((b) => `${b.source === "mic" ? "User" : "Others"}: ${b.text}`)
         .join("\n");
+
+      // Resolve any mic finals still in the grace queue: drop only proven
+      // echoes (late sys twin matched); everything else is SAVED — stopping
+      // the recording must never lose the user's words.
+      for (const p of pendingMicRef.current) {
+        const isLateEcho = recentSysSegmentsRef.current.some(
+          (s) => s.ts >= p.ts - 1000 && isEchoMatch(p.normalized, s.text),
+        );
+        if (!isLateEcho) fullPayload += `\nUser: ${p.text}`;
+      }
+      pendingMicRef.current = [];
 
       if (micDelta) fullPayload += `\nUser: ${micDelta}`;
       if (sysDelta) fullPayload += `\nOthers: ${sysDelta}`;
@@ -1296,6 +1455,67 @@ const Recording: React.FC = () => {
 
           <Divider sx={{ opacity: 0.3 }} />
 
+          {/* Live composition slots — pinned at the TOP, above the scrollable
+              history, with stronger contrast (user request: live first, easy
+              to glance; consolidated reading below never jumps). */}
+          {(micDelta || sysDelta) && (
+            <Box
+              sx={{
+                flexShrink: 0,
+                borderBottom: "1px solid rgba(255,255,255,0.1)",
+                bgcolor: "rgba(255,255,255,0.06)",
+                px: 3,
+                py: 1.25,
+                display: "flex",
+                flexDirection: "column",
+                gap: 0.5,
+              }}
+            >
+              {micDelta && (
+                <Stack direction="row" spacing={1} alignItems="baseline">
+                  <Typography
+                    variant="caption"
+                    color="primary.main"
+                    sx={{ fontWeight: "bold", flexShrink: 0, width: 56 }}
+                  >
+                    Me ▸
+                  </Typography>
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      color: "text.primary",
+                      whiteSpace: "pre-wrap",
+                      fontWeight: 500,
+                    }}
+                  >
+                    {micDelta}
+                  </Typography>
+                </Stack>
+              )}
+              {sysDelta && (
+                <Stack direction="row" spacing={1} alignItems="baseline">
+                  <Typography
+                    variant="caption"
+                    color="secondary.main"
+                    sx={{ fontWeight: "bold", flexShrink: 0, width: 56 }}
+                  >
+                    Others ▸
+                  </Typography>
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      color: "text.primary",
+                      whiteSpace: "pre-wrap",
+                      fontWeight: 500,
+                    }}
+                  >
+                    {sysDelta}
+                  </Typography>
+                </Stack>
+              )}
+            </Box>
+          )}
+
           <Box
             ref={transcriptBoxRef}
             onScroll={handleTranscriptScroll}
@@ -1341,52 +1561,8 @@ const Recording: React.FC = () => {
               </Box>
             ))}
 
-            {micDelta && (
-              <Box>
-                <Typography
-                  variant="caption"
-                  color="primary.main"
-                  sx={{ fontWeight: "bold" }}
-                >
-                  Me
-                </Typography>
-                <Typography
-                  variant="body2"
-                  sx={{
-                    lineHeight: 1.8,
-                    color: "text.primary",
-                    whiteSpace: "pre-wrap",
-                    opacity: 0.6,
-                  }}
-                >
-                  {micDelta}
-                </Typography>
-              </Box>
-            )}
-
-            {sysDelta && (
-              <Box>
-                <Typography
-                  variant="caption"
-                  color="secondary.main"
-                  sx={{ fontWeight: "bold" }}
-                >
-                  Others
-                </Typography>
-                <Typography
-                  variant="body2"
-                  sx={{
-                    lineHeight: 1.8,
-                    color: "text.primary",
-                    whiteSpace: "pre-wrap",
-                    opacity: 0.6,
-                  }}
-                >
-                  {sysDelta}
-                </Typography>
-              </Box>
-            )}
           </Box>
+
         </Box>
 
         {/* Live Meeting Assistant Sidebar */}
