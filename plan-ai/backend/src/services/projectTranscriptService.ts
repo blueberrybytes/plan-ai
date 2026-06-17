@@ -21,7 +21,7 @@ import {
   getMaxContextChunks,
   extractOpenRouterUsage,
 } from "../utils/aiModelUtils";
-import { dropEchoUtterances } from "../utils/echoDedup";
+import { dropEchoUtterances, estimateMicSysOffsetMs } from "../utils/echoDedup";
 import { generateText, stepCountIs, Output, type ToolSet } from "ai";
 import { z, type ZodTypeAny } from "zod";
 import { DeepgramClient } from "@deepgram/sdk";
@@ -389,11 +389,31 @@ export class ProjectTranscriptService {
     // the live stream's EchoDeduper, but timestamp-aware).
     if (process.env.ECHO_DEDUP_DISABLED !== "true" && sysUtterances.length > 0) {
       const before = micUtterances.length;
-      micUtterances = dropEchoUtterances(micUtterances, sysUtterances);
+      // Estimate the mic↔sys clock offset first (the two stored files don't
+      // share a timeline on macOS) so the dedup window is correctly centred.
+      const offsetMs = estimateMicSysOffsetMs(micUtterances, sysUtterances);
+      // Coverage histogram of KEPT segments: a cluster of survivors in 0.5–0.8
+      // means divergent-ASR bleed the exact-token matcher can't catch (the
+      // residual after the offset fix). This tells us — with data — whether a
+      // content-word/threshold change is warranted before doing it blindly.
+      const keptBuckets = { lt05: 0, b05_08: 0, ge08_kept: 0 };
+      micUtterances = dropEchoUtterances(micUtterances, sysUtterances, {
+        offsetMs,
+        onSegment: ({ dropped, coverage }) => {
+          if (dropped) return;
+          if (coverage >= 0.8) keptBuckets.ge08_kept += 1;
+          else if (coverage >= 0.5) keptBuckets.b05_08 += 1;
+          else keptBuckets.lt05 += 1;
+        },
+      });
       const dropped = before - micUtterances.length;
-      if (dropped > 0) {
-        logger.info(`[Diarization] EchoDedup dropped ${dropped} mic utterance(s) as speaker bleed`);
-      }
+      logger.info(
+        `[Diarization] EchoDedup: mic=${before} sys=${sysUtterances.length} ` +
+          `offset=${offsetMs === null ? "unaligned" : `${Math.round(offsetMs)}ms`} ` +
+          `dropped=${dropped} kept=${micUtterances.length} | ` +
+          `survivors coverage<0.5=${keptBuckets.lt05} 0.5-0.8=${keptBuckets.b05_08} ` +
+          `(0.5-0.8 = likely divergent bleed surviving)`,
+      );
     }
 
     // Merge chronologically by utterance start time

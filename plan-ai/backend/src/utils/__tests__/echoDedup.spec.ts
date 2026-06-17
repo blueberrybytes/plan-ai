@@ -1,5 +1,11 @@
 import { describe, it, expect } from "vitest";
-import { EchoDeduper, tokenize, dropEchoUtterances, wordsFromDeepgram } from "../echoDedup";
+import {
+  EchoDeduper,
+  tokenize,
+  dropEchoUtterances,
+  estimateMicSysOffsetMs,
+  wordsFromDeepgram,
+} from "../echoDedup";
 
 describe("tokenize", () => {
   it("lowercases, strips punctuation and diacritics", () => {
@@ -118,6 +124,59 @@ describe("dropEchoUtterances (prerecorded/reprocess path)", () => {
   it("keeps everything when there is no sys audio (headphones)", () => {
     const kept = dropEchoUtterances([u("we should migrate the auth service", 10.4, 13.2)], []);
     expect(kept).toHaveLength(1);
+  });
+});
+
+describe("dropEchoUtterances — large clock offset (macOS sys spin-up + drift)", () => {
+  const u = (transcript: string, start: number, end: number) => ({ transcript, start, end });
+
+  // The two stored files don't share a timeline: here the sys file starts ~5s
+  // BEFORE the mic (mic clock runs 5s later). That's beyond the legacy 3s
+  // window, so without offset alignment every echo would survive (the prod
+  // "fully duplicated speakerphone meeting" bug). Alignment must catch them.
+  const micSet = [
+    u("we should migrate the auth service to the new gateway", 10.0, 13.0),
+    u("then we deploy the build to staging on friday", 14.0, 16.5),
+    u("and run the full regression suite overnight before release", 18.0, 20.0),
+    u("the whole team agreed on the rollback plan yesterday", 22.0, 24.0),
+  ];
+  const sysSet = [
+    u("we should migrate the auth service to the new gateway", 5.0, 8.0),
+    u("then we deploy the build to staging on friday", 9.0, 11.5),
+    u("and run the full regression suite overnight before release", 13.0, 15.0),
+    u("the whole team agreed on the rollback plan yesterday", 17.0, 19.0),
+  ];
+
+  it("estimates the ~5s median offset from content matches", () => {
+    expect(estimateMicSysOffsetMs(micSet, sysSet)).toBe(5000);
+  });
+
+  it("aligns and drops the bleed beyond the legacy window", () => {
+    expect(dropEchoUtterances(micSet, sysSet)).toHaveLength(0);
+  });
+
+  it("keeps a genuine mic-only utterance under the same large offset", () => {
+    const mic = [
+      ...micSet.slice(0, 3),
+      u("but i strongly disagree we need a completely different rollback approach", 22.0, 25.0),
+    ];
+    const kept = dropEchoUtterances(mic, sysSet.slice(0, 3));
+    expect(kept).toHaveLength(1);
+    expect(kept[0].transcript).toContain("strongly disagree");
+  });
+
+  it("returns null when the two channels share no common content", () => {
+    const mic = [
+      u("the quarterly revenue numbers look strong this period", 10, 12),
+      u("marketing wants a new landing page by next month", 14, 16),
+      u("hr is finalising the new hire onboarding flow", 18, 20),
+    ];
+    const sys = [
+      u("the football match last night was absolutely thrilling", 5, 7),
+      u("traffic on the highway was terrible this morning", 9, 11),
+      u("the restaurant downtown has a great lunch menu", 13, 15),
+    ];
+    expect(estimateMicSysOffsetMs(mic, sys)).toBeNull();
   });
 });
 

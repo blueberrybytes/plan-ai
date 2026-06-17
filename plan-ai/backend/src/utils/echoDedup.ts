@@ -352,36 +352,107 @@ export interface TimedSegment {
 }
 
 /**
+ * Estimate how much LATER (ms) the mic file's clock runs vs the sys file's, by
+ * content-matching utterances and taking the median start-time delta of the
+ * confident matches.
+ *
+ * Why: the two stored files DON'T share a timeline. On macOS the sys native
+ * binary spins up ~2s after the mic, and the two independent captures drift
+ * over a long meeting — so a fixed timing window misses the real echo pairs
+ * (prod: a 40-min speakerphone meeting came back fully duplicated). Aligning by
+ * the measured median offset re-centres the window so a modest tolerance covers
+ * the whole recording.
+ *
+ * Returns null when there aren't enough confident matches (e.g. genuinely
+ * different content on the two channels) — callers then skip alignment.
+ */
+export function estimateMicSysOffsetMs(
+  micUtterances: TimedSegment[],
+  sysUtterances: TimedSegment[],
+): number | null {
+  const sysTok = sysUtterances
+    .map((s) => ({ start: s.start, toks: new Set(tokenize(s.transcript)) }))
+    .filter((s) => s.toks.size >= 4);
+  if (sysTok.length === 0) return null;
+
+  const deltas: number[] = [];
+  for (const mic of micUtterances) {
+    const mtoks = new Set(tokenize(mic.transcript));
+    if (mtoks.size < 4) continue;
+    let bestOverlap = 0;
+    let bestStart = 0;
+    for (const s of sysTok) {
+      let inter = 0;
+      mtoks.forEach((t) => {
+        if (s.toks.has(t)) inter += 1;
+      });
+      const overlap = inter / Math.min(mtoks.size, s.toks.size);
+      if (overlap > bestOverlap) {
+        bestOverlap = overlap;
+        bestStart = s.start;
+      }
+    }
+    // High-overlap match → this mic utterance is (almost certainly) a copy of a
+    // sys utterance; record how much later the mic version starts.
+    if (bestOverlap >= 0.6) deltas.push((mic.start - bestStart) * 1000);
+  }
+
+  if (deltas.length < 3) return null;
+  deltas.sort((a, b) => a - b);
+  return deltas[Math.floor(deltas.length / 2)]; // median is robust to outliers/drift
+}
+
+/**
  * Batch echo dedup for diarized utterances (the reprocess/upload path, where we
  * re-transcribe the stored mic + sys audio separately and merge by time).
  *
- * Uses the same word-level matcher as live when per-word timings exist
- * (Deepgram prerecorded always provides them), with a wider lead window
- * (`leadSeconds`, default 0.75s) because the two stored files may not start at
- * exactly the same instant.
+ * Two-stage: (1) estimate the global mic↔sys clock offset from content matches
+ * and shift the sys timeline onto the mic's, then (2) run the word-level matcher
+ * with a symmetric tolerance window. When the offset can't be estimated
+ * confidently it falls back to the legacy asymmetric window (no shift).
  *
  * Returns the mic utterances to KEEP (non-echo).
  */
 export function dropEchoUtterances<T extends TimedSegment>(
   micUtterances: T[],
   sysUtterances: TimedSegment[],
-  opts: { threshold?: number; leadSeconds?: number; earlierSeconds?: number } = {},
+  opts: {
+    threshold?: number;
+    leadSeconds?: number;
+    earlierSeconds?: number;
+    toleranceSeconds?: number;
+    /** Pre-computed offset (ms mic is later than sys); estimated if omitted. */
+    offsetMs?: number | null;
+    /**
+     * Per-mic-utterance diagnostic hook. Lets the caller see WHY a segment was
+     * kept — e.g. a cluster of survivors at coverage 0.5–0.8 means the two
+     * channels' ASR diverged (muffled bleed transcribed differently), which the
+     * exact-token matcher can't catch. Used to decide the safe next step with
+     * data instead of speculatively lowering the threshold.
+     */
+    onSegment?: (info: { dropped: boolean; coverage: number; micTokenCount: number }) => void;
+  } = {},
 ): T[] {
   if (sysUtterances.length === 0) return micUtterances;
   const threshold = opts.threshold ?? DEFAULT_THRESHOLD;
-  // Lead stays tight (far-end echo of the user arrives ≥~300ms later on sys);
-  // `earlier` is generous: the stored sys file may start seconds after the mic
-  // file (native binary spin-up), which shifts sys word times EARLIER — and
-  // earlier is always safe (only true bleed looks earlier).
-  const leadMs = (opts.leadSeconds ?? 0.3) * 1000;
-  const earlierMs = (opts.earlierSeconds ?? 3.0) * 1000;
 
-  // Files share the recording timeline → epoch 0 for both.
+  const offsetMs =
+    opts.offsetMs !== undefined ? opts.offsetMs : estimateMicSysOffsetMs(micUtterances, sysUtterances);
+  const aligned = offsetMs !== null;
+  const sysEpoch = aligned ? offsetMs : 0;
+
+  // Aligned → symmetric tolerance absorbs residual jitter + slow drift around
+  // the measured offset. Not aligned → legacy asymmetric window (sys may start
+  // seconds earlier; earlier is always safe).
+  const tolMs = (opts.toleranceSeconds ?? 2.0) * 1000;
+  const leadMs = aligned ? tolMs : (opts.leadSeconds ?? 0.3) * 1000;
+  const earlierMs = aligned ? tolMs : (opts.earlierSeconds ?? 3.0) * 1000;
+
   const deduper = new EchoDeduper(Number.POSITIVE_INFINITY, threshold, leadMs, earlierMs);
   for (const sys of sysUtterances) {
     const words = sys.words?.length
-      ? wordsFromDeepgram(sys.words, 0)
-      : wordsFromText(sys.transcript, sys.start * 1000);
+      ? wordsFromDeepgram(sys.words, sysEpoch)
+      : wordsFromText(sys.transcript, sys.start * 1000 + sysEpoch);
     deduper.noteSystemWords(words);
   }
 
@@ -389,6 +460,12 @@ export function dropEchoUtterances<T extends TimedSegment>(
     const words = mic.words?.length
       ? wordsFromDeepgram(mic.words, 0)
       : wordsFromText(mic.transcript, mic.start * 1000);
-    return !deduper.evaluateMicWords(words).isEcho;
+    const verdict = deduper.evaluateMicWords(words);
+    opts.onSegment?.({
+      dropped: verdict.isEcho,
+      coverage: verdict.coverage,
+      micTokenCount: verdict.micTokenCount,
+    });
+    return !verdict.isEcho;
   });
 }
