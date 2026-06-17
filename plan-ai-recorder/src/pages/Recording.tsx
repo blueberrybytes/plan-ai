@@ -20,6 +20,7 @@ import {
   FormControlLabel,
   FormGroup,
   Switch,
+  Tooltip,
 } from "@mui/material";
 import {
   Stop as StopIcon,
@@ -29,6 +30,8 @@ import {
   SmartToy as BotIcon,
   ContentCopy as CopyIcon,
   Check as CheckIcon,
+  VolumeUp as SpeakerIcon,
+  Headset as HeadsetIcon,
 } from "@mui/icons-material";
 import { IconButton, TextField } from "@mui/material";
 import { useNavigate } from "react-router-dom";
@@ -187,9 +190,11 @@ const Waveform: React.FC<{ active: boolean }> = ({ active }) => (
 // When the user is on a speaker (no headphones), the remote audio (Others)
 // plays out loud and the mic recaptures it, so the SAME speech is transcribed
 // twice: once on the system stream ("Others", correct) and once on the mic
-// stream ("User", an echo). The browser AEC can't cancel it because the audio
-// comes from an external app's speaker output, not from the page. So we drop a
-// mic segment when it closely matches a recent system segment.
+// stream ("User", an echo). Browser AEC (now ON by default) removes most of that
+// bleed at capture, but residual bleed — and AEC-off sessions (headphones mode
+// toggled while actually on a speaker) — can still leak through. So this
+// client-side text dedup is a backstop: we drop a mic segment when it closely
+// matches a recent system segment.
 const ECHO_WINDOW_MS = 6000; // echo arrives near-simultaneously with the system audio
 const ECHO_MIN_WORDS = 4; // don't dedup tiny utterances ("ok", "sí") — too risky
 const ECHO_SIMILARITY = 0.7; // overlap-coefficient threshold to treat as an echo
@@ -282,6 +287,9 @@ const Recording: React.FC = () => {
   const [isMicSpeaking, setIsMicSpeaking] = useState(false);
   const [isSysSpeaking, setIsSysSpeaking] = useState(false);
   const [language, setLanguage] = useState(config?.language || "");
+  // Echo cancellation: ON automatically (undefined ⇒ on). The header toggle
+  // lets a headphone user turn it off live without restarting the recording.
+  const [speakerMode, setSpeakerMode] = useState(config?.speakerMode ?? true);
   const [elapsed, setElapsed] = useState(0);
   const [blocks, setBlocks] = useState<TranscriptBlock[]>([]);
   const [micDelta, setMicDelta] = useState("");
@@ -936,6 +944,17 @@ const Recording: React.FC = () => {
     }
   };
 
+  const handleSpeakerModeChange = (enabled: boolean) => {
+    setSpeakerMode(enabled);
+    // Apply live to the running recording (re-acquires the mic with new AEC).
+    void recorderRef.current?.setSpeakerMode(enabled);
+    // Persist: session config for this recording + the cross-session default.
+    if (config) {
+      saveConfig({ ...config, speakerMode: enabled });
+    }
+    localStorage.setItem("planai_speaker_mode", String(enabled));
+  };
+
   // ── Done / Error states ───────────────────────────────────────────────────
   if (phase === "context_selection") {
     return (
@@ -1354,6 +1373,27 @@ const Recording: React.FC = () => {
               )}
             />
           </FormControl>
+
+          <Tooltip
+            title={
+              speakerMode
+                ? "Echo cancellation ON (loudspeaker). Click if you're on headphones."
+                : "Headphones mode — no echo cancellation. Click if you're on a loudspeaker."
+            }
+          >
+            <IconButton
+              size="small"
+              color={speakerMode ? "primary" : "default"}
+              onClick={() => handleSpeakerModeChange(!speakerMode)}
+              aria-label="Toggle echo cancellation"
+            >
+              {speakerMode ? (
+                <SpeakerIcon fontSize="small" />
+              ) : (
+                <HeadsetIcon fontSize="small" />
+              )}
+            </IconButton>
+          </Tooltip>
 
           <Button
             variant="contained"

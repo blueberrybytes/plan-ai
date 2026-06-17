@@ -75,6 +75,9 @@ export class AudioRecorder {
   private state: RecorderState = "idle";
   private options: AudioRecorderOptions;
   private lastTypedError: TypedBackendError | null = null;
+  // Browser AEC state. ON by default (automatic at start); the user can flip it
+  // off live for headphones via setSpeakerMode() on the Recording screen.
+  private speakerMode = true;
 
   constructor(options: AudioRecorderOptions) {
     this.options = options;
@@ -133,18 +136,19 @@ export class AudioRecorder {
       // Speaker mode → browser AEC (WebRTC AEC3, the same engine Teams uses) to
       // remove loudspeaker bleed AT CAPTURE. This is the real fix for the
       // "duplicated transcript on speakerphone" problem: a clean mic means no
-      // bleed reaches transcription, so no post-hoc dedup is needed. The cost is
-      // that macOS "voice communication" mode mildly mutes the system audio the
-      // user hears while recording — hence opt-in. With headphones it's off
-      // (no bleed to cancel). autoGainControl stays off either way (it pumps).
-      const speakerMode = config?.speakerMode ?? false;
+      // bleed reaches transcription, so no post-hoc dedup is needed. It's now ON
+      // by default (automatic at start) — the common case is a virtual meeting
+      // on a loudspeaker. The cost is that macOS "voice communication" mode
+      // mildly mutes the system audio the user hears; a headphone user can flip
+      // it off live via setSpeakerMode(). autoGainControl stays off (it pumps).
+      this.speakerMode = config?.speakerMode ?? true;
       console.log(
-        `[AudioRecorder] 🎤 Requesting mic deviceId="${micDeviceId}" speakerMode=${speakerMode} (AEC=${speakerMode})`,
+        `[AudioRecorder] 🎤 Requesting mic deviceId="${micDeviceId}" speakerMode=${this.speakerMode} (AEC=${this.speakerMode})`,
       );
       this.micStream = await navigator.mediaDevices.getUserMedia({
         audio: {
-          echoCancellation: speakerMode,
-          noiseSuppression: speakerMode,
+          echoCancellation: this.speakerMode,
+          noiseSuppression: this.speakerMode,
           autoGainControl: false,
           ...(micDeviceId && micDeviceId !== "default"
             ? { deviceId: { exact: micDeviceId } }
@@ -178,7 +182,8 @@ export class AudioRecorder {
       //const audioTrack = this.micStream.getAudioTracks()[0];
 
       // We will setup micMediaRecorder later, after the AudioContext and Worklet are ready,
-      // so that we can record the processed audio (with ducking/AEC applied) instead of the raw mic stream.
+      // so that we record the mic audio as it leaves the worklet (with capture-time
+      // browser AEC applied when speaker mode is on; the worklet itself no longer processes it).
       this.micChunks = [];
 
       // 4. Windows system audio via getDisplayMedia
@@ -229,14 +234,13 @@ export class AudioRecorder {
         this.micStream,
       );
 
-      // Two independent worklets for mic and system audio in parallel
-      // micWorkletNode has 2 inputs: [0] = mic, [1] = sys (for echo suppression)
+      // Two independent worklets for mic and system audio. Each just buffers,
+      // converts to Int16 and forwards its own input — echo is handled by
+      // capture-time AEC + server-side dedup, so the mic worklet no longer takes
+      // the system audio as a reference (no input 1).
       this.micWorkletNode = new AudioWorkletNode(
         this.audioContext,
         "pcm-processor",
-        {
-          numberOfInputs: 2,
-        },
       );
       this.sysWorkletNode = new AudioWorkletNode(
         this.audioContext,
@@ -253,13 +257,6 @@ export class AudioRecorder {
           window.dispatchEvent(
             new CustomEvent("plan-ai-audio-level", { detail: event.data }),
           );
-
-          // Echo-gate diagnostics every ~10s (worklet emits debug every ~3.4s).
-          // The message carries gate/floor/sysActivity — the values deciding
-          // whether the user's voice passes. Grep console for [EchoDbg].
-          if (debugMicCounter % 3 === 0 && event.data.message) {
-            console.log("[EchoDbg]", event.data.message);
-          }
 
           // Periodic diagnostic: every ~10 seconds
           if (debugMicCounter % 100 === 0) {
@@ -338,8 +335,9 @@ export class AudioRecorder {
       this.sourceNode.connect(this.micWorkletNode, 0, 0); // mic to input 0
       this.micWorkletNode.connect(silentGain);
 
-      // Create a destination so we can record the PROCESSED mic audio (with ducking/AEC applied)
-      // instead of the raw mic stream that still has the loudspeaker echo in it.
+      // Create a destination so we record the mic audio as it leaves the worklet.
+      // Loudspeaker echo is removed at capture by browser AEC (when speaker mode is
+      // on); the worklet no longer ducks the signal, so this is a clean passthrough.
       const micDest = this.audioContext.createMediaStreamDestination();
       this.micWorkletNode.connect(micDest);
       this.micMediaRecorder = new MediaRecorder(micDest.stream, {
@@ -368,9 +366,6 @@ export class AudioRecorder {
           this.sysStream,
         );
         this.sysSourceNode.connect(this.sysWorkletNode);
-
-        // Route system audio into micWorkletNode for Echo Suppression!
-        this.sysSourceNode.connect(this.micWorkletNode, 0, 1);
       } else {
         // macOS: We must also capture this sysWorkletNode into a WebM Blob
         const macSysDest = this.audioContext.createMediaStreamDestination();
@@ -405,9 +400,6 @@ export class AudioRecorder {
               const source = this.audioContext.createBufferSource();
               source.buffer = audioBuffer;
               source.connect(this.sysWorkletNode);
-
-              // Route system audio into micWorkletNode for Echo Suppression!
-              source.connect(this.micWorkletNode, 0, 1);
 
               if (this.sysAudioPlaybackTime < this.audioContext.currentTime) {
                 this.sysAudioPlaybackTime = this.audioContext.currentTime;
@@ -596,6 +588,67 @@ export class AudioRecorder {
     } else {
       console.warn(
         "[AudioRecorder] Cannot change language: WebSocket not open",
+      );
+    }
+  }
+
+  /**
+   * Flip browser AEC on/off live during a recording (speaker ↔ headphones).
+   * AEC is baked into the device at getUserMedia time, so we re-acquire the mic
+   * with the new constraint and hot-swap the source feeding micWorkletNode
+   * input 0. The processed-output chain (micWorkletNode → micDest →
+   * micMediaRecorder) is left untouched, so the saved blob and live transcript
+   * continue seamlessly.
+   * No-op when idle — start() will pick up the persisted choice via loadConfig.
+   */
+  async setSpeakerMode(enabled: boolean): Promise<void> {
+    this.speakerMode = enabled;
+
+    if (
+      this.state !== "recording" ||
+      !this.audioContext ||
+      !this.micWorkletNode
+    ) {
+      return;
+    }
+
+    const micDeviceId = loadConfig()?.micDeviceId;
+    try {
+      const newStream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: enabled,
+          noiseSuppression: enabled,
+          autoGainControl: false,
+          ...(micDeviceId && micDeviceId !== "default"
+            ? { deviceId: { exact: micDeviceId } }
+            : {}),
+        },
+        video: false,
+      });
+
+      // Wire the new source in before tearing the old one down so input 0 is
+      // never starved (a brief overlap is inaudible; a gap would drop audio).
+      const newSource = this.audioContext.createMediaStreamSource(newStream);
+      newSource.connect(this.micWorkletNode, 0, 0);
+
+      if (this.sourceNode) this.sourceNode.disconnect();
+      this.micStream?.getTracks().forEach((t) => t.stop());
+
+      this.sourceNode = newSource;
+      this.micStream = newStream;
+
+      const micTrack = newStream.getAudioTracks()[0];
+      micTrack.onended = () =>
+        console.error(
+          `[AudioRecorder] ⚠️ Mic track ENDED unexpectedly! (label: ${micTrack.label})`,
+        );
+      console.log(
+        `[AudioRecorder] 🔁 Speaker mode → ${enabled} (AEC=${enabled}); mic re-acquired, echoCancellation=${micTrack.getSettings().echoCancellation}`,
+      );
+    } catch (err) {
+      console.error(
+        "[AudioRecorder] Failed to re-acquire mic for speaker-mode change (keeping current stream):",
+        err instanceof Error ? err.message : err,
       );
     }
   }

@@ -102,7 +102,10 @@ const MermaidRenderer: React.FC<MermaidRendererProps> = ({
         // Repeating colour scales (pie/git/cScale wrap the 10-colour palette).
         const scale = (prefix: string, n: number, from = 0) =>
           Object.fromEntries(
-            Array.from({ length: n }, (_, i) => [`${prefix}${from + i}`, palette[i % palette.length]]),
+            Array.from({ length: n }, (_, i) => [
+              `${prefix}${from + i}`,
+              palette[i % palette.length],
+            ]),
           );
         const constScale = (prefix: string, n: number, value: string, from = 0) =>
           Object.fromEntries(Array.from({ length: n }, (_, i) => [`${prefix}${from + i}`, value]));

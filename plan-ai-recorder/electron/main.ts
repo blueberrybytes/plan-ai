@@ -11,6 +11,7 @@ import {
   Menu,
   Tray,
   dialog,
+  powerMonitor,
 } from "electron";
 import * as path from "path";
 import { join } from "path";
@@ -932,7 +933,35 @@ ipcMain.handle("quit-and-install", () => {
 });
 
 // ─── Dual-Track Auto Updater ──────────────────────────────────────────────────
+// Many users never quit or restart for weeks, so checking only at launch means
+// they sit on stale builds. We poll on an interval AND re-check on wake from
+// sleep — crucially, setInterval does NOT fire reliably while the machine is
+// asleep (the laptop-lid-closed-for-the-night case), so powerMonitor's "resume"
+// is what actually catches those long-idle sessions. A throttle keeps frequent
+// sleep/wake cycles from hammering the update server.
+const UPDATE_POLL_INTERVAL_MS = 3 * 60 * 60 * 1000; // poll every 3 hours
+const UPDATE_MIN_GAP_MS = 30 * 60 * 1000; // never check more than ~twice an hour
+
 function setupAutoUpdater() {
+  let lastCheckAt = 0;
+
+  // Wraps a check with throttling + logging so every trigger (startup, interval,
+  // resume) shares one rate limit and we can see in logs why a check ran.
+  const guardedCheck = (run: () => void, reason: string) => {
+    const now = Date.now();
+    if (now - lastCheckAt < UPDATE_MIN_GAP_MS) {
+      console.log(`[AutoUpdater] skip check (${reason}) — throttled`);
+      return;
+    }
+    lastCheckAt = now;
+    console.log(`[AutoUpdater] checking for updates (${reason})`);
+    try {
+      run();
+    } catch (e) {
+      console.error(`[AutoUpdater] check failed (${reason})`, e);
+    }
+  };
+
   if (process.mas) {
     const checkMasUpdate = async () => {
       try {
@@ -953,8 +982,11 @@ function setupAutoUpdater() {
         console.error("Failed to check MAS updates:", err);
       }
     };
-    checkMasUpdate();
-    setInterval(checkMasUpdate, 24 * 60 * 60 * 1000); // Check every 24 hours
+
+    const trigger = (reason: string) => guardedCheck(() => void checkMasUpdate(), reason);
+    trigger("startup");
+    setInterval(() => trigger("interval"), UPDATE_POLL_INTERVAL_MS);
+    powerMonitor.on("resume", () => trigger("resume-from-sleep"));
   } else {
     autoUpdater.logger = console;
 
@@ -976,13 +1008,10 @@ function setupAutoUpdater() {
       }
     });
 
-    try {
-      autoUpdater.checkForUpdatesAndNotify();
-      setInterval(() => {
-        try { autoUpdater.checkForUpdatesAndNotify(); } catch (e) { }
-      }, 24 * 60 * 60 * 1000);
-    } catch (e) {
-      console.error("Auto updater silent failure", e);
-    }
+    const trigger = (reason: string) =>
+      guardedCheck(() => autoUpdater.checkForUpdatesAndNotify(), reason);
+    trigger("startup");
+    setInterval(() => trigger("interval"), UPDATE_POLL_INTERVAL_MS);
+    powerMonitor.on("resume", () => trigger("resume-from-sleep"));
   }
 }

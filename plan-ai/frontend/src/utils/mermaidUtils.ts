@@ -98,7 +98,8 @@ export interface MermaidThemeOptions {
  * themeVariable instead — that's the whole point of the migration.
  */
 export const injectMermaidThemeStyles = (svg: string, options: MermaidThemeOptions): string => {
-  const { id, bg, primary, secondary, canvasTextColor, canvasContrastText, nodeTextColor } = options;
+  const { id, bg, primary, secondary, canvasTextColor, canvasContrastText, nodeTextColor } =
+    options;
 
   return svg.replace(
     /(<svg[^>]*>)/i,

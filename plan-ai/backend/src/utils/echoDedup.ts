@@ -33,13 +33,20 @@
 
 const DEFAULT_WINDOW_MS = 10000;
 const DEFAULT_THRESHOLD = 0.8;
-// Backstop posture: the recorder's worklet echo gate is now the PRIMARY defense
-// (it silences faint speaker bleed before it ever reaches Deepgram). This
-// server-side pass only catches the residual case — LOUD bleed that cleared the
-// gate — which is a near-perfect duplicate of the sys channel. Raising the
-// minimum-token floor keeps short user utterances (backchannels, brief replies)
-// from ever being dropped here, since those are exactly where the time-based
-// matcher is most prone to a false positive against the user's own speech.
+// Backstop posture: loudspeaker bleed is now removed at CAPTURE by the browser's
+// AEC (echoCancellation, ON by default in the recorder), which is the PRIMARY
+// defense. (The old in-recorder worklet echo gate was removed; AEC replaced it.)
+// This server-side word matcher is the residual backstop for LOUD bleed AEC
+// leaves behind (cheap/loud speakers, double-talk) and for AEC-off / legacy /
+// uploaded captures AEC never touched. Coverage differs by path: the BATCH /
+// reprocess path (dropEchoUtterances + estimateMicSysOffsetMs) is offset-aware
+// and corrects the mic↔sys clock skew; the LIVE path (EchoDeduper.subtractEcho)
+// only matches near-simultaneous bleed within fixed 2s/150ms windows, so late-
+// arriving sys twins (macOS sys spin-up ~2s) are caught by the recorder's
+// client-side grace queue, not here. Raising the minimum-token floor keeps short
+// user utterances (backchannels, brief replies) from ever being dropped, since
+// those are where the time-based matcher is most prone to a false positive
+// against the user's own speech.
 const MIN_TOKENS = 4;
 /** A sys word may occur at most this much AFTER the mic word and still match. */
 const DEFAULT_LEAD_MS = 150;
@@ -437,7 +444,9 @@ export function dropEchoUtterances<T extends TimedSegment>(
   const threshold = opts.threshold ?? DEFAULT_THRESHOLD;
 
   const offsetMs =
-    opts.offsetMs !== undefined ? opts.offsetMs : estimateMicSysOffsetMs(micUtterances, sysUtterances);
+    opts.offsetMs !== undefined
+      ? opts.offsetMs
+      : estimateMicSysOffsetMs(micUtterances, sysUtterances);
   const aligned = offsetMs !== null;
   const sysEpoch = aligned ? offsetMs : 0;
 

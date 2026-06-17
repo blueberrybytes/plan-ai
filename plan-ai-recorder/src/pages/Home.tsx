@@ -15,8 +15,6 @@ import {
   MenuItem,
   Select,
   Stack,
-  Switch,
-  FormControlLabel,
   Tooltip,
   Typography,
   TextField,
@@ -72,12 +70,6 @@ const Home: React.FC = () => {
     // gets hijacked by Zoom/Teams, so we need the auto-selection to find real hardware
     return saved && saved !== "default" ? saved : "default";
   });
-  // Speaker mode → browser AEC during recording (kills loudspeaker bleed at
-  // capture). Persisted across sessions in localStorage.
-  const [speakerMode, setSpeakerMode] = useState<boolean>(
-    () => localStorage.getItem("planai_speaker_mode") === "true",
-  );
-
   const [projects, setProjects] = useState<Project[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState<string>("");
 
@@ -391,6 +383,10 @@ const Home: React.FC = () => {
   }, [systemSourceId]);
 
   const handleStartRecording = () => {
+    // Echo cancellation is ON automatically; it only turns off if the user
+    // flipped it to headphones mode in a prior recording (persisted choice).
+    // The live override lives on the Recording screen now, not here.
+    const speakerMode = localStorage.getItem("planai_speaker_mode") !== "false";
     const config: RecordingConfig = {
       systemSourceId,
       language,
@@ -1045,33 +1041,9 @@ const Home: React.FC = () => {
               </FormControl>
             )}
 
-            {/* Speaker mode: browser AEC during recording to kill loudspeaker
-                bleed at capture. Off = headphones (no echo to cancel). */}
-            <FormControlLabel
-              sx={{ mt: 1.5, ml: 0, alignItems: "flex-start" }}
-              control={
-                <Switch
-                  size="small"
-                  checked={speakerMode}
-                  onChange={(e) => {
-                    setSpeakerMode(e.target.checked);
-                    localStorage.setItem("planai_speaker_mode", String(e.target.checked));
-                  }}
-                />
-              }
-              label={
-                <Box>
-                  <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                    Speaker mode (echo cancellation)
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    Turn on if you listen on loudspeaker — removes the echo that
-                    duplicates the transcript. Keep off with headphones.
-                  </Typography>
-                </Box>
-              }
-            />
-
+            {/* Echo cancellation is now automatic at recording start (kills
+                loudspeaker bleed at capture). The override for headphone users
+                lives on the Recording screen, so the toggle was removed here. */}
             <Typography
               variant="caption"
               color="text.secondary"

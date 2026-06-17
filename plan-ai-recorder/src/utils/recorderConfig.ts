@@ -5,8 +5,10 @@ export interface RecordingConfig {
   /**
    * Speaker / hands-free mode. When true the mic is captured with the browser's
    * AEC (echoCancellation), which removes loudspeaker bleed AT CAPTURE — the
-   * "Teams way". Off by default (headphones need no AEC, and AEC mildly mutes
-   * the system audio you're listening to).
+   * "Teams way". ON by default (undefined ⇒ on): the common case is a virtual
+   * meeting on a loudspeaker. A headphone user can flip it off live on the
+   * Recording screen; the choice persists in the `planai_speaker_mode`
+   * localStorage key (only "false" disables it).
    */
   speakerMode?: boolean;
   /** Legacy: direct context IDs. Prefer `projectIds`. */
