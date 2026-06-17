@@ -130,19 +130,21 @@ export class AudioRecorder {
       // 3. Microphone stream acquisition
       const config = loadConfig();
       const micDeviceId = config?.micDeviceId;
-      console.log(`[AudioRecorder] 🎤 Requesting mic with deviceId: "${micDeviceId}"`);
+      // Speaker mode → browser AEC (WebRTC AEC3, the same engine Teams uses) to
+      // remove loudspeaker bleed AT CAPTURE. This is the real fix for the
+      // "duplicated transcript on speakerphone" problem: a clean mic means no
+      // bleed reaches transcription, so no post-hoc dedup is needed. The cost is
+      // that macOS "voice communication" mode mildly mutes the system audio the
+      // user hears while recording — hence opt-in. With headphones it's off
+      // (no bleed to cancel). autoGainControl stays off either way (it pumps).
+      const speakerMode = config?.speakerMode ?? false;
+      console.log(
+        `[AudioRecorder] 🎤 Requesting mic deviceId="${micDeviceId}" speakerMode=${speakerMode} (AEC=${speakerMode})`,
+      );
       this.micStream = await navigator.mediaDevices.getUserMedia({
         audio: {
-          // ALL WebRTC audio-processing flags OFF on purpose.
-          // On macOS (and Windows), enabling ANY of echoCancellation,
-          // noiseSuppression, or autoGainControl puts the OS into
-          // "voice communication" mode, which ducks/alters the system audio
-          // the user is listening to (music sounds muffled/quiet while the
-          // recorder is open). Deepgram Nova handles noise & gain on its end,
-          // so these browser-level DSP passes are unnecessary and only cause
-          // the side effect.
-          echoCancellation: false,
-          noiseSuppression: false,
+          echoCancellation: speakerMode,
+          noiseSuppression: speakerMode,
           autoGainControl: false,
           ...(micDeviceId && micDeviceId !== "default"
             ? { deviceId: { exact: micDeviceId } }

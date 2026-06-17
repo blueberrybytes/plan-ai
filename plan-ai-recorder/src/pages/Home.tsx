@@ -15,6 +15,8 @@ import {
   MenuItem,
   Select,
   Stack,
+  Switch,
+  FormControlLabel,
   Tooltip,
   Typography,
   TextField,
@@ -70,6 +72,11 @@ const Home: React.FC = () => {
     // gets hijacked by Zoom/Teams, so we need the auto-selection to find real hardware
     return saved && saved !== "default" ? saved : "default";
   });
+  // Speaker mode → browser AEC during recording (kills loudspeaker bleed at
+  // capture). Persisted across sessions in localStorage.
+  const [speakerMode, setSpeakerMode] = useState<boolean>(
+    () => localStorage.getItem("planai_speaker_mode") === "true",
+  );
 
   const [projects, setProjects] = useState<Project[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState<string>("");
@@ -388,6 +395,7 @@ const Home: React.FC = () => {
       systemSourceId,
       language,
       micDeviceId,
+      speakerMode,
       projectIds: selectedProjectId ? [selectedProjectId] : undefined,
     };
     saveConfig(config);
@@ -1036,6 +1044,33 @@ const Home: React.FC = () => {
                 </Select>
               </FormControl>
             )}
+
+            {/* Speaker mode: browser AEC during recording to kill loudspeaker
+                bleed at capture. Off = headphones (no echo to cancel). */}
+            <FormControlLabel
+              sx={{ mt: 1.5, ml: 0, alignItems: "flex-start" }}
+              control={
+                <Switch
+                  size="small"
+                  checked={speakerMode}
+                  onChange={(e) => {
+                    setSpeakerMode(e.target.checked);
+                    localStorage.setItem("planai_speaker_mode", String(e.target.checked));
+                  }}
+                />
+              }
+              label={
+                <Box>
+                  <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                    Speaker mode (echo cancellation)
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    Turn on if you listen on loudspeaker — removes the echo that
+                    duplicates the transcript. Keep off with headphones.
+                  </Typography>
+                </Box>
+              }
+            />
 
             <Typography
               variant="caption"

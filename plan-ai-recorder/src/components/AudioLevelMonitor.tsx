@@ -139,12 +139,18 @@ export const AudioLevelMonitor: React.FC<AudioLevelMonitorProps> = ({
       const micAnalyser = micAnalyserRef.current;
       if (!ctx || !micAnalyser) return;
 
-      // Build constraint list: prefer chosen device, fall back to any mic
+      // Build constraint list: prefer chosen device, fall back to any mic.
+      // AEC/NS/AGC are OFF here on purpose: this is just a level meter, and any
+      // of those three flags puts macOS into "voice communication" mode, which
+      // ducks/muffles the system audio the user is listening to — while merely
+      // sitting on the Home screen, before any recording. (Echo cancellation for
+      // the actual recording is opt-in via speaker mode in audioRecorder.)
+      const noProc = { echoCancellation: false, noiseSuppression: false, autoGainControl: false };
       const constraints: MediaStreamConstraints[] = [];
       if (micDeviceId && micDeviceId !== "default") {
-        constraints.push({ audio: { deviceId: { exact: micDeviceId }, echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
+        constraints.push({ audio: { deviceId: { exact: micDeviceId }, ...noProc } });
       }
-      constraints.push({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
+      constraints.push({ audio: { ...noProc } });
       constraints.push({ audio: true });
 
       for (const cons of constraints) {
