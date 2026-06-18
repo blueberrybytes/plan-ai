@@ -200,6 +200,8 @@ const Users: React.FC = () => {
                       <TableCell>{t("users.name")}</TableCell>
                       <TableCell>{t("users.email")}</TableCell>
                       <TableCell>{t("users.role")}</TableCell>
+                      <TableCell>Created</TableCell>
+                      <TableCell>Last Sign In</TableCell>
                       <TableCell align="center">{t("users.actions")}</TableCell>
                     </TableRow>
                   </TableHead>
@@ -254,6 +256,32 @@ const Users: React.FC = () => {
                                   ? t("users.premium", "Premium")
                                   : t("users.client")}
                           </Typography>
+                        </TableCell>
+                        <TableCell>
+                          <Tooltip title={user.createdAt ? new Date(user.createdAt).toLocaleString() : ""}>
+                            <Typography variant="body2" color="text.secondary" sx={{ fontSize: "0.8rem" }}>
+                              {user.createdAt
+                                ? new Date(user.createdAt).toLocaleDateString(undefined, {
+                                    year: "numeric",
+                                    month: "short",
+                                    day: "numeric",
+                                  })
+                                : "—"}
+                            </Typography>
+                          </Tooltip>
+                        </TableCell>
+                        <TableCell>
+                          <Tooltip title={user.lastSignInAt ? new Date(user.lastSignInAt).toLocaleString() : ""}>
+                            <Typography variant="body2" color="text.secondary" sx={{ fontSize: "0.8rem" }}>
+                              {user.lastSignInAt
+                                ? new Date(user.lastSignInAt).toLocaleDateString(undefined, {
+                                    year: "numeric",
+                                    month: "short",
+                                    day: "numeric",
+                                  })
+                                : "—"}
+                            </Typography>
+                          </Tooltip>
                         </TableCell>
                         <TableCell align="center">
                           <Box
@@ -311,7 +339,7 @@ const Users: React.FC = () => {
                     {filteredUsers.length === 0 && (
                       <TableRow>
                         <TableCell
-                          colSpan={4}
+                          colSpan={6}
                           align="center"
                           sx={{ py: 4, color: "text.secondary" }}
                         >

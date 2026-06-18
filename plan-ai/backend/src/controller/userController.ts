@@ -26,6 +26,7 @@ export interface UserDetailResponse {
   role: Role;
   createdAt: Date;
   updatedAt: Date;
+  lastSignInAt: string | null;
 }
 
 export interface UpdateUserRoleRequest {
@@ -64,6 +65,22 @@ export class UserController extends Controller {
         },
       });
 
+      // Batch-fetch Firebase user records to get lastSignInTime
+      const firebaseUids = users.map((u) => ({ uid: u.firebaseUid }));
+      let firebaseMap = new Map<string, string | undefined>();
+      try {
+        // getUsers supports up to 100 identifiers per call
+        for (let i = 0; i < firebaseUids.length; i += 100) {
+          const batch = firebaseUids.slice(i, i + 100);
+          const result = await firebaseAdmin.auth().getUsers(batch);
+          for (const fbUser of result.users) {
+            firebaseMap.set(fbUser.uid, fbUser.metadata.lastSignInTime);
+          }
+        }
+      } catch (fbErr) {
+        logger.warn("Could not fetch Firebase user metadata for lastSignInAt", fbErr);
+      }
+
       const userResponses: UserDetailResponse[] = users.map((u) => ({
         id: u.id,
         firebaseUid: u.firebaseUid,
@@ -73,6 +90,7 @@ export class UserController extends Controller {
         role: u.role,
         createdAt: u.createdAt,
         updatedAt: u.updatedAt,
+        lastSignInAt: firebaseMap.get(u.firebaseUid) || null,
       }));
 
       return {
@@ -151,6 +169,7 @@ export class UserController extends Controller {
         role: updatedUser.role,
         createdAt: updatedUser.createdAt,
         updatedAt: updatedUser.updatedAt,
+        lastSignInAt: null,
       };
 
       return {
@@ -259,6 +278,7 @@ export class UserController extends Controller {
         role: user.role,
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,
+        lastSignInAt: null,
       };
 
       return {
@@ -387,6 +407,7 @@ export class UserController extends Controller {
         role: newUser.role,
         createdAt: newUser.createdAt,
         updatedAt: newUser.updatedAt,
+        lastSignInAt: null,
       };
 
       return {

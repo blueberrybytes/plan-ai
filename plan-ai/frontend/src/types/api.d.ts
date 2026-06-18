@@ -2536,6 +2536,7 @@ export interface components {
             createdAt: string;
             /** Format: date-time */
             updatedAt: string;
+            lastSignInAt: string | null;
         };
         "ApiResponse_UserDetailResponse-Array_": {
             message?: string;

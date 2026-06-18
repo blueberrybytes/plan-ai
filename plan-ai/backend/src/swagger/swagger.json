@@ -104,6 +104,10 @@
 					"updatedAt": {
 						"type": "string",
 						"format": "date-time"
+					},
+					"lastSignInAt": {
+						"type": "string",
+						"nullable": true
 					}
 				},
 				"required": [
@@ -114,7 +118,8 @@
 					"avatarUrl",
 					"role",
 					"createdAt",
-					"updatedAt"
+					"updatedAt",
+					"lastSignInAt"
 				],
 				"type": "object",
 				"additionalProperties": false
