@@ -13,6 +13,7 @@ import {
   getWorkspaceModel,
   getFallbackProviderOptions,
   getStructuredProviderOptions,
+  getCachedStructuredProviderOptions,
   getCachedContextModel,
   getCachedContextProviderOptions,
   CACHED_CONTEXT_MODEL,
@@ -1499,7 +1500,13 @@ ${content}`;
         try {
           const result = await generateText({
             model,
-            providerOptions: getStructuredProviderOptions(),
+            // Pin the OpenRouter provider so repeated identical-prefix calls (the
+            // retries below; future batched extraction) reuse Gemini's implicit
+            // cache instead of cold-missing when OpenRouter bounces Google
+            // endpoints. Orthogonal to — and keeps — the json_schema model
+            // fallbacks. NOTE: steady-state reuse stays limited until the prompt
+            // prefix is front-loaded (cf. getCachedContextModel's repo route).
+            providerOptions: getCachedStructuredProviderOptions(activeModel),
             output: Output.object({
               name: "TranscriptFullAnalysis",
               description:

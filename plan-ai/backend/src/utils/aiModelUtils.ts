@@ -307,6 +307,27 @@ export function getStructuredProviderOptions(modelKey?: string) {
 }
 
 /**
+ * Same as getStructuredProviderOptions, but PINS the upstream provider
+ * (`provider.allow_fallbacks: false`) so OpenRouter doesn't bounce repeated
+ * calls across different providers/endpoints of the same model — which
+ * cold-misses Gemini's implicit prompt cache (TTL ~3–5 min). Measured: an
+ * un-pinned route flip-flopped 0% → 95% → 0% cached prompt tokens on identical
+ * back-to-back calls, while the pinned route held ~95% (cost −77% on a warm
+ * call). Provider-pinning and the json_schema MODEL fallbacks (FALLBACK_MODELS)
+ * are orthogonal in OpenRouter — `allow_fallbacks` only stops *provider*
+ * bouncing — so the structured-output safety net stays intact.
+ */
+export function getCachedStructuredProviderOptions(modelKey?: string) {
+  const base = getStructuredProviderOptions(modelKey);
+  return {
+    openrouter: {
+      ...base.openrouter,
+      provider: { allow_fallbacks: false },
+    },
+  };
+}
+
+/**
  * Provider options that also turn ON OpenRouter reasoning tokens, so the model
  * streams its chain-of-thought. Reasoning-capable models (Gemini 2.5, Claude,
  * DeepSeek, …) emit `reasoning-delta` stream parts; models that don't support it
