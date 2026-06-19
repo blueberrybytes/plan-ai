@@ -21,7 +21,7 @@ export interface LogUsageParams {
    * estimated pricingMap calculation.
    */
   cost?: number;
-  /** Prompt tokens served from cache — logged for visibility (not persisted). */
+  /** Prompt tokens served from the provider's cache (Gemini/Anthropic), persisted for cache-hit analysis. */
   cachedTokens?: number;
 }
 
@@ -83,6 +83,7 @@ export class AiUsageService {
           model: params.model,
           inputTokens: params.inputTokens,
           outputTokens: params.outputTokens,
+          cachedTokens: params.cachedTokens ?? 0,
           totalTokens,
           estimatedCost,
           blueberryTokens,
