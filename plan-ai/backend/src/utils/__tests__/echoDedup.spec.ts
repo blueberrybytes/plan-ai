@@ -340,3 +340,120 @@ describe("subtractEcho (word-level double-talk handling)", () => {
     expect(res.keptText).toBe("");
   });
 });
+
+describe("dropEchoUtterances — similarity backstop (divergent / scattered bleed)", () => {
+  const u = (transcript: string, start: number, end: number) => ({ transcript, start, end });
+
+  it("drops garbled, time-scattered bleed the word matcher misses", () => {
+    // Field case (the user's pasted transcript): the mic copy is garbled
+    // ("i i i saw…") AND its sys twin sits ~3s earlier after alignment
+    // (segmentation + residual offset skew) — beyond the word matcher's ±2s
+    // aligned window, so per-word matching keeps it (coverage 0). As token SETS
+    // the two are identical (Jaccard 1.0), so the similarity backstop drops it.
+    const mic = [
+      u("i i i saw the invitation it looks like a lovely venue that you have chosen", 30.0, 34.0),
+    ];
+    const sys = [
+      u("i saw the invitation it looks like a lovely venue that you have chosen", 27.0, 30.0),
+    ];
+    expect(dropEchoUtterances(mic, sys, { offsetMs: 0 })).toHaveLength(0);
+  });
+
+  it("keeps the user's speech when the matching sys copy starts later (far-end echo)", () => {
+    const kept = dropEchoUtterances(
+      [u("lets ship the billing fix tomorrow morning everyone", 10.0, 13.0)],
+      [u("lets ship the billing fix tomorrow morning everyone", 13.0, 16.0)],
+      { offsetMs: 0 },
+    );
+    expect(kept).toHaveLength(1); // sys starts 3s later than mic > lead → kept
+  });
+
+  it("keeps a genuine repeat said far outside the look-back window", () => {
+    const kept = dropEchoUtterances(
+      [u("we should migrate the auth service to the new gateway", 60.0, 63.0)],
+      [u("we should migrate the auth service to the new gateway", 10.0, 13.0)],
+      { offsetMs: 0 },
+    );
+    expect(kept).toHaveLength(1); // 50s gap > backstop window → kept
+  });
+
+  it("keeps a genuine repeat of what the remote said ~8s earlier (just past the window)", () => {
+    // Confirmed false positive of the first cut (12s look-back): affirming what a
+    // participant just said is common; the 4s window + sys END recency keep it.
+    const kept = dropEchoUtterances(
+      [u("we should migrate the auth service to the new gateway", 18.0, 21.0)],
+      [u("we should migrate the auth service to the new gateway", 10.0, 13.0)],
+      { offsetMs: 0 },
+    );
+    expect(kept).toHaveLength(1);
+  });
+
+  it("keeps a short genuine reply that is a subset of a longer sys sentence", () => {
+    // Confirmed false positive of one-way containment: "yeah i agree we should do
+    // that" ⊂ a longer remote sentence, but symmetric Jaccard (6/13≈0.46) keeps it.
+    const kept = dropEchoUtterances(
+      [u("yeah i agree we should do that", 30.0, 31.5)],
+      [u("i agree we should do that next week if everyone is ready", 25.0, 29.0)],
+      { offsetMs: 0 },
+    );
+    expect(kept).toHaveLength(1);
+  });
+
+  it("keeps a negated disagreement — only the polarity guard saves it from a near-verbatim drop", () => {
+    // Near-identical to sys except the user's "not" (Jaccard 9/10=0.9 clears the
+    // threshold), sys ~4s earlier so the word matcher's ±2s window misses it.
+    // Only the polarity guard prevents deleting the user's dissent.
+    const kept = dropEchoUtterances(
+      [u("we should really not migrate the auth service to the gateway", 30.0, 33.0)],
+      [u("we should really migrate the auth service to the gateway", 26.0, 28.0)],
+      { offsetMs: 0 },
+    );
+    expect(kept).toHaveLength(1);
+  });
+
+  // Genuine near-twins the adversarial red-team proved a looser backstop deleted.
+  it("keeps a contraction-negated correction ('shouldn't' vs 'should')", () => {
+    const kept = dropEchoUtterances(
+      [u("honestly i think we shouldn't ship the feature this week", 40.0, 43.0)],
+      [u("i think we should ship the feature this week", 38.0, 42.0)],
+      { offsetMs: 0 },
+    );
+    expect(kept).toHaveLength(1);
+  });
+
+  it("keeps a user's question against the remote's answer", () => {
+    const kept = dropEchoUtterances(
+      [u("are we meeting on monday or tuesday next week", 12.0, 15.0)],
+      [u("we are meeting on monday next week", 13.5, 16.0)],
+      { offsetMs: 0 },
+    );
+    expect(kept).toHaveLength(1);
+  });
+
+  it("keeps a Spanish affirmation/paraphrase of the remote", () => {
+    const kept = dropEchoUtterances(
+      [u("si claro deberiamos hacerlo asi la proxima semana", 70.0, 73.0)],
+      [u("deberiamos hacerlo asi la proxima semana", 68.5, 71.0)],
+      { offsetMs: 0 },
+    );
+    expect(kept).toHaveLength(1);
+  });
+
+  it("does not strip a short reply that shares words with sys (below min-token floor)", () => {
+    const kept = dropEchoUtterances(
+      [u("yes exactly right", 30.2, 30.9)],
+      [u("yes exactly right", 22.0, 22.7)],
+      { offsetMs: 0 },
+    );
+    expect(kept).toHaveLength(1); // 3 unique tokens < floor → backstop skipped
+  });
+
+  it("keeps genuine double-talk that shares few words even within the window", () => {
+    const kept = dropEchoUtterances(
+      [u("honestly i completely disagree with that whole rollback plan", 20.0, 23.0)],
+      [u("we should migrate the auth service to the new gateway", 18.0, 21.0)],
+      { offsetMs: 0 },
+    );
+    expect(kept).toHaveLength(1); // low Jaccard → kept
+  });
+});

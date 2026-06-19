@@ -410,6 +410,115 @@ export function estimateMicSysOffsetMs(
 }
 
 /**
+ * Similarity backstop for the batch path.
+ *
+ * The per-word time-windowed matcher (evaluateMicWords) misses bleed the prod
+ * logs showed surviving at coverage 0.5–0.8, mainly because:
+ *  1. Time scatter / no per-word times — offset drift or different utterance
+ *     segmentation pushes the bleed's word times outside the tight ±tolerance
+ *     window; with the text-only fallback every token sits at the segment start,
+ *     so a few seconds of skew zeroes the per-word coverage entirely.
+ *  2. Divergent ASR — the muffled mic copy is transcribed with duplicate/garbled
+ *     tokens ("I I I saw the invitation…"), so the word matcher's coverage dips.
+ * As TOKEN SETS the bleed and its sys twin are near-identical (duplicates and
+ * word order collapse), so a high SYMMETRIC similarity (Jaccard) against a single
+ * overlapping sys utterance is strong echo evidence.
+ *
+ * Safeguards — each pinned to a confirmed false positive — so genuine user
+ * speech is never stripped:
+ *  - SYMMETRIC Jaccard, not one-way containment: a short reply that is merely a
+ *    subset of a longer, unrelated sys sentence ("yeah i agree we should do that"
+ *    inside "i agree we should do that next week if everyone is ready") scores
+ *    low and is KEPT. Only near-equal-length twins score high.
+ *  - a min unique-token floor (short replies / backchannels are never matched).
+ *  - an interval + direction window: the sys utterance must not START later than
+ *    the mic by more than `leadMs` (so the user's own far-end echo, which returns
+ *    LATER, is kept) and must not have ENDED more than `earlierMs` before the mic
+ *    started (so a genuine repeat of something said much earlier is out of scope;
+ *    using END rather than START keeps a long sys utterance that spans the mic
+ *    in scope). In the aligned path `leadMs` is the matcher's 2s tolerance, so a
+ *    verbatim duplicate whose copy lands within 2s is treated as bleed by design,
+ *    exactly as the word matcher already does.
+ *  - a negation guard: if exactly one side carries a negation ("we should NOT
+ *    ship" vs "we should ship"), the meaning is opposite — keep it. Checked on
+ *    the RAW text so contractions ("shouldn't") and other-language forms count.
+ *
+ * NEAR-VERBATIM ONLY. Text similarity cannot tell near-identical ECHO from
+ * near-identical genuine speech (the user affirming/paraphrasing/questioning the
+ * remote: "yeah we should ship that" / "monday or tuesday?"). Adversarial review
+ * found Jaccard ≥0.72 routinely deletes such turns. Since dropping a real
+ * sentence is far worse than leaving a duplicate, the threshold is set high
+ * enough that ONLY a near-identical twin qualifies — the reported failure mode
+ * (a verbatim re-transcription of the other channel) — accepting that mildly
+ * divergent bleed is left for the word matcher / future tuning.
+ */
+const SIMILARITY_THRESHOLD = 0.9; // Jaccard of unique tokens — near-verbatim twins only
+const SIMILARITY_MIN_TOKENS = 5;
+/** Backstop look-back when the offset is aligned (absorbs residual skew + segmentation). */
+const SIMILARITY_EARLIER_ALIGNED_MS = 4_000;
+/** Backstop look-back when unaligned; still well below the range where genuine repetition is plausible. */
+const SIMILARITY_EARLIER_UNALIGNED_MS = 6_000;
+/**
+ * Negation / polarity markers, matched on RAW text (before tokenize() strips
+ * apostrophes) so contractions ("shouldn't", "don't") and a few common
+ * other-language forms (Spanish "nunca", "tampoco", "ni", "sin") are caught.
+ */
+const NEGATION_RE =
+  /\b(?:not|no|never|none|nor|neither|without|cannot|cant|dont|doesnt|didnt|wont|wouldnt|shouldnt|couldnt|isnt|arent|wasnt|werent|aint|havent|hasnt|hadnt|nunca|tampoco|ni|sin)\b|n['’]t\b/i;
+
+function hasNegation(text: string): boolean {
+  return NEGATION_RE.test(text);
+}
+
+interface SysTokenSet {
+  /** Aligned start of the sys utterance on the mic clock (ms). */
+  startMs: number;
+  /** Aligned end of the sys utterance on the mic clock (ms). */
+  endMs: number;
+  /** Unique tokens of the sys utterance. */
+  tokens: Set<string>;
+  /** Whether the raw sys transcript carries a negation (polarity guard). */
+  hasNeg: boolean;
+}
+
+/** Jaccard similarity of two token sets: |A∩B| / |A∪B|. */
+function jaccard(a: Set<string>, b: Set<string>): number {
+  let inter = 0;
+  for (const t of a) if (b.has(t)) inter++;
+  const union = a.size + b.size - inter;
+  return union === 0 ? 0 : inter / union;
+}
+
+/**
+ * Backstop echo test, applied AFTER the word matcher keeps a mic segment. True
+ * when a single sys utterance overlaps the mic in time (interval + direction
+ * window), is a NEAR-VERBATIM twin by symmetric Jaccard, and matches the mic's
+ * negation polarity. See the block comment for the rationale behind each guard.
+ */
+function isSimilarityBleed(
+  micTokens: Set<string>,
+  micHasNeg: boolean,
+  micStartMs: number,
+  sysSets: SysTokenSet[],
+  leadMs: number,
+  earlierMs: number,
+): boolean {
+  if (micTokens.size < SIMILARITY_MIN_TOKENS) return false;
+  for (const s of sysSets) {
+    // Direction: sys must not START much later than the mic (else far-end echo).
+    if (s.startMs > micStartMs + leadMs) continue;
+    // Recency: sys must not have ENDED long before the mic started (else it's a
+    // later repeat of old content). END keeps a long spanning sys utterance in.
+    if (s.endMs < micStartMs - earlierMs) continue;
+    // Polarity: only one side negated → opposite meaning, not echo.
+    if (micHasNeg !== s.hasNeg) continue;
+    if (jaccard(micTokens, s.tokens) < SIMILARITY_THRESHOLD) continue;
+    return true;
+  }
+  return false;
+}
+
+/**
  * Batch echo dedup for diarized utterances (the reprocess/upload path, where we
  * re-transcribe the stored mic + sys audio separately and merge by time).
  *
@@ -465,16 +574,39 @@ export function dropEchoUtterances<T extends TimedSegment>(
     deduper.noteSystemWords(words);
   }
 
+  // Token-set view of the sys channel for the similarity backstop (below).
+  const backstopEarlierMs = aligned
+    ? SIMILARITY_EARLIER_ALIGNED_MS
+    : SIMILARITY_EARLIER_UNALIGNED_MS;
+  const sysSets: SysTokenSet[] = sysUtterances.map((s) => ({
+    startMs: s.start * 1000 + sysEpoch,
+    endMs: s.end * 1000 + sysEpoch,
+    tokens: new Set(tokenize(s.transcript)),
+    hasNeg: hasNegation(s.transcript),
+  }));
+
   return micUtterances.filter((mic) => {
     const words = mic.words?.length
       ? wordsFromDeepgram(mic.words, 0)
       : wordsFromText(mic.transcript, mic.start * 1000);
     const verdict = deduper.evaluateMicWords(words);
+    // Backstop: near-verbatim re-transcription of an overlapping sys utterance
+    // that the word matcher kept (time-scattered / divergent garbling).
+    const dropped =
+      verdict.isEcho ||
+      isSimilarityBleed(
+        new Set(tokenize(mic.transcript)),
+        hasNegation(mic.transcript),
+        mic.start * 1000,
+        sysSets,
+        leadMs,
+        backstopEarlierMs,
+      );
     opts.onSegment?.({
-      dropped: verdict.isEcho,
+      dropped,
       coverage: verdict.coverage,
       micTokenCount: verdict.micTokenCount,
     });
-    return !verdict.isEcho;
+    return !dropped;
   });
 }
