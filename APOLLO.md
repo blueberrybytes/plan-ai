@@ -1,372 +1,227 @@
-# Apollo.io — Sales Intelligence & Outreach Guide
+# Apollo.io — Guía de Prospección Plan AI
 
-A comprehensive guide to using Apollo.io for lead generation, prospecting, and outreach within the Plan AI sales workflow.
-
----
-
-## Table of Contents
-
-- [What is Apollo.io?](#what-is-apolloio)
-- [Getting Started](#getting-started)
-- [People Search & Filters](#people-search--filters)
-- [Company Search & Filters](#company-search--filters)
-- [Saved Searches & Lists](#saved-searches--lists)
-- [Sequences (Outreach Automation)](#sequences-outreach-automation)
-- [Apollo API (Programmatic Access)](#apollo-api-programmatic-access)
-- [Best Practices & Tips](#best-practices--tips)
+Guía práctica para captar clientes en España con Apollo.io.
 
 ---
 
-## What is Apollo.io?
+## 1. Setup Rápido
 
-Apollo.io is a sales intelligence and engagement platform. It provides:
-
-- **Contact Database** — 275M+ verified contacts with emails, phone numbers, and social profiles.
-- **Company Database** — 73M+ companies with firmographic data (revenue, employee count, industry, tech stack).
-- **Search & Filters** — Powerful filtering to build hyper-targeted prospect lists.
-- **Sequences** — Automated multi-step email + call + LinkedIn outreach cadences.
-- **Enrichment** — Enrich your CRM or CSV with Apollo data.
-- **Intent Signals** — See which companies are actively researching topics relevant to your product.
+1. Cuenta en [app.apollo.io](https://app.apollo.io)
+2. Instalar Chrome Extension (para LinkedIn)
+3. Conectar email en `Settings → Email Accounts`
+4. Configurar SPF/DKIM/DMARC en tu dominio (obligatorio para deliverability)
+5. **Warm-up**: enviar 10-15 emails/día las 2 primeras semanas antes de escalar
 
 ---
 
-## Getting Started
+## 2. Filtros para España
 
-1. **Create an account** at [app.apollo.io](https://app.apollo.io).
-2. **Install the Chrome Extension** — Lets you prospect directly from LinkedIn, company websites, and Gmail.
-3. **Connect your email** — Go to `Settings → Email Accounts` and connect Gmail / Outlook for sending sequences.
-4. **Set up your sender profile** — Add your name, title, and signature under `Settings → Profile`.
-
----
-
-## People Search & Filters
-
-The People Search is the core of Apollo. Navigate to **Search → People** to access it.
-
-### Quick Filter Bar
-
-At the top you'll see quick-access filters. Click any to expand options:
-
-| Filter | What it does | Example |
-|--------|-------------|---------|
-| **Job Titles** | Filter by exact title, title keywords, or seniority | `CTO`, `VP of Engineering`, `Head of Product` |
-| **Company** | Filter by specific company names | `Stripe`, `Notion`, `Linear` |
-| **Location** | Filter by person's location (city, state, country, region) | `San Francisco, CA`, `United States`, `Europe` |
-| **# Employees** | Filter by company headcount range | `11-50`, `51-200`, `201-500` |
-| **Industry** | Filter by the company's industry classification | `Computer Software`, `SaaS`, `Financial Services` |
-
-### Advanced Filters (Full List)
-
-Click **"More Filters"** to access the full filter panel. Here's every available filter grouped by category:
-
-#### 👤 Person Filters
-
-| Filter | Description | Pro Tips |
-|--------|-------------|----------|
-| **Job Titles** | Search by exact title or keywords | Use "contains" for broad matching (`Engineer`) or exact for precision (`Staff Software Engineer`) |
-| **Seniority** | Filter by level: C-Suite, VP, Director, Manager, Individual Contributor | Stack with Job Title for precision: `Seniority: VP` + `Title contains: Engineering` |
-| **Department** | Filter by function: Engineering, Sales, Marketing, Finance, HR, Operations, etc. | Useful when you don't know exact titles |
-| **Management Level** | C-Level, VP, Director, Manager, Non-Manager | Alternative to Seniority with different granularity |
-| **Person Location** | City, State, Country, Continent | Supports radius search around a city |
-| **Email Status** | Verified, Guessed, No Email | Always filter for **Verified** for cold outreach |
-| **Phone Number** | Has Direct Dial, Has Mobile, Has Any Phone | Filter for "Has Direct Dial" for cold calling |
-| **LinkedIn URL** | Has LinkedIn Profile | Useful for LinkedIn outreach sequences |
-| **Years in Current Role** | How long they've been in their current position | `< 1 year` = recently promoted/hired = potential buyer |
-| **Years at Current Company** | Tenure at the company | New hires (`< 1 year`) are often building their stack |
-| **Last Changed Job** | When they last switched companies | Recent job changers are 3x more likely to buy |
-
-#### 🏢 Company Filters (Applied to Person Search)
-
-| Filter | Description | Pro Tips |
-|--------|-------------|----------|
-| **Company Name** | Specific company names | Use for ABM (Account-Based Marketing) campaigns |
-| **Company Domain** | Filter by website domain | Upload a CSV of target domains |
-| **# Employees** | Headcount ranges | `1-10`, `11-50`, `51-200`, `201-500`, `501-1000`, `1001-5000`, `5001-10000`, `10000+` |
-| **Revenue** | Annual revenue ranges | `$1M-$10M`, `$10M-$50M`, `$50M-$100M`, etc. |
-| **Industry** | NAICS-based industry codes | Can select multiple industries |
-| **Keywords** | Company description keywords | `AI`, `machine learning`, `meeting recording` |
-| **Technologies** | Tech stack the company uses | `React`, `Kubernetes`, `Salesforce`, `Slack` — great for selling dev tools |
-| **Company Location** | HQ location of the company | Different from Person Location! |
-| **Founded Year** | When the company was founded | Filter for startups: `2020-2025` |
-| **Funding Stage** | Seed, Series A, Series B, Series C+, IPO | `Series A-B` = growing fast, have budget |
-| **Total Funding** | Total amount raised | `$5M-$50M` = funded but still agile |
-| **Latest Funding Date** | When they last raised | `Last 6 months` = flush with cash |
-| **Company Type** | Private, Public, Non-Profit, Government, Education | Most B2B SaaS targets are `Private` |
-
-#### 📊 Intent & Signal Filters
-
-| Filter | Description | Pro Tips |
-|--------|-------------|----------|
-| **Buying Intent** | Companies showing intent signals for specific topics | Set up intent topics in `Settings → Intent` first |
-| **Intent Score** | High / Medium / Low | Focus on **High** intent for warm outreach |
-| **Job Postings** | Companies actively hiring for specific roles | If they're hiring engineers → they need dev tools |
-| **News & Events** | Recent company news, funding rounds, product launches | Great conversation starters |
-
----
-
-## How to Build a People Search (Step-by-Step)
-
-### Example: Finding VP+ Engineering Leaders at Funded SaaS Startups in the US
-
-1. Go to **Search → People**
-2. Set these filters:
+### Búsqueda de Personas
 
 ```
-Job Title:        contains "Engineering" OR "Technical"
-Seniority:        VP, C-Suite, Director
+Job Title:        contains "CTO" OR "VP Engineering" OR "Head of Engineering"
+                  OR "Director de Tecnología" OR "Head of Product"
+Seniority:        C-Suite, VP, Director
 Department:       Engineering
-Person Location:  United States
-# Employees:      51-500
-Industry:         Computer Software, Internet
-Funding Stage:    Series A, Series B
+Person Location:  Spain
+# Employees:      20-500
+Industry:         Computer Software, Internet, Information Technology
 Email Status:     Verified
 ```
 
-3. Review results in the table
-4. Click **"Save Search"** to reuse this filter set
-5. Select contacts → **"Save to List"** or **"Add to Sequence"**
-
-### Example: Finding Recently-Hired Product Managers at Enterprise Companies
+### Variante: Product Managers / Ops que gestionan reuniones
 
 ```
-Job Title:        contains "Product Manager" OR "Product Lead"
+Job Title:        contains "Product Manager" OR "Operations" OR "Chief of Staff"
+                  OR "Project Manager" OR "Scrum Master"
 Seniority:        Manager, Director
+Person Location:  Spain
+# Employees:      20-500
 Years in Role:    < 1 year
-# Employees:      1001-10000
-Revenue:          $50M+
 Email Status:     Verified
 ```
 
-### Example: Finding CTOs at Companies Using Specific Tech
+### Filtros de Empresa (dentro de People Search)
 
 ```
-Job Title:        CTO, VP Engineering, Head of Engineering
-Technologies:     React, Node.js, AWS
-# Employees:      11-200
-Funding Stage:    Seed, Series A
-Company Location: Europe
+Company Location: Spain
+Technologies:     Slack, Zoom, Google Meet, Microsoft Teams
+Funding Stage:    Seed, Series A, Series B
+Keywords:         "SaaS" OR "startup" OR "tech" OR "software"
 ```
 
 ---
 
-## Company Search & Filters
+## 3. Secuencia de Emails (Cadencia 3-7-7)
 
-Navigate to **Search → Companies** to find and filter organizations.
+Basada en datos: la cadencia **3-7-7 días** entre emails es la que mejor funciona. Las respuestas pico llegan en el 2º y 3er toque. Máximo 4 emails.
 
-### Available Company Filters
+| Paso | Día | Canal | Qué hacer |
+|------|-----|-------|-----------|
+| 1 | 0 | Email | Primer contacto (ver Email 1) |
+| 2 | 1 | LinkedIn | Conexión con nota corta |
+| 3 | 3 | Email | Follow-up con valor nuevo (ver Email 2) |
+| 4 | 10 | Email | Caso de uso concreto (ver Email 3) |
+| 5 | 17 | Email | Breakup — último intento (ver Email 4) |
 
-| Filter | Description |
-|--------|-------------|
-| **Company Name** | Search by name |
-| **Domain** | Search by website |
-| **Industry** | NAICS industry classification |
-| **# Employees** | Headcount range |
-| **Revenue** | Annual revenue range |
-| **Location** | HQ city, state, country |
-| **Keywords** | Terms in company description |
-| **Technologies** | Tech stack |
-| **Founded Year** | Year of incorporation |
-| **Funding** | Stage, amount, and recency |
-| **SIC Codes** | Standard Industrial Classification |
-| **Alexa Ranking** | Web traffic ranking |
-| **Job Postings** | Open positions (by title keyword) |
-
-### Using Company Search for ABM
-
-1. Build a company list with your ICP (Ideal Customer Profile) filters
-2. Save the list
-3. Switch to **People Search** and use the **"Company Lists"** filter to find contacts *within* those companies
-4. Add the right contacts to a Sequence
+**Configuración en Apollo:**
+- Horario: Lun-Vie, 9:00-18:00 (zona horaria del contacto)
+- Auto-pausar al recibir respuesta: **SÍ**
+- Auto-eliminar rebotes: **SÍ**
+- Límite diario: empezar con 25, subir a 50 en semana 3
 
 ---
 
-## Saved Searches & Lists
+## 4. Plantillas de Email
 
-### Saved Searches
-- Click **"Save Search"** after configuring filters
-- Saved searches are **dynamic** — new contacts matching your criteria are added automatically
-- Set up **alerts** to get notified when new matches appear
-
-### Lists
-- Lists are **static** snapshots of contacts/companies
-- Create lists via **"Save to List"** from search results
-- Use lists to:
-  - Organize by campaign or segment
-  - Feed into Sequences
-  - Export as CSV
-  - Sync to your CRM
+> **Datos clave de rendimiento:**
+> - Asunto: 2-4 palabras, minúsculas, sin exclamaciones → +50% open rate
+> - Cuerpo: máximo 3 frases (< 125 palabras) → mejor reply rate
+> - Personalización con nombre de empresa → +30% apertura
+> - Cada email debe aportar valor nuevo, nunca "solo seguimiento"
+> - Reply rate esperado B2B SaaS: 3-5% media, 8-12% en campañas bien segmentadas
 
 ---
 
-## Sequences (Outreach Automation)
+### Email 1 — Primer Contacto (Trigger Event)
 
-Sequences let you automate multi-step outreach campaigns.
+**Asunto:** `pregunta sobre {{company}}`
 
-### Creating a Sequence
+```
+Hola {{first_name}},
 
-1. Go to **Engage → Sequences**
-2. Click **"+ New Sequence"**
-3. Add steps:
+He visto que {{company}} está creciendo — enhorabuena.
 
-| Step Type | Description |
-|-----------|-------------|
-| **Automatic Email** | Sent automatically at the scheduled time |
-| **Manual Email** | Queued for your review before sending |
-| **Phone Call** | Reminder task to call the contact |
-| **LinkedIn Action** | Connect / InMail / View Profile task |
-| **Custom Task** | Any custom action (e.g., "Send gift") |
+Cuando los equipos escalan, las reuniones se multiplican y las decisiones
+se pierden entre calls y notas. Hemos ayudado a equipos como el vuestro
+a recuperar 5h/semana convirtiendo reuniones en tareas automáticamente.
 
-### Sequence Settings
+¿Merece una conversación de 10 min, o ya lo tenéis resuelto?
 
-| Setting | Recommendation |
+{{sender_name}}
+```
+
+**Por qué funciona:** Asunto corto con nombre de empresa (+30% apertura). Referencia a un evento real (crecimiento). Propuesta de valor concreta (5h/semana). Cierre con salida fácil ("o ya lo tenéis resuelto") que reduce la presión y aumenta respuestas.
+
+---
+
+### Email 2 — Follow-up con Valor (Día 3)
+
+**Asunto:** `re: pregunta sobre {{company}}`
+
+```
+Hola {{first_name}},
+
+Un dato rápido: el profesional medio dedica 31h/mes a reuniones
+improductivas (fuente: Atlassian). Y el 73% hace otras cosas durante
+las calls porque sabe que no se va a retener nada.
+
+Plan AI graba, transcribe y extrae automáticamente las tareas y
+decisiones de cada reunión — sin que nadie tenga que tomar notas.
+
+Si te interesa, te mando un vídeo de 1 minuto mostrando cómo funciona.
+
+{{sender_name}}
+```
+
+**Por qué funciona:** Aporta un dato nuevo (no repite el email anterior). Ofrece un recurso de bajo compromiso (vídeo de 1 min) en vez de pedir una call directamente.
+
+---
+
+### Email 3 — Caso de Uso Concreto (Día 10)
+
+**Asunto:** `cómo lo usan equipos de {{industry}}`
+
+```
+Hola {{first_name}},
+
+Te cuento un caso rápido: un equipo de producto de 15 personas
+redujo sus follow-up meetings un 40% porque cada call genera
+automáticamente un resumen + tareas asignadas en Slack.
+
+La configuración lleva 2 minutos y funciona con Google Meet, Zoom
+y Teams.
+
+¿Tiene sentido para {{company}}?
+
+{{sender_name}}
+```
+
+**Por qué funciona:** Social proof con resultado medible. Muestra que es fácil de implementar (2 minutos, integra con herramientas que ya usan). Pregunta abierta que invita a responder.
+
+---
+
+### Email 4 — Breakup (Día 17)
+
+**Asunto:** `cierro el tema`
+
+```
+Hola {{first_name}},
+
+No quiero ser pesado — entiendo que las prioridades cambian.
+
+Si en algún momento las reuniones os están comiendo tiempo y queréis
+una solución automática, estaré por aquí.
+
+Un saludo,
+{{sender_name}}
+```
+
+**Por qué funciona:** Tono respetuoso sin presión. Deja la puerta abierta. Los breakup emails tienen históricamente las reply rates más altas de toda la secuencia (10-15%) porque eliminan la obligación de responder.
+
+---
+
+### LinkedIn — Nota de Conexión (Día 1)
+
+```
+Hola {{first_name}} — he visto el trabajo que estáis haciendo
+en {{company}}, muy interesante. Me encantaría conectar.
+```
+
+> Máximo 300 caracteres. No vendas aquí. Solo conecta.
+
+---
+
+## 5. Notas para el Mercado Español
+
+| Aspecto | Recomendación |
 |---------|---------------|
-| **Send Window** | Mon-Fri, 8am-6pm (contact's timezone) |
-| **Daily Send Limit** | Start at 25/day, ramp to 50-75 over 2 weeks |
-| **Reply Handling** | Auto-pause on reply (always enable this) |
-| **Bounce Handling** | Auto-remove on bounce |
-| **Open/Click Tracking** | Enable for analytics (disable if deliverability issues) |
-
-### Example 4-Step Sequence
-
-```
-Day 1  → Automatic Email (intro + value prop)
-Day 3  → LinkedIn Connection Request (with note)
-Day 5  → Automatic Email (follow-up with case study)
-Day 8  → Phone Call Task
-Day 10 → Manual Email (breakup email)
-```
+| **Idioma** | Siempre en español. Inglés solo si el perfil está 100% en inglés |
+| **Tono** | Profesional pero cercano. Tuteo en tech/startups, usted en enterprise |
+| **Formalidad** | Primer email semi-formal. Si responden casual, adaptar |
+| **Timing** | Evitar envíos antes de las 9:00 y después de las 18:00. Evitar agosto completo |
+| **LinkedIn** | Imprescindible en España — ratio de respuesta más alto que email puro |
+| **Velocidad** | Ciclo de venta más largo que US/UK. No presionar. Construir confianza |
 
 ---
 
-## Apollo API (Programmatic Access)
+## 6. Métricas Objetivo
 
-Apollo offers a REST API for building custom integrations.
+| Métrica | Mínimo Aceptable | Objetivo |
+|---------|-------------------|----------|
+| Open Rate | 50% | 65%+ |
+| Reply Rate | 3% | 8-12% |
+| Bounce Rate | < 5% | < 2% |
+| Meetings/semana | 2 | 5+ |
 
-### Authentication
-
-```bash
-# All requests use an API key via query param or header
-curl "https://api.apollo.io/api/v1/mixed_people/search" \
-  -H "Content-Type: application/json" \
-  -H "X-Api-Key: YOUR_API_KEY" \
-  -d '{
-    "person_titles": ["CTO", "VP Engineering"],
-    "person_locations": ["United States"],
-    "organization_num_employees_ranges": ["51,200"],
-    "page": 1,
-    "per_page": 25
-  }'
-```
-
-### Key Endpoints
-
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/v1/mixed_people/search` | POST | Search for people with filters |
-| `/v1/mixed_companies/search` | POST | Search for companies with filters |
-| `/v1/people/match` | POST | Enrich a person by email/name/domain |
-| `/v1/organizations/enrich` | GET | Enrich a company by domain |
-| `/v1/emailer_campaigns` | GET | List all sequences |
-| `/v1/contacts` | POST | Create a contact in Apollo |
-| `/v1/email_accounts` | GET | List connected email accounts |
-| `/v1/labels` | GET | List all labels/tags |
-
-### API Filter Parameters (People Search)
-
-```json
-{
-  "person_titles": ["CTO", "VP Engineering"],
-  "person_seniorities": ["vp", "c_suite", "director"],
-  "person_locations": ["San Francisco, CA"],
-  "organization_ids": ["org_abc123"],
-  "organization_num_employees_ranges": ["1,50", "51,200"],
-  "organization_industry_tag_ids": ["5567cd..."],
-  "q_keywords": "machine learning",
-  "prospected_by_current_team": ["no"],
-  "contact_email_status": ["verified"],
-  "page": 1,
-  "per_page": 25
-}
-```
-
-### API Filter Parameters (Company Search)
-
-```json
-{
-  "organization_industry_tag_ids": ["..."],
-  "organization_num_employees_ranges": ["51,200"],
-  "organization_revenue_ranges": ["1000000,10000000"],
-  "organization_locations": ["United States"],
-  "q_organization_keyword_tags": ["SaaS", "AI"],
-  "organization_latest_funding_stage_cd": ["a", "b"],
-  "page": 1,
-  "per_page": 25
-}
-```
+> ⚠️ Si bounce rate > 5%, pausar inmediatamente y revisar la lista. Daña la reputación del dominio.
 
 ---
 
-## Best Practices & Tips
+## 7. Créditos Apollo
 
-### 🎯 Targeting
+| Acción | Créditos |
+|--------|----------|
+| Revelar email | 1 |
+| Revelar móvil | 5 |
+| Exportar contacto | 1 |
 
-- **Layer filters** — Don't just search by title. Combine title + seniority + company size + funding + tech stack for laser-focused lists.
-- **Use "Exclude" filters** — Exclude companies you've already contacted, competitors, or unqualified industries.
-- **Filter for Verified Emails** — Always set `Email Status: Verified` for cold email. Guessed emails tank deliverability.
-- **Job change signals** — People who recently changed jobs are 3x more likely to evaluate new tools. Use `Years in Current Role: < 1 year`.
-
-### 📧 Outreach
-
-- **Warm up your email** — Send 10-15 emails/day for the first 2 weeks before ramping up.
-- **Personalize** — Use Apollo's `{{variables}}` like `{{first_name}}`, `{{company}}`, `{{title}}` in sequences.
-- **A/B test subject lines** — Apollo supports A/B testing on email steps. Always test.
-- **Keep sequences short** — 3-5 touches over 10-14 days. Don't spam.
-- **Use manual email steps** for high-value prospects so you can customize each message.
-
-### 📊 Tracking
-
-- **Monitor sequence analytics** — Open rate, reply rate, bounce rate, and meeting booked rate.
-- **Healthy benchmarks:**
-  - Open rate: 50%+
-  - Reply rate: 5-15%
-  - Bounce rate: < 3%
-- **Pause sequences** with high bounce rates immediately — it kills your sender reputation.
-
-### 🔄 CRM Integration
-
-- Apollo integrates with **Salesforce**, **HubSpot**, and others.
-- Enable **2-way sync** to keep Apollo and your CRM in sync.
-- Use **"Do Not Contact"** lists to respect opt-outs and stay compliant.
-
-### ⚡ Power User Shortcuts
-
-| Shortcut | Description |
-|----------|-------------|
-| `Cmd/Ctrl + K` | Quick search (search anything in Apollo) |
-| Bulk select + "Add to Sequence" | Add hundreds of contacts to a sequence at once |
-| CSV Import → Enrich | Upload a CSV of names/domains and Apollo fills in emails & data |
-| Chrome Extension on LinkedIn | Click the Apollo icon on any LinkedIn profile to get their email |
+> Filtra agresivamente **antes** de revelar emails. No quemar créditos en leads no cualificados.
 
 ---
 
-## Credit Usage
+## 8. Links
 
-Apollo uses a credit system. Be aware of costs:
-
-| Action | Credits |
-|--------|---------|
-| **Reveal Email** | 1 credit |
-| **Reveal Mobile Number** | 5 credits |
-| **Export Contact** | 1 credit |
-| **API Enrichment** | 1 credit per record |
-
-> **Tip:** Use filters aggressively to narrow your list *before* revealing emails. Don't burn credits on unqualified leads.
-
----
-
-## Useful Links
-
-- [Apollo.io App](https://app.apollo.io)
+- [Apollo App](https://app.apollo.io)
 - [Apollo API Docs](https://apolloio.github.io/apollo-api-docs/)
-- [Apollo Knowledge Base](https://knowledge.apollo.io)
-- [Apollo Chrome Extension](https://chrome.google.com/webstore/detail/apollo-io/eikcnfddocefiocjgkpkecfgelfdaplj)
+- [Chrome Extension](https://chrome.google.com/webstore/detail/apollo-io/eikcnfddocefiocjgkpkecfgelfdaplj)

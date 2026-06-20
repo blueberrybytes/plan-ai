@@ -258,8 +258,14 @@ const Users: React.FC = () => {
                           </Typography>
                         </TableCell>
                         <TableCell>
-                          <Tooltip title={user.createdAt ? new Date(user.createdAt).toLocaleString() : ""}>
-                            <Typography variant="body2" color="text.secondary" sx={{ fontSize: "0.8rem" }}>
+                          <Tooltip
+                            title={user.createdAt ? new Date(user.createdAt).toLocaleString() : ""}
+                          >
+                            <Typography
+                              variant="body2"
+                              color="text.secondary"
+                              sx={{ fontSize: "0.8rem" }}
+                            >
                               {user.createdAt
                                 ? new Date(user.createdAt).toLocaleDateString(undefined, {
                                     year: "numeric",
@@ -271,8 +277,16 @@ const Users: React.FC = () => {
                           </Tooltip>
                         </TableCell>
                         <TableCell>
-                          <Tooltip title={user.lastSignInAt ? new Date(user.lastSignInAt).toLocaleString() : ""}>
-                            <Typography variant="body2" color="text.secondary" sx={{ fontSize: "0.8rem" }}>
+                          <Tooltip
+                            title={
+                              user.lastSignInAt ? new Date(user.lastSignInAt).toLocaleString() : ""
+                            }
+                          >
+                            <Typography
+                              variant="body2"
+                              color="text.secondary"
+                              sx={{ fontSize: "0.8rem" }}
+                            >
                               {user.lastSignInAt
                                 ? new Date(user.lastSignInAt).toLocaleDateString(undefined, {
                                     year: "numeric",
