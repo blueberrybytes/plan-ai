@@ -7,6 +7,30 @@ import rawAudioWorklet from "../../public/audioWorklet.js?raw";
 
 type PlanAiApi = ReturnType<typeof createPlanAiApi>;
 
+/** Result posted back by aecWorker.ts after offline echo cancellation. */
+interface AecWorkerResponse {
+  ok: boolean;
+  audio?: ArrayBuffer; // encoded cleaned mic (MP3 or WAV), only when ok
+  mime?: string;
+  sampleRate: number;
+  delaySamples?: number;
+  erleDb?: number;
+  nearKept?: number;
+  echoReduction?: number;
+  error?: string;
+}
+
+/** Concatenate buffered Int16 PCM chunks into one contiguous buffer. */
+function concatInt16(chunks: Int16Array[], total: number): Int16Array {
+  const out = new Int16Array(total);
+  let off = 0;
+  for (const c of chunks) {
+    out.set(c, off);
+    off += c.length;
+  }
+  return out;
+}
+
 export type RecorderState = "idle" | "recording" | "stopping";
 
 export interface AudioRecorderOptions {
@@ -72,6 +96,22 @@ export class AudioRecorder {
   private micChunks: Blob[] = [];
   private sysChunks: Blob[] = [];
 
+  // ── Offline echo cancellation (loudspeaker bleed) ──────────────────────────
+  // Raw, PRE-CODEC mic + sys PCM buffered while recording so the loudspeaker
+  // bleed can be subtracted at STOP (see echoCancel.ts / aecWorker.ts). Linear
+  // AEC only works before the lossy Opus/AAC encode, so it MUST happen here, not
+  // server-side on the compressed blobs. Buffered only in speaker mode (no echo
+  // on headphones) and capped to bound renderer memory.
+  private aecMicPcm: Int16Array[] = [];
+  private aecSysPcm: Int16Array[] = [];
+  private aecMicSamples = 0;
+  private aecSysSamples = 0;
+  private aecOverCap = false;
+  // ~60 min at the 24 kHz context rate (the worker downsamples to 16 kHz before
+  // processing, so the working set stays bounded). Longer recordings skip AEC
+  // and keep the raw mic.
+  private static readonly AEC_MAX_SAMPLES = 24000 * 60 * 60;
+
   private state: RecorderState = "idle";
   private options: AudioRecorderOptions;
   private lastTypedError: TypedBackendError | null = null;
@@ -97,6 +137,117 @@ export class AudioRecorder {
       binary += String.fromCharCode(bytes[i]);
     }
     return window.btoa(binary);
+  }
+
+  /**
+   * Retain a copy of a pre-codec PCM chunk for the stop-time echo canceller.
+   * Only in speaker mode (headphones have no acoustic echo) and under a memory
+   * cap; past the cap we drop the buffers and fall back to the raw mic.
+   */
+  private bufferPcmForAec(source: "mic" | "sys", buffer: ArrayBuffer): void {
+    if (this.state !== "recording" || !this.speakerMode || this.aecOverCap) return;
+    // Copy: the worklet's transferred buffer is also base64-encoded right after,
+    // and we must keep our own owned copy for the lifetime of the recording.
+    const pcm = new Int16Array(buffer.slice(0));
+    if (source === "mic") {
+      this.aecMicPcm.push(pcm);
+      this.aecMicSamples += pcm.length;
+    } else {
+      this.aecSysPcm.push(pcm);
+      this.aecSysSamples += pcm.length;
+    }
+    if (
+      this.aecMicSamples > AudioRecorder.AEC_MAX_SAMPLES ||
+      this.aecSysSamples > AudioRecorder.AEC_MAX_SAMPLES
+    ) {
+      this.aecOverCap = true;
+      this.aecMicPcm = [];
+      this.aecSysPcm = [];
+      this.aecMicSamples = 0;
+      this.aecSysSamples = 0;
+      console.warn(
+        "[AudioRecorder] AEC PCM cap reached — echo cancellation skipped for this long recording (raw mic kept).",
+      );
+    }
+  }
+
+  /**
+   * Run the offline echo canceller on the buffered pre-codec PCM in a worker.
+   * Returns a cleaned-mic Blob (MP3, or WAV fallback) ONLY when the self-check
+   * confirms the far side was removed AND the user's own voice was preserved;
+   * otherwise null (caller keeps the raw mic). Never throws into the stop path.
+   */
+  private async runAecOnBuffers(): Promise<Blob | null> {
+    if (!this.speakerMode || this.aecOverCap) return null;
+    if (this.aecMicSamples === 0 || this.aecSysSamples === 0) return null;
+
+    const sampleRate = this.audioContext?.sampleRate ?? 24000;
+    const mic = concatInt16(this.aecMicPcm, this.aecMicSamples);
+    const sys = concatInt16(this.aecSysPcm, this.aecSysSamples);
+    // Release the per-chunk arrays early; the contiguous buffers are transferred.
+    this.aecMicPcm = [];
+    this.aecSysPcm = [];
+
+    try {
+      const result = await this.processAecInWorker(mic, sys, sampleRate);
+      if (!result.ok || !result.audio) {
+        console.log(
+          `[AudioRecorder] AEC not applied (ok=${result.ok} ` +
+            `erle=${result.erleDb?.toFixed(1)}dB nearKept=${result.nearKept?.toFixed(2)} ` +
+            `echoRed=${result.echoReduction?.toFixed(2)}${result.error ? ` err=${result.error}` : ""})`,
+        );
+        return null;
+      }
+      console.log(
+        `[AudioRecorder] ✅ AEC applied: erle=${result.erleDb?.toFixed(1)}dB ` +
+          `delay=${((result.delaySamples ?? 0) / result.sampleRate).toFixed(2)}s ` +
+          `nearKept=${result.nearKept?.toFixed(2)} echoRed=${result.echoReduction?.toFixed(2)} ` +
+          `size=${(result.audio.byteLength / 1024).toFixed(0)}KB`,
+      );
+      return new Blob([result.audio], { type: result.mime ?? "audio/mpeg" });
+    } catch (e) {
+      console.warn(
+        "[AudioRecorder] AEC worker failed, keeping raw mic:",
+        e instanceof Error ? e.message : e,
+      );
+      return null;
+    }
+  }
+
+  private processAecInWorker(
+    mic: Int16Array,
+    sys: Int16Array,
+    sampleRate: number,
+  ): Promise<AecWorkerResponse> {
+    return new Promise((resolve, reject) => {
+      let worker: Worker;
+      try {
+        worker = new Worker(new URL("./aecWorker.ts", import.meta.url), {
+          type: "module",
+        });
+      } catch (e) {
+        reject(e);
+        return;
+      }
+      const timeout = setTimeout(() => {
+        worker.terminate();
+        reject(new Error("AEC worker timeout"));
+      }, 180_000);
+      worker.onmessage = (ev: MessageEvent<AecWorkerResponse>) => {
+        clearTimeout(timeout);
+        worker.terminate();
+        resolve(ev.data);
+      };
+      worker.onerror = (err) => {
+        clearTimeout(timeout);
+        worker.terminate();
+        reject(err instanceof ErrorEvent ? new Error(err.message) : err);
+      };
+      worker.postMessage({ mic: mic.buffer, sys: sys.buffer, sampleRate }, [
+        mic.buffer,
+        sys.buffer,
+      ]);
+    });
   }
 
   async start(): Promise<void> {
@@ -274,6 +425,9 @@ export class AudioRecorder {
           return;
         }
         if (!(event.data instanceof ArrayBuffer)) return;
+        // Buffer pre-codec mic PCM for offline AEC (independent of the WS, so a
+        // reconnect gap doesn't punch a hole in the buffered timeline).
+        this.bufferPcmForAec("mic", event.data);
         if (
           this.state !== "recording" ||
           !this.ws ||
@@ -307,6 +461,8 @@ export class AudioRecorder {
           return;
         }
         if (!(event.data instanceof ArrayBuffer)) return;
+        // Buffer pre-codec system (reference) PCM for offline AEC.
+        this.bufferPcmForAec("sys", event.data);
         if (
           this.state !== "recording" ||
           !this.ws ||
@@ -504,11 +660,21 @@ export class AudioRecorder {
       let pendingRecorders = 0;
 
       const checkDone = () => {
-        if (pendingRecorders === 0) {
+        if (pendingRecorders !== 0) return;
+        // Offline echo cancellation on the buffered pre-codec PCM. Runs once the
+        // recorders have flushed (worklets already detached, so the buffers are
+        // final). On success the cleaned mic replaces the raw blob that gets
+        // uploaded as rawMicUrl, so the re-diarized transcript is echo-free; on
+        // any failure/self-check-reject we keep the raw mic (never worse).
+        void (async () => {
+          if (micBlob) {
+            const cleaned = await this.runAecOnBuffers().catch(() => null);
+            if (cleaned) micBlob = cleaned;
+          }
           this.cleanup();
           this.options.onStop();
           resolve({ micBlob, sysBlob });
-        }
+        })();
       };
 
       if (this.micMediaRecorder && this.micMediaRecorder.state !== "inactive") {
@@ -578,6 +744,13 @@ export class AudioRecorder {
 
     this.micStream?.getTracks().forEach((t) => t.stop());
     this.micStream = null;
+
+    // Release AEC PCM buffers.
+    this.aecMicPcm = [];
+    this.aecSysPcm = [];
+    this.aecMicSamples = 0;
+    this.aecSysSamples = 0;
+    this.aecOverCap = false;
 
     this.state = "idle";
   }

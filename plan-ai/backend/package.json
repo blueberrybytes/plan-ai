@@ -1,6 +1,6 @@
 {
   "name": "backend",
-  "version": "4.1.13",
+  "version": "4.1.14",
   "description": "",
   "engines": {
     "node": "22.17.1"
@@ -73,6 +73,7 @@
     "express-basic-auth": "^1.2.1",
     "express-rate-limit": "^8.5.2",
     "express-validator": "^7.1.0",
+    "ffmpeg-static": "^5.3.0",
     "firebase-admin": "^13.6.0",
     "googleapis": "^171.4.0",
     "googlethis": "^1.8.0",

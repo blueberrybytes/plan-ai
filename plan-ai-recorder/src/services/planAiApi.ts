@@ -344,9 +344,17 @@ export const createPlanAiApi = (
           formData.append("chatHistory", JSON.stringify(payload.chatHistory));
         }
 
-        // Determine mime types based on platform or defaults
+        // Determine mime types based on platform or defaults. The mic may be an
+        // echo-cancelled MP3/WAV (see audioRecorder AEC) rather than the raw
+        // Opus webm, so name it by the blob's actual type.
         if (payload.micFile) {
-          formData.append("micFile", payload.micFile, "mic.webm");
+          const mt = payload.micFile.type;
+          const micName = mt.includes("mpeg") || mt.includes("mp3")
+            ? "mic.mp3"
+            : mt.includes("wav")
+              ? "mic.wav"
+              : "mic.webm";
+          formData.append("micFile", payload.micFile, micName);
         }
         if (payload.sysFile) {
           const isMacNative = payload.sysFile.type.includes("mp4") || payload.sysFile.type.includes("m4a");

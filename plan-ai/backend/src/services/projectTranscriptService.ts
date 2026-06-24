@@ -23,6 +23,8 @@ import {
   extractOpenRouterUsage,
 } from "../utils/aiModelUtils";
 import { dropEchoUtterances, estimateMicSysOffsetMs } from "../utils/echoDedup";
+import { cancelEcho } from "../utils/echoCancel";
+import { decodeUrlToMonoPcm, encodeWavPcm16 } from "../utils/audioPcm";
 import { generateText, stepCountIs, Output, type ToolSet } from "ai";
 import { z, type ZodTypeAny } from "zod";
 import { DeepgramClient } from "@deepgram/sdk";
@@ -332,21 +334,29 @@ export class ProjectTranscriptService {
   ): Promise<{ combinedText: string; utterances: Utterance[]; totalSeconds: number }> {
     const deepgram = new DeepgramClient({ key: process.env.DEEPGRAM_API_KEY! });
 
-    const resolveDiarization = async (url: string, speakerPrefix: string): Promise<Utterance[]> => {
-      console.log(`[Diarization] Starting ${speakerPrefix} | url: ${url.slice(0, 80)}...`);
+    const resolveDiarization = async (
+      source: { url: string } | { buffer: Buffer },
+      speakerPrefix: string,
+    ): Promise<Utterance[]> => {
+      console.log(
+        `[Diarization] Starting ${speakerPrefix} | ${
+          "url" in source ? `url: ${source.url.slice(0, 80)}...` : `cleaned buffer ${source.buffer.length}B`
+        }`,
+      );
       try {
-        const res = await deepgram.listen.prerecorded.transcribeUrl(
-          { url },
-          {
-            diarize: true,
-            model: "nova-3",
-            smart_format: true,
-            language: "multi",
-            utterances: true,
-            utt_split: 0.5,
-            filler_words: false,
-          },
-        );
+        const dgOptions = {
+          diarize: true,
+          model: "nova-3",
+          smart_format: true,
+          language: "multi",
+          utterances: true,
+          utt_split: 0.5,
+          filler_words: false,
+        };
+        const res =
+          "url" in source
+            ? await deepgram.listen.prerecorded.transcribeUrl({ url: source.url }, dgOptions)
+            : await deepgram.listen.prerecorded.transcribeFile(source.buffer, dgOptions);
         if (res.error) {
           const e = res.error;
           const errMsg = e.message;
@@ -380,8 +390,44 @@ export class ProjectTranscriptService {
     let sysUtterances: Utterance[] = [];
 
     console.log(`[Diarization] mic=${!!micUrl} sys=${!!sysUrl}`);
-    if (micUrl) micUtterances = await resolveDiarization(micUrl, "User");
-    if (sysUrl) sysUtterances = await resolveDiarization(sysUrl, "Others");
+
+    // Reference-based acoustic echo cancellation (the real fix for loudspeaker
+    // bleed). When BOTH channels exist, the mic recording contains a delayed
+    // copy of the system audio; we decode both, subtract the modelled echo path
+    // (sys = reference) from the mic, and transcribe the CLEANED mic instead of
+    // the raw blob — so the far side never re-enters the "User" channel. The
+    // stored blobs are untouched, and every failure mode falls back to the raw
+    // URL, so transcription can never be worse than before. dropEchoUtterances
+    // below stays as a backstop for whatever residual the filter leaves.
+    // Opt-in (RECORDER_AEC_ENABLED=true) until measured on real meeting audio:
+    // the canceller is proven correct on clean PCM, but linear AEC on two
+    // SEPARATELY lossy-coded blobs (mic Opus 32k, sys AAC 128k) is partly
+    // decorrelated, so real-world suppression must be measured (see the
+    // `[AEC] … erle=` log) before enabling for everyone. Off ⇒ exact prior behaviour.
+    let micSource: { url: string } | { buffer: Buffer } | null = micUrl ? { url: micUrl } : null;
+    if (micUrl && sysUrl && process.env.RECORDER_AEC_ENABLED === "true") {
+      try {
+        const SR = 16000;
+        const [micPcm, sysPcm] = await Promise.all([
+          decodeUrlToMonoPcm(micUrl, SR),
+          decodeUrlToMonoPcm(sysUrl, SR),
+        ]);
+        const { output, delaySamples, erleDb } = cancelEcho(micPcm, sysPcm, { sampleRate: SR });
+        micSource = { buffer: encodeWavPcm16(output, SR) };
+        logger.info(
+          `[AEC] mic cleaned: micLen=${micPcm.length} sysLen=${sysPcm.length} ` +
+            `delay=${(delaySamples / SR).toFixed(2)}s erle=${erleDb.toFixed(1)}dB`,
+        );
+      } catch (err) {
+        logger.warn(
+          `[AEC] echo cancellation failed, using raw mic: ${err instanceof Error ? err.message : err}`,
+        );
+        micSource = { url: micUrl };
+      }
+    }
+
+    if (micSource) micUtterances = await resolveDiarization(micSource, "User");
+    if (sysUrl) sysUtterances = await resolveDiarization({ url: sysUrl }, "Others");
 
     // Speaker-bleed dedup: when the user listened through speakers, the mic
     // audio contains an acoustic copy of the system audio, so the re-transcribed
