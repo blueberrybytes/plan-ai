@@ -147,20 +147,26 @@ router.post(
       const toolsUsed: string[] = [];
       let gitnexusTools = undefined;
 
-      if (thread.contextIds.length > 0) {
-        const contexts = await queryContexts(thread.contextIds, content, 500);
-        if (contexts && contexts.length > 0) {
-          contextText = contexts.join("\n---\n");
-          toolsUsed.push("Plan AI Graph Power");
+      if (thread.contextIds.length > 0 || thread.transcriptId) {
+        if (thread.contextIds.length > 0) {
+          const contexts = await queryContexts(thread.contextIds, content, 500);
+          if (contexts && contexts.length > 0) {
+            contextText = contexts.join("\n---\n");
+            toolsUsed.push("Plan AI Graph Power");
+          }
         }
 
         // 2a. Also pull transcripts attached to any of the selected contexts so
         // the chat can reason over recorded meetings, not just uploaded files.
+        // Also include the specific transcript if the chat is linked to one.
         try {
           const attachedTranscripts = await prisma.transcript.findMany({
             where: {
               workspaceId,
-              contextIds: { hasSome: thread.contextIds },
+              OR: [
+                ...(thread.contextIds.length > 0 ? [{ contextIds: { hasSome: thread.contextIds } }] : []),
+                ...(thread.transcriptId ? [{ id: thread.transcriptId }] : []),
+              ],
             },
             select: {
               id: true,
