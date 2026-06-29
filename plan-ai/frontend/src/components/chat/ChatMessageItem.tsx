@@ -96,14 +96,6 @@ interface ParsedMessage {
 function parseMessage(role: ChatMessage["role"], content: string): ParsedMessage {
   let thinking: string | null = null;
   let rawContent = content;
-  if (role !== "USER") {
-    const thinkMatch = rawContent.match(/<think>([\s\S]*?)(<\/think>|$)/);
-    if (thinkMatch) {
-      thinking = thinkMatch[1].trim() || null;
-      rawContent = rawContent.slice(thinkMatch[0].length);
-    }
-  }
-
   let contentToRender = rawContent;
   let citations: Array<{ filename: string; lines: string }> = [];
   let latencyMs: number | undefined;
@@ -113,7 +105,7 @@ function parseMessage(role: ChatMessage["role"], content: string): ParsedMessage
   if (role !== "USER") {
     try {
       const parsed = JSON.parse(rawContent);
-      if (parsed.text) contentToRender = parsed.text;
+      if (parsed.text !== undefined) contentToRender = parsed.text;
       if (Array.isArray(parsed.citations)) citations = parsed.citations;
       if (typeof parsed.latencyMs === "number") latencyMs = parsed.latencyMs;
       if (Array.isArray(parsed.tools)) toolsUsed = parsed.tools;
@@ -129,6 +121,14 @@ function parseMessage(role: ChatMessage["role"], content: string): ParsedMessage
         } catch {
           contentToRender = textMatch[1].replace(/\\n/g, "\n").replace(/\\"/g, '"');
         }
+      }
+    }
+
+    if (typeof contentToRender === "string") {
+      const thinkMatch = contentToRender.match(/<think>([\s\S]*?)(<\/think>|$)/);
+      if (thinkMatch) {
+        thinking = thinkMatch[1].trim() || null;
+        contentToRender = contentToRender.replace(thinkMatch[0], "");
       }
     }
   }
