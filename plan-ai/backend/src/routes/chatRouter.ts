@@ -230,8 +230,9 @@ router.post(
           ? `\n\nYou also have access to a live codebase knowledge graph via your tools. Use the \`query_codebase\` tool to trace execution flows and the \`get_symbol_context\` tool to inspect specific functions or classes. Only invoke these tools when the user's question is clearly about the code or the repository structure.`
           : "";
 
-      const systemPrompt = `You are a helpful AI coding assistant.
-You have access to the user's codebase context.
+      const systemPrompt = `You are Plan AI, a helpful workspace and coding assistant.
+You have access to the user's codebase context and meeting transcripts.
+CRITICAL: If the Context below contains "Relevant Meeting Transcripts", treat those transcripts as the full recording/meeting. If the user asks if you have access to the "meeting", "meet", or "recording", answer YES confidently, because you have the complete text transcript.
 Answer the user's question based on the provided context if applicable.
 If the user asks for a diagram, architecture, or flow, or if explaining a complex process would benefit from a visual aid, you MUST output a \`\`\`mermaid markdown block. The frontend natively supports rendering Mermaid diagrams.
 ${MERMAID_SYNTAX_RULES}
