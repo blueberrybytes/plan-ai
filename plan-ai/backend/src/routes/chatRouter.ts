@@ -348,7 +348,7 @@ ${contextText}
                 schema: ResponseSchema,
               }),
             }),
-        onFinish: async ({ text, usage }) => {
+        onFinish: async ({ text, reasoning, usage }) => {
           try {
             if (usage) {
               aiUsageService
@@ -389,12 +389,22 @@ ${contextText}
             }
 
             // Extract text + citations from structured output, or use raw text for tool models
-            let finalText = text || "Failed to generate text content.";
+            let baseText = text;
+            if (!baseText && reasoning) {
+              // Model generated reasoning but no text. Leave baseText empty to avoid the error message.
+              baseText = "";
+            } else if (!baseText) {
+              baseText = "Failed to generate text content.";
+            }
+
+            let finalText = reasoning ? `<think>\n${reasoning}\n</think>\n\n${baseText}` : baseText;
             let citations: { filename: string; lines: string }[] = [];
             if (useStructuredOutput) {
               try {
                 const outputObj = await result.output;
-                if (outputObj?.text) finalText = outputObj.text;
+                if (outputObj?.text) {
+                  finalText = reasoning ? `<think>\n${reasoning}\n</think>\n\n${outputObj.text}` : outputObj.text;
+                }
                 if (outputObj && Array.isArray(outputObj.citations))
                   citations = outputObj.citations;
               } catch {
