@@ -305,7 +305,6 @@ ${contextText}
       );
 
       const messages: ModelMessage[] = [
-        { role: "system", content: systemPrompt },
         ...historyMessages,
         await buildUserMessage(content, attachments),
       ];
@@ -332,6 +331,7 @@ ${contextText}
 
       const result = await streamText({
         model: getConfiguredModel(requestedModelKey),
+        system: systemPrompt,
         // Turn on reasoning tokens so the model streams its thinking — surfaced
         // live in the chat UI as a collapsible "Thinking" panel (wrapped in
         // <think>…</think> in the stream below). Non-reasoning models no-op.
@@ -468,13 +468,17 @@ ${contextText}
             res.write("<think>");
             inThink = true;
           }
-          res.write(part.text);
+          const p = part as { textDelta?: string; delta?: string; text?: string };
+          const content = p.textDelta ?? p.delta ?? p.text ?? "";
+          if (content) res.write(content);
         } else if (part.type === "text-delta") {
           if (inThink) {
             res.write("</think>");
             inThink = false;
           }
-          res.write(part.text);
+          const p = part as { textDelta?: string; delta?: string; text?: string };
+          const content = p.textDelta ?? p.delta ?? p.text ?? "";
+          if (content) res.write(content);
         }
       }
       if (inThink) res.write("</think>");
@@ -569,7 +573,9 @@ router.post("/assistant/stream", authenticateUser, async (req: AuthenticatedRequ
     console.log("[ChatRouter] Starting stream iteration for assistant/stream");
     for await (const part of result.fullStream) {
       if (part.type === "text-delta") {
-        res.write(part.text);
+        const p = part as { textDelta?: string; delta?: string; text?: string };
+        const content = p.textDelta ?? p.delta ?? p.text ?? "";
+        if (content) res.write(content);
       } else if (part.type === "tool-call" && part.toolName === "requestDocumentGeneration") {
         // TypeScript knows part.input is correctly typed here because of the toolName check
         const input = part.input as { purpose?: string; recordingId?: string; contextId?: string };
