@@ -10,7 +10,6 @@ import {
   FlatList,
   Linking,
 } from "react-native";
-import { Buffer } from "buffer";
 import {
   Text,
   IconButton,
@@ -29,7 +28,6 @@ import {
   ProgressBar,
 } from "react-native-paper";
 import Markdown from "react-native-markdown-display";
-import LiveAudioStream from "react-native-live-audio-stream";
 import { useRouter, useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
@@ -38,12 +36,17 @@ import {
   setAudioModeAsync,
 } from "expo-audio";
 import { File, Paths, Directory } from "expo-file-system";
-import notifee, { AndroidImportance } from "@notifee/react-native";
+import notifee from "@notifee/react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Project, Context } from "@/services/planAiApi";
 import * as Location from "expo-location";
 import * as Sentry from "@sentry/react-native";
 import { SubscriptionBanner } from "@/components/SubscriptionBanner";
+import {
+  recordingService,
+  useRecordingSession,
+  type RecordingApi,
+} from "@/services/recordingService";
 
 // Using global object so it survives React Native Fast Refresh (HMR) without dropping native locks
 const g = global as any;
@@ -246,15 +249,20 @@ const LANGUAGE_OPTIONS = [
 
 export default function RecordScreen() {
   const [phase, setPhase] = useState<Phase>("setup");
-  const [isRecording, setIsRecording] = useState(false);
-  const [isSpeaking, setIsSpeaking] = useState(false);
-  const [transcript, setTranscript] = useState("");
-  const [interim, setInterim] = useState("");
-  const [audioBackupPath, setAudioBackupPath] = useState<string | null>(null);
-  const [currentVolume, setCurrentVolume] = useState(0);
-  const [isWsConnected, setIsWsConnected] = useState(true);
-  const [isConnectingWs, setIsConnectingWs] = useState(false);
-  const [wsUnrecoverable, setWsUnrecoverable] = useState(false);
+  // Live recording state lives in the recordingService singleton (outside the
+  // React tree) so it survives navigation/backgrounding. This screen is just a
+  // view over it and re-attaches when it remounts.
+  const {
+    isRecording,
+    isSpeaking,
+    transcript,
+    interim,
+    currentVolume,
+    isWsConnected,
+    isConnectingWs,
+    wsUnrecoverable,
+    audioBackupPath,
+  } = useRecordingSession();
   const [meetingLocation, setMeetingLocation] = useState<{
     latitude: number;
     longitude: number;
@@ -269,7 +277,6 @@ export default function RecordScreen() {
     lang.name.toLowerCase().includes(languageSearchQuery.toLowerCase()),
   );
 
-  const wsRef = useRef<WebSocket | null>(null);
   const theme = useTheme();
   const router = useRouter();
   const { api } = useAuth();
@@ -390,6 +397,7 @@ export default function RecordScreen() {
       if (summaryPollTimerRef.current)
         clearInterval(summaryPollTimerRef.current);
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase, api]);
 
   const getDefaultMeetingTitle = () => {
@@ -470,72 +478,15 @@ export default function RecordScreen() {
     }
   }, [phase, transcript, api, title]);
 
+  // Re-attach this screen to an in-progress session when it remounts (the user
+  // navigated away while recording and came back). The session keeps running in
+  // recordingService regardless — there is intentionally NO unmount cleanup that
+  // stops recording, which is what previously killed it on screen close.
   useEffect(() => {
-    let chunkCount = 0;
-
-    // Strict linear promise chain to prevent disk race conditions
-    let writeQueue = Promise.resolve();
-
-    LiveAudioStream.on("data", (data: string) => {
-      chunkCount++;
-      if (chunkCount % 20 === 0) {
-        console.log(
-          `🎤 Captured ${chunkCount} chunks. Last chunk length:`,
-          data.length,
-        );
-      }
-
-      // Manually append PCM payload natively to disk over JS bridge
-      writeQueue = writeQueue
-        .then(() => {
-          const backupFile = new File(Paths.document, "emergency_backup.wav");
-          return backupFile.write(data, { encoding: "base64", append: true });
-        })
-        .catch((e) => console.warn("WAV append failed", e));
-
-      // Compute audio volume natively from Base64 PCM Buffer (16-bit)
-      if (chunkCount % 2 === 0) {
-        try {
-          const pcm = Buffer.from(data, "base64");
-          let sum = 0;
-          let maxAmp = 0;
-          for (let i = 0; i < pcm.length; i += 2) {
-            const amp = Math.abs(pcm.readInt16LE(i));
-            sum += amp;
-            if (amp > maxAmp) maxAmp = amp;
-          }
-          const avg = sum / (pcm.length / 2);
-          const level = Math.min(1, avg / 6000); // Normalize 0 to 1
-          setCurrentVolume(level);
-
-          if (chunkCount % 20 === 0) {
-            console.log(
-              `[AUDIO DEBUG] Chunk ${chunkCount} | MaxAmp: ${maxAmp} | Avg: ${Math.round(avg)} | Vol: ${level.toFixed(2)}`,
-            );
-          }
-        } catch (e) {
-          console.error("[AUDIO DEBUG] Error parsing chunk:", e);
-        }
-      }
-
-      if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-        wsRef.current.send(
-          JSON.stringify({
-            type: "input_audio",
-            audio: data,
-            source: "mic",
-          }),
-        );
-      }
-    });
-
-    return () => {
-      if (isRecording) {
-        stopAudioStream();
-      }
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isRecording]);
+    if (recordingService.getSnapshot().isRecording) {
+      setPhase("recording");
+    }
+  }, []);
 
   // Refetch contexts when the screen regains focus, so deletions on the web
   // app are reflected without restarting the mobile app.
@@ -609,166 +560,10 @@ export default function RecordScreen() {
     }
   }, [phase, api]);
 
-  const connectWebSocket = useCallback(async () => {
-    if (isConnectingWs) return;
-    setIsConnectingWs(true);
-    try {
-      const ws = await api.startAudioStream(
-        language,
-        selectedContextIds,
-        selectedProjectId ? [selectedProjectId] : undefined,
-      );
-      wsRef.current = ws;
-
-      ws.onopen = () => {
-        console.log("✅ WebSocket Connected!");
-        setIsWsConnected(true);
-        setIsConnectingWs(false);
-      };
-
-      ws.onmessage = (event: MessageEvent) => {
-        try {
-          console.log("⬅️ WS MSG RCVD:", event.data);
-          const msg = JSON.parse(event.data);
-          if (msg.type === "transcript") {
-            const speakerStr = msg.isFinal
-              ? `[${msg.speaker || "Speaker"}]`
-              : "";
-            if (msg.isFinal) {
-              setTranscript(
-                (prev) => prev + `${prev ? "\n" : ""}${speakerStr} ${msg.text}`,
-              );
-              setInterim("");
-            } else {
-              setInterim(`${speakerStr} ${msg.text}`);
-            }
-          } else if (msg.type === "speech_started") {
-            setIsSpeaking(true);
-          } else if (msg.type === "utterance_end") {
-            setIsSpeaking(false);
-          } else if (msg.type === "error") {
-            console.error("[WS Error from Backend]", msg.message);
-            const isKeyIssue =
-              msg.code === "MISSING_API_KEY" || msg.code === "INVALID_API_KEY";
-            const isQuotaIssue = msg.code === "USAGE_LIMIT_EXCEEDED";
-            const isSubIssue = msg.code === "SUBSCRIPTION_REQUIRED";
-            Sentry.captureException(
-              new Error(`WS backend error: ${msg.message ?? "(no message)"}`),
-              {
-                tags: {
-                  source: "audio_stream_ws",
-                  code: msg.code ?? "unknown",
-                  provider: msg.provider ?? "unknown",
-                },
-              },
-            );
-
-            if (isKeyIssue) {
-              // Unrecoverable from inside the app — stop the auto-reconnect loop
-              setWsUnrecoverable(true);
-              const webAppUrl =
-                process.env.EXPO_PUBLIC_PLAN_AI_WEB_URL ??
-                "https://plan-ai.blueberrybytes.com";
-              Alert.alert(
-                "Configuration Required",
-                msg.message ||
-                  "Your workspace is missing a required API key.",
-                [
-                  {
-                    text: "Open Workspace Settings",
-                    onPress: () =>
-                      Linking.openURL(`${webAppUrl.replace(/\/+$/, "")}/settings/workspace`),
-                  },
-                  { text: "Dismiss", style: "cancel" },
-                ],
-              );
-            } else if (isQuotaIssue || isSubIssue) {
-              // Unrecoverable — stop reconnect and direct user to billing
-              setWsUnrecoverable(true);
-              const webAppUrl =
-                process.env.EXPO_PUBLIC_PLAN_AI_WEB_URL ??
-                "https://plan-ai.blueberrybytes.com";
-              Alert.alert(
-                isQuotaIssue ? "Usage Limit Reached" : "Subscription Required",
-                msg.message ||
-                  (isQuotaIssue
-                    ? "You've reached your monthly limit. Upgrade your plan or wait until the next billing cycle."
-                    : "An active subscription is required to record. Choose a plan to continue."),
-                [
-                  {
-                    text: isQuotaIssue ? "Upgrade Plan" : "Choose a Plan",
-                    onPress: () =>
-                      Linking.openURL(`${webAppUrl.replace(/\/+$/, "")}/billing`),
-                  },
-                  { text: "Dismiss", style: "cancel" },
-                ],
-              );
-            } else {
-              Alert.alert(
-                "Connection Warning",
-                msg.message ||
-                  "Lost connection to the transcription server. You can still save what you have.",
-              );
-            }
-          }
-        } catch (e) {
-          console.error("[WS Data Handling Error]", e);
-        }
-      };
-
-      ws.onclose = () => {
-        console.log(
-          "WS Stream Closed (Network disconnected). Local WAV continues recording.",
-        );
-        setIsWsConnected(false);
-        setIsConnectingWs(false);
-        wsRef.current = null;
-      };
-    } catch (e) {
-      console.warn("Failed to initialize WS (offline):", e);
-      setIsWsConnected(false);
-      setIsConnectingWs(false);
-    }
-  }, [api, isConnectingWs, language, selectedContextIds]);
-
-  // Auto-reconnect loop when recording but websocket dropped
-  useEffect(() => {
-    let reconnectTimeout: NodeJS.Timeout;
-    if (
-      phase === "recording" &&
-      isRecording &&
-      !isWsConnected &&
-      !isConnectingWs &&
-      !wsUnrecoverable
-    ) {
-      // Wait 3 seconds before automatically trying again
-      reconnectTimeout = setTimeout(() => {
-        console.log("🔄 Auto-reconnecting WebSocket...");
-        connectWebSocket();
-      }, 3000);
-    }
-    return () => clearTimeout(reconnectTimeout);
-  }, [
-    phase,
-    isRecording,
-    isWsConnected,
-    isConnectingWs,
-    wsUnrecoverable,
-    language,
-    connectWebSocket,
-  ]);
-
   const handleLanguageChange = (newLang: string) => {
     setLanguage(newLang);
     setLanguageMenuVisible(false);
-    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-      console.log(
-        `[AudioRecorder] Requesting dynamic language change to: ${newLang}`,
-      );
-      wsRef.current.send(
-        JSON.stringify({ type: "change_language", language: newLang }),
-      );
-    }
+    recordingService.changeLanguage(newLang);
   };
 
   const startRecording = async () => {
@@ -785,7 +580,7 @@ export default function RecordScreen() {
         allowsBackgroundRecording: true,
       });
 
-      // Capture location asynchronously in background without blocking audio start
+      // Capture location asynchronously without blocking audio start.
       (async () => {
         try {
           const { status } = await Location.requestForegroundPermissionsAsync();
@@ -805,113 +600,24 @@ export default function RecordScreen() {
         }
       })();
 
-      setTranscript("");
-      setInterim("");
       setPhase("recording");
 
-      if (Platform.OS === "android") {
-        try {
-          const channelId = await notifee.createChannel({
-            id: "recording",
-            name: "Active Recording",
-            importance: AndroidImportance.HIGH,
-          });
-
-          await notifee.displayNotification({
-            title: "Plan AI",
-            body: "Meeting is actively recording in the background",
-            android: {
-              channelId,
-              asForegroundService: true,
-              color: "#0284c7",
-              ongoing: true,
-            },
-          });
-        } catch (err) {
-          console.warn("Failed to start Android Foreground Daemon:", err);
-        }
-      }
-
-      try {
-        const backupFile = new File(Paths.document, "emergency_backup.wav");
-        // Rebuild perfectly clean 24000Hz WAV Header to overwrite previous audio trace
-        backupFile.write(
-          "UklGRv////9XQVZFZm10IBAAAAABAAEAwF0AAIC7AAACABAAZGF0Yf////8=",
-          { encoding: "base64" },
-        );
-        console.log(
-          "🛑 Initialized WAV header for emergency_backup.wav (24000Hz)",
-        );
-      } catch (err) {
-        console.warn("Failed to write WAV header", err);
-      }
-
-      await connectWebSocket();
-
-      if (!g.__isAudioInitialized) {
-        LiveAudioStream.init({
-          sampleRate: 24000,
-          channels: 1,
-          bitsPerSample: 16,
-          audioSource: 1, // 1 = MIC (Captures ambient room audio instead of aggressively isolating the user's voice like VOICE_RECOGNITION does)
-          bufferSize: 4096,
-          wavFile: "emergency_backup.wav",
-        });
-        g.__isAudioInitialized = true;
-        console.log("🛑 Global Java AudioRecord Singleton Initialized.");
-      }
-
-      LiveAudioStream.start();
-      setIsRecording(true);
+      // The session (native audio + websocket + foreground service + WAV
+      // backup) is owned by recordingService so it survives navigation,
+      // backgrounding, and screen close.
+      await recordingService.start({
+        language,
+        contextIds: selectedContextIds,
+        projectId: selectedProjectId,
+        api: api as unknown as RecordingApi,
+      });
     } catch (err) {
       console.error("Failed to start recording setup", err);
     }
   };
 
   const stopAudioStream = async (): Promise<boolean> => {
-    let hasData = transcript.length > 0;
-    try {
-      console.log("🛑 Attempting to stop stream. isRecording:", isRecording);
-      if (isRecording) {
-        LiveAudioStream.stop(); // CRITICAL: Do NOT await this! The Android native module has a bug where it NEVER resolves the promise.
-        setIsRecording(false);
-        console.log("🛑 LiveAudioStream stopped successfully.");
-
-        if (Platform.OS === "android") {
-          try {
-            if (g.__resolveForegroundService) {
-              g.__resolveForegroundService();
-              g.__resolveForegroundService = null;
-            }
-            await notifee.stopForegroundService();
-          } catch (err) {
-            console.warn("Failed to stop Android Foreground Daemon", err);
-          }
-        }
-
-        const backupFile = new File(Paths.document, "emergency_backup.wav");
-        console.log(
-          "🛑 Explicit FileSystem check resolving info...",
-          backupFile.uri,
-        );
-        const exists = backupFile.exists;
-        const size = backupFile.size;
-        console.log("🛑 File Info:", { exists, size });
-
-        if (exists && size > 0) {
-          setAudioBackupPath(backupFile.uri);
-          hasData = true;
-        }
-      }
-      if (wsRef.current) {
-        wsRef.current.close();
-        wsRef.current = null;
-      }
-      return hasData;
-    } catch (e) {
-      console.error("🛑 FATAL ERROR IN STOP:", e);
-      return hasData;
-    }
+    return recordingService.stop();
   };
 
   const handleStopRecordingBtn = async () => {
@@ -1042,15 +748,7 @@ export default function RecordScreen() {
             text: "Discard",
             style: "destructive",
             onPress: () => {
-              if (isRecording) {
-                try {
-                  LiveAudioStream.stop();
-                } catch (e) {}
-                if (wsRef.current) {
-                  wsRef.current.close();
-                  wsRef.current = null;
-                }
-              }
+              recordingService.discard();
               router.back();
             },
           },
@@ -1607,13 +1305,7 @@ export default function RecordScreen() {
             loading={isConnectingWs}
             disabled={isConnectingWs}
             onPress={() => {
-              if (isRecording) {
-                if (wsRef.current) {
-                  wsRef.current.close();
-                }
-                setWsUnrecoverable(false);
-                connectWebSocket();
-              }
+              recordingService.reconnect();
             }}
           >
             {isConnectingWs ? "Connecting..." : "Reconnect"}

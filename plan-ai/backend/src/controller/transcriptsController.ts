@@ -25,7 +25,12 @@ import {
 import { type TaskWithRelations } from "../services/taskCrudService";
 import { projectTranscriptService } from "../services/projectTranscriptService";
 import { resolveProjectIdsToContextIds } from "../services/projectContextResolver";
-import { mapTaskResponse, type TaskResponse } from "./projectsModelController";
+import {
+  mapTaskResponse,
+  mapPainPointResponse,
+  type TaskResponse,
+  type PainPointResponse,
+} from "./projectsModelController";
 import { transcriptGenerationQueue } from "../queue/transcriptGenerationQueue";
 import { firebaseAdmin } from "../firebase/firebaseAdmin";
 import { DocDocumentResponse } from "./docController";
@@ -60,6 +65,8 @@ interface StandaloneTranscriptResponse {
   createdAt: Date;
   updatedAt: Date;
   tasks?: TaskResponse[];
+  /** AI-extracted pain points, ranked most-severe first. */
+  painPoints?: PainPointResponse[];
   documents?: DocDocumentResponse[];
   /** IDs of contexts attached to this transcript. */
   contextIds: string[];
@@ -149,6 +156,9 @@ export class TranscriptsController extends BaseWorkspaceController {
       updatedAt: t.updatedAt,
       contextIds: t.contextIds ?? [],
       contexts: t.contexts ?? [],
+      // Present when the fetch included the relation (single-transcript GET).
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      painPoints: ((t as any).painPoints ?? []).map((p: any) => mapPainPointResponse(p)),
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       chatThread: (t as any).chatThread
         ? {

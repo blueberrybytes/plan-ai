@@ -484,6 +484,119 @@ export default function TranscriptViewScreen() {
     );
   };
 
+  const renderPainPointsTab = () => {
+    const painPoints = transcript?.painPoints || [];
+    const SEVERITY_COLOR: Record<string, string> = {
+      BLOCKER: "#dc2626",
+      HIGH: "#ea580c",
+      MEDIUM: "#0284c7",
+      LOW: "#6b7280",
+    };
+    const SEVERITY_RANK: Record<string, number> = {
+      BLOCKER: 0,
+      HIGH: 1,
+      MEDIUM: 2,
+      LOW: 3,
+    };
+    const sorted = [...painPoints].sort(
+      (a, b) => (SEVERITY_RANK[a.severity] ?? 99) - (SEVERITY_RANK[b.severity] ?? 99),
+    );
+    return (
+      <View style={{ paddingBottom: 40, gap: 12 }}>
+        <Text
+          variant="titleMedium"
+          style={{
+            fontWeight: "bold",
+            color: theme.colors.primary,
+            marginBottom: 8,
+            marginTop: 8,
+          }}
+        >
+          Pain Points
+        </Text>
+        {sorted.map((pp) => (
+          <Surface
+            key={pp.id}
+            style={{
+              padding: 16,
+              borderRadius: 12,
+              backgroundColor: theme.colors.surfaceVariant,
+            }}
+            elevation={0}
+          >
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                flexWrap: "wrap",
+                gap: 6,
+                marginBottom: 8,
+              }}
+            >
+              <View
+                style={{
+                  backgroundColor: SEVERITY_COLOR[pp.severity] ?? "#6b7280",
+                  paddingHorizontal: 8,
+                  paddingVertical: 2,
+                  borderRadius: 8,
+                }}
+              >
+                <Text variant="labelSmall" style={{ color: "white", fontWeight: "bold" }}>
+                  {pp.severity}
+                </Text>
+              </View>
+              <View
+                style={{
+                  borderWidth: 1,
+                  borderColor: theme.colors.outline,
+                  paddingHorizontal: 8,
+                  paddingVertical: 2,
+                  borderRadius: 8,
+                }}
+              >
+                <Text
+                  variant="labelSmall"
+                  style={{ color: theme.colors.onSurfaceVariant, textTransform: "capitalize" }}
+                >
+                  {pp.status.replace(/_/g, " ").toLowerCase()}
+                </Text>
+              </View>
+            </View>
+            <Text style={{ color: theme.colors.onSurface, lineHeight: 22, fontWeight: "600" }}>
+              {pp.problem}
+            </Text>
+            {pp.affected ? (
+              <Text
+                variant="labelSmall"
+                style={{ color: theme.colors.onSurfaceVariant, marginTop: 4 }}
+              >
+                Affects: {pp.affected}
+              </Text>
+            ) : null}
+            {pp.evidence ? (
+              <Text
+                style={{
+                  color: theme.colors.onSurfaceVariant,
+                  fontStyle: "italic",
+                  marginTop: 6,
+                  lineHeight: 20,
+                }}
+              >
+                {`“${pp.evidence}”`}
+              </Text>
+            ) : null}
+            {pp.suggestedResolution ? (
+              <Text style={{ color: theme.colors.onSurface, marginTop: 6, lineHeight: 20 }}>
+                <Text style={{ fontWeight: "bold" }}>Suggested: </Text>
+                {pp.suggestedResolution}
+              </Text>
+            ) : null}
+          </Surface>
+        ))}
+      </View>
+    );
+  };
+
   const renderDocumentsTab = () => {
     const documents = transcript?.documents || [];
     return (
@@ -819,6 +932,7 @@ export default function TranscriptViewScreen() {
                   ? [{ value: "documents", label: "Docs" }]
                   : []),
                 ...(transcript?.metadata?.keyPoints && transcript.metadata.keyPoints.length > 0 ? [{ value: "keypoints", label: "Points" }] : []),
+                ...(transcript?.painPoints && transcript.painPoints.length > 0 ? [{ value: "painpoints", label: "Pain" }] : []),
                 { value: "utterances", label: "Transcript" },
                 ...(() => {
                   const meta = transcript?.metadata as TranscriptMetadata | null | undefined;
@@ -844,6 +958,7 @@ export default function TranscriptViewScreen() {
             {activeTab === "summary" && renderSummaryTab()}
             {activeTab === "documents" && renderDocumentsTab()}
             {activeTab === "keypoints" && renderKeyPointsTab()}
+            {activeTab === "painpoints" && renderPainPointsTab()}
             {activeTab === "utterances" && renderUtterancesTab()}
             {activeTab === "errors" && (
               <View style={{ gap: 12, paddingBottom: 40 }}>

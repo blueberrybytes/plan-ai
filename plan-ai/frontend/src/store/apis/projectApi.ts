@@ -31,6 +31,10 @@ export type ApiResponseTaskResponse = components["schemas"]["ApiResponse_TaskRes
 export type TaskResponse = components["schemas"]["TaskResponse"];
 export type TaskStatusSchema = components["schemas"]["TaskStatus"];
 export type TaskPrioritySchema = components["schemas"]["TaskPriority"];
+export type PainPointResponse = components["schemas"]["PainPointResponse"];
+export type ApiResponseConvertPainPointResponse =
+  components["schemas"]["ApiResponse_ConvertPainPointResponse_"];
+export type ConvertPainPointArgs = operations["ConvertPainPointToTask"]["parameters"]["path"];
 
 export type ListTranscriptsParams = operations["ListProjectTranscripts"]["parameters"]["query"];
 export type TranscriptPathParams = operations["GetProjectTranscript"]["parameters"]["path"];
@@ -392,6 +396,22 @@ export const projectApi = createApi({
         body,
       }),
     }),
+    // Turn a meeting pain point into a resolving Task. Invalidates the transcript
+    // (pain point flips to "being addressed") and the project task board (new task).
+    convertPainPointToTask: builder.mutation<
+      ApiResponseConvertPainPointResponse,
+      ConvertPainPointArgs
+    >({
+      query: ({ projectId, transcriptId, painPointId }) => ({
+        url: `/api/projects/${projectId}/transcripts/${transcriptId}/pain-points/${painPointId}/convert-to-task`,
+        method: "POST",
+      }),
+      invalidatesTags: (result, error, { projectId, transcriptId }) => [
+        { type: "Project" as const, id: projectId },
+        { type: "Transcript" as const, id: transcriptId },
+        { type: "Task" as const, id: `${projectId}-LIST` },
+      ],
+    }),
   }),
 });
 
@@ -418,4 +438,5 @@ export const {
   useUpdateProjectTaskMutation,
   useDeleteProjectTaskMutation,
   useRefineProjectTaskMutation,
+  useConvertPainPointToTaskMutation,
 } = projectApi;

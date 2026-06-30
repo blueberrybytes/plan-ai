@@ -37,6 +37,7 @@ import ReactJson from "react-json-view";
 import MermaidRenderer from "../components/common/MermaidRenderer";
 import { AiGraphTrace, ContextGraph } from "../components/project/ContextGraph";
 import PostMeetingTasksPanel from "../components/project/PostMeetingTasksPanel";
+import PainPointsPanel from "../components/project/PainPointsPanel";
 import ExtractionReasoningPanel from "../components/transcripts/ExtractionReasoningPanel";
 import SpeakerInsightsTab, {
   type SpeakerInsight,
@@ -552,6 +553,14 @@ const ProjectTranscriptDetail: React.FC = () => {
                 </Stack>
               </CardContent>
             </Card>
+
+            {!isFailedTranscript && (
+              <PainPointsPanel
+                painPoints={transcript.painPoints}
+                projectId={projectId ?? ""}
+                transcriptId={transcript.id}
+              />
+            )}
 
             {(transcript.metadata as { processingStatus?: string })?.processingStatus ===
             "PENDING" ? (

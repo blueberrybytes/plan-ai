@@ -84,6 +84,7 @@ model Workspace {
   projects       Project[]
   contexts       Context[]
   transcripts    Transcript[]
+  painPoints     PainPoint[]
   slideTemplates SlideTemplate[]
   presentations  Presentation[]
   brandThemes    BrandTheme[]          @relation("WorkspaceThemes")
@@ -329,6 +330,7 @@ model Transcript {
 
   workspace  Workspace            @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   taskLinks  TaskTranscriptLink[]
+  painPoints PainPoint[]
   chatThread ChatThread?
   project    Project?             @relation(fields: [projectId], references: [id], onDelete: Cascade)
   user       User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -374,6 +376,7 @@ model Task {
   dependencies       TaskDependency[]     @relation("TaskDependencyDependants")
   dependants         TaskDependency[]     @relation("TaskDependencyDependencies")
   transcriptLinks    TaskTranscriptLink[]
+  resolvedPainPoint  PainPoint?
 
   @@index([projectId])
   @@index([status])
@@ -402,6 +405,39 @@ model TaskTranscriptLink {
   transcript   Transcript @relation(fields: [transcriptId], references: [id], onDelete: Cascade)
 
   @@id([taskId, transcriptId])
+}
+
+/// A friction/blocker/unmet-need raised during a meeting, extracted by the AI
+/// alongside tasks. First-class (not a metadata blob) so we can rank by
+/// severity, track resolution status, link a resolving Task, and run
+/// cross-meeting queries (e.g. "all unresolved blockers this month").
+model PainPoint {
+  id                  String            @id @default(cuid())
+  transcriptId        String
+  workspaceId         String
+  problem             String
+  affected            String?
+  severity            PainPointSeverity @default(MEDIUM)
+  status              PainPointStatus   @default(RAISED)
+  /// Short verbatim transcript quote grounding the pain point (anti-hallucination + trust).
+  evidence            String?
+  suggestedResolution String?
+  /// Insertion order from the LLM, which is asked to rank by severity.
+  position            Int               @default(0)
+  /// Set when a user converts this pain point into a resolving Task.
+  resolutionTaskId    String?           @unique
+  metadata            Json?
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+
+  transcript     Transcript @relation(fields: [transcriptId], references: [id], onDelete: Cascade)
+  workspace      Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  resolutionTask Task?      @relation(fields: [resolutionTaskId], references: [id], onDelete: SetNull)
+
+  @@index([transcriptId])
+  @@index([workspaceId])
+  @@index([severity])
+  @@index([status])
 }
 
 model Context {
@@ -686,6 +722,19 @@ enum DependencyType {
   BLOCKS
   RELATES_TO
   DUPLICATES
+}
+
+enum PainPointSeverity {
+  BLOCKER
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum PainPointStatus {
+  RAISED
+  BEING_ADDRESSED
+  RESOLVED_IN_MEETING
 }
 
 enum IntegrationProvider {

@@ -44,13 +44,17 @@ export function fftInPlace(re: Float64Array, im: Float64Array, inverse: boolean)
     for (; j & bit; bit >>= 1) j ^= bit;
     j ^= bit;
     if (i < j) {
-      const tr = re[i]; re[i] = re[j]; re[j] = tr;
-      const ti = im[i]; im[i] = im[j]; im[j] = ti;
+      const tr = re[i];
+      re[i] = re[j];
+      re[j] = tr;
+      const ti = im[i];
+      im[i] = im[j];
+      im[j] = ti;
     }
   }
 
   for (let len = 2; len <= n; len <<= 1) {
-    const ang = (inverse ? 2 : -2) * Math.PI / len;
+    const ang = ((inverse ? 2 : -2) * Math.PI) / len;
     const wr = Math.cos(ang);
     const wi = Math.sin(ang);
     for (let i = 0; i < n; i += len) {
@@ -248,12 +252,14 @@ export function cancelEcho(
 
   const delaySamples = options.preAligned
     ? 0
-    : options.delaySamples ??
+    : (options.delaySamples ??
       estimateDelaySamples(mic, ref, options.sampleRate, {
         maxLagSeconds: options.maxLagSeconds ?? 8,
-      });
+      }));
 
-  const x = options.preAligned ? ensureLength(ref, mic.length) : alignReference(ref, delaySamples, mic.length);
+  const x = options.preAligned
+    ? ensureLength(ref, mic.length)
+    : alignReference(ref, delaySamples, mic.length);
   const d = mic;
   const out = new Float32Array(d.length);
 
@@ -285,80 +291,80 @@ export function cancelEcho(
   for (let iter = 0; iter < iterations; iter++) {
     const finalPass = iter === iterations - 1;
     for (let b = 0; b < numBlocks; b++) {
-    const base = b * N;
+      const base = b * N;
 
-    // Input frame = [previous N ref samples, current N ref samples] (overlap-save).
-    for (let i = 0; i < N; i++) {
-      const prev = base - N + i;
-      xBufR[i] = prev >= 0 ? x[prev] : 0;
-      xBufI[i] = 0;
-    }
-    for (let i = 0; i < N; i++) {
-      const cur = base + i;
-      xBufR[N + i] = cur < x.length ? x[cur] : 0;
-      xBufI[N + i] = 0;
-    }
-    const Xr = xBufR.slice();
-    const Xi = xBufI.slice();
-    fftInPlace(Xr, Xi, false);
-
-    // Per-bin reference power (EMA), seeded on the first block. Also a scalar
-    // mean used as the regularization floor (so silent bins, where the gradient
-    // is ~0 anyway, get a sane denominator instead of exploding).
-    let meanPow = 0;
-    for (let i = 0; i < M; i++) {
-      const px = Xr[i] * Xr[i] + Xi[i] * Xi[i];
-      P[i] = b === 0 ? px : lambda * P[i] + (1 - lambda) * px;
-      meanPow += px;
-    }
-    meanPow /= M;
-    const reg = 1e-2 * meanPow + eps;
-
-    // Echo estimate y = last N of IFFT(W .* X).
-    for (let i = 0; i < M; i++) {
-      yR[i] = Wr[i] * Xr[i] - Wi[i] * Xi[i];
-      yI[i] = Wr[i] * Xi[i] + Wi[i] * Xr[i];
-    }
-    fftInPlace(yR, yI, true);
-
-    // Error e = d - y on the current block; output it.
-    for (let i = 0; i < M; i++) {
-      eR[i] = 0;
-      eI[i] = 0;
-    }
-    for (let i = 0; i < N; i++) {
-      const cur = base + i;
-      const dv = cur < d.length ? d[cur] : 0;
-      const yv = yR[N + i];
-      const ev = dv - yv;
-      eR[N + i] = ev;
-      if (finalPass) {
-        if (cur < out.length) out[cur] = ev;
-        echoEnergy += dv * dv;
-        outEnergy += ev * ev;
+      // Input frame = [previous N ref samples, current N ref samples] (overlap-save).
+      for (let i = 0; i < N; i++) {
+        const prev = base - N + i;
+        xBufR[i] = prev >= 0 ? x[prev] : 0;
+        xBufI[i] = 0;
       }
-    }
+      for (let i = 0; i < N; i++) {
+        const cur = base + i;
+        xBufR[N + i] = cur < x.length ? x[cur] : 0;
+        xBufI[N + i] = 0;
+      }
+      const Xr = xBufR.slice();
+      const Xi = xBufI.slice();
+      fftInPlace(Xr, Xi, false);
 
-    // Gradient: G = conj(X) .* E, NLMS-normalized per bin by smoothed |X|^2.
-    fftInPlace(eR, eI, false);
-    for (let i = 0; i < M; i++) {
-      const norm = P[i] + reg;
-      gR[i] = (Xr[i] * eR[i] + Xi[i] * eI[i]) / norm;
-      gI[i] = (Xr[i] * eI[i] - Xi[i] * eR[i]) / norm;
-    }
+      // Per-bin reference power (EMA), seeded on the first block. Also a scalar
+      // mean used as the regularization floor (so silent bins, where the gradient
+      // is ~0 anyway, get a sane denominator instead of exploding).
+      let meanPow = 0;
+      for (let i = 0; i < M; i++) {
+        const px = Xr[i] * Xr[i] + Xi[i] * Xi[i];
+        P[i] = b === 0 ? px : lambda * P[i] + (1 - lambda) * px;
+        meanPow += px;
+      }
+      meanPow /= M;
+      const reg = 1e-2 * meanPow + eps;
 
-    // Gradient constraint: keep only the first N taps (causal filter), zero the rest.
-    fftInPlace(gR, gI, true);
-    for (let i = N; i < M; i++) {
-      gR[i] = 0;
-      gI[i] = 0;
-    }
-    fftInPlace(gR, gI, false);
+      // Echo estimate y = last N of IFFT(W .* X).
+      for (let i = 0; i < M; i++) {
+        yR[i] = Wr[i] * Xr[i] - Wi[i] * Xi[i];
+        yI[i] = Wr[i] * Xi[i] + Wi[i] * Xr[i];
+      }
+      fftInPlace(yR, yI, true);
 
-    for (let i = 0; i < M; i++) {
-      Wr[i] += mu * gR[i];
-      Wi[i] += mu * gI[i];
-    }
+      // Error e = d - y on the current block; output it.
+      for (let i = 0; i < M; i++) {
+        eR[i] = 0;
+        eI[i] = 0;
+      }
+      for (let i = 0; i < N; i++) {
+        const cur = base + i;
+        const dv = cur < d.length ? d[cur] : 0;
+        const yv = yR[N + i];
+        const ev = dv - yv;
+        eR[N + i] = ev;
+        if (finalPass) {
+          if (cur < out.length) out[cur] = ev;
+          echoEnergy += dv * dv;
+          outEnergy += ev * ev;
+        }
+      }
+
+      // Gradient: G = conj(X) .* E, NLMS-normalized per bin by smoothed |X|^2.
+      fftInPlace(eR, eI, false);
+      for (let i = 0; i < M; i++) {
+        const norm = P[i] + reg;
+        gR[i] = (Xr[i] * eR[i] + Xi[i] * eI[i]) / norm;
+        gI[i] = (Xr[i] * eI[i] - Xi[i] * eR[i]) / norm;
+      }
+
+      // Gradient constraint: keep only the first N taps (causal filter), zero the rest.
+      fftInPlace(gR, gI, true);
+      for (let i = N; i < M; i++) {
+        gR[i] = 0;
+        gI[i] = 0;
+      }
+      fftInPlace(gR, gI, false);
+
+      for (let i = 0; i < M; i++) {
+        Wr[i] += mu * gR[i];
+        Wi[i] += mu * gI[i];
+      }
     }
   }
 

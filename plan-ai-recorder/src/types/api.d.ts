@@ -333,6 +333,48 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/projects/{projectId}/pain-points": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description Pain points raised across all meetings in a project, optionally filtered by
+         *     severity/status. Powers the cross-meeting view (e.g. "open blockers").
+         */
+        get: operations["ListProjectPainPoints"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/projects/{projectId}/transcripts/{transcriptId}/pain-points/{painPointId}/convert-to-task": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description Convert a pain point into a resolving Task: creates the task in the project,
+         *     links it back to the pain point (resolutionTaskId) + the transcript, and
+         *     flips the pain point to BEING_ADDRESSED. Idempotency-guarded: a pain point
+         *     that already has a resolution task returns 409.
+         */
+        post: operations["ConvertPainPointToTask"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/projects/{projectId}/transcripts/manual": {
         parameters: {
             query?: never;
@@ -2667,6 +2709,28 @@ export interface components {
         /** @enum {string} */
         "_36_Enums.TranscriptSource": "MANUAL" | "RECORDING" | "UPLOAD" | "IMPORTED";
         TranscriptSource: components["schemas"]["_36_Enums.TranscriptSource"];
+        /** @enum {string} */
+        "_36_Enums.PainPointSeverity": "BLOCKER" | "HIGH" | "MEDIUM" | "LOW";
+        PainPointSeverity: components["schemas"]["_36_Enums.PainPointSeverity"];
+        /** @enum {string} */
+        "_36_Enums.PainPointStatus": "RAISED" | "BEING_ADDRESSED" | "RESOLVED_IN_MEETING";
+        PainPointStatus: components["schemas"]["_36_Enums.PainPointStatus"];
+        PainPointResponse: {
+            id: string;
+            transcriptId: string;
+            problem: string;
+            affected: string | null;
+            severity: components["schemas"]["PainPointSeverity"];
+            status: components["schemas"]["PainPointStatus"];
+            evidence: string | null;
+            suggestedResolution: string | null;
+            /** @description Set once a user converts this pain point into a resolving Task. */
+            resolutionTaskId: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
         TranscriptResponse: {
             id: string;
             projectId: string | null;
@@ -2683,6 +2747,8 @@ export interface components {
             createdAt: string;
             /** Format: date-time */
             updatedAt: string;
+            /** @description AI-extracted pain points, ranked most-severe first. */
+            painPoints?: components["schemas"]["PainPointResponse"][];
             chatThread?: {
                 messages: {
                     /** Format: date-time */
@@ -2699,7 +2765,7 @@ export interface components {
         "_36_Enums.TaskStatus": "COMPLETED" | "ARCHIVED" | "BACKLOG" | "IN_PROGRESS" | "BLOCKED";
         TaskStatus: components["schemas"]["_36_Enums.TaskStatus"];
         /** @enum {string} */
-        "_36_Enums.TaskPriority": "LOW" | "MEDIUM" | "HIGH" | "URGENT";
+        "_36_Enums.TaskPriority": "HIGH" | "MEDIUM" | "LOW" | "URGENT";
         TaskPriority: components["schemas"]["_36_Enums.TaskPriority"];
         TaskResponse: {
             id: string;
@@ -2776,6 +2842,22 @@ export interface components {
         ApiResponse_TranscriptResponse_: {
             message?: string;
             data: components["schemas"]["TranscriptResponse"] | null;
+            /** Format: double */
+            status: number;
+        };
+        "ApiResponse_PainPointResponse-Array_": {
+            message?: string;
+            data: components["schemas"]["PainPointResponse"][] | null;
+            /** Format: double */
+            status: number;
+        };
+        ConvertPainPointResponse: {
+            painPoint: components["schemas"]["PainPointResponse"];
+            task: components["schemas"]["TaskResponse"];
+        };
+        ApiResponse_ConvertPainPointResponse_: {
+            message?: string;
+            data: components["schemas"]["ConvertPainPointResponse"] | null;
             /** Format: double */
             status: number;
         };
@@ -3102,6 +3184,8 @@ export interface components {
             /** Format: date-time */
             updatedAt: string;
             tasks?: components["schemas"]["TaskResponse"][];
+            /** @description AI-extracted pain points, ranked most-severe first. */
+            painPoints?: components["schemas"]["PainPointResponse"][];
             documents?: components["schemas"]["DocDocumentResponse"][];
             /** @description IDs of contexts attached to this transcript. */
             contextIds: string[];
@@ -5252,6 +5336,55 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ApiResponse_null_"];
+                };
+            };
+        };
+    };
+    ListProjectPainPoints: {
+        parameters: {
+            query?: {
+                severity?: components["schemas"]["PainPointSeverity"];
+                status?: components["schemas"]["PainPointStatus"];
+            };
+            header?: never;
+            path: {
+                projectId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_PainPointResponse-Array_"];
+                };
+            };
+        };
+    };
+    ConvertPainPointToTask: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                projectId: string;
+                transcriptId: string;
+                painPointId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_ConvertPainPointResponse_"];
                 };
             };
         };

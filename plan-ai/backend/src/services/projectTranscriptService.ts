@@ -8,6 +8,9 @@ import {
   Transcript,
   TranscriptSource,
   Task,
+  // Aliased: local lowercase analysis-level types of the same name live below.
+  PainPointSeverity as PrismaPainPointSeverity,
+  PainPointStatus as PrismaPainPointStatus,
 } from "@prisma/client";
 import {
   getWorkspaceModel,
@@ -130,6 +133,43 @@ const TranscriptTaskRawSchemaWithSubtasks = TranscriptTaskRawSchema.extend({
   subtasks: z.array(TranscriptTaskRawSchema).nullable(),
 });
 
+// A pain point = a friction, blocker, or unmet need raised in the meeting.
+// `.nullable()` (not `.optional()`) on optional fields — see the strict
+// structured-output note above TranscriptTaskRawSchema. `severity` and `status`
+// are required enums (always present): they're the core ranking + tracking
+// signal. The array itself is required-and-possibly-empty (the prompt instructs
+// the model to return [] when no genuine pain points exist — never invent any).
+const PainPointRawSchema = z.object({
+  problem: z
+    .string()
+    .min(1)
+    .describe("The friction, blocker, or unmet need, stated in one clear sentence."),
+  affected: z
+    .string()
+    .nullable()
+    .describe("Who or what is affected (a person, team, or customer). Null if unclear."),
+  severity: z
+    .enum(["blocker", "high", "medium", "low"])
+    .describe(
+      "How much this is hurting. 'blocker' = work cannot proceed; 'high' = significant drag; 'medium' = notable friction; 'low' = minor annoyance.",
+    ),
+  status: z
+    .enum(["raised", "being_addressed", "resolved_in_meeting"])
+    .describe(
+      "'raised' = mentioned, no owner/plan yet; 'being_addressed' = someone is already working on it; 'resolved_in_meeting' = settled during the meeting.",
+    ),
+  evidence: z
+    .string()
+    .nullable()
+    .describe(
+      "A short verbatim quote from the transcript that grounds this pain point. Null if no clean quote exists. Do NOT fabricate.",
+    ),
+  suggestedResolution: z
+    .string()
+    .nullable()
+    .describe("A concise suggested next step to resolve it, if one is reasonable. Null otherwise."),
+});
+
 // `.nullable()` (not `.optional()`) — see the note above TranscriptTaskRawSchema.
 const TranscriptAnalysisRawSchema = z.object({
   // Nullable on purpose: it's debug-only and the LAST field generated, so it's
@@ -147,7 +187,7 @@ const TranscriptAnalysisRawSchema = z.object({
     .array(z.string())
     .nullable()
     .describe(
-      "A list of 3-7 key points, pain points, or critical insights discussed in the meeting.",
+      "A list of 3-7 key points, decisions, or critical insights discussed in the meeting. Do NOT duplicate pain points here — those go in the dedicated painPoints field.",
     ),
   sentiment: z
     .string()
@@ -160,6 +200,11 @@ const TranscriptAnalysisRawSchema = z.object({
     .nullable()
     .describe(
       "A 1-2 sentence text explanation of the overall sentiment, mood, and tone of the transcript.",
+    ),
+  painPoints: z
+    .array(PainPointRawSchema)
+    .describe(
+      "Friction, blockers, and unmet needs raised in the meeting, ranked most-severe first. Return an EMPTY array if none are genuinely present — never invent pain points.",
     ),
   tasks: z.array(TranscriptTaskRawSchemaWithSubtasks),
 });
@@ -172,7 +217,7 @@ const transcriptAnalysisSchemaForGeneration: ZodTypeAny = z.object({
     .array(z.string())
     .nullable()
     .describe(
-      "A list of 3-7 key points, pain points, or critical insights discussed in the meeting.",
+      "A list of 3-7 key points, decisions, or critical insights discussed in the meeting. Do NOT duplicate pain points here — those go in the dedicated painPoints field.",
     ),
   sentiment: z
     .string()
@@ -186,6 +231,11 @@ const transcriptAnalysisSchemaForGeneration: ZodTypeAny = z.object({
     .describe(
       "A 1-2 sentence text explanation of the overall sentiment, mood, and tone of the transcript.",
     ),
+  painPoints: z
+    .array(PainPointRawSchema)
+    .describe(
+      "Friction, blockers, and unmet needs raised in the meeting, ranked most-severe first. Return an EMPTY array if none are genuinely present — never invent pain points.",
+    ),
   tasks: z.array(TranscriptTaskRawSchemaWithSubtasks),
   // Last field + nullable: debug-only, must never block extraction if truncated.
   chainOfThought: z
@@ -196,12 +246,26 @@ const transcriptAnalysisSchemaForGeneration: ZodTypeAny = z.object({
     ),
 });
 
+export type PainPointSeverity = "blocker" | "high" | "medium" | "low";
+export type PainPointStatus = "raised" | "being_addressed" | "resolved_in_meeting";
+
+/** Cleaned, parsed pain point (nulls from strict-mode schema coerced to undefined). */
+export interface PainPoint {
+  problem: string;
+  affected?: string;
+  severity: PainPointSeverity;
+  status: PainPointStatus;
+  evidence?: string;
+  suggestedResolution?: string;
+}
+
 export interface TranscriptAnalysis {
   chainOfThought?: string;
   language: string;
   title?: string;
   summary?: string;
   keyPoints?: string[];
+  painPoints?: PainPoint[];
   sentiment?: string;
   sentimentExplanation?: string;
   tasks: TranscriptTask[];
@@ -340,7 +404,9 @@ export class ProjectTranscriptService {
     ): Promise<Utterance[]> => {
       console.log(
         `[Diarization] Starting ${speakerPrefix} | ${
-          "url" in source ? `url: ${source.url.slice(0, 80)}...` : `cleaned buffer ${source.buffer.length}B`
+          "url" in source
+            ? `url: ${source.url.slice(0, 80)}...`
+            : `cleaned buffer ${source.buffer.length}B`
         }`,
       );
       try {
@@ -1038,6 +1104,28 @@ export class ProjectTranscriptService {
         }
       }
 
+      // Pain points are tied to the transcript + workspace (not a project), so
+      // they persist even for project-less recordings (recorder/mobile). The
+      // LLM ranks them most-severe first; `position` preserves that order.
+      const painPointsToCreate = analysisRaw.painPoints ?? [];
+      if (painPointsToCreate.length > 0) {
+        await tx.painPoint.createMany({
+          data: painPointsToCreate.map((p, index) => ({
+            transcriptId: transcript.id,
+            workspaceId: input.workspaceId,
+            problem: p.problem,
+            affected: p.affected ?? null,
+            // Analysis strings are lowercase ("blocker"); enum values are their
+            // uppercase form — a direct, lossless mapping.
+            severity: p.severity.toUpperCase() as PrismaPainPointSeverity,
+            status: p.status.toUpperCase() as PrismaPainPointStatus,
+            evidence: p.evidence ?? null,
+            suggestedResolution: p.suggestedResolution ?? null,
+            position: index,
+          })),
+        });
+      }
+
       return { transcript, createdTasks };
     });
 
@@ -1520,6 +1608,14 @@ Analyze the following transcript/request and the provided codebase context.
    - **type**: One of "TASK", "BUG", "STORY", or "EPIC". Use "EPIC" ONLY when the task has a non-empty 'subtasks' array. Otherwise use TASK (concrete unit of work), BUG (defect), or STORY (user-facing feature).
    - **category**: One of "engineering", "design", "support", "ops", "research". Use this to split work types: "engineering" = code/dev work, "design" = mocks/UX, "support" = customer outreach + admin flag toggles (NOT engineering), "ops" = infra/devops/migrations, "research" = spikes and investigations. The user filters their ticket board by this.
    - **storyPoints**: REQUIRED. Use the Fibonacci scale (1, 2, 3, 5, 8, 13). Engineering rule of thumb: trivial admin/support actions = 1, simple UI tweak = 1, single-file refactor = 2, cross-file feature = 3, schema migration or new integration = 5, multi-platform feature = 8, full system redesign = 13. Never omit this field.
+5. Extract PAIN POINTS — frictions, blockers, complaints, risks, or unmet needs raised by participants. These describe PROBLEMS, distinct from the action items above (a pain point may motivate a task, but state the problem, not the fix). For each:
+   - **problem**: REQUIRED. The friction in one clear sentence.
+   - **affected**: Who/what it hurts (a person, team, or customer), or null if unclear.
+   - **severity**: REQUIRED. One of "blocker" (work cannot proceed), "high" (significant drag), "medium" (notable friction), "low" (minor annoyance).
+   - **status**: REQUIRED. One of "raised" (mentioned, no plan), "being_addressed" (someone already on it), "resolved_in_meeting" (settled during the call).
+   - **evidence**: A short verbatim quote from the transcript grounding the pain point, or null. NEVER fabricate a quote.
+   - **suggestedResolution**: A concise next step, or null.
+   - Rank the array most-severe first. CRITICAL: return an EMPTY array if the meeting raised no genuine pain points — do NOT invent friction to fill the list.
 
 CRITICAL LANGUAGE RULE: The generated title, summary, task titles, descriptions, and acceptance criteria MUST be written entirely in the detected predominant human language of the transcript. If the transcript is spoken in Spanish, ALL output fields must be in Spanish!
 
@@ -1615,8 +1711,19 @@ ${content}`;
         // the resulting `null`s back to `undefined` to match TranscriptAnalysis.
         title: parsed.title ?? undefined,
         summary: parsed.summary ?? undefined,
+        // Forward keyPoints so the persisted metadata.keyPoints is actually
+        // populated (it was previously read downstream but never returned here).
+        keyPoints: parsed.keyPoints ?? undefined,
         sentiment: parsed.sentiment ?? undefined,
         sentimentExplanation: parsed.sentimentExplanation ?? undefined,
+        painPoints: parsed.painPoints.map((p) => ({
+          problem: p.problem,
+          affected: p.affected ?? undefined,
+          severity: p.severity,
+          status: p.status,
+          evidence: p.evidence ?? undefined,
+          suggestedResolution: p.suggestedResolution ?? undefined,
+        })),
         tasks: parsed.tasks.map((task) => {
           const ac = joinAcceptanceCriteria(task.acceptanceCriteria);
           return {
