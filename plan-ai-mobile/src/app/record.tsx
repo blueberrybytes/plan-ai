@@ -397,6 +397,7 @@ export default function RecordScreen() {
       if (summaryPollTimerRef.current)
         clearInterval(summaryPollTimerRef.current);
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase, api]);
 
   const getDefaultMeetingTitle = () => {
@@ -485,7 +486,6 @@ export default function RecordScreen() {
     if (recordingService.getSnapshot().isRecording) {
       setPhase("recording");
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Refetch contexts when the screen regains focus, so deletions on the web
