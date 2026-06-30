@@ -1665,13 +1665,15 @@ ${content}`;
           break;
         } catch (error: any) {
           attempt++;
-          const isSocketDisconnect =
+          const isTransientError =
             error?.name === "AI_APICallError" &&
-            error?.message?.includes("Failed to process successful response");
+            (error?.message?.includes("Failed to process successful response") ||
+              error?.message?.includes("JSON error injected into SSE stream") ||
+              error?.data?.code === 429);
 
-          if (isSocketDisconnect && attempt < maxManualRetries) {
+          if (isTransientError && attempt < maxManualRetries) {
             logger.warn(
-              `LLM API socket closed prematurely (attempt ${attempt}/${maxManualRetries}). Retrying...`,
+              `LLM API transient error (${error.message || "Unknown error"}). Retrying (attempt ${attempt}/${maxManualRetries})...`,
             );
             await new Promise((resolve) => setTimeout(resolve, 2000 * attempt));
             continue;
