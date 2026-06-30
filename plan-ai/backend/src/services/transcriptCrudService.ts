@@ -145,6 +145,10 @@ export class TranscriptCrudService {
             },
           },
         },
+        // Ranked most-severe first (position mirrors the LLM's severity ranking).
+        painPoints: {
+          orderBy: { position: "asc" },
+        },
       },
     });
 

@@ -327,6 +327,19 @@ const RenderTranscriptContent = ({
   );
 };
 
+const PAIN_SEVERITY_COLOR: Record<string, string> = {
+  BLOCKER: "#ef4444",
+  HIGH: "#f97316",
+  MEDIUM: "#3b82f6",
+  LOW: "#6b7280",
+};
+const PAIN_SEVERITY_RANK: Record<string, number> = {
+  BLOCKER: 0,
+  HIGH: 1,
+  MEDIUM: 2,
+  LOW: 3,
+};
+
 const TranscriptView: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -708,8 +721,9 @@ const TranscriptView: React.FC = () => {
                   {(transcript.documents && transcript.documents.length > 0) && (
                     <Tab label="Generated Docs" value="documents" sx={{ fontWeight: 600 }} />
                   )}
-                  {transcript.metadata?.keyPoints && 
-                   transcript.metadata.keyPoints.length > 0 && (
+                  {((transcript.metadata?.keyPoints &&
+                    transcript.metadata.keyPoints.length > 0) ||
+                    (transcript.painPoints && transcript.painPoints.length > 0)) && (
                     <Tab label="Key Points & Pain Points" value="keypoints" sx={{ fontWeight: 600 }} />
                   )}
                   <Tab
@@ -800,16 +814,74 @@ const TranscriptView: React.FC = () => {
                 )}
 
                 {tabValue === "keypoints" && (
-                  <Box sx={{ p: 2, bgcolor: "background.paper", borderRadius: 1, border: "1px solid", borderColor: "divider" }}>
-                    <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 700, textTransform: "uppercase" }}>Critical Insights & Pain Points</Typography>
-                    <Stack spacing={2} component="ul" sx={{ m: 0, pl: 2 }}>
-                      {(transcript.metadata?.keyPoints || []).map((point, idx) => (
-                        <Typography component="li" key={idx} variant="body2" sx={{ lineHeight: 1.5 }}>
-                          {point}
-                        </Typography>
-                      ))}
-                    </Stack>
-                  </Box>
+                  <Stack spacing={2}>
+                    {transcript.metadata?.keyPoints && transcript.metadata.keyPoints.length > 0 && (
+                      <Box sx={{ p: 2, bgcolor: "background.paper", borderRadius: 1, border: "1px solid", borderColor: "divider" }}>
+                        <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 700, textTransform: "uppercase" }}>Critical Insights</Typography>
+                        <Stack spacing={2} component="ul" sx={{ m: 0, pl: 2 }}>
+                          {transcript.metadata.keyPoints.map((point, idx) => (
+                            <Typography component="li" key={idx} variant="body2" sx={{ lineHeight: 1.5 }}>
+                              {point}
+                            </Typography>
+                          ))}
+                        </Stack>
+                      </Box>
+                    )}
+
+                    {transcript.painPoints && transcript.painPoints.length > 0 && (
+                      <Box sx={{ p: 2, bgcolor: "background.paper", borderRadius: 1, border: "1px solid", borderColor: "divider" }}>
+                        <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 700, textTransform: "uppercase" }}>Pain Points</Typography>
+                        <Stack spacing={1.5}>
+                          {[...transcript.painPoints]
+                            .sort(
+                              (a, b) =>
+                                (PAIN_SEVERITY_RANK[a.severity] ?? 99) -
+                                (PAIN_SEVERITY_RANK[b.severity] ?? 99),
+                            )
+                            .map((pp) => (
+                              <Box key={pp.id} sx={{ p: 1.5, border: "1px solid", borderColor: "divider", borderRadius: 1 }}>
+                                <Stack direction="row" spacing={1} sx={{ mb: 0.5, flexWrap: "wrap", alignItems: "center", rowGap: 0.5 }}>
+                                  <Chip
+                                    size="small"
+                                    label={pp.severity}
+                                    style={{ backgroundColor: PAIN_SEVERITY_COLOR[pp.severity] ?? "#6b7280", color: "white" }}
+                                    sx={{ fontWeight: "bold", height: 22, fontSize: "0.7rem" }}
+                                  />
+                                  <Chip
+                                    size="small"
+                                    variant="outlined"
+                                    label={pp.status.replace(/_/g, " ").toLowerCase()}
+                                    sx={{ height: 22, fontSize: "0.7rem", textTransform: "capitalize" }}
+                                  />
+                                  {pp.affected && (
+                                    <Typography variant="caption" color="text.secondary">
+                                      Affects: {pp.affected}
+                                    </Typography>
+                                  )}
+                                </Stack>
+                                <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                  {pp.problem}
+                                </Typography>
+                                {pp.evidence && (
+                                  <Typography
+                                    variant="body2"
+                                    color="text.secondary"
+                                    sx={{ mt: 0.5, fontStyle: "italic", borderLeft: "3px solid", borderColor: "divider", pl: 1 }}
+                                  >
+                                    {`"${pp.evidence}"`}
+                                  </Typography>
+                                )}
+                                {pp.suggestedResolution && (
+                                  <Typography variant="body2" sx={{ mt: 0.5 }}>
+                                    <strong>Suggested:</strong> {pp.suggestedResolution}
+                                  </Typography>
+                                )}
+                              </Box>
+                            ))}
+                        </Stack>
+                      </Box>
+                    )}
+                  </Stack>
                 )}
 
                 {tabValue === "transcript" && (

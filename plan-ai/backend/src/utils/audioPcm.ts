@@ -64,10 +64,7 @@ function runFfmpegToBuffer(args: string[]): Promise<Buffer> {
  * Writes the bytes to a temp file first (m4a's moov atom can sit at the end,
  * which ffmpeg can't seek to over a pipe).
  */
-export async function decodeUrlToMonoPcm(
-  url: string,
-  sampleRate = 16000,
-): Promise<Float32Array> {
+export async function decodeUrlToMonoPcm(url: string, sampleRate = 16000): Promise<Float32Array> {
   const res = await fetch(url);
   if (!res.ok) throw new Error(`fetch failed ${res.status} for audio blob`);
   const inBuf = Buffer.from(await res.arrayBuffer());
@@ -95,7 +92,7 @@ export async function decodeUrlToMonoPcm(
     new Uint8Array(ab).set(raw.subarray(0, usable));
     return new Float32Array(ab);
   } finally {
-    await fs.unlink(tmp).catch(() => { });
+    await fs.unlink(tmp).catch(() => {});
   }
 }
 
@@ -133,7 +130,9 @@ export async function ffmpegAvailable(): Promise<boolean> {
     await runFfmpegToBuffer(["-hide_banner", "-version"]);
     return true;
   } catch (e) {
-    logger.warn(`[AEC] ffmpeg not available (${resolveFfmpegPath()}): ${e instanceof Error ? e.message : e}`);
+    logger.warn(
+      `[AEC] ffmpeg not available (${resolveFfmpegPath()}): ${e instanceof Error ? e.message : e}`,
+    );
     return false;
   }
 }

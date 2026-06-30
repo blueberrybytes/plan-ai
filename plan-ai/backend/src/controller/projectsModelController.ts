@@ -22,6 +22,8 @@ import {
   TaskStatus,
   Task,
   TaskType,
+  PainPointSeverity,
+  PainPointStatus,
 } from "@prisma/client";
 import prisma from "../prisma/prismaClient";
 import { logger } from "../utils/logger";
@@ -115,6 +117,26 @@ interface CreateTranscriptRequest {
   createSlides?: boolean;
 }
 
+export interface PainPointResponse {
+  id: string;
+  transcriptId: string;
+  problem: string;
+  affected: string | null;
+  severity: PainPointSeverity;
+  status: PainPointStatus;
+  evidence: string | null;
+  suggestedResolution: string | null;
+  /** Set once a user converts this pain point into a resolving Task. */
+  resolutionTaskId: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+interface ConvertPainPointResponse {
+  painPoint: PainPointResponse;
+  task: TaskResponse;
+}
+
 interface TranscriptResponse {
   id: string;
   projectId: string | null;
@@ -128,6 +150,8 @@ interface TranscriptResponse {
   metadata: TsoaJsonObject | null;
   createdAt: Date;
   updatedAt: Date;
+  /** AI-extracted pain points, ranked most-severe first. */
+  painPoints?: PainPointResponse[];
   chatThread?: {
     id: string;
     title: string;
@@ -287,6 +311,46 @@ export function mapTaskResponse(
     updatedAt: task.updatedAt,
   };
 }
+
+/**
+ * Module-level (not a method) so it stays safe when `mapTranscriptResponse` is
+ * passed unbound to `.map()` — `this` would be undefined there.
+ */
+export function mapPainPointResponse(p: {
+  id: string;
+  transcriptId: string;
+  problem: string;
+  affected: string | null;
+  severity: PainPointSeverity;
+  status: PainPointStatus;
+  evidence: string | null;
+  suggestedResolution: string | null;
+  resolutionTaskId: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}): PainPointResponse {
+  return {
+    id: p.id,
+    transcriptId: p.transcriptId,
+    problem: p.problem,
+    affected: p.affected,
+    severity: p.severity,
+    status: p.status,
+    evidence: p.evidence,
+    suggestedResolution: p.suggestedResolution,
+    resolutionTaskId: p.resolutionTaskId,
+    createdAt: p.createdAt,
+    updatedAt: p.updatedAt,
+  };
+}
+
+/** A blocker maps to the most urgent ticket; minor friction to a low one. */
+const PAIN_POINT_SEVERITY_TO_TASK_PRIORITY: Record<PainPointSeverity, TaskPriority> = {
+  BLOCKER: TaskPriority.URGENT,
+  HIGH: TaskPriority.HIGH,
+  MEDIUM: TaskPriority.MEDIUM,
+  LOW: TaskPriority.LOW,
+};
 
 @Route("api/projects")
 @Tags("Projects")
@@ -676,6 +740,114 @@ export class ProjectsModelController extends BaseWorkspaceController {
     return {
       status: 200,
       data: this.mapTranscriptResponse(transcript),
+    };
+  }
+
+  /**
+   * Pain points raised across all meetings in a project, optionally filtered by
+   * severity/status. Powers the cross-meeting view (e.g. "open blockers").
+   */
+  @Get("{projectId}/pain-points")
+  @Security("ClientLevel")
+  public async listProjectPainPoints(
+    @Request() request: AuthenticatedRequest,
+    @Path() projectId: string,
+    @Query() severity?: PainPointSeverity,
+    @Query() status?: PainPointStatus,
+  ): Promise<ApiResponse<PainPointResponse[]>> {
+    const { workspaceId } = await this.getAuthorizedWorkspaceAccess(request);
+    await this.getProjectForWorkspace(request, projectId, workspaceId);
+
+    const painPoints = await prisma.painPoint.findMany({
+      where: {
+        workspaceId,
+        transcript: { projectId },
+        ...(severity ? { severity } : {}),
+        ...(status ? { status } : {}),
+      },
+      // Enum columns sort by declared order (BLOCKER→LOW), so asc = most severe first.
+      orderBy: [{ severity: "asc" }, { createdAt: "desc" }],
+    });
+
+    return {
+      status: 200,
+      data: painPoints.map(mapPainPointResponse),
+    };
+  }
+
+  /**
+   * Convert a pain point into a resolving Task: creates the task in the project,
+   * links it back to the pain point (resolutionTaskId) + the transcript, and
+   * flips the pain point to BEING_ADDRESSED. Idempotency-guarded: a pain point
+   * that already has a resolution task returns 409.
+   */
+  @Post("{projectId}/transcripts/{transcriptId}/pain-points/{painPointId}/convert-to-task")
+  @Security("ClientLevel")
+  public async convertPainPointToTask(
+    @Request() request: AuthenticatedRequest,
+    @Path() projectId: string,
+    @Path() transcriptId: string,
+    @Path() painPointId: string,
+  ): Promise<ApiResponse<ConvertPainPointResponse>> {
+    const { workspaceId } = await this.getAuthorizedWorkspaceAccess(request);
+    await this.getProjectForWorkspace(request, projectId, workspaceId);
+
+    const painPoint = await prisma.painPoint.findFirst({
+      where: { id: painPointId, transcriptId, workspaceId },
+    });
+    if (!painPoint) {
+      this.setStatus(404);
+      throw { status: 404, message: "Pain point not found" };
+    }
+    if (painPoint.resolutionTaskId) {
+      this.setStatus(409);
+      throw { status: 409, message: "Pain point already converted to a task" };
+    }
+
+    const description =
+      [
+        painPoint.affected ? `**Affected:** ${painPoint.affected}` : null,
+        painPoint.evidence ? `**From the meeting:** "${painPoint.evidence}"` : null,
+        painPoint.suggestedResolution
+          ? `**Suggested resolution:** ${painPoint.suggestedResolution}`
+          : null,
+      ]
+        .filter(Boolean)
+        .join("\n\n") || null;
+
+    const task = await taskCrudService.createTaskForWorkspace(workspaceId, {
+      projectId,
+      title: painPoint.problem,
+      summary: painPoint.suggestedResolution ?? painPoint.problem,
+      description,
+      priority: PAIN_POINT_SEVERITY_TO_TASK_PRIORITY[painPoint.severity],
+      status: TaskStatus.BACKLOG,
+      type: TaskType.TASK,
+      metadata: {
+        generatedFromPainPointId: painPoint.id,
+        generatedFromTranscriptId: transcriptId,
+      },
+    });
+
+    const [updatedPainPoint] = await prisma.$transaction([
+      prisma.painPoint.update({
+        where: { id: painPoint.id },
+        data: { resolutionTaskId: task.id, status: PainPointStatus.BEING_ADDRESSED },
+      }),
+      prisma.taskTranscriptLink.upsert({
+        where: { taskId_transcriptId: { taskId: task.id, transcriptId } },
+        create: { taskId: task.id, transcriptId },
+        update: {},
+      }),
+    ]);
+
+    return {
+      status: 201,
+      message: "Pain point converted to task",
+      data: {
+        painPoint: mapPainPointResponse(updatedPainPoint),
+        task: mapTaskResponse(task),
+      },
     };
   }
 
@@ -1269,6 +1441,9 @@ export class ProjectsModelController extends BaseWorkspaceController {
       metadata: transcript.metadata,
       createdAt: transcript.createdAt,
       updatedAt: transcript.updatedAt,
+      // Present only when the fetch included the relation; list queries omit it.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      painPoints: ((transcript as any).painPoints ?? []).map((p: any) => mapPainPointResponse(p)),
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       chatThread: (transcript as any).chatThread
         ? {

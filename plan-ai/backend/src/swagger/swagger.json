@@ -616,6 +616,88 @@
 			"TranscriptSource": {
 				"$ref": "#/components/schemas/_36_Enums.TranscriptSource"
 			},
+			"_36_Enums.PainPointSeverity": {
+				"type": "string",
+				"enum": [
+					"BLOCKER",
+					"HIGH",
+					"MEDIUM",
+					"LOW"
+				]
+			},
+			"PainPointSeverity": {
+				"$ref": "#/components/schemas/_36_Enums.PainPointSeverity"
+			},
+			"_36_Enums.PainPointStatus": {
+				"type": "string",
+				"enum": [
+					"RAISED",
+					"BEING_ADDRESSED",
+					"RESOLVED_IN_MEETING"
+				]
+			},
+			"PainPointStatus": {
+				"$ref": "#/components/schemas/_36_Enums.PainPointStatus"
+			},
+			"PainPointResponse": {
+				"properties": {
+					"id": {
+						"type": "string"
+					},
+					"transcriptId": {
+						"type": "string"
+					},
+					"problem": {
+						"type": "string"
+					},
+					"affected": {
+						"type": "string",
+						"nullable": true
+					},
+					"severity": {
+						"$ref": "#/components/schemas/PainPointSeverity"
+					},
+					"status": {
+						"$ref": "#/components/schemas/PainPointStatus"
+					},
+					"evidence": {
+						"type": "string",
+						"nullable": true
+					},
+					"suggestedResolution": {
+						"type": "string",
+						"nullable": true
+					},
+					"resolutionTaskId": {
+						"type": "string",
+						"nullable": true,
+						"description": "Set once a user converts this pain point into a resolving Task."
+					},
+					"createdAt": {
+						"type": "string",
+						"format": "date-time"
+					},
+					"updatedAt": {
+						"type": "string",
+						"format": "date-time"
+					}
+				},
+				"required": [
+					"id",
+					"transcriptId",
+					"problem",
+					"affected",
+					"severity",
+					"status",
+					"evidence",
+					"suggestedResolution",
+					"resolutionTaskId",
+					"createdAt",
+					"updatedAt"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
 			"TranscriptResponse": {
 				"properties": {
 					"id": {
@@ -667,6 +749,13 @@
 					"updatedAt": {
 						"type": "string",
 						"format": "date-time"
+					},
+					"painPoints": {
+						"items": {
+							"$ref": "#/components/schemas/PainPointResponse"
+						},
+						"type": "array",
+						"description": "AI-extracted pain points, ranked most-severe first."
 					},
 					"chatThread": {
 						"properties": {
@@ -746,9 +835,9 @@
 			"_36_Enums.TaskPriority": {
 				"type": "string",
 				"enum": [
-					"LOW",
-					"MEDIUM",
 					"HIGH",
+					"MEDIUM",
+					"LOW",
 					"URGENT"
 				]
 			},
@@ -1048,6 +1137,69 @@
 						"allOf": [
 							{
 								"$ref": "#/components/schemas/TranscriptResponse"
+							}
+						],
+						"nullable": true
+					},
+					"status": {
+						"type": "number",
+						"format": "double"
+					}
+				},
+				"required": [
+					"data",
+					"status"
+				],
+				"type": "object"
+			},
+			"ApiResponse_PainPointResponse-Array_": {
+				"properties": {
+					"message": {
+						"type": "string"
+					},
+					"data": {
+						"items": {
+							"$ref": "#/components/schemas/PainPointResponse"
+						},
+						"type": "array",
+						"nullable": true
+					},
+					"status": {
+						"type": "number",
+						"format": "double"
+					}
+				},
+				"required": [
+					"data",
+					"status"
+				],
+				"type": "object"
+			},
+			"ConvertPainPointResponse": {
+				"properties": {
+					"painPoint": {
+						"$ref": "#/components/schemas/PainPointResponse"
+					},
+					"task": {
+						"$ref": "#/components/schemas/TaskResponse"
+					}
+				},
+				"required": [
+					"painPoint",
+					"task"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"ApiResponse_ConvertPainPointResponse_": {
+				"properties": {
+					"message": {
+						"type": "string"
+					},
+					"data": {
+						"allOf": [
+							{
+								"$ref": "#/components/schemas/ConvertPainPointResponse"
 							}
 						],
 						"nullable": true
@@ -2150,6 +2302,13 @@
 							"$ref": "#/components/schemas/TaskResponse"
 						},
 						"type": "array"
+					},
+					"painPoints": {
+						"items": {
+							"$ref": "#/components/schemas/PainPointResponse"
+						},
+						"type": "array",
+						"description": "AI-extracted pain points, ranked most-severe first."
 					},
 					"documents": {
 						"items": {
@@ -7141,7 +7300,7 @@
 	},
 	"info": {
 		"title": "backend",
-		"version": "4.1.12",
+		"version": "4.1.14",
 		"license": {
 			"name": "BUSL-1.1"
 		},
@@ -8380,6 +8539,110 @@
 					{
 						"in": "path",
 						"name": "transcriptId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				]
+			}
+		},
+		"/api/projects/{projectId}/pain-points": {
+			"get": {
+				"operationId": "ListProjectPainPoints",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiResponse_PainPointResponse-Array_"
+								}
+							}
+						}
+					}
+				},
+				"description": "Pain points raised across all meetings in a project, optionally filtered by\nseverity/status. Powers the cross-meeting view (e.g. \"open blockers\").",
+				"tags": [
+					"Projects"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": [
+					{
+						"in": "path",
+						"name": "projectId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"in": "query",
+						"name": "severity",
+						"required": false,
+						"schema": {
+							"$ref": "#/components/schemas/PainPointSeverity"
+						}
+					},
+					{
+						"in": "query",
+						"name": "status",
+						"required": false,
+						"schema": {
+							"$ref": "#/components/schemas/PainPointStatus"
+						}
+					}
+				]
+			}
+		},
+		"/api/projects/{projectId}/transcripts/{transcriptId}/pain-points/{painPointId}/convert-to-task": {
+			"post": {
+				"operationId": "ConvertPainPointToTask",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiResponse_ConvertPainPointResponse_"
+								}
+							}
+						}
+					}
+				},
+				"description": "Convert a pain point into a resolving Task: creates the task in the project,\nlinks it back to the pain point (resolutionTaskId) + the transcript, and\nflips the pain point to BEING_ADDRESSED. Idempotency-guarded: a pain point\nthat already has a resolution task returns 409.",
+				"tags": [
+					"Projects"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": [
+					{
+						"in": "path",
+						"name": "projectId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"in": "path",
+						"name": "transcriptId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"in": "path",
+						"name": "painPointId",
 						"required": true,
 						"schema": {
 							"type": "string"

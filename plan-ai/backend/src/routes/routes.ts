@@ -307,6 +307,44 @@ const models: TsoaRoute.Models = {
         "type": {"ref":"_36_Enums.TranscriptSource","validators":{}},
     },
     // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "_36_Enums.PainPointSeverity": {
+        "dataType": "refAlias",
+        "type": {"dataType":"union","subSchemas":[{"dataType":"enum","enums":["BLOCKER"]},{"dataType":"enum","enums":["HIGH"]},{"dataType":"enum","enums":["MEDIUM"]},{"dataType":"enum","enums":["LOW"]}],"validators":{}},
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "PainPointSeverity": {
+        "dataType": "refAlias",
+        "type": {"ref":"_36_Enums.PainPointSeverity","validators":{}},
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "_36_Enums.PainPointStatus": {
+        "dataType": "refAlias",
+        "type": {"dataType":"union","subSchemas":[{"dataType":"enum","enums":["RAISED"]},{"dataType":"enum","enums":["BEING_ADDRESSED"]},{"dataType":"enum","enums":["RESOLVED_IN_MEETING"]}],"validators":{}},
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "PainPointStatus": {
+        "dataType": "refAlias",
+        "type": {"ref":"_36_Enums.PainPointStatus","validators":{}},
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "PainPointResponse": {
+        "dataType": "refObject",
+        "properties": {
+            "id": {"dataType":"string","required":true},
+            "transcriptId": {"dataType":"string","required":true},
+            "problem": {"dataType":"string","required":true},
+            "affected": {"dataType":"union","subSchemas":[{"dataType":"string"},{"dataType":"enum","enums":[null]}],"required":true},
+            "severity": {"ref":"PainPointSeverity","required":true},
+            "status": {"ref":"PainPointStatus","required":true},
+            "evidence": {"dataType":"union","subSchemas":[{"dataType":"string"},{"dataType":"enum","enums":[null]}],"required":true},
+            "suggestedResolution": {"dataType":"union","subSchemas":[{"dataType":"string"},{"dataType":"enum","enums":[null]}],"required":true},
+            "resolutionTaskId": {"dataType":"union","subSchemas":[{"dataType":"string"},{"dataType":"enum","enums":[null]}],"required":true},
+            "createdAt": {"dataType":"datetime","required":true},
+            "updatedAt": {"dataType":"datetime","required":true},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
     "TranscriptResponse": {
         "dataType": "refObject",
         "properties": {
@@ -322,6 +360,7 @@ const models: TsoaRoute.Models = {
             "metadata": {"dataType":"union","subSchemas":[{"ref":"TsoaJsonObject"},{"dataType":"enum","enums":[null]}],"required":true},
             "createdAt": {"dataType":"datetime","required":true},
             "updatedAt": {"dataType":"datetime","required":true},
+            "painPoints": {"dataType":"array","array":{"dataType":"refObject","ref":"PainPointResponse"}},
             "chatThread": {"dataType":"union","subSchemas":[{"dataType":"nestedObjectLiteral","nestedProperties":{"messages":{"dataType":"array","array":{"dataType":"nestedObjectLiteral","nestedProperties":{"createdAt":{"dataType":"datetime","required":true},"content":{"dataType":"string","required":true},"role":{"dataType":"union","subSchemas":[{"dataType":"enum","enums":["USER"]},{"dataType":"enum","enums":["ASSISTANT"]}],"required":true}}},"required":true},"title":{"dataType":"string","required":true},"id":{"dataType":"string","required":true}}},{"dataType":"enum","enums":[null]}]},
         },
         "additionalProperties": false,
@@ -339,7 +378,7 @@ const models: TsoaRoute.Models = {
     // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
     "_36_Enums.TaskPriority": {
         "dataType": "refAlias",
-        "type": {"dataType":"union","subSchemas":[{"dataType":"enum","enums":["LOW"]},{"dataType":"enum","enums":["MEDIUM"]},{"dataType":"enum","enums":["HIGH"]},{"dataType":"enum","enums":["URGENT"]}],"validators":{}},
+        "type": {"dataType":"union","subSchemas":[{"dataType":"enum","enums":["HIGH"]},{"dataType":"enum","enums":["MEDIUM"]},{"dataType":"enum","enums":["LOW"]},{"dataType":"enum","enums":["URGENT"]}],"validators":{}},
     },
     // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
     "TaskPriority": {
@@ -443,6 +482,25 @@ const models: TsoaRoute.Models = {
     "ApiResponse_TranscriptResponse_": {
         "dataType": "refAlias",
         "type": {"dataType":"nestedObjectLiteral","nestedProperties":{"message":{"dataType":"string"},"data":{"dataType":"union","subSchemas":[{"ref":"TranscriptResponse"},{"dataType":"enum","enums":[null]}],"required":true},"status":{"dataType":"double","required":true}},"validators":{}},
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "ApiResponse_PainPointResponse-Array_": {
+        "dataType": "refAlias",
+        "type": {"dataType":"nestedObjectLiteral","nestedProperties":{"message":{"dataType":"string"},"data":{"dataType":"union","subSchemas":[{"dataType":"array","array":{"dataType":"refObject","ref":"PainPointResponse"}},{"dataType":"enum","enums":[null]}],"required":true},"status":{"dataType":"double","required":true}},"validators":{}},
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "ConvertPainPointResponse": {
+        "dataType": "refObject",
+        "properties": {
+            "painPoint": {"ref":"PainPointResponse","required":true},
+            "task": {"ref":"TaskResponse","required":true},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "ApiResponse_ConvertPainPointResponse_": {
+        "dataType": "refAlias",
+        "type": {"dataType":"nestedObjectLiteral","nestedProperties":{"message":{"dataType":"string"},"data":{"dataType":"union","subSchemas":[{"ref":"ConvertPainPointResponse"},{"dataType":"enum","enums":[null]}],"required":true},"status":{"dataType":"double","required":true}},"validators":{}},
     },
     // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
     "ManualTranscriptRequest": {
@@ -777,6 +835,7 @@ const models: TsoaRoute.Models = {
             "createdAt": {"dataType":"datetime","required":true},
             "updatedAt": {"dataType":"datetime","required":true},
             "tasks": {"dataType":"array","array":{"dataType":"refObject","ref":"TaskResponse"}},
+            "painPoints": {"dataType":"array","array":{"dataType":"refObject","ref":"PainPointResponse"}},
             "documents": {"dataType":"array","array":{"dataType":"refObject","ref":"DocDocumentResponse"}},
             "contextIds": {"dataType":"array","array":{"dataType":"string"},"required":true},
             "contexts": {"dataType":"array","array":{"dataType":"refObject","ref":"TranscriptContextSummary"},"required":true},
@@ -2912,6 +2971,74 @@ export function RegisterRoutes(app: Router,opts?:{multer?:ReturnType<typeof mult
 
               await templateService.apiHandler({
                 methodName: 'getProjectTranscript',
+                controller,
+                response,
+                next,
+                validatedArgs,
+                successStatus: undefined,
+              });
+            } catch (err) {
+                return next(err);
+            }
+        });
+        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+        const argsProjectsModelController_listProjectPainPoints: Record<string, TsoaRoute.ParameterSchema> = {
+                request: {"in":"request","name":"request","required":true,"dataType":"object"},
+                projectId: {"in":"path","name":"projectId","required":true,"dataType":"string"},
+                severity: {"in":"query","name":"severity","ref":"PainPointSeverity"},
+                status: {"in":"query","name":"status","ref":"PainPointStatus"},
+        };
+        app.get('/api/projects/:projectId/pain-points',
+            authenticateMiddleware([{"ClientLevel":[]}]),
+            ...(fetchMiddlewares<RequestHandler>(ProjectsModelController)),
+            ...(fetchMiddlewares<RequestHandler>(ProjectsModelController.prototype.listProjectPainPoints)),
+
+            async function ProjectsModelController_listProjectPainPoints(request: ExRequest, response: ExResponse, next: any) {
+
+            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+
+            let validatedArgs: any[] = [];
+            try {
+                validatedArgs = templateService.getValidatedArgs({ args: argsProjectsModelController_listProjectPainPoints, request, response });
+
+                const controller = new ProjectsModelController();
+
+              await templateService.apiHandler({
+                methodName: 'listProjectPainPoints',
+                controller,
+                response,
+                next,
+                validatedArgs,
+                successStatus: undefined,
+              });
+            } catch (err) {
+                return next(err);
+            }
+        });
+        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+        const argsProjectsModelController_convertPainPointToTask: Record<string, TsoaRoute.ParameterSchema> = {
+                request: {"in":"request","name":"request","required":true,"dataType":"object"},
+                projectId: {"in":"path","name":"projectId","required":true,"dataType":"string"},
+                transcriptId: {"in":"path","name":"transcriptId","required":true,"dataType":"string"},
+                painPointId: {"in":"path","name":"painPointId","required":true,"dataType":"string"},
+        };
+        app.post('/api/projects/:projectId/transcripts/:transcriptId/pain-points/:painPointId/convert-to-task',
+            authenticateMiddleware([{"ClientLevel":[]}]),
+            ...(fetchMiddlewares<RequestHandler>(ProjectsModelController)),
+            ...(fetchMiddlewares<RequestHandler>(ProjectsModelController.prototype.convertPainPointToTask)),
+
+            async function ProjectsModelController_convertPainPointToTask(request: ExRequest, response: ExResponse, next: any) {
+
+            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+
+            let validatedArgs: any[] = [];
+            try {
+                validatedArgs = templateService.getValidatedArgs({ args: argsProjectsModelController_convertPainPointToTask, request, response });
+
+                const controller = new ProjectsModelController();
+
+              await templateService.apiHandler({
+                methodName: 'convertPainPointToTask',
                 controller,
                 response,
                 next,

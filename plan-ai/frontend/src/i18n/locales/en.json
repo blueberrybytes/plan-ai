@@ -796,6 +796,25 @@
       "noMetadata": "No metadata provided."
     }
   },
+  "painPoints": {
+    "title": "Pain points",
+    "severity": {
+      "BLOCKER": "Blocker",
+      "HIGH": "High",
+      "MEDIUM": "Medium",
+      "LOW": "Low"
+    },
+    "status": {
+      "RAISED": "Raised",
+      "BEING_ADDRESSED": "Being addressed",
+      "RESOLVED_IN_MEETING": "Resolved in meeting"
+    },
+    "affected": "Affects: {{who}}",
+    "suggested": "Suggested:",
+    "convert": "Convert to task",
+    "converted": "Task created",
+    "convertedTooltip": "A resolving task has been created for this pain point"
+  },
   "projectTranscriptDetail": {
     "aiReasoning": {
       "title": "Why these tasks — AI reasoning"

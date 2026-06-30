@@ -164,7 +164,9 @@ router.post(
             where: {
               workspaceId,
               OR: [
-                ...(thread.contextIds.length > 0 ? [{ contextIds: { hasSome: thread.contextIds } }] : []),
+                ...(thread.contextIds.length > 0
+                  ? [{ contextIds: { hasSome: thread.contextIds } }]
+                  : []),
                 ...(thread.transcriptId ? [{ id: thread.transcriptId }] : []),
               ],
             },
@@ -403,7 +405,9 @@ ${contextText}
               try {
                 const outputObj = await result.output;
                 if (outputObj?.text) {
-                  finalText = reasoning ? `<think>\n${reasoning}\n</think>\n\n${outputObj.text}` : outputObj.text;
+                  finalText = reasoning
+                    ? `<think>\n${reasoning}\n</think>\n\n${outputObj.text}`
+                    : outputObj.text;
                 }
                 if (outputObj && Array.isArray(outputObj.citations))
                   citations = outputObj.citations;

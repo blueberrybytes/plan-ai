@@ -790,6 +790,25 @@
       "noMetadata": "No se proporcionaron metadatos."
     }
   },
+  "painPoints": {
+    "title": "Puntos de dolor",
+    "severity": {
+      "BLOCKER": "Bloqueante",
+      "HIGH": "Alta",
+      "MEDIUM": "Media",
+      "LOW": "Baja"
+    },
+    "status": {
+      "RAISED": "Planteado",
+      "BEING_ADDRESSED": "En proceso",
+      "RESOLVED_IN_MEETING": "Resuelto en la reunión"
+    },
+    "affected": "Afecta a: {{who}}",
+    "suggested": "Sugerencia:",
+    "convert": "Convertir en tarea",
+    "converted": "Tarea creada",
+    "convertedTooltip": "Se ha creado una tarea para resolver este punto de dolor"
+  },
   "projectTranscriptDetail": {
     "aiReasoning": {
       "title": "Por qué estas tareas — razonamiento de la IA"
