@@ -42,6 +42,7 @@ import ExtractionReasoningPanel from "../components/transcripts/ExtractionReason
 import SpeakerInsightsTab, {
   type SpeakerInsight,
 } from "../components/transcript/SpeakerInsightsTab";
+import TranscriptBody from "../components/transcript/TranscriptBody";
 import type { components } from "../types/api";
 
 type TranscriptMetadata = components["schemas"]["TranscriptMetadata"];
@@ -107,142 +108,6 @@ const formatDateTime = (value: string | null | undefined, fallback: string) => {
   }
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? fallback : date.toLocaleString();
-};
-
-const formatTimestamp = (seconds?: number | null) => {
-  if (seconds == null) return "";
-  const m = Math.floor(seconds / 60);
-  const s = Math.floor(seconds % 60);
-  return `[${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}]`;
-};
-
-const RenderTranscriptContent = ({ transcript }: { transcript: any }) => {
-  const principalSpeaker = (transcript?.metadata as any)?.principalSpeaker;
-
-  // Reuse the AI-identified speaker insights (the same data shown on the
-  // "Speakers" tab) so raw diarized labels ("User 0", "Speaker 1") render as the
-  // real person's name. Keyed by the raw label, which matches each utterance's
-  // `speaker` string exactly (the backend builds both from the same diarization).
-  const speakers: SpeakerInsight[] =
-    (transcript?.metadata as { speakers?: SpeakerInsight[] } | null)?.speakers ?? [];
-  const speakerByLabel = new Map(speakers.map((s) => [s.label, s]));
-
-  const renderSpeaker = (rawLabel: string) => {
-    const info = speakerByLabel.get(rawLabel);
-    const isMe =
-      info?.isPrincipalSpeaker ??
-      (principalSpeaker ? rawLabel === principalSpeaker : false);
-    const identified = info?.identifiedName?.trim() || null;
-    const role = info?.role ?? null;
-    // Prefer the identified name; for the principal speaker without a name show
-    // "You"; otherwise fall back to the raw diarized label.
-    const primary = identified || (isMe ? "You" : rawLabel);
-    return {
-      isMe,
-      node: (
-        <>
-          {primary}
-          {isMe && identified ? (
-            <Box component="span" sx={{ fontWeight: 400, opacity: 0.7 }}>
-              {" "}
-              (You)
-            </Box>
-          ) : null}
-          {role ? (
-            <Box component="span" sx={{ fontWeight: 400, opacity: 0.7 }}>
-              {" · "}
-              {role}
-            </Box>
-          ) : null}
-        </>
-      ),
-    };
-  };
-
-  if (
-    transcript.utterances &&
-    Array.isArray(transcript.utterances) &&
-    transcript.utterances.length > 0
-  ) {
-    return (
-      <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-        {transcript.utterances.map((u: any, i: number) => {
-          const { isMe, node } = renderSpeaker(u.speaker || "Unknown");
-          return (
-            <Box key={i} sx={{ display: "flex", flexDirection: "column" }}>
-              <Typography
-                variant="subtitle2"
-                color={isMe ? "primary.main" : "secondary.main"}
-                fontWeight="bold"
-              >
-                {formatTimestamp(u.start)} {node}
-              </Typography>
-              <Typography variant="body1" sx={{ lineHeight: 1.6, color: "text.primary" }}>
-                {u.transcript}
-              </Typography>
-            </Box>
-          );
-        })}
-      </Box>
-    );
-  }
-
-  // Fallback for transcripts without DB utterances
-  const rawText = transcript.transcript || "No transcript content available.";
-  const parts = rawText.split("\n\n");
-
-  if (parts.length > 0) {
-    // Check if the parts look like they have speaker prefixes (e.g. "Speaker Name: Text")
-    const hasLabels = parts.some((p: string) => /^([\w\s]+):\s*([\s\S]*)/i.test(p));
-
-    if (hasLabels) {
-      return (
-        <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-          {parts.map((block: string, i: number) => {
-            const match = block.match(/^([\w\s]+):\s*([\s\S]*)/i);
-            if (match) {
-              const speaker = match[1].trim();
-              const text = match[2];
-              const { isMe, node } = renderSpeaker(speaker);
-              return (
-                <Box key={i} sx={{ display: "flex", flexDirection: "column" }}>
-                  <Typography
-                    variant="subtitle2"
-                    color={isMe ? "primary.main" : "secondary.main"}
-                    fontWeight="bold"
-                  >
-                    {node}
-                  </Typography>
-                  <Typography variant="body1" sx={{ lineHeight: 1.6, color: "text.primary" }}>
-                    {text}
-                  </Typography>
-                </Box>
-              );
-            }
-            return (
-              <Typography
-                key={i}
-                variant="body1"
-                sx={{
-                  whiteSpace: "pre-wrap",
-                  lineHeight: 1.6,
-                  color: "text.primary",
-                }}
-              >
-                {block}
-              </Typography>
-            );
-          })}
-        </Box>
-      );
-    }
-  }
-
-  return (
-    <Typography variant="body1" sx={{ whiteSpace: "pre-wrap", lineHeight: 1.6 }}>
-      {rawText}
-    </Typography>
-  );
 };
 
 const ProjectTranscriptDetail: React.FC = () => {
@@ -735,7 +600,7 @@ const ProjectTranscriptDetail: React.FC = () => {
 
                       {tabValue === "transcript" && (
                         <Box sx={{ mt: 2 }}>
-                          <RenderTranscriptContent transcript={transcript} />
+                          <TranscriptBody transcript={transcript} />
                         </Box>
                       )}
 

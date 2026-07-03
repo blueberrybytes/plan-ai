@@ -38,6 +38,7 @@ import ExtractionReasoningPanel from "../components/transcripts/ExtractionReason
 import SpeakerInsightsTab, {
   type SpeakerInsight,
 } from "../components/transcript/SpeakerInsightsTab";
+import TranscriptBody from "../components/transcript/TranscriptBody";
 import { exportMarkdownToDocx } from "../utils/docxExport";
 import { jsPDF } from "jspdf";
 
@@ -749,18 +750,9 @@ const RecordingDetail: React.FC = () => {
                     >
                       {copying ? "Copied!" : "Copy Text"}
                     </Button>
-                    <Typography
-                      variant="body1"
-                      sx={{
-                        mt: 4,
-                        whiteSpace: "pre-wrap",
-                        color: "text.primary",
-                        lineHeight: 1.8,
-                        fontSize: "1.05rem",
-                      }}
-                    >
-                      {transcript.data?.transcript || "No transcript content available."}
-                    </Typography>
+                    <Box sx={{ mt: 4 }}>
+                      <TranscriptBody transcript={transcript.data} />
+                    </Box>
                   </Box>
                 )}
 
