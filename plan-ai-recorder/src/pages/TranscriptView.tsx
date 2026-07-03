@@ -231,14 +231,53 @@ const RenderTranscriptContent = ({
   const utterances = transcript.utterances as Utterance[] | null | undefined;
   const principalSpeaker = transcript?.metadata?.principalSpeaker as string | undefined;
 
+  // The same AI-identified speaker insights shown on the "Speakers" tab. We reuse
+  // them here so raw diarized labels ("User 0", "Speaker 1") render as the real
+  // person's name when the AI managed to identify them. Keyed by the raw label,
+  // which is guaranteed to match each utterance's `speaker` string (backend builds
+  // both from the same diarization output).
+  const speakers =
+    (transcript.metadata as { speakers?: SpeakerInsight[] } | null | undefined)
+      ?.speakers ?? [];
+  const speakerByLabel = new Map(speakers.map((s) => [s.label, s]));
+
+  const renderSpeaker = (rawLabel: string) => {
+    const info = speakerByLabel.get(rawLabel);
+    const isMe =
+      info?.isPrincipalSpeaker ??
+      (principalSpeaker ? rawLabel === principalSpeaker : false);
+    const identified = info?.identifiedName?.trim() || null;
+    const role = info?.role ?? null;
+    // Prefer the identified name; for the principal speaker without a name, show
+    // "You"; otherwise fall back to the raw diarized label.
+    const primary = identified || (isMe ? "You" : rawLabel);
+    return {
+      isMe,
+      node: (
+        <>
+          {primary}
+          {isMe && identified ? (
+            <Box component="span" sx={{ fontWeight: 400, opacity: 0.7 }}>
+              {" "}
+              (You)
+            </Box>
+          ) : null}
+          {role ? (
+            <Box component="span" sx={{ fontWeight: 400, opacity: 0.7 }}>
+              {" · "}
+              {role}
+            </Box>
+          ) : null}
+        </>
+      ),
+    };
+  };
+
   if (utterances && utterances.length > 0) {
     return (
       <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
         {utterances.map((u, i) => {
-          const speakerStr = u.speaker || "Unknown";
-          const isMe = principalSpeaker
-            ? speakerStr === principalSpeaker
-            : false;
+          const { isMe, node } = renderSpeaker(u.speaker || "Unknown");
           return (
             <Box key={i} sx={{ display: "flex", flexDirection: "column" }}>
               <Typography
@@ -246,7 +285,7 @@ const RenderTranscriptContent = ({
                 color={isMe ? "primary.main" : "secondary.main"}
                 fontWeight="bold"
               >
-                {formatTimestamp(u.start)} {isMe ? "(Me)" : speakerStr}
+                {formatTimestamp(u.start)} {node}
               </Typography>
               <Typography
                 variant="body1"
@@ -276,9 +315,7 @@ const RenderTranscriptContent = ({
             if (match) {
               const speaker = match[1].trim();
               const text = match[2];
-              const isMe = principalSpeaker
-                ? speaker === principalSpeaker
-                : false;
+              const { isMe, node } = renderSpeaker(speaker);
               return (
                 <Box key={i} sx={{ display: "flex", flexDirection: "column" }}>
                   <Typography
@@ -286,7 +323,7 @@ const RenderTranscriptContent = ({
                     color={isMe ? "primary.main" : "secondary.main"}
                     fontWeight="bold"
                   >
-                    {isMe ? "(Me)" : speaker}
+                    {node}
                   </Typography>
                   <Typography
                     variant="body1"
@@ -655,13 +692,13 @@ const TranscriptView: React.FC = () => {
             ) : (
               <>
                 {transcript.metadata?.processingStatus === "FAILED" && (
-                  <Alert 
-                    severity="error" 
+                  <Alert
+                    severity="error"
                     sx={{ mt: 2, mb: 4 }}
                     action={
-                      <Button 
-                        color="inherit" 
-                        size="small" 
+                      <Button
+                        color="inherit"
+                        size="small"
                         onClick={async () => {
                           if (!id) return;
                           try {
@@ -724,8 +761,8 @@ const TranscriptView: React.FC = () => {
                   {((transcript.metadata?.keyPoints &&
                     transcript.metadata.keyPoints.length > 0) ||
                     (transcript.painPoints && transcript.painPoints.length > 0)) && (
-                    <Tab label="Key Points & Pain Points" value="keypoints" sx={{ fontWeight: 600 }} />
-                  )}
+                      <Tab label="Key Points & Pain Points" value="keypoints" sx={{ fontWeight: 600 }} />
+                    )}
                   <Tab
                     label="Raw Transcript"
                     value="transcript"
@@ -793,15 +830,15 @@ const TranscriptView: React.FC = () => {
                     <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 700, textTransform: "uppercase" }}>Generated Documents</Typography>
                     <Stack spacing={1}>
                       {(transcript.documents || []).map((doc) => (
-                        <Box 
-                          key={doc.id} 
-                          sx={{ 
-                            p: 2, 
-                            border: "1px solid", 
-                            borderColor: "divider", 
-                            borderRadius: 1, 
+                        <Box
+                          key={doc.id}
+                          sx={{
+                            p: 2,
+                            border: "1px solid",
+                            borderColor: "divider",
+                            borderRadius: 1,
                             cursor: 'pointer',
-                            '&:hover': { bgcolor: 'action.hover' } 
+                            '&:hover': { bgcolor: 'action.hover' }
                           }}
                           onClick={() => window.open(`${import.meta.env.VITE_PLAN_AI_WEB_URL}/docs/view/${doc.id}`, '_blank')}
                         >
@@ -1219,9 +1256,9 @@ const TranscriptView: React.FC = () => {
                       principalSpeakerLabel={
                         (
                           transcript.metadata as
-                            | { principalSpeaker?: string }
-                            | null
-                            | undefined
+                          | { principalSpeaker?: string }
+                          | null
+                          | undefined
                         )?.principalSpeaker ?? null
                       }
                     />

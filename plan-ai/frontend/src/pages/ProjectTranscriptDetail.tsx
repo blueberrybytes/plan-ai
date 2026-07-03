@@ -119,6 +119,46 @@ const formatTimestamp = (seconds?: number | null) => {
 const RenderTranscriptContent = ({ transcript }: { transcript: any }) => {
   const principalSpeaker = (transcript?.metadata as any)?.principalSpeaker;
 
+  // Reuse the AI-identified speaker insights (the same data shown on the
+  // "Speakers" tab) so raw diarized labels ("User 0", "Speaker 1") render as the
+  // real person's name. Keyed by the raw label, which matches each utterance's
+  // `speaker` string exactly (the backend builds both from the same diarization).
+  const speakers: SpeakerInsight[] =
+    (transcript?.metadata as { speakers?: SpeakerInsight[] } | null)?.speakers ?? [];
+  const speakerByLabel = new Map(speakers.map((s) => [s.label, s]));
+
+  const renderSpeaker = (rawLabel: string) => {
+    const info = speakerByLabel.get(rawLabel);
+    const isMe =
+      info?.isPrincipalSpeaker ??
+      (principalSpeaker ? rawLabel === principalSpeaker : false);
+    const identified = info?.identifiedName?.trim() || null;
+    const role = info?.role ?? null;
+    // Prefer the identified name; for the principal speaker without a name show
+    // "You"; otherwise fall back to the raw diarized label.
+    const primary = identified || (isMe ? "You" : rawLabel);
+    return {
+      isMe,
+      node: (
+        <>
+          {primary}
+          {isMe && identified ? (
+            <Box component="span" sx={{ fontWeight: 400, opacity: 0.7 }}>
+              {" "}
+              (You)
+            </Box>
+          ) : null}
+          {role ? (
+            <Box component="span" sx={{ fontWeight: 400, opacity: 0.7 }}>
+              {" · "}
+              {role}
+            </Box>
+          ) : null}
+        </>
+      ),
+    };
+  };
+
   if (
     transcript.utterances &&
     Array.isArray(transcript.utterances) &&
@@ -127,8 +167,7 @@ const RenderTranscriptContent = ({ transcript }: { transcript: any }) => {
     return (
       <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
         {transcript.utterances.map((u: any, i: number) => {
-          const speakerStr = u.speaker || "Unknown";
-          const isMe = principalSpeaker ? speakerStr === principalSpeaker : false;
+          const { isMe, node } = renderSpeaker(u.speaker || "Unknown");
           return (
             <Box key={i} sx={{ display: "flex", flexDirection: "column" }}>
               <Typography
@@ -136,7 +175,7 @@ const RenderTranscriptContent = ({ transcript }: { transcript: any }) => {
                 color={isMe ? "primary.main" : "secondary.main"}
                 fontWeight="bold"
               >
-                {formatTimestamp(u.start)} {isMe ? "(Me)" : speakerStr}
+                {formatTimestamp(u.start)} {node}
               </Typography>
               <Typography variant="body1" sx={{ lineHeight: 1.6, color: "text.primary" }}>
                 {u.transcript}
@@ -164,7 +203,7 @@ const RenderTranscriptContent = ({ transcript }: { transcript: any }) => {
             if (match) {
               const speaker = match[1].trim();
               const text = match[2];
-              const isMe = principalSpeaker ? speaker === principalSpeaker : false;
+              const { isMe, node } = renderSpeaker(speaker);
               return (
                 <Box key={i} sx={{ display: "flex", flexDirection: "column" }}>
                   <Typography
@@ -172,7 +211,7 @@ const RenderTranscriptContent = ({ transcript }: { transcript: any }) => {
                     color={isMe ? "primary.main" : "secondary.main"}
                     fontWeight="bold"
                   >
-                    {isMe ? "(Me)" : speaker}
+                    {node}
                   </Typography>
                   <Typography variant="body1" sx={{ lineHeight: 1.6, color: "text.primary" }}>
                     {text}

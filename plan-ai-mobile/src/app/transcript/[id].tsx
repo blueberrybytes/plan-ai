@@ -303,18 +303,40 @@ export default function TranscriptViewScreen() {
       end: number;
     };
     const utterances = transcript?.utterances as Utterance[] | null | undefined;
-    if (utterances && utterances.length > 0) {
-      const principalSpeaker = transcript?.metadata?.principalSpeaker as string | undefined;
+    const principalSpeaker = transcript?.metadata?.principalSpeaker as
+      | string
+      | undefined;
 
+    // Map raw diarized labels ("User 0") to the AI-identified names shown on the
+    // Speakers tab. Keyed by label, which matches each utterance's `speaker`.
+    const speakerByLabel = new Map<string, SpeakerInsight>(
+      (
+        (transcript?.metadata as { speakers?: SpeakerInsight[] } | null | undefined)
+          ?.speakers ?? []
+      ).map((s) => [s.label, s] as [string, SpeakerInsight]),
+    );
+    const resolveSpeaker = (rawLabel: string) => {
+      const info = speakerByLabel.get(rawLabel);
+      const isMe =
+        info?.isPrincipalSpeaker ??
+        (principalSpeaker ? rawLabel === principalSpeaker : false);
+      const identified = info?.identifiedName?.trim() || null;
+      const role = info?.role ?? null;
+      // Prefer the identified name; show "You" for the principal speaker; else
+      // fall back to the raw diarized label.
+      let label = identified || (isMe ? "You" : rawLabel);
+      if (isMe && identified) label += " (You)";
+      if (role) label += ` · ${role}`;
+      return { isMe, label };
+    };
+
+    if (utterances && utterances.length > 0) {
       return (
         <View style={{ paddingBottom: 40, gap: 16 }}>
           {utterances.map((u, i) => {
-            console.log("Utterance:", u);
-            const speakerStr = u.speaker || "Unknown";
-            const isMe = principalSpeaker
-              ? speakerStr === principalSpeaker
-              : false;
-            const speakerLabel = isMe ? "(Me)" : speakerStr;
+            const { isMe, label: speakerLabel } = resolveSpeaker(
+              u.speaker || "Unknown",
+            );
             return (
               <Surface
                 key={i}
@@ -364,8 +386,6 @@ export default function TranscriptViewScreen() {
     console.log("🛑 Has Labels:", hasLabels);
 
     if (hasLabels) {
-      const principalSpeaker = transcript?.metadata?.principalSpeaker as string | undefined;
-
       return (
         <View style={{ paddingBottom: 40, gap: 16 }}>
           {blocks.map((block, i) => {
@@ -397,12 +417,7 @@ export default function TranscriptViewScreen() {
               );
             }
 
-            const isMe = principalSpeaker
-              ? speaker === principalSpeaker
-              : false;
-            const displaySpeaker = isMe ? "(Me)" : speaker;
-
-            console.log(`🧐 Speaker Parsed: '${speaker}', isMe: ${isMe}`);
+            const { isMe, label: displaySpeaker } = resolveSpeaker(speaker);
 
             return (
               <Surface
