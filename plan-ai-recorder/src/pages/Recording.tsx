@@ -355,6 +355,55 @@ const Recording: React.FC = () => {
   // "save text only", and copy-to-clipboard without losing the recording.
   const lastPayloadRef = useRef<string>("");
   const [copied, setCopied] = useState(false);
+  const [liveCopied, setLiveCopied] = useState(false);
+
+  // Build a portable plaintext snapshot of the live transcript. In real time we
+  // only know the audio *channel* each line came from (mic vs system audio), not
+  // who the speaker is — individual names are only resolved after the recording
+  // is processed on the backend. So lines are labelled "Me" (your mic) and
+  // "Others" (meeting audio), the header says so, and timestamps are relative to
+  // the recording start (derived from the elapsed counter).
+  const buildLiveTranscriptText = useCallback((): string => {
+    const startEpoch = Date.now() - elapsed * 1000;
+    const stamp = (tsMs: number) =>
+      formatTime(Math.max(0, Math.round((tsMs - startEpoch) / 1000)));
+
+    const header = [
+      `Live transcript — ${new Date(startEpoch).toLocaleString()}`,
+      `Duration ${formatTime(elapsed)} · ${chunkCount} segment${chunkCount !== 1 ? "s" : ""}`,
+      "Speakers are labelled by audio channel (Me = your microphone, Others = meeting audio); individual names are identified after the recording is processed.",
+    ].join("\n");
+
+    const body = blocks
+      .map((b) => `[${stamp(b.ts)}] ${b.source === "mic" ? "Me" : "Others"}: ${b.text}`)
+      .join("\n");
+
+    const interim: string[] = [];
+    if (micDelta.trim()) interim.push(`[${formatTime(elapsed)}] Me: ${micDelta.trim()}`);
+    if (sysDelta.trim())
+      interim.push(`[${formatTime(elapsed)}] Others: ${sysDelta.trim()}`);
+
+    return [
+      header,
+      body,
+      interim.length ? `— In progress —\n${interim.join("\n")}` : "",
+    ]
+      .filter((s) => s.trim().length > 0)
+      .join("\n\n");
+  }, [blocks, micDelta, sysDelta, elapsed, chunkCount]);
+
+  const handleCopyLiveTranscript = useCallback(async () => {
+    const text = buildLiveTranscriptText();
+    if (!text.trim()) return;
+    try {
+      await navigator.clipboard.writeText(text);
+      setLiveCopied(true);
+      setTimeout(() => setLiveCopied(false), 2000);
+    } catch {
+      /* clipboard unavailable */
+    }
+  }, [buildLiveTranscriptText]);
+
   // Recent finalized system ("Others") segments, used to detect mic echo.
   const recentSysSegmentsRef = useRef<{ text: string; ts: number }[]>([]);
   // Mic finals waiting out the grace period (far side active) before painting.
@@ -1483,14 +1532,33 @@ const Recording: React.FC = () => {
             >
               Live Transcript
             </Typography>
-            {chunkCount > 0 && (
-              <Chip
-                label={`${chunkCount} segment${chunkCount !== 1 ? "s" : ""}`}
-                size="small"
-                color="primary"
-                variant="outlined"
-              />
-            )}
+            <Stack direction="row" alignItems="center" spacing={1}>
+              {chunkCount > 0 && (
+                <Chip
+                  label={`${chunkCount} segment${chunkCount !== 1 ? "s" : ""}`}
+                  size="small"
+                  color="primary"
+                  variant="outlined"
+                />
+              )}
+              <Tooltip title={liveCopied ? "Copied!" : "Copy transcript"}>
+                {/* span keeps the tooltip working while the button is disabled */}
+                <span>
+                  <IconButton
+                    size="small"
+                    onClick={handleCopyLiveTranscript}
+                    disabled={blocks.length === 0 && !micDelta && !sysDelta}
+                    sx={{ color: "text.secondary" }}
+                  >
+                    {liveCopied ? (
+                      <CheckIcon fontSize="small" color="success" />
+                    ) : (
+                      <CopyIcon fontSize="small" />
+                    )}
+                  </IconButton>
+                </span>
+              </Tooltip>
+            </Stack>
           </Stack>
 
           <Divider sx={{ opacity: 0.3 }} />
