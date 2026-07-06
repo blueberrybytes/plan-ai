@@ -74,8 +74,18 @@ export interface AecTelemetry {
   nearKept?: number;
   echoReduction?: number;
   delaySeconds?: number;
-  /** How much pre-codec PCM was available to the canceller. */
+  /** Mic PCM available to the canceller (seconds). */
   bufferedSeconds?: number;
+  /** Sys (reference) PCM available (seconds). Should ≈ wallSeconds; a deficit means the reference timeline is still being compressed. */
+  sysBufferedSeconds?: number;
+  /** Wall-clock recording duration (seconds). */
+  wallSeconds?: number;
+  /** macOS sys scheduler: how many times playback fell behind (each one was a timeline gap pre-keep-alive fix). */
+  sysResets?: number;
+  /** macOS sys scheduler: total scheduling-gap time (seconds). */
+  sysGapSeconds?: number;
+  /** How long the AEC worker ran (ms). */
+  workerMs?: number;
 }
 
 /**
@@ -95,6 +105,15 @@ export class AudioRecorder {
   private audioContext: AudioContext | null = null;
   private micWorkletNode: AudioWorkletNode | null = null;
   private sysWorkletNode: AudioWorkletNode | null = null;
+  // Silent always-active source keeping sysWorkletNode's input channel alive.
+  // Without it, the worklet sees ZERO input channels between scheduled macOS
+  // chunks and skips those quanta entirely, so the posted sys stream (WS +
+  // AEC reference) has every gap DELETED — a compressed, drifting timeline the
+  // echo canceller can never align against the real-time mic (field test
+  // 2026-07-06: erle=-0.2dB), and compressed sys timestamps that skew every
+  // text-dedup window. With it, the sys stream is real-time and silence-filled,
+  // symmetric with the mic.
+  private sysKeepAliveNode: ConstantSourceNode | null = null;
   private sourceNode: MediaStreamAudioSourceNode | null = null;
   private sysSourceNode: MediaStreamAudioSourceNode | null = null; // Windows web audio source
   private ws: WebSocket | null = null;
@@ -140,6 +159,12 @@ export class AudioRecorder {
   };
   // Outcome of the stop-time canceller for THIS recording (see AecTelemetry).
   private aecTelemetry: AecTelemetry | null = null;
+  // Wall-clock start of the recording — lets the stop-time diagnostics compare
+  // buffered PCM seconds against real elapsed time (a sys deficit = the
+  // reference timeline is being compressed, which starves the canceller).
+  private recStartWallMs = 0;
+  // macOS sys-scheduler health counters (see the chunk interval in start()).
+  private sysChunkStats = { chunks: 0, decodedSeconds: 0, resets: 0, gapSeconds: 0 };
 
   private state: RecorderState = "idle";
   private options: AudioRecorderOptions;
@@ -254,23 +279,47 @@ export class AudioRecorder {
       return null;
     }
     if (this.aecMicSamples === 0 || this.aecSysSamples === 0) {
-      this.aecTelemetry = { outcome: "skipped", reason: "no-buffered-audio" };
+      this.aecTelemetry = {
+        outcome: "skipped",
+        reason: `no-buffered-audio (mic=${this.aecMicSamples} sys=${this.aecSysSamples} samples)`,
+        wallSeconds: Math.round((Date.now() - this.recStartWallMs) / 1000),
+      };
       return null;
     }
 
     // Buffers are already at the 16 kHz processing rate (downsampled at capture).
     const sampleRate = AudioRecorder.AEC_RATE;
-    const bufferedSeconds = Math.round(this.aecMicSamples / sampleRate);
+    const round2 = (v?: number) => (v == null ? undefined : Math.round(v * 100) / 100);
+    const bufferedSeconds = round2(this.aecMicSamples / sampleRate);
+    const sysBufferedSeconds = round2(this.aecSysSamples / sampleRate);
+    const wallSeconds = round2((Date.now() - this.recStartWallMs) / 1000);
+    // Diagnostics shared by every outcome below. sysBuf should ≈ wall; a
+    // deficit means the reference timeline is compressed and the canceller is
+    // structurally doomed regardless of tuning (root cause of the 2026-07-06
+    // erle=-0.2dB field failure).
+    const diag = {
+      bufferedSeconds,
+      sysBufferedSeconds,
+      wallSeconds,
+      sysResets: this.sysChunkStats.resets,
+      sysGapSeconds: round2(this.sysChunkStats.gapSeconds),
+    };
+    console.log(
+      `[AudioRecorder] AEC buffers: mic=${bufferedSeconds}s sys=${sysBufferedSeconds}s ` +
+        `wall=${wallSeconds}s sysDeficit=${round2((wallSeconds ?? 0) - (sysBufferedSeconds ?? 0))}s | ` +
+        `scheduler chunks=${this.sysChunkStats.chunks} resets=${this.sysChunkStats.resets} ` +
+        `gaps=${this.sysChunkStats.gapSeconds.toFixed(1)}s`,
+    );
     const mic = concatInt16(this.aecMicPcm, this.aecMicSamples);
     const sys = concatInt16(this.aecSysPcm, this.aecSysSamples);
     // Release the per-chunk arrays early; the contiguous buffers are transferred.
     this.aecMicPcm = [];
     this.aecSysPcm = [];
 
-    const round2 = (v?: number) => (v == null ? undefined : Math.round(v * 100) / 100);
-
+    const workerT0 = Date.now();
     try {
       const result = await this.processAecInWorker(mic, sys, sampleRate);
+      const workerMs = Date.now() - workerT0;
       if (!result.ok || !result.audio) {
         this.aecTelemetry = {
           outcome: "rejected",
@@ -278,12 +327,16 @@ export class AudioRecorder {
           erleDb: round2(result.erleDb),
           nearKept: round2(result.nearKept),
           echoReduction: round2(result.echoReduction),
-          bufferedSeconds,
+          delaySeconds: round2((result.delaySamples ?? 0) / result.sampleRate),
+          workerMs,
+          ...diag,
         };
         console.log(
           `[AudioRecorder] AEC not applied (ok=${result.ok} ` +
             `erle=${result.erleDb?.toFixed(1)}dB nearKept=${result.nearKept?.toFixed(2)} ` +
-            `echoRed=${result.echoReduction?.toFixed(2)}${result.error ? ` err=${result.error}` : ""})`,
+            `echoRed=${result.echoReduction?.toFixed(2)} ` +
+            `delay=${((result.delaySamples ?? 0) / result.sampleRate).toFixed(2)}s ` +
+            `workerMs=${workerMs}${result.error ? ` err=${result.error}` : ""})`,
         );
         return null;
       }
@@ -293,20 +346,22 @@ export class AudioRecorder {
         nearKept: round2(result.nearKept),
         echoReduction: round2(result.echoReduction),
         delaySeconds: round2((result.delaySamples ?? 0) / result.sampleRate),
-        bufferedSeconds,
+        workerMs,
+        ...diag,
       };
       console.log(
         `[AudioRecorder] ✅ AEC applied: erle=${result.erleDb?.toFixed(1)}dB ` +
           `delay=${((result.delaySamples ?? 0) / result.sampleRate).toFixed(2)}s ` +
           `nearKept=${result.nearKept?.toFixed(2)} echoRed=${result.echoReduction?.toFixed(2)} ` +
-          `size=${(result.audio.byteLength / 1024).toFixed(0)}KB`,
+          `workerMs=${workerMs} size=${(result.audio.byteLength / 1024).toFixed(0)}KB`,
       );
       return new Blob([result.audio], { type: result.mime ?? "audio/mpeg" });
     } catch (e) {
       this.aecTelemetry = {
         outcome: "error",
         reason: e instanceof Error ? e.message : String(e),
-        bufferedSeconds,
+        workerMs: Date.now() - workerT0,
+        ...diag,
       };
       console.warn(
         "[AudioRecorder] AEC worker failed, keeping raw mic:",
@@ -362,6 +417,9 @@ export class AudioRecorder {
 
     try {
       this.state = "recording";
+      this.recStartWallMs = Date.now();
+      this.sysChunkStats = { chunks: 0, decodedSeconds: 0, resets: 0, gapSeconds: 0 };
+      this.aecTelemetry = null;
 
       // 0. Permission check (macOS only — no-op on Windows)
       if (window.electron.checkMicrophonePermission) {
@@ -594,6 +652,15 @@ export class AudioRecorder {
       silentGain.gain.value = 0;
       silentGain.connect(this.audioContext.destination);
 
+      // Keep the sys worklet's input channel permanently active (see field
+      // declaration). A constant 0 mixes into the scheduled chunks unchanged,
+      // but the worklet now runs every quantum and posts real-time PCM —
+      // silence included — instead of a gap-compressed stream.
+      this.sysKeepAliveNode = this.audioContext.createConstantSource();
+      this.sysKeepAliveNode.offset.value = 0;
+      this.sysKeepAliveNode.connect(this.sysWorkletNode);
+      this.sysKeepAliveNode.start();
+
       // Connect mic graph
       this.sourceNode.connect(this.micWorkletNode, 0, 0); // mic to input 0
       this.micWorkletNode.connect(silentGain);
@@ -665,10 +732,33 @@ export class AudioRecorder {
               source.connect(this.sysWorkletNode);
 
               if (this.sysAudioPlaybackTime < this.audioContext.currentTime) {
+                // Playback fell behind → a real gap in the scheduled sys audio.
+                // Counted for the AEC diagnostics (each gap used to be silently
+                // DELETED from the reference before the keep-alive fix).
+                this.sysChunkStats.resets += 1;
+                this.sysChunkStats.gapSeconds +=
+                  this.audioContext.currentTime - this.sysAudioPlaybackTime;
                 this.sysAudioPlaybackTime = this.audioContext.currentTime;
               }
               source.start(this.sysAudioPlaybackTime);
               this.sysAudioPlaybackTime += audioBuffer.duration;
+
+              this.sysChunkStats.chunks += 1;
+              this.sysChunkStats.decodedSeconds += audioBuffer.duration;
+              // Periodic pipeline health (~30s at the 2s chunk cadence): buffered
+              // AEC seconds vs wall clock. sysBuf should track wall; a growing
+              // deficit means the reference timeline is compressing again.
+              if (this.sysChunkStats.chunks % 15 === 0) {
+                const wall = (Date.now() - this.recStartWallMs) / 1000;
+                const s = this.sysChunkStats;
+                console.log(
+                  `[AudioRecorder] 📊 sys pipeline: chunks=${s.chunks} decoded=${s.decodedSeconds.toFixed(1)}s ` +
+                    `resets=${s.resets} gaps=${s.gapSeconds.toFixed(1)}s | aecBuf mic=${(
+                      this.aecMicSamples / AudioRecorder.AEC_RATE
+                    ).toFixed(1)}s sys=${(this.aecSysSamples / AudioRecorder.AEC_RATE).toFixed(1)}s ` +
+                    `wall=${wall.toFixed(1)}s`,
+                );
+              }
             }
           } catch (err) {
             console.error(
@@ -816,11 +906,20 @@ export class AudioRecorder {
     if (this.sysSourceNode) this.sysSourceNode.disconnect();
     if (this.micWorkletNode) this.micWorkletNode.disconnect();
     if (this.sysWorkletNode) this.sysWorkletNode.disconnect();
+    if (this.sysKeepAliveNode) {
+      try {
+        this.sysKeepAliveNode.stop();
+      } catch {
+        /* already stopped */
+      }
+      this.sysKeepAliveNode.disconnect();
+    }
 
     this.sourceNode = null;
     this.sysSourceNode = null;
     this.micWorkletNode = null;
     this.sysWorkletNode = null;
+    this.sysKeepAliveNode = null;
 
     if (this.audioContext && this.audioContext.state !== "closed") {
       this.audioContext.close();
