@@ -163,8 +163,19 @@ export class AudioRecorder {
   // buffered PCM seconds against real elapsed time (a sys deficit = the
   // reference timeline is being compressed, which starves the canceller).
   private recStartWallMs = 0;
+  // Wall-clock when stop() was requested. Buffering ceases there, but the AEC
+  // runs after a 2.5s flush grace — measuring wall against THIS avoids a
+  // phantom ~2.75s "deficit" in the diagnostics (seen 2026-07-06).
+  private recStopWallMs = 0;
   // macOS sys-scheduler health counters (see the chunk interval in start()).
   private sysChunkStats = { chunks: 0, decodedSeconds: 0, resets: 0, gapSeconds: 0 };
+  // macOS: the AEC sys reference is appended straight from the DECODED capture
+  // chunks (contiguous capture timeline) instead of the worklet playback tap.
+  // Playback scheduling re-anchors on every decode hiccup (field test
+  // 2026-07-06: 5 resets / 2.8s of jumps in 43s), which puts the reference on a
+  // piecewise-jumping delay no adaptive filter can track (erle=-0.8dB despite a
+  // correct global delay). When true, the worklet's sys tap is skipped.
+  private sysAecTapDirect = false;
 
   private state: RecorderState = "idle";
   private options: AudioRecorderOptions;
@@ -292,7 +303,9 @@ export class AudioRecorder {
     const round2 = (v?: number) => (v == null ? undefined : Math.round(v * 100) / 100);
     const bufferedSeconds = round2(this.aecMicSamples / sampleRate);
     const sysBufferedSeconds = round2(this.aecSysSamples / sampleRate);
-    const wallSeconds = round2((Date.now() - this.recStartWallMs) / 1000);
+    const wallSeconds = round2(
+      ((this.recStopWallMs || Date.now()) - this.recStartWallMs) / 1000,
+    );
     // Diagnostics shared by every outcome below. sysBuf should ≈ wall; a
     // deficit means the reference timeline is compressed and the canceller is
     // structurally doomed regardless of tuning (root cause of the 2026-07-06
@@ -376,6 +389,29 @@ export class AudioRecorder {
     return this.aecTelemetry;
   }
 
+  /**
+   * Chrome mic-processing constraints for the current speaker-mode state.
+   *
+   * macOS: browser AEC3 is REFERENCELESS in our topology (the far side plays
+   * through another app; this page renders only silence), so it cannot remove
+   * loudspeaker bleed — both 2026-07-06 field tests show the bleed transcribed
+   * verbatim with it ON. Worse, noiseSuppression is a NONLINEAR stage that
+   * decorrelates the echo from the sys reference the offline canceller must
+   * model. So on macOS the mic stays RAW and the stop-time canceller is the
+   * sole defense. Windows/Linux keep the previous behaviour.
+   */
+  private micProcessingConstraints(): {
+    echoCancellation: boolean;
+    noiseSuppression: boolean;
+  } {
+    const isMac = /Mac/i.test(navigator.userAgent);
+    if (isMac) return { echoCancellation: false, noiseSuppression: false };
+    return {
+      echoCancellation: this.speakerMode,
+      noiseSuppression: this.speakerMode,
+    };
+  }
+
   private processAecInWorker(
     mic: Int16Array,
     sys: Int16Array,
@@ -418,8 +454,10 @@ export class AudioRecorder {
     try {
       this.state = "recording";
       this.recStartWallMs = Date.now();
+      this.recStopWallMs = 0;
       this.sysChunkStats = { chunks: 0, decodedSeconds: 0, resets: 0, gapSeconds: 0 };
       this.aecTelemetry = null;
+      this.sysAecTapDirect = false;
 
       // 0. Permission check (macOS only — no-op on Windows)
       if (window.electron.checkMicrophonePermission) {
@@ -458,13 +496,14 @@ export class AudioRecorder {
       // mildly mutes the system audio the user hears; a headphone user can flip
       // it off live via setSpeakerMode(). autoGainControl stays off (it pumps).
       this.speakerMode = config?.speakerMode ?? true;
+      const micProc = this.micProcessingConstraints();
       console.log(
-        `[AudioRecorder] 🎤 Requesting mic deviceId="${micDeviceId}" speakerMode=${this.speakerMode} (AEC=${this.speakerMode})`,
+        `[AudioRecorder] 🎤 Requesting mic deviceId="${micDeviceId}" speakerMode=${this.speakerMode} ` +
+          `(browserAEC=${micProc.echoCancellation} NS=${micProc.noiseSuppression})`,
       );
       this.micStream = await navigator.mediaDevices.getUserMedia({
         audio: {
-          echoCancellation: this.speakerMode,
-          noiseSuppression: this.speakerMode,
+          ...micProc,
           autoGainControl: false,
           ...(micDeviceId && micDeviceId !== "default"
             ? { deviceId: { exact: micDeviceId } }
@@ -626,8 +665,11 @@ export class AudioRecorder {
           return;
         }
         if (!(event.data instanceof ArrayBuffer)) return;
-        // Buffer pre-codec system (reference) PCM for offline AEC.
-        this.bufferPcmForAec("sys", event.data);
+        // Buffer pre-codec system (reference) PCM for offline AEC — but only on
+        // the Windows/Linux path where this worklet input IS the live capture.
+        // On macOS the reference is appended straight from the decoded chunks
+        // (see sysAecTapDirect) to keep playback scheduling out of the loop.
+        if (!this.sysAecTapDirect) this.bufferPcmForAec("sys", event.data);
         if (
           this.state !== "recording" ||
           !this.ws ||
@@ -710,7 +752,9 @@ export class AudioRecorder {
         };
         this.sysMediaRecorder.start(1000);
 
-        // macOS: poll the native binary's SIGUSR1 chunks every 2 s
+        // macOS: poll the native binary's SIGUSR1 chunks every 2 s. The AEC
+        // reference is fed from the DECODED chunks below, not the worklet.
+        this.sysAecTapDirect = true;
         this.sysAudioPlaybackTime = this.audioContext.currentTime;
         this.sysAudioInterval = setInterval(async () => {
           if (
@@ -742,6 +786,28 @@ export class AudioRecorder {
               }
               source.start(this.sysAudioPlaybackTime);
               this.sysAudioPlaybackTime += audioBuffer.duration;
+
+              // AEC reference: append the decoded capture audio DIRECTLY.
+              // Chunks are contiguous capture, so concatenation IS the capture
+              // timeline — playback scheduling (and its re-anchor jumps) never
+              // touches the reference the canceller aligns against.
+              if (this.state === "recording" && this.speakerMode && !this.aecOverCap) {
+                let mono = audioBuffer.getChannelData(0);
+                if (audioBuffer.numberOfChannels > 1) {
+                  const ch1 = audioBuffer.getChannelData(1);
+                  const mixed = new Float32Array(mono.length);
+                  for (let i = 0; i < mono.length; i++) {
+                    mixed[i] = (mono[i] + ch1[i]) / 2;
+                  }
+                  mono = mixed;
+                }
+                const int16 = new Int16Array(mono.length);
+                for (let i = 0; i < mono.length; i++) {
+                  const s = Math.max(-1, Math.min(1, mono[i]));
+                  int16[i] = s < 0 ? s * 0x8000 : s * 0x7fff;
+                }
+                this.bufferPcmForAec("sys", int16.buffer);
+              }
 
               this.sysChunkStats.chunks += 1;
               this.sysChunkStats.decodedSeconds += audioBuffer.duration;
@@ -834,6 +900,9 @@ export class AudioRecorder {
   async stop(): Promise<{ micBlob?: Blob; sysBlob?: Blob }> {
     if (this.state !== "recording") return {};
     this.state = "stopping";
+    // Buffering effectively ends here (worklets are severed below); stamp it so
+    // the AEC diagnostics compare buffered seconds against the true window.
+    this.recStopWallMs = Date.now();
 
     // Cancel any pending auto-reconnect — we're stopping on purpose.
     if (this.reconnectTimer) {
@@ -995,8 +1064,9 @@ export class AudioRecorder {
     try {
       const newStream = await navigator.mediaDevices.getUserMedia({
         audio: {
-          echoCancellation: enabled,
-          noiseSuppression: enabled,
+          // Same platform-aware decision as start(): on macOS the mic stays
+          // raw regardless of speaker mode (see micProcessingConstraints).
+          ...this.micProcessingConstraints(),
           autoGainControl: false,
           ...(micDeviceId && micDeviceId !== "default"
             ? { deviceId: { exact: micDeviceId } }
