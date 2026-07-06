@@ -1,6 +1,6 @@
 {
   "name": "plan-ai-recorder",
-  "version": "4.2.4",
+  "version": "4.2.6",
   "license": "BUSL-1.1",
   "private": true,
   "author": {
@@ -35,7 +35,7 @@
     "release:mac:housegroup": "export BRAND_KEY=housegroup && set -a && source .env.housegroup.production && set +a && electron-vite build && electron-builder --mac -p always -c electron-builder.config.js",
     "build:local:mac": "export BRAND_KEY=blueberrybytes && set -a && source .env.production && set +a && electron-vite build && electron-builder --mac -p never -c electron-builder.config.js",
     "build:local:mac:housegroup": "export BRAND_KEY=housegroup && set -a && source .env.housegroup.production && set +a && electron-vite build && electron-builder --mac -p never -c electron-builder.config.js",
-    "release:mixed": "node scripts/bump-version.js && yarn release:win && yarn release:linux && yarn release:mac",
+    "release:mixed": "rm -rf release && node scripts/bump-version.js && yarn release:win && yarn release:linux && yarn release:mac",
     "release:mixed:housegroup": "node scripts/bump-version.js && yarn release:win:housegroup && yarn release:linux:housegroup && yarn release:mac:housegroup",
     "release:all": "node scripts/bump-version.js && yarn release:win && yarn release:linux && yarn release:mac && yarn release:win:housegroup && yarn release:linux:housegroup && yarn release:mac:housegroup",
     "publish-release": "node scripts/publish-draft.js",

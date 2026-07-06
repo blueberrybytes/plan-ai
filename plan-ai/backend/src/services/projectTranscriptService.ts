@@ -396,8 +396,17 @@ export class ProjectTranscriptService {
     micUrl: string | null,
     sysUrl: string | null,
     language?: string | null,
-  ): Promise<{ combinedText: string; utterances: Utterance[]; totalSeconds: number }> {
+  ): Promise<{
+    combinedText: string;
+    utterances: Utterance[];
+    totalSeconds: number;
+    /** Human-readable per-channel failures (stored in metadata — a diarization
+     * failure must never be silent: it makes the final transcript fall back to
+     * the live text and silently drop everything the live WS missed). */
+    diagnostics: string[];
+  }> {
     const deepgram = new DeepgramClient({ key: process.env.DEEPGRAM_API_KEY! });
+    const diagnostics: string[] = [];
 
     // Honour the language the user picked in the recorder. nova-3 supports the
     // recorder's monolingual codes (including "ca"), whereas "multi"
@@ -410,20 +419,34 @@ export class ProjectTranscriptService {
     const resolveDiarization = async (
       source: { url: string } | { buffer: Buffer },
       speakerPrefix: string,
+      lang: string = dgLanguage,
     ): Promise<Utterance[]> => {
       console.log(
-        `[Diarization] Starting ${speakerPrefix} | ${
+        `[Diarization] Starting ${speakerPrefix} | lang=${lang} | ${
           "url" in source
             ? `url: ${source.url.slice(0, 80)}...`
             : `cleaned buffer ${source.buffer.length}B`
         }`,
       );
+      // A channel failure must be loud AND self-healing: record it for the
+      // transcript's metadata, and when a monolingual language was requested
+      // retry once with "multi" — a degraded transcript beats losing the whole
+      // channel (which silently falls back to the live text).
+      const failChannel = async (errMsg: string): Promise<Utterance[]> => {
+        logger.error(`[Diarization] Deepgram error for ${speakerPrefix} (lang=${lang}): ${errMsg}`);
+        diagnostics.push(`${speakerPrefix} (language=${lang}): ${errMsg}`);
+        if (lang !== "multi") {
+          logger.warn(`[Diarization] Retrying ${speakerPrefix} with language=multi`);
+          return resolveDiarization(source, speakerPrefix, "multi");
+        }
+        return [];
+      };
       try {
         const dgOptions = {
           diarize: true,
           model: "nova-3",
           smart_format: true,
-          language: dgLanguage,
+          language: lang,
           utterances: true,
           utt_split: 0.5,
           filler_words: false,
@@ -433,17 +456,14 @@ export class ProjectTranscriptService {
             ? await deepgram.listen.prerecorded.transcribeUrl({ url: source.url }, dgOptions)
             : await deepgram.listen.prerecorded.transcribeFile(source.buffer, dgOptions);
         if (res.error) {
-          const e = res.error;
-          const errMsg = e.message;
-          logger.error(`[Diarization] Deepgram error for ${speakerPrefix}: ${errMsg}`);
-          //throw new Error(`Deepgram API error: ${errMsg}`);
+          return failChannel(res.error.message);
         }
         const meta = res.result?.metadata;
         const detectedLang = res.result?.results?.channels?.[0]?.detected_language ?? "?";
         const dgUtterances = res.result?.results?.utterances || [];
         const uniqueSpeakers = new Set(dgUtterances.map((u) => u.speaker)).size;
         console.log(
-          `[Diarization] ${speakerPrefix} | requested=${dgLanguage} detected=${detectedLang} duration=${(meta?.duration as number | undefined)?.toFixed(1) ?? "?"}s utterances=${dgUtterances.length} speakers=${uniqueSpeakers}`,
+          `[Diarization] ${speakerPrefix} | requested=${lang} detected=${detectedLang} duration=${(meta?.duration as number | undefined)?.toFixed(1) ?? "?"}s utterances=${dgUtterances.length} speakers=${uniqueSpeakers}`,
         );
         return dgUtterances.map((u) => ({
           speaker: `${speakerPrefix} ${u.speaker}`,
@@ -456,8 +476,7 @@ export class ProjectTranscriptService {
           })),
         }));
       } catch (err: any) {
-        logger.error(`[Diarization] Failed for ${speakerPrefix}: ${err?.message ?? err}`);
-        return [];
+        return failChannel(err?.message ?? String(err));
       }
     };
 
@@ -547,7 +566,7 @@ export class ProjectTranscriptService {
     const totalSeconds =
       utterances.length > 0 ? Math.ceil(utterances[utterances.length - 1].end) : 0;
 
-    return { combinedText, utterances, totalSeconds };
+    return { combinedText, utterances, totalSeconds, diagnostics };
   }
 
   public async createPendingTranscript(
@@ -697,6 +716,7 @@ export class ProjectTranscriptService {
 
     const user = await prisma.user.findUnique({ where: { id: input.userId } });
     let principalSpeaker: string | undefined;
+    let diarizationDiagnostics: string[] = [];
 
     if (existing.rawMicUrl || existing.rawSysUrl) {
       logger.info(`Starting batch diarization for ${existing.id}...`);
@@ -715,6 +735,12 @@ export class ProjectTranscriptService {
       );
       let { combinedText, utterances } = diarizationResult;
       const { totalSeconds } = diarizationResult;
+      diarizationDiagnostics = diarizationResult.diagnostics;
+      if (diarizationDiagnostics.length > 0) {
+        logger.warn(
+          `[Diarization] ${existing.id} completed with channel failures: ${diarizationDiagnostics.join(" | ")}`,
+        );
+      }
 
       // Log Deepgram Usage
       if (totalSeconds > 0) {
@@ -833,6 +859,7 @@ export class ProjectTranscriptService {
             ...currentMetadata,
             processingStatus: "EXTRACTING_TASKS",
             principalSpeaker,
+            ...(diarizationDiagnostics.length > 0 ? { diarizationDiagnostics } : {}),
           } as unknown as Prisma.InputJsonValue,
         },
       });
@@ -851,6 +878,7 @@ export class ProjectTranscriptService {
             ...currentMetadata,
             processingStatus: "EXTRACTING_TASKS",
             principalSpeaker,
+            ...(diarizationDiagnostics.length > 0 ? { diarizationDiagnostics } : {}),
           } as unknown as Prisma.InputJsonValue,
         },
       });

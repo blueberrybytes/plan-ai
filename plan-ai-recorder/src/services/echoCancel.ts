@@ -150,13 +150,31 @@ export function estimateDelaySamples(
   }
   fftInPlace(aR, aI, true);
 
+  // Normalize each lag by the mic-envelope energy under the ref's support at
+  // that lag (sliding-window energy via prefix sums). Raw correlation picks
+  // whichever alignment overlaps the LOUDEST unrelated burst — e.g. the ref's
+  // only burst against the user's own (louder) speech elsewhere in the mic —
+  // and returns a bogus lag at the search bound (field failure 2026-07-06).
+  // Normalized cross-correlation instead rewards matching SHAPE: the echo's
+  // envelope is a scaled copy of the ref's, so the true lag scores ~1 while a
+  // coincidental overlap of unrelated speech scores far lower.
+  const micE2Prefix = new Float64Array(me.length + 1);
+  for (let i = 0; i < me.length; i++) micE2Prefix[i + 1] = micE2Prefix[i] + me[i] * me[i];
+  let refE2 = 0;
+  for (let i = 0; i < re.length; i++) refE2 += re[i] * re[i];
+
   // corr at lag k lives at index k (k>=0) or n+k (k<0).
   let bestLag = 0;
   let bestVal = -Infinity;
   for (let k = minLagFrames; k <= maxLagFrames; k++) {
     const idx = k >= 0 ? k : n + k;
     if (idx < 0 || idx >= n) continue;
-    const v = aR[idx];
+    // Mic-envelope energy over the ref's support shifted by k: frames [k, k+len(re)).
+    const lo = Math.max(0, Math.min(me.length, k));
+    const hi = Math.max(0, Math.min(me.length, k + re.length));
+    const micE2 = micE2Prefix[hi] - micE2Prefix[lo];
+    const denom = Math.sqrt(micE2 * refE2) + 1e-12;
+    const v = aR[idx] / denom;
     if (v > bestVal) {
       bestVal = v;
       bestLag = k;
@@ -171,6 +189,103 @@ function demean(x: Float64Array): void {
   for (let i = 0; i < x.length; i++) m += x[i];
   m /= x.length;
   for (let i = 0; i < x.length; i++) x[i] -= m;
+}
+
+/**
+ * GCC-PHAT waveform delay estimation — the primary estimator.
+ *
+ * Envelope correlation compares energy SHAPES, so a loud burst of the user's
+ * own (unrelated) speech overlapping the ref's only burst at some bogus lag can
+ * out-score the true alignment of the ref with its much quieter echo — exactly
+ * the 2026-07-06 field failure (estimate pinned at the +8s search bound).
+ * GCC-PHAT instead whitens the cross-spectrum (|C| normalized away per bin), so
+ * scoring is by PHASE COHERENCE alone: the echo is a filtered copy of the ref
+ * (coherent → sharp peak at the true lag) while near-end speech is incoherent
+ * with it at every lag regardless of loudness.
+ *
+ * Runs on a few of the LOUDEST reference windows (bounded memory/CPU even for
+ * 90-min buffers) and accumulates their correlograms. Returns null when no
+ * confident coherent peak exists (silent/degenerate reference) — the caller
+ * falls back to the envelope method.
+ */
+export function estimateDelayPhat(
+  mic: Float32Array,
+  ref: Float32Array,
+  sampleRate: number,
+  opts: { maxLagSeconds?: number; windowSeconds?: number; windows?: number } = {},
+): number | null {
+  const maxLag = Math.round((opts.maxLagSeconds ?? 8) * sampleRate);
+  const win = Math.round((opts.windowSeconds ?? 8) * sampleRate);
+  const numWindows = opts.windows ?? 4;
+  if (ref.length < win || mic.length < win) return null;
+
+  // Rank ref windows by energy (hop = win/2), pick the loudest non-overlapping.
+  const hop = win >> 1;
+  const cands: { start: number; e: number }[] = [];
+  for (let s = 0; s + win <= ref.length; s += hop) {
+    let e = 0;
+    for (let i = s; i < s + win; i += 4) e += ref[i] * ref[i]; // stride-4 sample is enough for ranking
+    cands.push({ start: s, e });
+  }
+  cands.sort((a, b) => b.e - a.e);
+  const picked: number[] = [];
+  for (const c of cands) {
+    if (c.e <= 0) break;
+    if (picked.every((p) => Math.abs(p - c.start) >= win)) picked.push(c.start);
+    if (picked.length >= numWindows) break;
+  }
+  if (picked.length === 0) return null;
+
+  const acc = new Float64Array(2 * maxLag + 1);
+  for (const s of picked) {
+    // Mic segment spans the ref window ± maxLag so every candidate lag overlaps.
+    const micStart = Math.max(0, s - maxLag);
+    const micEnd = Math.min(mic.length, s + win + maxLag);
+    const micLen = micEnd - micStart;
+    if (micLen < win) continue;
+
+    const n = nextPow2(micLen + win);
+    const aRe = new Float64Array(n);
+    const aIm = new Float64Array(n);
+    const bRe = new Float64Array(n);
+    const bIm = new Float64Array(n);
+    for (let i = 0; i < micLen; i++) aRe[i] = mic[micStart + i];
+    for (let i = 0; i < win; i++) bRe[i] = ref[s + i];
+    fftInPlace(aRe, aIm, false);
+    fftInPlace(bRe, bIm, false);
+    // PHAT-weighted cross spectrum: C = A·conj(B) / |A·conj(B)|.
+    for (let i = 0; i < n; i++) {
+      const r = aRe[i] * bRe[i] + aIm[i] * bIm[i];
+      const im = aIm[i] * bRe[i] - aRe[i] * bIm[i];
+      const mag = Math.sqrt(r * r + im * im) + 1e-12;
+      aRe[i] = r / mag;
+      aIm[i] = im / mag;
+    }
+    fftInPlace(aRe, aIm, true);
+    // corr[l] = coherence of mic[micStart+l ...] with ref[s ...]; absolute
+    // delay (mic lags ref) = (micStart + l) - s.
+    for (let d = -maxLag; d <= maxLag; d++) {
+      const l = d + (s - micStart);
+      if (l < 0 || l >= n) continue;
+      acc[d + maxLag] += aRe[l];
+    }
+  }
+
+  // Confidence: the coherent peak must clearly dominate the correlogram noise.
+  let best = 0;
+  let bestVal = -Infinity;
+  let sumAbs = 0;
+  for (let i = 0; i < acc.length; i++) {
+    const v = acc[i];
+    sumAbs += Math.abs(v);
+    if (v > bestVal) {
+      bestVal = v;
+      best = i;
+    }
+  }
+  const meanAbs = sumAbs / acc.length;
+  if (!(bestVal > 0) || bestVal < 8 * meanAbs) return null;
+  return best - maxLag;
 }
 
 /** Shift `ref` so its content lines up with the mic, given mic lags ref by `lag` samples. */
@@ -243,9 +358,14 @@ export function cancelEcho(
   const iterations = Math.max(1, options.iterations ?? 3);
   const eps = 1e-6;
 
+  // Delay: GCC-PHAT (phase coherence — immune to loud unrelated near-end
+  // speech) with the envelope method as fallback when no coherent peak exists.
   const delaySamples = options.preAligned
     ? 0
     : options.delaySamples ??
+      estimateDelayPhat(mic, ref, options.sampleRate, {
+        maxLagSeconds: options.maxLagSeconds ?? 8,
+      }) ??
       estimateDelaySamples(mic, ref, options.sampleRate, {
         maxLagSeconds: options.maxLagSeconds ?? 8,
       });
@@ -277,6 +397,34 @@ export function cancelEcho(
   let outEnergy = 0;
 
   const numBlocks = Math.ceil(d.length / N);
+
+  // Global reference power scale, for far-end gating and regularization.
+  // A real meeting reference is silence-dominated (the far side talks in
+  // bursts); normalizing by the CURRENT block's power lets near-silent blocks
+  // divide the gradient by ~eps while the error buffer holds full-scale
+  // near-end speech — the weights explode astronomically (field test
+  // 2026-07-06: nearKept=34, echoRed=114). So: (1) adapt only when the block's
+  // reference power is within 30 dB of the loudest reference block, (2) floor
+  // the regularizer to the global scale, (3) leak the weights slightly so any
+  // residual misadaptation bleeds away instead of accumulating.
+  let peakBlockPow = 0;
+  for (let b = 0; b < numBlocks; b++) {
+    const base = b * N;
+    let p = 0;
+    for (let i = 0; i < N; i++) {
+      const cur = base + i;
+      const v = cur < x.length ? x[cur] : 0;
+      p += v * v;
+    }
+    if (p / N > peakBlockPow) peakBlockPow = p / N;
+  }
+  const gateThr = peakBlockPow * 1e-3; // −30 dB vs loudest reference block
+  // Freq-domain equivalent of the global scale (Parseval: Σ|X|² = M·Σx²; the
+  // per-bin mean over M bins of a full-power block ≈ M·peakBlockPow… kept as a
+  // conservative floor rather than an exact identity).
+  const regFloor = 1e-3 * (2 * N) * peakBlockPow;
+  const leak = 0.9995;
+
   // Adaptation passes converge the filter (W persists across passes); only the
   // last pass emits output and diagnostics.
   for (let iter = 0; iter < iterations; iter++) {
@@ -299,9 +447,19 @@ export function cancelEcho(
     const Xi = xBufI.slice();
     fftInPlace(Xr, Xi, false);
 
-    // Per-bin reference power (EMA), seeded on the first block. Also a scalar
-    // mean used as the regularization floor (so silent bins, where the gradient
-    // is ~0 anyway, get a sane denominator instead of exploding).
+    // Current block's reference power (time domain) for the far-end gate.
+    let curBlockPow = 0;
+    for (let i = 0; i < N; i++) {
+      const cur = base + i;
+      const v = cur < x.length ? x[cur] : 0;
+      curBlockPow += v * v;
+    }
+    curBlockPow /= N;
+    const farEndActive = curBlockPow >= gateThr;
+
+    // Per-bin reference power (EMA), seeded on the first block. The scalar
+    // regularizer is floored to the GLOBAL reference scale so a near-silent
+    // block can never collapse the denominator (see the stability note above).
     let meanPow = 0;
     for (let i = 0; i < M; i++) {
       const px = Xr[i] * Xr[i] + Xi[i] * Xi[i];
@@ -309,7 +467,7 @@ export function cancelEcho(
       meanPow += px;
     }
     meanPow /= M;
-    const reg = 1e-2 * meanPow + eps;
+    const reg = 1e-2 * Math.max(meanPow, regFloor) + eps;
 
     // Echo estimate y = last N of IFFT(W .* X).
     for (let i = 0; i < M; i++) {
@@ -336,25 +494,32 @@ export function cancelEcho(
       }
     }
 
-    // Gradient: G = conj(X) .* E, NLMS-normalized per bin by smoothed |X|^2.
-    fftInPlace(eR, eI, false);
-    for (let i = 0; i < M; i++) {
-      const norm = P[i] + reg;
-      gR[i] = (Xr[i] * eR[i] + Xi[i] * eI[i]) / norm;
-      gI[i] = (Xr[i] * eI[i] - Xi[i] * eR[i]) / norm;
-    }
+    // Adapt only while the far end is actually active: with a silent reference
+    // there is no echo to learn — the "gradient" is pure near-end speech noise
+    // and integrating it is what blew the filter up.
+    if (farEndActive) {
+      // Gradient: G = conj(X) .* E, NLMS-normalized per bin by smoothed |X|^2.
+      fftInPlace(eR, eI, false);
+      for (let i = 0; i < M; i++) {
+        const norm = P[i] + reg;
+        gR[i] = (Xr[i] * eR[i] + Xi[i] * eI[i]) / norm;
+        gI[i] = (Xr[i] * eI[i] - Xi[i] * eR[i]) / norm;
+      }
 
-    // Gradient constraint: keep only the first N taps (causal filter), zero the rest.
-    fftInPlace(gR, gI, true);
-    for (let i = N; i < M; i++) {
-      gR[i] = 0;
-      gI[i] = 0;
-    }
-    fftInPlace(gR, gI, false);
+      // Gradient constraint: keep only the first N taps (causal filter), zero the rest.
+      fftInPlace(gR, gI, true);
+      for (let i = N; i < M; i++) {
+        gR[i] = 0;
+        gI[i] = 0;
+      }
+      fftInPlace(gR, gI, false);
 
-    for (let i = 0; i < M; i++) {
-      Wr[i] += mu * gR[i];
-      Wi[i] += mu * gI[i];
+      // Leaky update: the leak bleeds away residual misadaptation instead of
+      // letting it accumulate across a long recording.
+      for (let i = 0; i < M; i++) {
+        Wr[i] = leak * Wr[i] + mu * gR[i];
+        Wi[i] = leak * Wi[i] + mu * gI[i];
+      }
     }
     }
   }
