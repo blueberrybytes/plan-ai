@@ -490,6 +490,60 @@ function jaccard(a: Set<string>, b: Set<string>): number {
 }
 
 /**
+ * Divergent-twin layer (third stage, aligned-offset only).
+ *
+ * Field data (2026-07): with the offset aligned, loudspeaker bleed still
+ * survives BOTH the word matcher and the 0.9-Jaccard backstop when the two
+ * channels' ASR diverges hard — the muffled mic copy is transcribed as a
+ * garbled paraphrase of the sys twin (different tokens, same speech), scoring
+ * 0.4–0.7 Jaccard. Simply lowering SIMILARITY_THRESHOLD was already tried and
+ * rejected (adversarial review: ≥0.72 deletes genuine affirmations), so this
+ * layer trades similarity strictness for strong TEMPORAL corroboration the 0.9
+ * backstop never required:
+ *  - LONG utterances only (≥ FUZZY_TWIN_MIN_TOKENS unique tokens): the
+ *    confirmed false-positive class — short affirmations/paraphrases
+ *    ("yeah we should ship that") — is exempt by construction.
+ *  - The sys twin must cover ≥ FUZZY_TWIN_MIN_OVERLAP of the mic utterance's
+ *    time span ON THE ALIGNED CLOCK, with comparable durations. A human doesn't
+ *    genuinely utter a 10+-token paraphrase of the far end in the same seconds
+ *    the far end is saying it — simultaneous shadowing IS echo.
+ *  - Same negation-polarity guard as the 0.9 backstop.
+ * Runs only when the mic↔sys offset was confidently aligned (time overlap is
+ * meaningless otherwise) and can be disabled via ECHO_DEDUP_FUZZY_DISABLED.
+ */
+const FUZZY_TWIN_THRESHOLD = 0.4; // Jaccard — divergent-ASR twins
+const FUZZY_TWIN_MIN_TOKENS = 10; // long utterances only; short replies exempt
+const FUZZY_TWIN_MIN_OVERLAP = 0.6; // sys twin must cover ≥60% of the mic span
+const FUZZY_TWIN_MAX_DURATION_RATIO = 2.0; // spans must be comparable
+
+function isDivergentTwinBleed(
+  micTokens: Set<string>,
+  micHasNeg: boolean,
+  micStartMs: number,
+  micEndMs: number,
+  sysSets: SysTokenSet[],
+): boolean {
+  if (micTokens.size < FUZZY_TWIN_MIN_TOKENS) return false;
+  const micDur = micEndMs - micStartMs;
+  if (micDur <= 0) return false;
+  for (const s of sysSets) {
+    const overlap = Math.min(micEndMs, s.endMs) - Math.max(micStartMs, s.startMs);
+    if (overlap < micDur * FUZZY_TWIN_MIN_OVERLAP) continue;
+    const sysDur = s.endMs - s.startMs;
+    if (sysDur <= 0) continue;
+    const ratio = micDur / sysDur;
+    if (ratio > FUZZY_TWIN_MAX_DURATION_RATIO || ratio < 1 / FUZZY_TWIN_MAX_DURATION_RATIO) {
+      continue;
+    }
+    // Polarity: only one side negated → opposite meaning, not echo.
+    if (micHasNeg !== s.hasNeg) continue;
+    if (jaccard(micTokens, s.tokens) < FUZZY_TWIN_THRESHOLD) continue;
+    return true;
+  }
+  return false;
+}
+
+/**
  * Backstop echo test, applied AFTER the word matcher keeps a mic segment. True
  * when a single sys utterance overlaps the mic in time (interval + direction
  * window), is a NEAR-VERBATIM twin by symmetric Jaccard, and matches the mic's
@@ -546,7 +600,13 @@ export function dropEchoUtterances<T extends TimedSegment>(
      * exact-token matcher can't catch. Used to decide the safe next step with
      * data instead of speculatively lowering the threshold.
      */
-    onSegment?: (info: { dropped: boolean; coverage: number; micTokenCount: number }) => void;
+    onSegment?: (info: {
+      dropped: boolean;
+      coverage: number;
+      micTokenCount: number;
+      /** True when the divergent-twin layer (not the word matcher/backstop) dropped it. */
+      fuzzyTwin?: boolean;
+    }) => void;
   } = {},
 ): T[] {
   if (sysUtterances.length === 0) return micUtterances;
@@ -585,28 +645,33 @@ export function dropEchoUtterances<T extends TimedSegment>(
     hasNeg: hasNegation(s.transcript),
   }));
 
+  // Divergent-twin layer needs a trustworthy shared clock — aligned only.
+  const fuzzyEnabled = aligned && process.env.ECHO_DEDUP_FUZZY_DISABLED !== "true";
+
   return micUtterances.filter((mic) => {
     const words = mic.words?.length
       ? wordsFromDeepgram(mic.words, 0)
       : wordsFromText(mic.transcript, mic.start * 1000);
     const verdict = deduper.evaluateMicWords(words);
+    const micTokens = new Set(tokenize(mic.transcript));
+    const micHasNeg = hasNegation(mic.transcript);
     // Backstop: near-verbatim re-transcription of an overlapping sys utterance
     // that the word matcher kept (time-scattered / divergent garbling).
     const dropped =
       verdict.isEcho ||
-      isSimilarityBleed(
-        new Set(tokenize(mic.transcript)),
-        hasNegation(mic.transcript),
-        mic.start * 1000,
-        sysSets,
-        leadMs,
-        backstopEarlierMs,
-      );
+      isSimilarityBleed(micTokens, micHasNeg, mic.start * 1000, sysSets, leadMs, backstopEarlierMs);
+    // Third stage: long, time-coincident, similar-span twin with moderate
+    // token overlap — divergent-ASR bleed the two layers above can't see.
+    const fuzzyTwin =
+      !dropped &&
+      fuzzyEnabled &&
+      isDivergentTwinBleed(micTokens, micHasNeg, mic.start * 1000, mic.end * 1000, sysSets);
     opts.onSegment?.({
-      dropped,
+      dropped: dropped || fuzzyTwin,
       coverage: verdict.coverage,
       micTokenCount: verdict.micTokenCount,
+      fuzzyTwin,
     });
-    return !dropped;
+    return !(dropped || fuzzyTwin);
   });
 }

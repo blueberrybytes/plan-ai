@@ -306,6 +306,8 @@ export const createPlanAiApi = (
       taskCount?: number;
       micFile?: Blob;
       sysFile?: Blob;
+      /** Stop-time echo-canceller outcome (see audioRecorder AecTelemetry). */
+      aecTelemetry?: object;
       skipAi?: boolean;
       exportToGoogleDrive?: boolean;
       exportToOneDrive?: boolean;
@@ -322,6 +324,9 @@ export const createPlanAiApi = (
         if (payload.title) formData.append("title", payload.title);
         if (payload.recordedAt) formData.append("recordedAt", payload.recordedAt);
         if (payload.projectId) formData.append("projectId", payload.projectId);
+        // ASR language the user picked ("ca", "es", …) — the backend stores it
+        // so batch re-diarization honours it instead of defaulting to "multi".
+        if (payload.language) formData.append("language", payload.language);
         if (payload.modelKey) formData.append("modelKey", payload.modelKey);
         if (payload.complexityLevel) formData.append("complexityLevel", payload.complexityLevel);
         if (payload.syncToJira) formData.append("syncToJira", "true");
@@ -342,6 +347,9 @@ export const createPlanAiApi = (
         }
         if (payload.chatHistory) {
           formData.append("chatHistory", JSON.stringify(payload.chatHistory));
+        }
+        if (payload.aecTelemetry) {
+          formData.append("aecTelemetry", JSON.stringify(payload.aecTelemetry));
         }
 
         // Determine mime types based on platform or defaults. The mic may be an

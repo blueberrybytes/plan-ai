@@ -5920,6 +5920,8 @@ export interface operations {
                     location?: string;
                     createDoc?: string;
                     createSlides?: string;
+                    language?: string;
+                    aecTelemetry?: string;
                     /** Format: binary */
                     micFile?: string;
                     /** Format: binary */

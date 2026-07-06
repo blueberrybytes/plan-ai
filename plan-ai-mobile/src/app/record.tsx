@@ -652,6 +652,9 @@ export default function RecordScreen() {
         title: title || getDefaultMeetingTitle(),
         recordedAt: new Date().toISOString(),
         projectId: selectedProjectId || undefined,
+        // Selected ASR language ("" = auto) — persisted so the backend's batch
+        // re-diarization uses it instead of "multi" (which has no Catalan).
+        language: language || undefined,
         contextIds:
           selectedContextIds.length > 0 ? selectedContextIds : undefined,
         syncToJira,

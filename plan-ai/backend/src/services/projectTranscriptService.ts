@@ -395,8 +395,17 @@ export class ProjectTranscriptService {
   private async diarizeAudio(
     micUrl: string | null,
     sysUrl: string | null,
+    language?: string | null,
   ): Promise<{ combinedText: string; utterances: Utterance[]; totalSeconds: number }> {
     const deepgram = new DeepgramClient({ key: process.env.DEEPGRAM_API_KEY! });
+
+    // Honour the language the user picked in the recorder. nova-3 supports the
+    // recorder's monolingual codes (including "ca"), whereas "multi"
+    // (code-switching) only covers 10 languages — notably NOT Catalan — so
+    // "multi" is the fallback for auto-detect, never an override of an explicit
+    // choice. Re-validated here because reprocessed rows may carry old metadata.
+    const dgLanguage =
+      language && /^[a-z]{2,3}(-[A-Za-z0-9]{2,10})?$/i.test(language) ? language : "multi";
 
     const resolveDiarization = async (
       source: { url: string } | { buffer: Buffer },
@@ -414,7 +423,7 @@ export class ProjectTranscriptService {
           diarize: true,
           model: "nova-3",
           smart_format: true,
-          language: "multi",
+          language: dgLanguage,
           utterances: true,
           utt_split: 0.5,
           filler_words: false,
@@ -434,7 +443,7 @@ export class ProjectTranscriptService {
         const dgUtterances = res.result?.results?.utterances || [];
         const uniqueSpeakers = new Set(dgUtterances.map((u) => u.speaker)).size;
         console.log(
-          `[Diarization] ${speakerPrefix} | lang=${detectedLang} duration=${(meta?.duration as number | undefined)?.toFixed(1) ?? "?"}s utterances=${dgUtterances.length} speakers=${uniqueSpeakers}`,
+          `[Diarization] ${speakerPrefix} | requested=${dgLanguage} detected=${detectedLang} duration=${(meta?.duration as number | undefined)?.toFixed(1) ?? "?"}s utterances=${dgUtterances.length} speakers=${uniqueSpeakers}`,
         );
         return dgUtterances.map((u) => ({
           speaker: `${speakerPrefix} ${u.speaker}`,
@@ -510,9 +519,11 @@ export class ProjectTranscriptService {
       // residual after the offset fix). This tells us — with data — whether a
       // content-word/threshold change is warranted before doing it blindly.
       const keptBuckets = { lt05: 0, b05_08: 0, ge08_kept: 0 };
+      let fuzzyTwinDrops = 0;
       micUtterances = dropEchoUtterances(micUtterances, sysUtterances, {
         offsetMs,
-        onSegment: ({ dropped, coverage }) => {
+        onSegment: ({ dropped, coverage, fuzzyTwin }) => {
+          if (fuzzyTwin) fuzzyTwinDrops += 1;
           if (dropped) return;
           if (coverage >= 0.8) keptBuckets.ge08_kept += 1;
           else if (coverage >= 0.5) keptBuckets.b05_08 += 1;
@@ -523,7 +534,7 @@ export class ProjectTranscriptService {
       logger.info(
         `[Diarization] EchoDedup: mic=${before} sys=${sysUtterances.length} ` +
           `offset=${offsetMs === null ? "unaligned" : `${Math.round(offsetMs)}ms`} ` +
-          `dropped=${dropped} kept=${micUtterances.length} | ` +
+          `dropped=${dropped} (fuzzyTwin=${fuzzyTwinDrops}) kept=${micUtterances.length} | ` +
           `survivors coverage<0.5=${keptBuckets.lt05} 0.5-0.8=${keptBuckets.b05_08} ` +
           `(0.5-0.8 = likely divergent bleed surviving)`,
       );
@@ -689,7 +700,19 @@ export class ProjectTranscriptService {
 
     if (existing.rawMicUrl || existing.rawSysUrl) {
       logger.info(`Starting batch diarization for ${existing.id}...`);
-      const diarizationResult = await this.diarizeAudio(existing.rawMicUrl, existing.rawSysUrl);
+      // The ASR language the user picked in the recorder (stored at upload).
+      // Distinct from `existing.language`, which the fast-summary LLM later
+      // overwrites with a human-readable name ("catalan") that Deepgram
+      // wouldn't accept as a code.
+      const recordingLanguage =
+        ((existing.metadata as Prisma.JsonObject | null)?.recordingLanguage as
+          | string
+          | undefined) ?? null;
+      const diarizationResult = await this.diarizeAudio(
+        existing.rawMicUrl,
+        existing.rawSysUrl,
+        recordingLanguage,
+      );
       let { combinedText, utterances } = diarizationResult;
       const { totalSeconds } = diarizationResult;
 

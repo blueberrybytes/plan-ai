@@ -3843,6 +3843,8 @@ export function RegisterRoutes(app: Router,opts?:{multer?:ReturnType<typeof mult
                 location: {"in":"formData","name":"location","dataType":"string"},
                 createDoc: {"in":"formData","name":"createDoc","dataType":"string"},
                 createSlides: {"in":"formData","name":"createSlides","dataType":"string"},
+                language: {"in":"formData","name":"language","dataType":"string"},
+                aecTelemetry: {"in":"formData","name":"aecTelemetry","dataType":"string"},
                 micFile: {"in":"formData","name":"micFile","dataType":"file"},
                 sysFile: {"in":"formData","name":"sysFile","dataType":"file"},
         };

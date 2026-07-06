@@ -512,6 +512,9 @@ export const createPlanAiApi = (
         if (payload.title) formData.append("title", payload.title);
         if (payload.recordedAt) formData.append("recordedAt", payload.recordedAt);
         if (payload.projectId) formData.append("projectId", payload.projectId);
+        // ASR language the user picked ("ca", "es", …) — the backend stores it
+        // so batch re-diarization honours it instead of defaulting to "multi".
+        if (payload.language) formData.append("language", payload.language);
         if (payload.modelKey) formData.append("modelKey", payload.modelKey);
         if (payload.complexityLevel) formData.append("complexityLevel", payload.complexityLevel);
         if (payload.syncToJira) formData.append("syncToJira", "true");

@@ -62,6 +62,23 @@ interface TypedBackendError {
 }
 
 /**
+ * Outcome of the stop-time offline echo canceller for one recording. Uploaded
+ * with the transcript (stored as `metadata.recorderAec`) so echoey meetings can
+ * be diagnosed per-recording without access to the user's console.
+ */
+export interface AecTelemetry {
+  outcome: "applied" | "rejected" | "skipped" | "error";
+  /** Why AEC didn't apply: "headphones-mode" | "pcm-cap-exceeded" | "no-buffered-audio" | self-check/worker error detail. */
+  reason?: string;
+  erleDb?: number;
+  nearKept?: number;
+  echoReduction?: number;
+  delaySeconds?: number;
+  /** How much pre-codec PCM was available to the canceller. */
+  bufferedSeconds?: number;
+}
+
+/**
  * AudioRecorder manages microphone + system audio capture and Realtime WebSocket streaming.
  *
  * Mic audio: WebAudio AudioWorklet → Int16 PCM → WebSocket
@@ -107,10 +124,22 @@ export class AudioRecorder {
   private aecMicSamples = 0;
   private aecSysSamples = 0;
   private aecOverCap = false;
-  // ~60 min at the 24 kHz context rate (the worker downsamples to 16 kHz before
-  // processing, so the working set stays bounded). Longer recordings skip AEC
-  // and keep the raw mic.
-  private static readonly AEC_MAX_SAMPLES = 24000 * 60 * 60;
+  // The canceller processes at 16 kHz (speech lives below 8 kHz), so chunks are
+  // downsampled from the 24 kHz context rate AT CAPTURE — buffering at the
+  // processing rate instead of the context rate stretches the same memory
+  // budget from ~60 to ~90 minutes, and the worker skips its own resample.
+  private static readonly AEC_RATE = 16000;
+  // ~90 min at 16 kHz — identical RAM to the previous 60-min @ 24 kHz cap.
+  // Longer recordings skip AEC and keep the raw mic (recorded in telemetry).
+  private static readonly AEC_MAX_SAMPLES = 16000 * 60 * 90;
+  // Per-channel streaming-resampler carry (fractional read position + previous
+  // chunk's final sample) so chunk boundaries interpolate as one stream.
+  private aecDs = {
+    mic: { frac: 0, last: 0 },
+    sys: { frac: 0, last: 0 },
+  };
+  // Outcome of the stop-time canceller for THIS recording (see AecTelemetry).
+  private aecTelemetry: AecTelemetry | null = null;
 
   private state: RecorderState = "idle";
   private options: AudioRecorderOptions;
@@ -146,9 +175,12 @@ export class AudioRecorder {
    */
   private bufferPcmForAec(source: "mic" | "sys", buffer: ArrayBuffer): void {
     if (this.state !== "recording" || !this.speakerMode || this.aecOverCap) return;
-    // Copy: the worklet's transferred buffer is also base64-encoded right after,
-    // and we must keep our own owned copy for the lifetime of the recording.
-    const pcm = new Int16Array(buffer.slice(0));
+    // Downsample to the 16 kHz processing rate at capture. The resampler writes
+    // a fresh owned array, so no extra copy of the worklet's transferred buffer
+    // is needed.
+    const inputRate = this.audioContext?.sampleRate ?? 24000;
+    const pcm = this.downsampleForAec(this.aecDs[source], new Int16Array(buffer), inputRate);
+    if (pcm.length === 0) return;
     if (source === "mic") {
       this.aecMicPcm.push(pcm);
       this.aecMicSamples += pcm.length;
@@ -165,10 +197,46 @@ export class AudioRecorder {
       this.aecSysPcm = [];
       this.aecMicSamples = 0;
       this.aecSysSamples = 0;
+      this.aecTelemetry = {
+        outcome: "skipped",
+        reason: "pcm-cap-exceeded",
+        bufferedSeconds: Math.round(AudioRecorder.AEC_MAX_SAMPLES / AudioRecorder.AEC_RATE),
+      };
       console.warn(
         "[AudioRecorder] AEC PCM cap reached — echo cancellation skipped for this long recording (raw mic kept).",
       );
     }
+  }
+
+  /**
+   * Streaming linear-interpolation downsampler used while buffering AEC PCM.
+   * Keeps a fractional-position + last-sample carry per channel so consecutive
+   * chunks resample as one continuous stream (no boundary artifacts).
+   */
+  private downsampleForAec(
+    st: { frac: number; last: number },
+    input: Int16Array,
+    inputRate: number,
+  ): Int16Array {
+    if (input.length === 0) return new Int16Array(0);
+    // Context already at/below the processing rate — keep as-is (owned copy).
+    if (inputRate <= AudioRecorder.AEC_RATE) return new Int16Array(input);
+    const ratio = inputRate / AudioRecorder.AEC_RATE;
+    const out: number[] = [];
+    // `pos` is the fractional input index of the next output sample within this
+    // chunk; -1 < pos < 0 interpolates from the previous chunk's tail sample.
+    let pos = st.frac;
+    while (pos <= input.length - 1) {
+      const i0 = Math.floor(pos);
+      const frac = pos - i0;
+      const a = i0 < 0 ? st.last : input[i0];
+      const b = i0 + 1 < input.length ? input[i0 + 1] : input[input.length - 1];
+      out.push(Math.round(a + (b - a) * frac));
+      pos += ratio;
+    }
+    st.frac = pos - input.length;
+    st.last = input[input.length - 1];
+    return Int16Array.from(out);
   }
 
   /**
@@ -178,19 +246,40 @@ export class AudioRecorder {
    * otherwise null (caller keeps the raw mic). Never throws into the stop path.
    */
   private async runAecOnBuffers(): Promise<Blob | null> {
-    if (!this.speakerMode || this.aecOverCap) return null;
-    if (this.aecMicSamples === 0 || this.aecSysSamples === 0) return null;
+    if (!this.speakerMode || this.aecOverCap) {
+      // Cap-hit already recorded its own telemetry (with bufferedSeconds).
+      if (!this.aecTelemetry) {
+        this.aecTelemetry = { outcome: "skipped", reason: "headphones-mode" };
+      }
+      return null;
+    }
+    if (this.aecMicSamples === 0 || this.aecSysSamples === 0) {
+      this.aecTelemetry = { outcome: "skipped", reason: "no-buffered-audio" };
+      return null;
+    }
 
-    const sampleRate = this.audioContext?.sampleRate ?? 24000;
+    // Buffers are already at the 16 kHz processing rate (downsampled at capture).
+    const sampleRate = AudioRecorder.AEC_RATE;
+    const bufferedSeconds = Math.round(this.aecMicSamples / sampleRate);
     const mic = concatInt16(this.aecMicPcm, this.aecMicSamples);
     const sys = concatInt16(this.aecSysPcm, this.aecSysSamples);
     // Release the per-chunk arrays early; the contiguous buffers are transferred.
     this.aecMicPcm = [];
     this.aecSysPcm = [];
 
+    const round2 = (v?: number) => (v == null ? undefined : Math.round(v * 100) / 100);
+
     try {
       const result = await this.processAecInWorker(mic, sys, sampleRate);
       if (!result.ok || !result.audio) {
+        this.aecTelemetry = {
+          outcome: "rejected",
+          reason: result.error ?? "self-check",
+          erleDb: round2(result.erleDb),
+          nearKept: round2(result.nearKept),
+          echoReduction: round2(result.echoReduction),
+          bufferedSeconds,
+        };
         console.log(
           `[AudioRecorder] AEC not applied (ok=${result.ok} ` +
             `erle=${result.erleDb?.toFixed(1)}dB nearKept=${result.nearKept?.toFixed(2)} ` +
@@ -198,6 +287,14 @@ export class AudioRecorder {
         );
         return null;
       }
+      this.aecTelemetry = {
+        outcome: "applied",
+        erleDb: round2(result.erleDb),
+        nearKept: round2(result.nearKept),
+        echoReduction: round2(result.echoReduction),
+        delaySeconds: round2((result.delaySamples ?? 0) / result.sampleRate),
+        bufferedSeconds,
+      };
       console.log(
         `[AudioRecorder] ✅ AEC applied: erle=${result.erleDb?.toFixed(1)}dB ` +
           `delay=${((result.delaySamples ?? 0) / result.sampleRate).toFixed(2)}s ` +
@@ -206,12 +303,22 @@ export class AudioRecorder {
       );
       return new Blob([result.audio], { type: result.mime ?? "audio/mpeg" });
     } catch (e) {
+      this.aecTelemetry = {
+        outcome: "error",
+        reason: e instanceof Error ? e.message : String(e),
+        bufferedSeconds,
+      };
       console.warn(
         "[AudioRecorder] AEC worker failed, keeping raw mic:",
         e instanceof Error ? e.message : e,
       );
       return null;
     }
+  }
+
+  /** Echo-canceller outcome for this recording — populated during stop(). */
+  getAecTelemetry(): AecTelemetry | null {
+    return this.aecTelemetry;
   }
 
   private processAecInWorker(

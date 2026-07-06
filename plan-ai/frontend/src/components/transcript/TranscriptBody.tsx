@@ -32,8 +32,7 @@ const TranscriptBody = ({ transcript }: { transcript: any }) => {
   const renderSpeaker = (rawLabel: string) => {
     const info = speakerByLabel.get(rawLabel);
     const isMe =
-      info?.isPrincipalSpeaker ??
-      (principalSpeaker ? rawLabel === principalSpeaker : false);
+      info?.isPrincipalSpeaker ?? (principalSpeaker ? rawLabel === principalSpeaker : false);
     const identified = info?.identifiedName?.trim() || null;
     const role = info?.role ?? null;
     // Prefer the identified name; for the principal speaker without a name show

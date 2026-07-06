@@ -36,7 +36,7 @@ import {
 import { IconButton, TextField } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
-import { AudioRecorder } from "../services/audioRecorder";
+import { AudioRecorder, type AecTelemetry } from "../services/audioRecorder";
 import { loadConfig, saveConfig } from "../utils/recorderConfig";
 import {
   persistUnsavedTranscript,
@@ -298,6 +298,9 @@ const Recording: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [errorCode, setErrorCode] = useState<string | null>(null);
   const [blobs, setBlobs] = useState<{ micBlob?: Blob; sysBlob?: Blob }>({});
+  // Echo-canceller outcome from stop() — uploaded with the transcript so echoey
+  // recordings can be diagnosed from their metadata instead of the console.
+  const [aecTelemetry, setAecTelemetry] = useState<AecTelemetry | null>(null);
 
   const [projects, setProjects] = useState<Project[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState<string>(() => {
@@ -737,6 +740,9 @@ const Recording: React.FC = () => {
         content: fullPayload,
         recordedAt: new Date().toISOString(),
         projectId: targetProjectId,
+        // Selected ASR language ("" = auto) — persisted so the backend's batch
+        // re-diarization uses it instead of "multi" (which has no Catalan).
+        language: language || undefined,
         // contextIds intentionally not passed — backend resolves from projectId
         // (the project's paired Context) when omitted.
         contextIds: selectedContextId ? [selectedContextId] : undefined,
@@ -759,6 +765,7 @@ const Recording: React.FC = () => {
         // upload timing out / aborting) so the transcript itself still saves.
         micFile: skipAudio ? undefined : blobs.micBlob,
         sysFile: skipAudio ? undefined : blobs.sysBlob,
+        aecTelemetry: aecTelemetry ?? undefined,
       });
 
       // Saved successfully — clear the local recovery copy.
@@ -980,6 +987,7 @@ const Recording: React.FC = () => {
     if (timerRef.current) clearInterval(timerRef.current);
     const result = await recorderRef.current?.stop();
     if (result) setBlobs(result);
+    setAecTelemetry(recorderRef.current?.getAecTelemetry() ?? null);
     setIsStopping(false);
   };
 

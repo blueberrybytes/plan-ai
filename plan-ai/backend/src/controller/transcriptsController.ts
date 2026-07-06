@@ -329,6 +329,8 @@ export class TranscriptsController extends BaseWorkspaceController {
     @FormField() location?: string,
     @FormField() createDoc?: string,
     @FormField() createSlides?: string,
+    @FormField() language?: string,
+    @FormField() aecTelemetry?: string,
     @UploadedFile("micFile") micFile?: Express.Multer.File,
     @UploadedFile("sysFile") sysFile?: Express.Multer.File,
   ): Promise<ApiResponse<StandaloneTranscriptResponse>> {
@@ -346,6 +348,29 @@ export class TranscriptsController extends BaseWorkspaceController {
     let contextIdsArray: string[] = contextIds ? JSON.parse(contextIds) : [];
     const chatHistoryArray = chatHistory ? JSON.parse(chatHistory) : [];
     const locationObj = location ? JSON.parse(location) : undefined;
+
+    // Transcription language the user picked in the recorder ("ca", "es",
+    // "pt-BR", …). Validated so an arbitrary string can never reach the ASR
+    // call; stored in metadata so batch re-diarization (and any reprocess)
+    // honours the choice instead of falling back to "multi".
+    const recordingLanguage =
+      language && /^[a-z]{2,3}(-[A-Za-z0-9]{2,10})?$/i.test(language) ? language : undefined;
+
+    // Echo-canceller outcome reported by the recorder (previously console-only):
+    // records per-recording whether the uploaded mic was cleaned, skipped
+    // (cap/headphones) or rejected — the key diagnostic for echoey meetings.
+    // Diagnostics must never block an upload, so parse failures are ignored.
+    let recorderAec: Prisma.JsonObject | undefined;
+    if (aecTelemetry && aecTelemetry.length <= 2048) {
+      try {
+        const parsed = JSON.parse(aecTelemetry);
+        if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+          recorderAec = parsed as Prisma.JsonObject;
+        }
+      } catch {
+        /* malformed telemetry — ignore */
+      }
+    }
 
     // If the client only sent a projectId (mobile / recorder after the Context
     // refactor), auto-derive the project's paired contextId so AI generation,
@@ -448,6 +473,8 @@ export class TranscriptsController extends BaseWorkspaceController {
         metadata: {
           processingStatus: skipAi === "true" ? "DONE" : "PENDING",
           ...(locationObj ? { location: locationObj } : {}),
+          ...(recordingLanguage ? { recordingLanguage } : {}),
+          ...(recorderAec ? { recorderAec } : {}),
           generationOptions,
         } as Prisma.JsonObject,
       },
