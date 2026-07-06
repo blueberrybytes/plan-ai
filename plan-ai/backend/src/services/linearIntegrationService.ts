@@ -121,59 +121,110 @@ class LinearIntegrationService {
       return integration;
     }
 
-    try {
-      const clientId = EnvUtils.get("LINEAR_CLIENT_ID");
-      const clientSecret = EnvUtils.get("LINEAR_CLIENT_SECRET");
+    // Linear migrated ALL OAuth apps to expiring (~24h) access tokens with
+    // rotating refresh tokens on 2026-04-01, so this refresh runs daily per
+    // workspace — it is routine infrastructure, not a rare edge case. Failure
+    // handling must therefore distinguish:
+    //  - definitive auth rejection (HTTP 400/401, e.g. invalid_grant: token
+    //    revoked or stale) → the integration is truly dead → DISCONNECT so the
+    //    UI asks the user to reconnect;
+    //  - anything transient (Linear 5xx, network error, our 15s timeout,
+    //    missing env config) → DO NOT disconnect; throw a retryable error and
+    //    let the next sync try again. Disconnecting on a blip forces a manual
+    //    reconnect of a perfectly healthy integration.
+    // Retrying the SAME refresh request is safe: Linear documents a 30-minute
+    // replay grace during which a superseded refresh token returns the same
+    // newly-issued pair.
+    const clientId = EnvUtils.get("LINEAR_CLIENT_ID");
+    const clientSecret = EnvUtils.get("LINEAR_CLIENT_SECRET");
+    if (!clientId || !clientSecret) {
+      // Server misconfiguration — never the user's integration's fault.
+      throw new Error("Linear OAuth credentials are not configured");
+    }
 
-      if (!clientId || !clientSecret) {
-        throw new Error("Linear OAuth credentials are not configured");
-      }
+    const params = new URLSearchParams();
+    params.append("grant_type", "refresh_token");
+    params.append("refresh_token", integration.refreshToken);
+    params.append("client_id", clientId);
+    params.append("client_secret", clientSecret);
 
-      const params = new URLSearchParams();
-      params.append("grant_type", "refresh_token");
-      params.append("refresh_token", integration.refreshToken);
-      params.append("client_id", clientId);
-      params.append("client_secret", clientSecret);
-
+    const attempt = async (): Promise<
+      { ok: true; parsed: LinearTokenResponse } | { ok: false; status: number; body: string }
+    > => {
       const response = await fetch("https://api.linear.app/oauth/token", {
         method: "POST",
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
         body: params.toString(),
         signal: AbortSignal.timeout(15000),
       });
-
       const rawBody = await response.text();
-      if (!response.ok) {
-        logger.error("Failed to refresh Linear token", { status: response.status, body: rawBody });
-        throw new Error("Failed to refresh Linear token");
+      if (!response.ok) return { ok: false, status: response.status, body: rawBody };
+      return { ok: true, parsed: JSON.parse(rawBody) as LinearTokenResponse };
+    };
+
+    let result: Awaited<ReturnType<typeof attempt>>;
+    try {
+      result = await attempt();
+      if (!result.ok && result.status >= 500) {
+        await new Promise((r) => setTimeout(r, 1000));
+        result = await attempt();
       }
-
-      const parsed = JSON.parse(rawBody) as LinearTokenResponse;
-
-      let expiresAt: Date | null = null;
-      if (parsed.expires_in) {
-        expiresAt = new Date();
-        expiresAt.setSeconds(expiresAt.getSeconds() + parsed.expires_in);
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    } catch (firstErr) {
+      // Network error / timeout — replay once (safe per the 30-min grace).
+      try {
+        await new Promise((r) => setTimeout(r, 1000));
+        result = await attempt();
+      } catch (secondErr) {
+        logger.warn("Linear token refresh failed (network, will retry on next sync)", secondErr);
+        throw new Error(
+          "Linear token refresh failed (network error). The integration stays connected; the next sync will retry.",
+        );
       }
-
-      const updated = await prisma.workspaceIntegration.update({
-        where: { id: integration.id },
-        data: {
-          accessToken: parsed.access_token,
-          refreshToken: parsed.refresh_token ?? integration.refreshToken,
-          expiresAt,
-        },
-      });
-
-      return updated;
-    } catch (error) {
-      logger.error("Error refreshing Linear token", error);
-      await prisma.workspaceIntegration.update({
-        where: { id: integration.id },
-        data: { status: IntegrationStatus.DISCONNECTED },
-      });
-      throw new Error("Linear token expired and could not be refreshed. Please reconnect.");
     }
+
+    if (!result.ok) {
+      const authRejected = result.status === 400 || result.status === 401;
+      logger.error("Failed to refresh Linear token", {
+        status: result.status,
+        body: result.body,
+        authRejected,
+      });
+      if (authRejected) {
+        // The refresh token is dead (revoked / rotated away) — reconnect is
+        // genuinely required, so surface it in the integration status.
+        await prisma.workspaceIntegration.update({
+          where: { id: integration.id },
+          data: { status: IntegrationStatus.DISCONNECTED },
+        });
+        throw new Error(
+          `Linear rejected the refresh token (HTTP ${result.status}). Please reconnect Linear.`,
+        );
+      }
+      throw new Error(
+        `Linear token refresh failed with HTTP ${result.status}. The integration stays connected; the next sync will retry.`,
+      );
+    }
+
+    const { parsed } = result;
+    let expiresAt: Date | null = null;
+    if (parsed.expires_in) {
+      expiresAt = new Date();
+      expiresAt.setSeconds(expiresAt.getSeconds() + parsed.expires_in);
+    }
+
+    // If this update fails, the stored (now superseded) refresh token remains
+    // usable for 30 minutes via Linear's replay grace, so the next sync heals.
+    const updated = await prisma.workspaceIntegration.update({
+      where: { id: integration.id },
+      data: {
+        accessToken: parsed.access_token,
+        refreshToken: parsed.refresh_token ?? integration.refreshToken,
+        expiresAt,
+      },
+    });
+
+    return updated;
   }
 
   public async verifyManualCredentials(workspaceId: string, payload: LinearManualConnectRequest) {
