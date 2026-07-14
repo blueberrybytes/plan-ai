@@ -37,13 +37,13 @@ import { IconButton, TextField } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 import { AudioRecorder, type AecTelemetry } from "../services/audioRecorder";
-import { loadConfig, saveConfig } from "../utils/recorderConfig";
+import { loadConfig, saveConfig, saveLanguagePreference } from "../utils/recorderConfig";
 import {
   persistUnsavedTranscript,
   clearUnsavedTranscript,
 } from "../utils/unsavedTranscript";
 import ReactMarkdown from "react-markdown";
-import { DEEPGRAM_LANGUAGES } from "../utils/deepgramLanguages";
+import { DEEPGRAM_LANGUAGES, AUTO_LANGUAGE_OPTION } from "../utils/deepgramLanguages";
 import type { Context, Project, AiModel, UserIntegrationSummary } from "../services/planAiApi";
 
 type Phase = "recording" | "context_selection" | "saving" | "done" | "error";
@@ -61,7 +61,7 @@ export interface TranscriptBlock {
 }
 
 const LANGUAGE_OPTIONS = [
-  { code: "", name: "Auto-Detect Lang" },
+  AUTO_LANGUAGE_OPTION,
   ...Object.entries(DEEPGRAM_LANGUAGES)
     .sort((a, b) => a[1].localeCompare(b[1]))
     .map(([code, name]) => ({ code, name })),
@@ -999,6 +999,9 @@ const Recording: React.FC = () => {
     if (config) {
       saveConfig({ ...config, language: newLang });
     }
+    // …and to the cross-session default, so returning Home doesn't reset the
+    // selector to auto-detect and silently re-record under "multi".
+    saveLanguagePreference(newLang);
   };
 
   const handleSpeakerModeChange = (enabled: boolean) => {

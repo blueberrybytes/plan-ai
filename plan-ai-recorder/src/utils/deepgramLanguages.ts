@@ -1,5 +1,18 @@
 // Full list of languages supported by Deepgram Nova-3 model
 // https://developers.deepgram.com/docs/models-languages-overview
+
+/**
+ * Auto-detect ⇒ Deepgram `language=multi` (code-switching), which only covers
+ * en, es, fr, de, hi, ru, pt, ja, it and nl. Picking it for any OTHER language
+ * in the list below — Catalan included — returns an EMPTY transcript, not a
+ * degraded one. The label has to say so; the codes below all work, but only
+ * when selected explicitly.
+ */
+export const AUTO_LANGUAGE_OPTION = {
+  code: "",
+  name: "Auto-Detect (10 major languages only)",
+};
+
 export const DEEPGRAM_LANGUAGES: Record<string, string> = {
     ar: "Arabic",
     be: "Belarusian",

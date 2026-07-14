@@ -36,13 +36,19 @@ import { useAuth } from "../hooks/useAuth";
 import type { Transcript, Project } from "../services/planAiApi";
 import type { DesktopSource } from "../types/electron";
 import { AudioLevelMonitor } from "../components/AudioLevelMonitor";
-import { saveConfig, type RecordingConfig } from "../utils/recorderConfig";
+import {
+  saveConfig,
+  loadConfig,
+  saveLanguagePreference,
+  loadLanguagePreference,
+  type RecordingConfig,
+} from "../utils/recorderConfig";
 import {
   loadUnsavedTranscript,
   clearUnsavedTranscript,
   type UnsavedTranscript,
 } from "../utils/unsavedTranscript";
-import { DEEPGRAM_LANGUAGES } from "../utils/deepgramLanguages";
+import { DEEPGRAM_LANGUAGES, AUTO_LANGUAGE_OPTION } from "../utils/deepgramLanguages";
 import { PrivacyConsentDialog } from "../components/PrivacyConsentDialog";
 import WorkspaceSwitcher from "../components/WorkspaceSwitcher";
 
@@ -62,7 +68,12 @@ const Home: React.FC = () => {
   const [hasScreenPermission, setHasScreenPermission] = useState(true);
   const [hasMicPermission, setHasMicPermission] = useState(true);
 
-  const [language, setLanguage] = useState<string>(""); // "" = auto
+  // "" = auto-detect. Restored from the persisted choice: Home remounts after
+  // every meeting, and a bare useState("") silently reverted the user's pick to
+  // auto-detect, then overwrote the saved config with it on the next Start.
+  const [language, setLanguage] = useState<string>(
+    () => loadLanguagePreference() ?? loadConfig()?.language ?? "",
+  );
   const [micInputs, setMicInputs] = useState<MediaDeviceInfo[]>([]);
   const [micDeviceId, setMicDeviceId] = useState<string>(() => {
     const saved = localStorage.getItem("planai_mic_device_id");
@@ -395,6 +406,10 @@ const Home: React.FC = () => {
       projectIds: selectedProjectId ? [selectedProjectId] : undefined,
     };
     saveConfig(config);
+    // Re-assert the language on Start, so the preference repairs itself if it
+    // was only recovered from the session config (sign-out clears localStorage
+    // but not sessionStorage) rather than read back from its own key.
+    saveLanguagePreference(language);
     navigate(`/recording`);
   };
 
@@ -1058,7 +1073,7 @@ const Home: React.FC = () => {
               size="small"
               fullWidth
               options={[
-                { code: "", name: "Auto-Detect (May mix languages)" },
+                AUTO_LANGUAGE_OPTION,
                 ...Object.entries(DEEPGRAM_LANGUAGES)
                   .sort((a, b) => a[1].localeCompare(b[1]))
                   .map(([code, name]) => ({ code, name })),
@@ -1066,14 +1081,16 @@ const Home: React.FC = () => {
               getOptionLabel={(option) => option.name}
               value={
                 language === ""
-                  ? { code: "", name: "Auto-Detect (May mix languages)" }
+                  ? AUTO_LANGUAGE_OPTION
                   : {
                       code: language,
                       name: DEEPGRAM_LANGUAGES[language] || language,
                     }
               }
               onChange={(_, newValue) => {
-                setLanguage(newValue ? newValue.code : "");
+                const code = newValue ? newValue.code : "";
+                setLanguage(code);
+                saveLanguagePreference(code);
               }}
               isOptionEqualToValue={(option, value) =>
                 option.code === value.code
