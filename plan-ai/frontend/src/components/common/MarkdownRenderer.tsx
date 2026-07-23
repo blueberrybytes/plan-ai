@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useRef, useState } from "react";
 import { Box, IconButton, SxProps, Tooltip } from "@mui/material";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
@@ -116,6 +117,17 @@ const TableWithCopy: React.FC<{
   );
 };
 
+const flattenText = (children: any): string => {
+  if (typeof children === "string") return children;
+  if (Array.isArray(children)) {
+    return children.map(flattenText).join("");
+  }
+  if (children && typeof children === "object" && children.props && children.props.children) {
+    return flattenText(children.props.children);
+  }
+  return "";
+};
+
 interface MarkdownRendererProps {
   content: string;
   sx?: SxProps;
@@ -200,6 +212,30 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         components={{
+          h1: ({ children, ...props }: any) => {
+            const id = flattenText(children).toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]/g, '');
+            return <h1 id={id} {...props}>{children}</h1>;
+          },
+          h2: ({ children, ...props }: any) => {
+            const id = flattenText(children).toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]/g, '');
+            return <h2 id={id} {...props}>{children}</h2>;
+          },
+          h3: ({ children, ...props }: any) => {
+            const id = flattenText(children).toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]/g, '');
+            return <h3 id={id} {...props}>{children}</h3>;
+          },
+          h4: ({ children, ...props }: any) => {
+            const id = flattenText(children).toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]/g, '');
+            return <h4 id={id} {...props}>{children}</h4>;
+          },
+          h5: ({ children, ...props }: any) => {
+            const id = flattenText(children).toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]/g, '');
+            return <h5 id={id} {...props}>{children}</h5>;
+          },
+          h6: ({ children, ...props }: any) => {
+            const id = flattenText(children).toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]/g, '');
+            return <h6 id={id} {...props}>{children}</h6>;
+          },
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           table: ({ children, ...props }: any) => (
             <TableWithCopy tableProps={props}>{children}</TableWithCopy>
@@ -284,14 +320,59 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
           },
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           a({ href, children, ...props }: any) {
+            if (!href) return <a {...props}>{children}</a>;
+
             // If the link is internal (starts with /), use React Router
-            if (href && href.startsWith("/")) {
+            if (href.startsWith("/")) {
               return (
                 <RouterLink to={href} {...props}>
                   {children}
                 </RouterLink>
               );
             }
+
+            // Handle hash links (for Table of Contents)
+            if (href.startsWith("#")) {
+              return (
+                <a 
+                  href={href} 
+                  onClick={(e) => {
+                    const id = href.substring(1);
+                    const element = document.getElementById(id);
+                    if (element) {
+                      e.preventDefault();
+                      element.scrollIntoView({ behavior: "smooth" });
+                    }
+                  }}
+                  {...props}
+                >
+                  {children}
+                </a>
+              );
+            }
+
+            // Detect AI hallucinated relative links (e.g. "See Section 4. Action Plan")
+            // A real external link will start with http://, https://, or mailto:
+            if (!/^https?:\/\//i.test(href) && !href.startsWith("mailto:")) {
+              // Convert the broken relative link to a hash ID based on its text
+              const slug = href.trim().toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]/g, '');
+              return (
+                <a 
+                  href={`#${slug}`} 
+                  onClick={(e) => {
+                    const element = document.getElementById(slug);
+                    if (element) {
+                      e.preventDefault();
+                      element.scrollIntoView({ behavior: "smooth" });
+                    }
+                  }}
+                  {...props}
+                >
+                  {children}
+                </a>
+              );
+            }
+
             // For external links, use a standard anchor tag with target="_blank"
             return (
               <a href={href} target="_blank" rel="noopener noreferrer" {...props}>
