@@ -172,7 +172,12 @@ export const repairMermaidSyntax = (chart: string): string => {
   if (detectedType && detectedType !== "FLOWCHART") return chart;
 
   // Chars that break an UNQUOTED node label and therefore force quoting.
-  const FORBIDDEN_IN_LABEL = /[(){}&%/\-:#;]/;
+  // `"` belongs here: Mermaid's lexer treats a quote inside a bare label as the
+  // start of a STR token and dies expecting the shape's closing delimiter (e.g.
+  // `B{AI Agent "Berry"}` → "expecting DIAMOND_STOP, got STR"). Step 0 above only
+  // covers labels whose quote sits immediately after the bracket, so without this
+  // the mid-label case reaches the parser unrepaired.
+  const FORBIDDEN_IN_LABEL = /[(){}&%/\-:#;"]/;
 
   // ─── Step 0: escape inner quotes inside already-quoted node labels ───────────
   // The AI sometimes emits:  A["label with "quoted" word"]
@@ -228,12 +233,13 @@ export const repairMermaidSyntax = (chart: string): string => {
   });
 
   // Edge labels `-->|label|`: only quote when they carry delimiter-breaking
-  // characters that genuinely crash the parser (parens/braces/ampersand/hash).
+  // characters that genuinely crash the parser (parens/braces/ampersand/hash,
+  // plus a bare `"` for the same STR-token reason as node labels above).
   // Colons, plus signs and slashes render fine in edge labels, so leave those.
   safeChart = safeChart.replace(/\|([^|\n]+)\|/g, (match, text: string) => {
     const trimmed = text.trim();
     if (trimmed.startsWith('"') && trimmed.endsWith('"')) return match;
-    if (/[(){}&#]/.test(trimmed)) {
+    if (/[(){}&#"]/.test(trimmed)) {
       return `|"${trimmed.replace(/"/g, "'")}"|`;
     }
     return match;

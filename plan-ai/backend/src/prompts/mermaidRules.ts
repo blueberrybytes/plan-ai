@@ -13,8 +13,8 @@
  */
 export const MERMAID_SYNTAX_RULES = `CRITICAL MERMAID SYNTAX RULES:
 1. NODE IDs: Node IDs MUST be strictly alphanumeric or underscores. NEVER use dots, slashes, hyphens, or spaces in Node IDs (e.g. use \`NodeJS\`, not \`Node.js\`).
-2. NODE LABELS: ANY node label containing spaces, parentheses "()", ampersands "&", hyphens "-", slashes "/", colons ":", or other punctuation MUST be enclosed in double quotes. Example: A["Menu (Client)"] instead of A[Menu (Client)]. This applies to ALL node shapes — including compound ones: circle E(("Endpoint")), stadium S(["Start/Stop"]), cylinder D[("User DB")], subroutine X[["Sub-call"]], hexagon H{{"Decision"}}.
-3. Never place a literal double quote inside a quoted label — use a single quote ' instead.
+2. NODE LABELS: ANY node label containing spaces, parentheses "()", ampersands "&", hyphens "-", slashes "/", colons ":", quotes, or other punctuation MUST be enclosed in double quotes. Example: A["Menu (Client)"] instead of A[Menu (Client)]. This applies to ALL node shapes — rectangle A["Label"], rhombus/decision B{"Is it valid?"}, rounded C("Label") — including compound ones: circle E(("Endpoint")), stadium S(["Start/Stop"]), cylinder D[("User DB")], subroutine X[["Sub-call"]], hexagon H{{"Decision"}}.
+3. QUOTES INSIDE LABELS: a label that mentions a quoted name is STILL wrapped in double quotes — convert the inner quotes to single quotes '. Write B{"AI Agent 'Berry'"}, NEVER B{AI Agent "Berry"} and NEVER B{"AI Agent "Berry""}. Leaving such a label unquoted crashes the parser: Mermaid reads the inner " as the start of a string token and reports 'got STR' while expecting the shape's closing delimiter.
 4. EDGE LABELS: keep edge labels (\`-->|label|\`) free of parentheses, braces and ampersands; if unavoidable, wrap the label in double quotes.
 5. SUBGRAPHS: Every \`subgraph\` MUST be closed with a matching \`end\` keyword. Never leave a subgraph unclosed or truncate the diagram.
 6. STATE DIAGRAMS: NEVER use double quotes directly in transition arrows. Define an alias first using 'state "Label" as ID', then transition between IDs.
