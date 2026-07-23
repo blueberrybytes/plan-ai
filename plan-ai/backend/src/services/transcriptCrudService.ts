@@ -9,6 +9,8 @@ export interface TranscriptListResult {
 export interface TranscriptListOptions {
   projectId?: string;
   source?: TranscriptSource;
+  /** Multi-source filter. Takes precedence over `source` when non-empty. */
+  sources?: TranscriptSource[];
   query?: string;
   page?: number;
   pageSize?: number;
@@ -105,7 +107,13 @@ export class TranscriptCrudService {
     const where: Prisma.TranscriptWhereInput = {
       workspaceId: options.workspaceId,
       ...(options.projectId !== undefined ? { projectId: options.projectId } : {}),
-      ...(options.source ? { source: options.source } : {}),
+      // `sources` (plural) wins when supplied. Kept separate from `source` so
+      // existing single-source callers keep their exact behaviour.
+      ...(options.sources?.length
+        ? { source: { in: options.sources } }
+        : options.source
+          ? { source: options.source }
+          : {}),
       ...(options.sentiment && options.sentiment !== "all_sentiments"
         ? { sentiment: options.sentiment }
         : {}),

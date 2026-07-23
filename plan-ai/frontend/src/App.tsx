@@ -42,6 +42,7 @@ import DocView from "./pages/DocView";
 import ChatStreamTest from "./pages/ChatStreamTest";
 import Downloads from "./pages/Downloads";
 import PublicDocView from "./pages/PublicDocView";
+import PublicPrototypeView from "./pages/PublicPrototypeView";
 import Diagrams from "./pages/Diagrams";
 import DiagramCreate from "./pages/DiagramCreate";
 import DiagramTypes from "./pages/DiagramTypes";
@@ -224,6 +225,7 @@ const AppRoutes: React.FC = () => {
 
             {/* Public Document View */}
             <Route path="/doc/public/:id" element={<PublicDocView />} />
+            <Route path="/prototype/public/:id" element={<PublicPrototypeView />} />
 
             {/* Public Diagram View */}
             <Route path="/diagram/public/:id" element={<PublicDiagramView />} />

@@ -1356,5 +1356,17 @@
     "toast": {
       "subscriptionRequired": "Subscription required — open Billing to choose a plan."
     }
+  },
+  "workspace": {
+    "identifiers": {
+      "title": "Identifiers",
+      "description": "Needed to connect this workspace to server-side integrations, such as the Telegram bot. Paste them into your .env file.",
+      "workspaceId": "Workspace ID",
+      "userId": "Your user ID",
+      "copied": "Copied"
+    }
+  },
+  "prototype": {
+    "notFound": "This prototype is no longer available."
   }
 }

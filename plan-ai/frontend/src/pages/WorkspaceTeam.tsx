@@ -25,6 +25,8 @@ import GroupAddIcon from "@mui/icons-material/GroupAdd";
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
 import RefreshIcon from "@mui/icons-material/Refresh";
+import ContentCopyIcon from "@mui/icons-material/ContentCopy";
+import CheckIcon from "@mui/icons-material/Check";
 import InsightsIcon from "@mui/icons-material/Insights";
 import { useTranslation } from "react-i18next";
 import { useSelector, useDispatch } from "react-redux";
@@ -53,6 +55,98 @@ import { Dialog, DialogTitle, DialogContent, DialogActions, TextField, Link } fr
 import { components } from "../types/api";
 
 type WorkspaceMemberResponse = components["schemas"]["WorkspaceMemberResponse"];
+
+/**
+ * Read-only identifier with a copy button. These values are pasted into `.env`
+ * files and support tickets, so selecting them by hand is both fiddly and a
+ * source of truncation errors — the copy button is the point of the component.
+ */
+const CopyableId: React.FC<{ label: string; value: string; copiedLabel: string }> = ({
+  label,
+  value,
+  copiedLabel,
+}) => {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = () => {
+    void navigator.clipboard.writeText(value);
+    setCopied(true);
+    window.setTimeout(() => setCopied(false), 1500);
+  };
+
+  return (
+    <TextField
+      fullWidth
+      label={label}
+      value={value}
+      size="small"
+      sx={{ mb: 2 }}
+      InputProps={{
+        readOnly: true,
+        sx: { fontFamily: "monospace", fontSize: 13 },
+        endAdornment: (
+          <Tooltip title={copied ? copiedLabel : label}>
+            <IconButton onClick={handleCopy} edge="end" size="small">
+              {copied ? (
+                <CheckIcon fontSize="small" color="success" />
+              ) : (
+                <ContentCopyIcon fontSize="small" />
+              )}
+            </IconButton>
+          </Tooltip>
+        ),
+      }}
+    />
+  );
+};
+
+/**
+ * Workspace + user IDs, for wiring server-side integrations (the Telegram bot,
+ * scripts, support requests).
+ *
+ * Deliberately NOT inside `WorkspaceSettingsSection`: that lives under a tab
+ * gated on `role === "OWNER" && isByokTrack`, so on a courtesy or managed
+ * workspace the tab does not exist and the IDs were unreachable. These are
+ * plain workspace metadata, not a BYOK concern, so they only need OWNER.
+ */
+const WorkspaceIdentifiersSection: React.FC<{ workspaceId: string }> = ({ workspaceId }) => {
+  const { t } = useTranslation();
+  const userDb = useSelector(selectUserDb);
+
+  return (
+    <Paper
+      elevation={0}
+      sx={{
+        p: 3,
+        mt: 3,
+        maxWidth: 600,
+        borderRadius: 2,
+        border: "1px solid",
+        borderColor: "divider",
+      }}
+    >
+      <Typography variant="subtitle1" sx={{ fontWeight: 600 }} gutterBottom>
+        {t("workspace.identifiers.title")}
+      </Typography>
+      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+        {t("workspace.identifiers.description")}
+      </Typography>
+
+      <CopyableId
+        label={t("workspace.identifiers.workspaceId")}
+        value={workspaceId}
+        copiedLabel={t("workspace.identifiers.copied")}
+      />
+      {userDb?.id && (
+        <CopyableId
+          label={t("workspace.identifiers.userId")}
+          value={userDb.id}
+          copiedLabel={t("workspace.identifiers.copied")}
+        />
+      )}
+    </Paper>
+  );
+};
 
 const WorkspaceSettingsSection: React.FC<{ activeWorkspace: WorkspaceResponse }> = ({
   activeWorkspace,
@@ -463,152 +557,157 @@ const WorkspaceTeam: React.FC = () => {
             Failed to load team members.
           </Alert>
         ) : tabs[tabValue]?.id === "active" || tabs[tabValue]?.id === "pending" ? (
-          <TableContainer component={Paper} sx={{ borderRadius: 2, overflow: "hidden" }}>
-            <Table>
-              <TableHead sx={{ bgcolor: "background.default" }}>
-                <TableRow>
-                  <TableCell>Email</TableCell>
-                  <TableCell>Role</TableCell>
-                  {tabs[tabValue]?.id === "active" && <TableCell>Name</TableCell>}
-                  <TableCell>User Persona</TableCell>
-                  <TableCell>Date</TableCell>
-                  {canInvite && <TableCell align="center">Actions</TableCell>}
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {(tabs[tabValue]?.id === "active" ? activeMembers : pendingInvitations).map(
-                  (member) => (
-                    <TableRow key={member.id} hover>
-                      <TableCell>
-                        <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-                          <Avatar sx={{ width: 32, height: 32 }}>
-                            {member.email[0].toUpperCase()}
-                          </Avatar>
-                          <Typography variant="body2" fontWeight={500}>
-                            {member.email}
+          <>
+            <TableContainer component={Paper} sx={{ borderRadius: 2, overflow: "hidden" }}>
+              <Table>
+                <TableHead sx={{ bgcolor: "background.default" }}>
+                  <TableRow>
+                    <TableCell>Email</TableCell>
+                    <TableCell>Role</TableCell>
+                    {tabs[tabValue]?.id === "active" && <TableCell>Name</TableCell>}
+                    <TableCell>User Persona</TableCell>
+                    <TableCell>Date</TableCell>
+                    {canInvite && <TableCell align="center">Actions</TableCell>}
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {(tabs[tabValue]?.id === "active" ? activeMembers : pendingInvitations).map(
+                    (member) => (
+                      <TableRow key={member.id} hover>
+                        <TableCell>
+                          <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+                            <Avatar sx={{ width: 32, height: 32 }}>
+                              {member.email[0].toUpperCase()}
+                            </Avatar>
+                            <Typography variant="body2" fontWeight={500}>
+                              {member.email}
+                            </Typography>
+                          </Box>
+                        </TableCell>
+                        <TableCell>
+                          <Typography
+                            variant="body2"
+                            sx={{
+                              px: 1.5,
+                              py: 0.5,
+                              borderRadius: 1,
+                              display: "inline-block",
+                              bgcolor:
+                                member.role === "ADMIN" || member.role === "OWNER"
+                                  ? "error.main"
+                                  : "primary.main",
+                              color: "#fff",
+                              fontSize: "0.75rem",
+                              fontWeight: 600,
+                              opacity: 0.9,
+                            }}
+                          >
+                            {member.role}
                           </Typography>
-                        </Box>
-                      </TableCell>
-                      <TableCell>
-                        <Typography
-                          variant="body2"
-                          sx={{
-                            px: 1.5,
-                            py: 0.5,
-                            borderRadius: 1,
-                            display: "inline-block",
-                            bgcolor:
-                              member.role === "ADMIN" || member.role === "OWNER"
-                                ? "error.main"
-                                : "primary.main",
-                            color: "#fff",
-                            fontSize: "0.75rem",
-                            fontWeight: 600,
-                            opacity: 0.9,
-                          }}
-                        >
-                          {member.role}
-                        </Typography>
-                      </TableCell>
-                      {tabs[tabValue]?.id === "active" && (
+                        </TableCell>
+                        {tabs[tabValue]?.id === "active" && (
+                          <TableCell>
+                            <Typography variant="body2" color="text.secondary">
+                              {member.name || "—"}
+                            </Typography>
+                          </TableCell>
+                        )}
+                        <TableCell>
+                          <Chip
+                            label={
+                              member.personas && member.personas.length > 0
+                                ? member.personas.join(", ").replace(/_/g, " ")
+                                : "Not Set"
+                            }
+                            size="small"
+                            onClick={
+                              canInvite && member.role !== "OWNER"
+                                ? () => {
+                                    setMemberToEdit(member);
+                                    setEditModalOpen(true);
+                                  }
+                                : undefined
+                            }
+                            clickable={canInvite && member.role !== "OWNER"}
+                            color={
+                              member.personas && member.personas.length > 0 ? "primary" : "default"
+                            }
+                            variant={
+                              member.personas && member.personas.length > 0 ? "outlined" : "filled"
+                            }
+                            sx={{ textTransform: "capitalize" }}
+                          />
+                        </TableCell>
                         <TableCell>
                           <Typography variant="body2" color="text.secondary">
-                            {member.name || "—"}
+                            {format(new Date(member.createdAt), "MMM d, yyyy")}
                           </Typography>
                         </TableCell>
-                      )}
-                      <TableCell>
-                        <Chip
-                          label={
-                            member.personas && member.personas.length > 0
-                              ? member.personas.join(", ").replace(/_/g, " ")
-                              : "Not Set"
-                          }
-                          size="small"
-                          onClick={
-                            canInvite && member.role !== "OWNER"
-                              ? () => {
-                                  setMemberToEdit(member);
-                                  setEditModalOpen(true);
+                        {canInvite && (
+                          <TableCell align="center" sx={{ whiteSpace: "nowrap" }}>
+                            {tabs[tabValue]?.id === "active" && (
+                              <Tooltip title="Edit member">
+                                <IconButton
+                                  size="small"
+                                  color="primary"
+                                  onClick={() => {
+                                    setMemberToEdit(member);
+                                    setEditModalOpen(true);
+                                  }}
+                                >
+                                  <EditIcon fontSize="small" />
+                                </IconButton>
+                              </Tooltip>
+                            )}
+                            {member.role !== "OWNER" && (
+                              <Tooltip
+                                title={
+                                  tabs[tabValue]?.id === "active"
+                                    ? "Remove member"
+                                    : "Cancel invitation"
                                 }
-                              : undefined
-                          }
-                          clickable={canInvite && member.role !== "OWNER"}
-                          color={
-                            member.personas && member.personas.length > 0 ? "primary" : "default"
-                          }
-                          variant={
-                            member.personas && member.personas.length > 0 ? "outlined" : "filled"
-                          }
-                          sx={{ textTransform: "capitalize" }}
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <Typography variant="body2" color="text.secondary">
-                          {format(new Date(member.createdAt), "MMM d, yyyy")}
-                        </Typography>
-                      </TableCell>
-                      {canInvite && (
-                        <TableCell align="center" sx={{ whiteSpace: "nowrap" }}>
-                          {tabs[tabValue]?.id === "active" && (
-                            <Tooltip title="Edit member">
-                              <IconButton
-                                size="small"
-                                color="primary"
-                                onClick={() => {
-                                  setMemberToEdit(member);
-                                  setEditModalOpen(true);
-                                }}
                               >
-                                <EditIcon fontSize="small" />
-                              </IconButton>
-                            </Tooltip>
-                          )}
-                          {member.role !== "OWNER" && (
-                            <Tooltip
-                              title={
-                                tabs[tabValue]?.id === "active"
-                                  ? "Remove member"
-                                  : "Cancel invitation"
-                              }
-                            >
-                              <IconButton
-                                size="small"
-                                color="error"
-                                onClick={() => {
-                                  if (tabs[tabValue]?.id === "active") {
-                                    removeMember(member.id);
-                                  } else {
-                                    cancelInvitation(member.id);
-                                  }
-                                }}
-                              >
-                                <DeleteIcon fontSize="small" />
-                              </IconButton>
-                            </Tooltip>
-                          )}
-                        </TableCell>
-                      )}
+                                <IconButton
+                                  size="small"
+                                  color="error"
+                                  onClick={() => {
+                                    if (tabs[tabValue]?.id === "active") {
+                                      removeMember(member.id);
+                                    } else {
+                                      cancelInvitation(member.id);
+                                    }
+                                  }}
+                                >
+                                  <DeleteIcon fontSize="small" />
+                                </IconButton>
+                              </Tooltip>
+                            )}
+                          </TableCell>
+                        )}
+                      </TableRow>
+                    ),
+                  )}
+                  {(tabs[tabValue]?.id === "active" ? activeMembers : pendingInvitations).length ===
+                    0 && (
+                    <TableRow>
+                      <TableCell
+                        colSpan={canInvite ? 5 : 4}
+                        align="center"
+                        sx={{ py: 4, color: "text.secondary" }}
+                      >
+                        {tabs[tabValue]?.id === "active"
+                          ? "No active members found."
+                          : "No pending invitations."}
+                      </TableCell>
                     </TableRow>
-                  ),
-                )}
-                {(tabs[tabValue]?.id === "active" ? activeMembers : pendingInvitations).length ===
-                  0 && (
-                  <TableRow>
-                    <TableCell
-                      colSpan={canInvite ? 5 : 4}
-                      align="center"
-                      sx={{ py: 4, color: "text.secondary" }}
-                    >
-                      {tabs[tabValue]?.id === "active"
-                        ? "No active members found."
-                        : "No pending invitations."}
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </TableContainer>
+                  )}
+                </TableBody>
+              </Table>
+            </TableContainer>
+            {tabs[tabValue]?.id === "active" && activeWorkspace?.role === "OWNER" && (
+              <WorkspaceIdentifiersSection workspaceId={activeWorkspace.id} />
+            )}
+          </>
         ) : tabs[tabValue]?.id === "usage" && canViewUsage ? (
           <>
             {usageLoading ? (

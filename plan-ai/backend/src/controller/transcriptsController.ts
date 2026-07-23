@@ -215,13 +215,27 @@ export class TranscriptsController extends BaseWorkspaceController {
     @Query() q?: string,
     @Query() sentiment?: string,
     @Query() dateFilter?: string,
+    @Query() sources?: string,
   ): Promise<ApiResponse<StandaloneTranscriptListResponse>> {
     const { user, workspaceId } = await this.getAuthorizedWorkspaceAccess(request);
+
+    // Comma-separated multi-source filter, e.g. "RECORDING,TELEGRAM". Added
+    // rather than making `source` an array so existing callers are untouched.
+    // Unknown values are dropped instead of 400ing — a stale client asking for
+    // a source we removed should get a narrower list, not an error.
+    const parsedSources = sources
+      ?.split(",")
+      .map((value) => value.trim().toUpperCase())
+      .filter((value): value is TranscriptSource =>
+        Object.values(TranscriptSource).includes(value as TranscriptSource),
+      );
+
     const options: TranscriptListOptions = {
       workspaceId,
       page,
       pageSize,
       source,
+      sources: parsedSources,
       query: q,
       sentiment,
       dateFilter,

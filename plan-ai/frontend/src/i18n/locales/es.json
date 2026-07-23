@@ -1350,5 +1350,17 @@
     "toast": {
       "subscriptionRequired": "Suscripción requerida — ve a Facturación para elegir un plan."
     }
+  },
+  "workspace": {
+    "identifiers": {
+      "title": "Identificadores",
+      "description": "Necesarios para conectar este workspace con integraciones de servidor, como el bot de Telegram. Pégalos en tu fichero .env.",
+      "workspaceId": "ID del workspace",
+      "userId": "Tu ID de usuario",
+      "copied": "Copiado"
+    }
+  },
+  "prototype": {
+    "notFound": "Este prototipo ya no está disponible."
   }
 }

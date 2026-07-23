@@ -628,6 +628,34 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/integrations/telegram/webhook": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description Receives updates from the Telegram Bot API for the "Berry" sales bot.
+         *
+         *     Unauthenticated by necessity (Telegram has no OAuth for webhooks) — the gate
+         *     is the `X-Telegram-Bot-Api-Secret-Token` header registered via `setWebhook`,
+         *     following the same shape as the Stripe and GitHub receivers in this codebase.
+         *
+         *     Answers 200 immediately and processes in the background: Telegram retries
+         *     any update it doesn't get a prompt response for, and generation takes far
+         *     longer than its tolerance — without this a slow generation becomes a
+         *     duplicate-proposal loop.
+         */
+        post: operations["HandleWebhook"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/tasks/metadata-types": {
         parameters: {
             query?: never;
@@ -2707,7 +2735,7 @@ export interface components {
             status: number;
         };
         /** @enum {string} */
-        "_36_Enums.TranscriptSource": "MANUAL" | "RECORDING" | "UPLOAD" | "IMPORTED";
+        "_36_Enums.TranscriptSource": "MANUAL" | "RECORDING" | "UPLOAD" | "IMPORTED" | "TELEGRAM";
         TranscriptSource: components["schemas"]["_36_Enums.TranscriptSource"];
         /** @enum {string} */
         "_36_Enums.PainPointSeverity": "BLOCKER" | "HIGH" | "MEDIUM" | "LOW";
@@ -5845,6 +5873,7 @@ export interface operations {
                 q?: string;
                 sentiment?: string;
                 dateFilter?: string;
+                sources?: string;
             };
             header?: never;
             path?: never;
@@ -6052,6 +6081,28 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ApiResponse__success-boolean__"];
+                };
+            };
+        };
+    };
+    HandleWebhook: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Update received */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        status: string;
+                    };
                 };
             };
         };

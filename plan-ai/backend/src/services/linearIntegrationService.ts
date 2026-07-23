@@ -48,9 +48,7 @@ class LinearIntegrationService {
     return `https://linear.app/oauth/authorize?${params.toString()}`;
   }
 
-  public async exchangeCode(
-    code: string,
-  ): Promise<{
+  public async exchangeCode(code: string): Promise<{
     accessToken: string;
     accountId: string;
     accountName: string;

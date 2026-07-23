@@ -1,6 +1,6 @@
 {
   "name": "backend",
-  "version": "4.2.7",
+  "version": "4.2.8",
   "description": "",
   "engines": {
     "node": "22.17.1"
@@ -10,6 +10,9 @@
     "start": "node dist/server.js",
     "build": "yarn generate:swagger && tsc",
     "build:ts": "tsc",
+    "preview:berry": "ts-node --transpile-only src/scripts/previewBerryArtifacts.ts",
+    "preflight:berry": "env-cmd -f .env ts-node --transpile-only src/scripts/preflightBerry.ts",
+    "webhook:berry": "env-cmd -f .env ts-node --transpile-only src/scripts/setBerryWebhook.ts",
     "test:plugins": "env-cmd -f .env ts-node --transpile-only src/scripts/testResponseHealing.ts",
     "test:mcp": "env-cmd -f .env ts-node --transpile-only src/scripts/testMcpHttp.ts",
     "test:reasoning": "env-cmd -f .env ts-node --transpile-only src/scripts/testReasoning.ts",
@@ -86,7 +89,9 @@
     "octokit": "^5.0.5",
     "officeparser": "^6.1.0",
     "openai": "^6.32.0",
+    "parse5": "^8.0.1",
     "pdf-parse": "^1.1.1",
+    "pptxgenjs": "3.12.0",
     "reflect-metadata": "^0.1.13",
     "remark-parse": "^11.0.0",
     "repomix": "^1.13.1",

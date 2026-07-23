@@ -213,28 +213,70 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
         remarkPlugins={[remarkGfm]}
         components={{
           h1: ({ children, ...props }: any) => {
-            const id = flattenText(children).toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]/g, '');
-            return <h1 id={id} {...props}>{children}</h1>;
+            const id = flattenText(children)
+              .toLowerCase()
+              .replace(/\s+/g, "-")
+              .replace(/[^\w-]/g, "");
+            return (
+              <h1 id={id} {...props}>
+                {children}
+              </h1>
+            );
           },
           h2: ({ children, ...props }: any) => {
-            const id = flattenText(children).toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]/g, '');
-            return <h2 id={id} {...props}>{children}</h2>;
+            const id = flattenText(children)
+              .toLowerCase()
+              .replace(/\s+/g, "-")
+              .replace(/[^\w-]/g, "");
+            return (
+              <h2 id={id} {...props}>
+                {children}
+              </h2>
+            );
           },
           h3: ({ children, ...props }: any) => {
-            const id = flattenText(children).toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]/g, '');
-            return <h3 id={id} {...props}>{children}</h3>;
+            const id = flattenText(children)
+              .toLowerCase()
+              .replace(/\s+/g, "-")
+              .replace(/[^\w-]/g, "");
+            return (
+              <h3 id={id} {...props}>
+                {children}
+              </h3>
+            );
           },
           h4: ({ children, ...props }: any) => {
-            const id = flattenText(children).toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]/g, '');
-            return <h4 id={id} {...props}>{children}</h4>;
+            const id = flattenText(children)
+              .toLowerCase()
+              .replace(/\s+/g, "-")
+              .replace(/[^\w-]/g, "");
+            return (
+              <h4 id={id} {...props}>
+                {children}
+              </h4>
+            );
           },
           h5: ({ children, ...props }: any) => {
-            const id = flattenText(children).toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]/g, '');
-            return <h5 id={id} {...props}>{children}</h5>;
+            const id = flattenText(children)
+              .toLowerCase()
+              .replace(/\s+/g, "-")
+              .replace(/[^\w-]/g, "");
+            return (
+              <h5 id={id} {...props}>
+                {children}
+              </h5>
+            );
           },
           h6: ({ children, ...props }: any) => {
-            const id = flattenText(children).toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]/g, '');
-            return <h6 id={id} {...props}>{children}</h6>;
+            const id = flattenText(children)
+              .toLowerCase()
+              .replace(/\s+/g, "-")
+              .replace(/[^\w-]/g, "");
+            return (
+              <h6 id={id} {...props}>
+                {children}
+              </h6>
+            );
           },
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           table: ({ children, ...props }: any) => (
@@ -334,8 +376,8 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
             // Handle hash links (for Table of Contents)
             if (href.startsWith("#")) {
               return (
-                <a 
-                  href={href} 
+                <a
+                  href={href}
                   onClick={(e) => {
                     const id = href.substring(1);
                     const element = document.getElementById(id);
@@ -355,10 +397,14 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
             // A real external link will start with http://, https://, or mailto:
             if (!/^https?:\/\//i.test(href) && !href.startsWith("mailto:")) {
               // Convert the broken relative link to a hash ID based on its text
-              const slug = href.trim().toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]/g, '');
+              const slug = href
+                .trim()
+                .toLowerCase()
+                .replace(/\s+/g, "-")
+                .replace(/[^\w-]/g, "");
               return (
-                <a 
-                  href={`#${slug}`} 
+                <a
+                  href={`#${slug}`}
                   onClick={(e) => {
                     const element = document.getElementById(slug);
                     if (element) {

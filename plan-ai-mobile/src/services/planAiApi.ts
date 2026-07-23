@@ -350,7 +350,10 @@ export const createPlanAiApi = (
       const req = async (force: boolean) => {
         const url = new URL(`${BASE_URL}/api/transcripts`);
         url.searchParams.set("pageSize", "50");
-        url.searchParams.set("source", "RECORDING");
+        // RECORDING + TELEGRAM: this list is where the team sees inbound work,
+        // and Berry's Telegram leads are inbound work. Filtering on RECORDING
+        // alone hid every prospect from the app entirely.
+        url.searchParams.set("sources", "RECORDING,TELEGRAM");
         if (q) url.searchParams.set("q", q);
 
         return silentFetch(url.toString(), {

@@ -610,7 +610,8 @@
 					"MANUAL",
 					"RECORDING",
 					"UPLOAD",
-					"IMPORTED"
+					"IMPORTED",
+					"TELEGRAM"
 				]
 			},
 			"TranscriptSource": {
@@ -3240,6 +3241,31 @@
 					"status"
 				],
 				"type": "object"
+			},
+			"PublicPrototypeResponse": {
+				"properties": {
+					"id": {
+						"type": "string"
+					},
+					"title": {
+						"type": "string"
+					},
+					"variant": {
+						"type": "string"
+					},
+					"html": {
+						"type": "string",
+						"description": "Sanitized HTML. The viewer MUST render this inside a sandboxed iframe."
+					}
+				},
+				"required": [
+					"id",
+					"title",
+					"variant",
+					"html"
+				],
+				"type": "object",
+				"additionalProperties": false
 			},
 			"DefaultSelection_Prisma._36_BrandThemePayload_": {
 				"properties": {
@@ -7300,7 +7326,7 @@
 	},
 	"info": {
 		"title": "backend",
-		"version": "4.2.1",
+		"version": "4.2.7",
 		"license": {
 			"name": "BUSL-1.1"
 		},
@@ -9512,6 +9538,14 @@
 						"schema": {
 							"type": "string"
 						}
+					},
+					{
+						"in": "query",
+						"name": "sources",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
 					}
 				]
 			},
@@ -9859,6 +9893,37 @@
 						}
 					}
 				]
+			}
+		},
+		"/api/integrations/telegram/webhook": {
+			"post": {
+				"operationId": "HandleWebhook",
+				"responses": {
+					"200": {
+						"description": "Update received",
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"status": {
+											"type": "string"
+										}
+									},
+									"required": [
+										"status"
+									],
+									"type": "object"
+								}
+							}
+						}
+					}
+				},
+				"description": "Receives updates from the Telegram Bot API for the \"Berry\" sales bot.\n\nUnauthenticated by necessity (Telegram has no OAuth for webhooks) — the gate\nis the `X-Telegram-Bot-Api-Secret-Token` header registered via `setWebhook`,\nfollowing the same shape as the Stripe and GitHub receivers in this codebase.\n\nAnswers 200 immediately and processes in the background: Telegram retries\nany update it doesn't get a prompt response for, and generation takes far\nlonger than its tolerance — without this a slow generation becomes a\nduplicate-proposal loop.",
+				"tags": [
+					"Integrations"
+				],
+				"security": [],
+				"parameters": []
 			}
 		},
 		"/api/tasks/metadata-types": {
@@ -10454,6 +10519,37 @@
 				},
 				"security": [],
 				"parameters": []
+			}
+		},
+		"/api/public/prototypes/{id}": {
+			"get": {
+				"operationId": "GetPublicPrototype",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/PublicPrototypeResponse"
+								}
+							}
+						}
+					}
+				},
+				"tags": [
+					"Public Prototypes"
+				],
+				"security": [],
+				"parameters": [
+					{
+						"in": "path",
+						"name": "id",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				]
 			}
 		},
 		"/api/public/presentations/{presentationId}": {

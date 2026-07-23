@@ -16,6 +16,8 @@ import { DocController } from './../controller/docController';
 // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
 import { TranscriptsController } from './../controller/transcriptsController';
 // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+import { TelegramController } from './../controller/telegramController';
+// WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
 import { TaskIntegrationController } from './../controller/taskIntegrationController';
 // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
 import { SlideTemplateController } from './../controller/slideTemplateController';
@@ -23,6 +25,8 @@ import { SlideTemplateController } from './../controller/slideTemplateController
 import { SessionController } from './../controller/sessionController';
 // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
 import { SentryTestController } from './../controller/sentryTestController';
+// WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+import { PublicPrototypeController } from './../controller/publicPrototypeController';
 // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
 import { PublicPresentationController } from './../controller/publicPresentationController';
 // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
@@ -299,7 +303,7 @@ const models: TsoaRoute.Models = {
     // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
     "_36_Enums.TranscriptSource": {
         "dataType": "refAlias",
-        "type": {"dataType":"union","subSchemas":[{"dataType":"enum","enums":["MANUAL"]},{"dataType":"enum","enums":["RECORDING"]},{"dataType":"enum","enums":["UPLOAD"]},{"dataType":"enum","enums":["IMPORTED"]}],"validators":{}},
+        "type": {"dataType":"union","subSchemas":[{"dataType":"enum","enums":["MANUAL"]},{"dataType":"enum","enums":["RECORDING"]},{"dataType":"enum","enums":["UPLOAD"]},{"dataType":"enum","enums":["IMPORTED"]},{"dataType":"enum","enums":["TELEGRAM"]}],"validators":{}},
     },
     // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
     "TranscriptSource": {
@@ -1084,6 +1088,17 @@ const models: TsoaRoute.Models = {
     "ApiResponse__customToken-string__": {
         "dataType": "refAlias",
         "type": {"dataType":"nestedObjectLiteral","nestedProperties":{"message":{"dataType":"string"},"data":{"dataType":"union","subSchemas":[{"dataType":"nestedObjectLiteral","nestedProperties":{"customToken":{"dataType":"string","required":true}}},{"dataType":"enum","enums":[null]}],"required":true},"status":{"dataType":"double","required":true}},"validators":{}},
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "PublicPrototypeResponse": {
+        "dataType": "refObject",
+        "properties": {
+            "id": {"dataType":"string","required":true},
+            "title": {"dataType":"string","required":true},
+            "variant": {"dataType":"string","required":true},
+            "html": {"dataType":"string","required":true},
+        },
+        "additionalProperties": false,
     },
     // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
     "DefaultSelection_Prisma._36_BrandThemePayload_": {
@@ -3789,6 +3804,7 @@ export function RegisterRoutes(app: Router,opts?:{multer?:ReturnType<typeof mult
                 q: {"in":"query","name":"q","dataType":"string"},
                 sentiment: {"in":"query","name":"sentiment","dataType":"string"},
                 dateFilter: {"in":"query","name":"dateFilter","dataType":"string"},
+                sources: {"in":"query","name":"sources","dataType":"string"},
         };
         app.get('/api/transcripts',
             authenticateMiddleware([{"ClientLevel":[]}]),
@@ -4074,6 +4090,36 @@ export function RegisterRoutes(app: Router,opts?:{multer?:ReturnType<typeof mult
                 next,
                 validatedArgs,
                 successStatus: undefined,
+              });
+            } catch (err) {
+                return next(err);
+            }
+        });
+        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+        const argsTelegramController_handleWebhook: Record<string, TsoaRoute.ParameterSchema> = {
+                req: {"in":"request","name":"req","required":true,"dataType":"object"},
+        };
+        app.post('/api/integrations/telegram/webhook',
+            ...(fetchMiddlewares<RequestHandler>(TelegramController)),
+            ...(fetchMiddlewares<RequestHandler>(TelegramController.prototype.handleWebhook)),
+
+            async function TelegramController_handleWebhook(request: ExRequest, response: ExResponse, next: any) {
+
+            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+
+            let validatedArgs: any[] = [];
+            try {
+                validatedArgs = templateService.getValidatedArgs({ args: argsTelegramController_handleWebhook, request, response });
+
+                const controller = new TelegramController();
+
+              await templateService.apiHandler({
+                methodName: 'handleWebhook',
+                controller,
+                response,
+                next,
+                validatedArgs,
+                successStatus: 200,
               });
             } catch (err) {
                 return next(err);
@@ -4544,6 +4590,36 @@ export function RegisterRoutes(app: Router,opts?:{multer?:ReturnType<typeof mult
 
               await templateService.apiHandler({
                 methodName: 'getSentryError',
+                controller,
+                response,
+                next,
+                validatedArgs,
+                successStatus: undefined,
+              });
+            } catch (err) {
+                return next(err);
+            }
+        });
+        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+        const argsPublicPrototypeController_getPublicPrototype: Record<string, TsoaRoute.ParameterSchema> = {
+                id: {"in":"path","name":"id","required":true,"dataType":"string"},
+        };
+        app.get('/api/public/prototypes/:id',
+            ...(fetchMiddlewares<RequestHandler>(PublicPrototypeController)),
+            ...(fetchMiddlewares<RequestHandler>(PublicPrototypeController.prototype.getPublicPrototype)),
+
+            async function PublicPrototypeController_getPublicPrototype(request: ExRequest, response: ExResponse, next: any) {
+
+            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+
+            let validatedArgs: any[] = [];
+            try {
+                validatedArgs = templateService.getValidatedArgs({ args: argsPublicPrototypeController_getPublicPrototype, request, response });
+
+                const controller = new PublicPrototypeController();
+
+              await templateService.apiHandler({
+                methodName: 'getPublicPrototype',
                 controller,
                 response,
                 next,
