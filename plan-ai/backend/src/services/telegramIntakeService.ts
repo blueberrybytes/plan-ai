@@ -67,7 +67,6 @@ const SYNC_TO_LINEAR = process.env.TELEGRAM_SYNC_TO_LINEAR === "true";
 /** Public base URL, for the shareable proposal link. */
 const APP_URL = (process.env.APP_URL || "http://localhost:3000").replace(/\/+$/, "");
 
-
 /**
  * Resolves the chat to a workspace, creating the link on first contact.
  * Returns null when the sales workspace isn't configured, so the bot degrades
@@ -344,10 +343,13 @@ export const handleIncomingMessage = async (message: TelegramMessage): Promise<v
   const directText = (message.text ?? message.caption ?? "").trim();
   const voice = message.voice ?? message.audio;
 
-  // Language of the FIXED chrome comes straight from the prospect's Telegram
-  // client — available on the very first message, no detection call.
-  const lang = resolveLang(message.from?.language_code);
-  const t = berryStrings(lang);
+  // Language resolution, most-trusted signal wins as it becomes available:
+  //   1. what triage detects the prospect is WRITING in (set later)
+  //   2. the language stored from a previous turn
+  //   3. their Telegram device language — only a bootstrap default, since a
+  //      Spanish device can be chatting to the bot in English.
+  let lang = resolveLang(message.from?.language_code);
+  let t = berryStrings(lang);
 
   if (directText.startsWith("/start") || directText.startsWith("/help")) {
     await telegram.sendMessage(chatId, t.greeting);
@@ -359,6 +361,12 @@ export const handleIncomingMessage = async (message: TelegramMessage): Promise<v
 
   const link = await resolveLink(message);
   if (!link) return;
+
+  // A language remembered from an earlier turn beats the device default.
+  if (link.language === "en" || link.language === "es") {
+    lang = link.language;
+    t = berryStrings(lang);
+  }
 
   // Chat is cheap, generation is not — so the message budget is checked first
   // and the generation budget only when we are actually about to generate.
@@ -400,6 +408,21 @@ export const handleIncomingMessage = async (message: TelegramMessage): Promise<v
     link.workspaceId,
     message.from?.language_code,
   );
+
+  // The most reliable language signal: what triage read from the actual text.
+  // This is what fixes an English chat getting Spanish chrome. Persist it so the
+  // next turn (and any /start) stays in the right language.
+  if (triage?.language === "en" || triage?.language === "es") {
+    if (triage.language !== lang) {
+      lang = triage.language;
+      t = berryStrings(lang);
+    }
+    if (triage.language !== link.language) {
+      await prisma.telegramLink
+        .update({ where: { id: link.id }, data: { language: triage.language } })
+        .catch(() => {});
+    }
+  }
 
   // Triage failing must not leave the prospect on read. Falling back to the old
   // length heuristic keeps the bot useful when the model is unavailable.

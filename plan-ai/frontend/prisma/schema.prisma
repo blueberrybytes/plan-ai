@@ -97,6 +97,7 @@ model Workspace {
   mcpTokens      McpToken[]
   billingEvents  BillingEvent[]
   telegramLinks  TelegramLink[]
+  prototypes     Prototype[]
 
   @@index([defaultThemeId])
 }
@@ -119,6 +120,10 @@ model TelegramLink {
   /// Without it every message is judged alone, so a prospect describing their
   /// idea across two messages never gets past the "tell me more" reply.
   conversation    Json?
+  /// Language the prospect actually WRITES in ("en"/"es"), detected by triage
+  /// from their messages. Distinct from their Telegram UI language: a Spanish
+  /// user can message the bot in English and must get English back.
+  language        String?
   /// Messages seen in this window. Separate from `requestCount` (generations)
   /// because a chatty prospect costs triage calls without ever generating.
   messageCount    Int                @default(0)
@@ -139,6 +144,37 @@ model TelegramLink {
 enum TelegramLinkStatus {
   ACTIVE
   BLOCKED
+}
+
+/// A navigable HTML prototype generated from a prospect's brief.
+///
+/// Stored as a single self-contained document (inline CSS, no scripts, no
+/// external resources) and served read-only at a public path, so a prospect can
+/// open it on their phone and tap around instead of looking at a flat image.
+///
+/// The HTML is authored by an LLM from an untrusted message, so it is sanitized
+/// before it is ever stored — see `utils/htmlSanitize.ts`.
+model Prototype {
+  id          String   @id @default(cuid())
+  workspaceId String
+  userId      String
+  title       String
+  /// Sanitized, self-contained HTML.
+  html        String   @db.Text
+  /// Short label for the variant shown to the prospect ("Claro" / "Oscuro").
+  variant     String   @db.VarChar(32)
+  isPublic    Boolean  @default(false)
+  /// Lead this prototype was generated for, when it came from Telegram.
+  transcriptId String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+  @@index([userId])
+  @@index([isPublic])
 }
 
 /// Audit log of Stripe webhook events processed for this workspace.
@@ -246,6 +282,7 @@ model User {
   workspaceMembers     WorkspaceMember[]
   mcpTokens            McpToken[]
   telegramLinks        TelegramLink[]
+  prototypes           Prototype[]
 }
 
 model DesktopAuthCode {

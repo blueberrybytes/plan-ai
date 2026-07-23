@@ -33,7 +33,9 @@ describe("sanitizePrototypeHtml — hostile input", () => {
   });
 
   it("removes iframes and objects", () => {
-    const result = sanitizePrototypeHtml(`${body}<iframe src="//evil.com"></iframe><object></object>`);
+    const result = sanitizePrototypeHtml(
+      `${body}<iframe src="//evil.com"></iframe><object></object>`,
+    );
     expect(result?.html).not.toContain("<iframe");
     expect(result?.html).not.toContain("<object");
   });
@@ -117,7 +119,7 @@ describe("wrapPrototypeDocument", () => {
   });
 
   it("cannot have its title broken out of", () => {
-    const doc = wrapPrototypeDocument("<h1>x</h1>", '</title><script>alert(1)</script>');
+    const doc = wrapPrototypeDocument("<h1>x</h1>", "</title><script>alert(1)</script>");
     expect(doc).not.toContain("<script");
   });
 });
@@ -215,7 +217,7 @@ describe("regresiones de seguridad (revisión adversarial)", () => {
     // La CSS inline del propio prototipo debe seguir permitida.
     expect(doc).toContain("style-src 'unsafe-inline'");
   });
-})
+});
 
 describe("navegación multipantalla (:target)", () => {
   const flow = `<style>.screen{display:none}.screen:target{display:block}</style>
@@ -252,7 +254,7 @@ describe("navegación multipantalla (:target)", () => {
     );
     expect(result?.html).not.toContain("evil.example");
   });
-})
+});
 
 describe("finalizePrototypeHtml — enlaces muertos y documento único", () => {
   const raw = `<style>.screen{display:none}.screen:target{display:block}#p1{display:block}</style>
@@ -296,4 +298,4 @@ describe("finalizePrototypeHtml — enlaces muertos y documento único", () => {
     expect(html).toContain("default-src 'none'");
     expect(html).toContain(":target");
   });
-})
+});

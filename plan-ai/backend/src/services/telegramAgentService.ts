@@ -34,6 +34,13 @@ const TriageSchema = z.object({
   intent: z
     .enum(["GREETING", "QUESTION", "BRIEF", "NEEDS_MORE", "OFF_TOPIC", "FOLLOW_UP"])
     .describe("What the prospect is doing in their latest message"),
+  language: z
+    .enum(["en", "es"])
+    .describe(
+      "The language the prospect is WRITING in — read it from their messages, NOT from any " +
+        "hint about their app settings. If they write in English, this is 'en' even if their " +
+        "device is Spanish.",
+    ),
   reply: z
     .string()
     .describe("What to say back, in the prospect's language. Conversational, max 2 sentences."),
@@ -132,7 +139,12 @@ export const triageMessage = async (
       }),
       system: SYSTEM,
       prompt:
-        (languageCode ? `Idioma del cliente (código Telegram): ${languageCode}. Responde en ese idioma.\n\n` : "") +
+        // language_code is only a WEAK tiebreaker for a message too short to
+        // read (e.g. "ok"). It must never override the language they visibly
+        // write in — that was the bug where an English chat got Spanish replies.
+        (languageCode
+          ? `(Pista débil, solo si el mensaje es ambiguo — idioma del dispositivo: ${languageCode}. Ignórala si el texto está claramente en otro idioma.)\n\n`
+          : "") +
         `CONVERSACIÓN HASTA AHORA:\n${renderHistory(history)}\n\nÚLTIMO MENSAJE DEL CLIENTE:\n${message}`,
       temperature: 0.5,
       abortSignal: AbortSignal.timeout(15_000),

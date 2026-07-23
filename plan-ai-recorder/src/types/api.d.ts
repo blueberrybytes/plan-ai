@@ -871,6 +871,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/public/prototypes/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetPublicPrototype"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/public/presentations/{presentationId}": {
         parameters: {
             query?: never;
@@ -3463,6 +3479,13 @@ export interface components {
             } | null;
             /** Format: double */
             status: number;
+        };
+        PublicPrototypeResponse: {
+            id: string;
+            title: string;
+            variant: string;
+            /** @description Sanitized HTML. The viewer MUST render this inside a sandboxed iframe. */
+            html: string;
         };
         "DefaultSelection_Prisma._36_BrandThemePayload_": {
             workspaceId: string;
@@ -6519,6 +6542,28 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    GetPublicPrototype: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicPrototypeResponse"];
+                };
             };
         };
     };

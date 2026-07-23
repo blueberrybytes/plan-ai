@@ -129,7 +129,10 @@ const generateHtml = async (
               "etiquetas y comillas, en especial </style>."
             : ""),
         temperature: 0.6,
-        abortSignal: AbortSignal.timeout(45_000),
+        // Generating a full multi-screen HTML document is heavy; 45s tripped
+        // under load. With the two variants now parallel, a longer per-call
+        // budget doesn't add to wall-clock — they still overlap.
+        abortSignal: AbortSignal.timeout(60_000),
       });
 
       const result = sanitizePrototypeHtml(response.text);
@@ -184,29 +187,32 @@ export const generatePrototypes = async (
   transcriptId?: string,
   lang = "es",
 ): Promise<GeneratedPrototype[]> => {
-  const stored: GeneratedPrototype[] = [];
+  // Both variants in PARALLEL. Generating HTML is the slow step (~30-45s each),
+  // and running them sequentially doubled the prospect's wait — long enough to
+  // trip the timeout under load. Concurrency makes wall-clock ≈ the slower one.
+  const results = await Promise.all(
+    PROTOTYPE_VARIANTS.map(async (variant) => {
+      const html = await generateHtml(brief, variant, workspaceId, lang);
+      if (!html) return null;
 
-  for (const variant of PROTOTYPE_VARIANTS) {
-    const html = await generateHtml(brief, variant, workspaceId, lang);
-    if (!html) continue;
+      return prisma.prototype.create({
+        data: {
+          workspaceId,
+          userId,
+          title,
+          html,
+          variant: variant.name,
+          // Published on creation: the whole point is a link the prospect opens.
+          // Only prototypes made for a lead reach this code path.
+          isPublic: true,
+          transcriptId: transcriptId ?? null,
+        },
+        select: { id: true, variant: true },
+      });
+    }),
+  );
 
-    const row = await prisma.prototype.create({
-      data: {
-        workspaceId,
-        userId,
-        title,
-        html,
-        variant: variant.name,
-        // Published on creation: the whole point is a link the prospect opens.
-        // Only prototypes made for a lead reach this code path.
-        isPublic: true,
-        transcriptId: transcriptId ?? null,
-      },
-      select: { id: true, variant: true },
-    });
-
-    stored.push(row);
-  }
+  const stored: GeneratedPrototype[] = results.filter((r): r is GeneratedPrototype => r !== null);
 
   return stored;
 };

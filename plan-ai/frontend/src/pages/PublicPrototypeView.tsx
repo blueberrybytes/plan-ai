@@ -47,7 +47,9 @@ const PublicPrototypeView: React.FC = () => {
 
   if (error) {
     return (
-      <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100vh" }}>
+      <Box
+        sx={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100vh" }}
+      >
         <Typography color="text.secondary">{t("prototype.notFound")}</Typography>
       </Box>
     );
@@ -55,7 +57,9 @@ const PublicPrototypeView: React.FC = () => {
 
   if (!html) {
     return (
-      <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100vh" }}>
+      <Box
+        sx={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100vh" }}
+      >
         <CircularProgress />
       </Box>
     );
