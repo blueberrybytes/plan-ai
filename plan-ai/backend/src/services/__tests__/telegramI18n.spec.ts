@@ -45,15 +45,9 @@ describe("berryStrings", () => {
     expect(t.deckChallenge).toBe("El reto");
   });
 
-  it("localizes the variant labels", () => {
-    expect(berryStrings("en").variantLabel("Claro")).toBe("Light");
-    expect(berryStrings("en").variantLabel("Oscuro")).toBe("Dark");
-    expect(berryStrings("es").variantLabel("Claro")).toBe("Claro");
-  });
-
-  it("builds localized dynamic labels", () => {
-    expect(berryStrings("en").openPrototypeLabel("Light")).toBe("Open Light prototype");
-    expect(berryStrings("es").openPrototypeLabel("Claro")).toBe("Abrir prototipo Claro");
+  it("localizes the prototype link label", () => {
+    expect(berryStrings("en").openPrototypeLabel).toBe("Open the prototype");
+    expect(berryStrings("es").openPrototypeLabel).toBe("Abrir el prototipo");
   });
 
   it("covers every string key in both locales", () => {

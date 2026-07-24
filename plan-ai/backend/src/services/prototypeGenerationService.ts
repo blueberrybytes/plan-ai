@@ -33,46 +33,36 @@ export interface PrototypeVariant {
   direction: string;
 }
 
-/** Two directions different enough that choosing between them means something. */
+/** One polished direction. The prospect no longer picks between two photos. */
 export const PROTOTYPE_VARIANTS: PrototypeVariant[] = [
   {
-    name: "Claro",
+    name: "App",
     direction:
       "Fondo blanco, superficie #F8FAFC, acento azul #4361EE, texto #0F172A. " +
       "Limpio y corporativo, mucho aire, esquinas redondeadas de 12px.",
   },
-  {
-    name: "Oscuro",
-    direction:
-      "Fondo #12151C, superficie #1B2029, acento violeta #A78BFA, texto #F8FAFC. " +
-      "Moderno y compacto, contraste alto, esquinas redondeadas de 12px.",
-  },
 ];
 
-const SYSTEM = `Diseñas prototipos de app en HTML para propuestas comerciales: un flujo de
-VARIAS pantallas que el cliente puede recorrer, como un prototipo de Figma.
+const SYSTEM = `Diseñas las PANTALLAS de un prototipo de app móvil para una propuesta comercial.
 
 Devuelves UN ÚNICO documento HTML autocontenido. Nada más: sin explicaciones,
 sin bloques de markdown, sin comentarios previos.
 
-NAVEGACIÓN ENTRE PANTALLAS — MUY IMPORTANTE (sin JavaScript)
-- Haz de 3 a 4 pantallas. Cada una es un contenedor con id:
-  <section class="screen" id="pantalla-inicio">…</section>
-- Se navega con enlaces de ancla y el pseudo-selector :target de CSS. Ejemplo:
-    .screen { display: none; }
-    .screen:target { display: block; }
-    #pantalla-inicio { display: block; }   /* la primera visible por defecto */
-  Y los botones/enlaces cambian de pantalla así:
-    <a href="#pantalla-detalle" class="btn">Ver comanda</a>
-- Cada pantalla lleva una barra inferior o botones que llevan a las demás, para
-  que el cliente pueda recorrer el flujo entero tocando.
-- PROHIBIDO JavaScript. La navegación es SOLO con :target y href="#id".
-- Los href SOLO pueden apuntar a un id interno con # (href="#pantalla-x").
-  Nunca a una URL externa.
+QUÉ DEVUELVES — pantallas, NO navegación
+- Un bloque <style> al principio (ciérralo SIEMPRE) con el CSS COMPARTIDO por
+  todas las pantallas, para que se vean coherentes entre sí.
+- Después, de 3 a 4 pantallas, cada una así:
+    <section class="berry-screen" data-title="Nombre corto">… contenido …</section>
+- "data-title" es un rótulo de 1-2 palabras para la pestaña de esa pantalla
+  (por ejemplo: "Inicio", "Catálogo", "Ficha", "Cesta").
+- NO pongas navegación de ningún tipo: NADA de href, NADA de :target, NADA de
+  menús que cambien de pantalla, NADA de <a> que apunte a otra sección. La
+  navegación entre pantallas la añadimos NOSOTROS por fuera y siempre funciona.
+- Los botones DENTRO de cada pantalla son decorativos (es un boceto): estílalos
+  bonitos, pero NO tienen que llevar a ningún sitio. Nunca uses href.
 
 REGLAS TÉCNICAS (obligatorias)
-- Todo el CSS va en UN solo bloque <style> al principio. Ciérralo SIEMPRE.
-- PROHIBIDO: <script>, atributos onclick/onload/on*, iframes.
+- PROHIBIDO: <script>, atributos onclick/onload/on*, iframes, href.
 - PROHIBIDO: recursos externos — nada de src="http...", fuentes de Google,
   CDNs ni @import. Debe funcionar sin conexión.
 - Iconos: SVG inline o caracteres tipográficos simples. Nada de emoji.
@@ -80,25 +70,19 @@ REGLAS TÉCNICAS (obligatorias)
   (-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif).
 - Cierra SIEMPRE las comillas de atributos y la etiqueta </style>.
 
-MARCO DEL TELÉFONO — evita que el contenido se desborde
-- El marco tiene ALTURA FIJA (por ejemplo 800px) y el contenido scrollea DENTRO:
-    .phone { width: 380px; height: 800px; margin: 24px auto; border-radius: 32px;
-             overflow: hidden; position: relative; display: flex; flex-direction: column; }
-    .screen { flex: 1; overflow-y: auto; padding-bottom: 80px; }  /* hueco para la barra */
-- Si pones una barra de navegación inferior, va DENTRO del marco y fija abajo:
-    .tabbar { position: absolute; bottom: 0; left: 0; right: 0; height: 64px; }
-  Y el contenido lleva padding-bottom para que NINGÚN botón quede tapado ni fuera.
-- Un botón flotante (FAB) va dentro del marco con position:absolute, nunca fuera.
-- NADA puede salirse del marco. Si dudas, reduce contenido antes que desbordar.
+CADA PANTALLA — encaja en un móvil
+- Diséñala para un ancho de ~380px. No fijes tú el alto ni el marco del teléfono:
+  eso lo ponemos nosotros. Tú haces el CONTENIDO de la pantalla.
+- Estructura típica: cabecera, contenido principal (lista, tarjetas, ficha o
+  formulario según toque) y, si encaja, una acción principal abajo.
+- Contenido REALISTA con el vocabulario del cliente. Tienda de cactus:
+  "Echeveria elegans · 12€", no "Producto 1". Que reconozca su negocio.
 
-REGLAS DE DISEÑO
-- Móvil primero: marco de teléfono centrado, ancho máximo 420px.
-- Elige las 3-4 pantallas CLAVE del producto y el recorrido natural entre ellas.
-  Restaurante de comandas: (1) lista de mesas, (2) detalle de una comanda,
-  (3) pantalla de cocina, (4) resumen del turno.
-- Datos REALISTAS con el vocabulario del cliente ("Mesa 4 · 2 entrantes", no
-  "Elemento 1"). Que reconozca su negocio.
-- Escribe TODO en el idioma del cliente.`;
+QUÉ PANTALLAS ELEGIR
+- Las 3-4 vistas CLAVE y el recorrido natural. Tienda de cactus: (1) catálogo,
+  (2) ficha de un cactus, (3) cesta, (4) confirmación de pedido.
+
+- Escribe TODOS los textos en el idioma del cliente.`;
 
 /**
  * Asks the model for one prototype, retrying when the result would render blank.
@@ -157,11 +141,7 @@ const generateHtml = async (
       }
 
       const s = berryStrings(resolveLang(lang));
-      return finalizePrototypeHtml(result.html, "Prototipo", {
-        title: s.fallbackTitle,
-        body: s.fallbackBody,
-        back: s.fallbackBack,
-      });
+      return finalizePrototypeHtml(result.html, "Prototipo", { emptyLabel: s.screenLabel });
     } catch (err) {
       logger.warn(`[prototype] intento ${attempt} falló`, err);
     }

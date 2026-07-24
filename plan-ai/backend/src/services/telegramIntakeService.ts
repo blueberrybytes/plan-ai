@@ -14,8 +14,6 @@ import { buildSalesDeck, DEFAULT_DECK_THEME, type DeckTheme } from "../utils/sal
 import { extractBullets, extractSummary } from "../utils/docOutline";
 import { sendTelegramLeadEmail } from "./emailService";
 import { transcriptGenerationQueue } from "../queue/transcriptGenerationQueue";
-import { buildMockupSpec } from "./mockupGenerationService";
-import { MOCKUP_PALETTES, isRenderableSpec, renderMockup } from "../utils/mockupRender";
 import {
   appendTurn,
   parseConversation,
@@ -186,18 +184,15 @@ const awaitGeneratedDoc = async (
 };
 
 /**
- * Sends the visual designs: the flat SVG mockups first, then links to navigable
- * HTML prototypes.
+ * Generates the navigable HTML prototype and sends its link. Returns true if it
+ * reached the prospect.
  *
- * Both, deliberately. The image lands the instant the prospect opens Telegram
- * with nothing to tap; the link is the one that convinces, because they can
- * scroll and explore a real interface. Sending only the link would waste the
- * moment the notification arrives.
- *
- * Prototypes are best-effort: they involve two more model calls, and their
- * absence must not delay the images that are already rendered.
+ * This replaced the flat SVG "light/dark" mockups the prospect used to get: they
+ * were two static images with no interaction, and the prospect didn't want a
+ * pick-one-of-two photo. The prototype is the real design deliverable — a set of
+ * screens they can tap through, on brand.
  */
-const deliverDesigns = async (
+const deliverPrototype = async (
   chatId: string,
   brief: string,
   workspaceId: string,
@@ -206,8 +201,6 @@ const deliverDesigns = async (
   t: BerryStrings,
   lang: string,
 ): Promise<boolean> => {
-  const sentImages = await deliverMockups(chatId, brief, workspaceId, t);
-
   try {
     const prototypes = await generatePrototypes(
       brief,
@@ -223,7 +216,7 @@ const deliverDesigns = async (
         chatId,
         t.prototypesReady,
         prototypes.map((p) => ({
-          label: t.openPrototypeLabel(t.variantLabel(p.variant)),
+          label: t.openPrototypeLabel,
           url: `${APP_URL}/prototype/public/${p.id}`,
         })),
       );
@@ -233,7 +226,7 @@ const deliverDesigns = async (
     logger.warn(`[telegram] prototype generation failed for chat ${chatId}`, err);
   }
 
-  return sentImages;
+  return false;
 };
 
 interface WorkspaceBranding {
@@ -282,51 +275,6 @@ const resolveWorkspaceBranding = async (workspaceId: string): Promise<WorkspaceB
         }
       : null,
   };
-};
-
-/**
- * Generates and sends the two selectable mockups. Returns true if at least one
- * reached the prospect.
- *
- * One spec, two palettes — the client is choosing a direction, and two screens
- * built from the same content differ in exactly the way that makes the choice
- * meaningful. Generating two independent specs would produce two different
- * apps, which reads as indecision rather than options.
- */
-const deliverMockups = async (
-  chatId: string,
-  brief: string,
-  workspaceId: string,
-  t: BerryStrings,
-): Promise<boolean> => {
-  try {
-    const spec = await buildMockupSpec(brief, workspaceId);
-    if (!spec || !isRenderableSpec(spec)) return false;
-
-    await telegram.sendChatAction(chatId, "upload_photo");
-
-    let delivered = 0;
-    for (const palette of MOCKUP_PALETTES) {
-      const png = await renderMockup(spec, palette);
-      if (!png) continue;
-      await telegram.sendPhoto(
-        chatId,
-        png,
-        `mockup-${palette.name.toLowerCase()}.png`,
-        t.designOption(t.variantLabel(palette.name)),
-      );
-      delivered += 1;
-    }
-
-    if (delivered === 2) {
-      await telegram.sendMessage(chatId, t.chooseDesign);
-    }
-
-    return delivered > 0;
-  } catch (err) {
-    logger.warn(`[telegram] mockup delivery failed for chat ${chatId}`, err);
-    return false;
-  }
 };
 
 /** Filename-safe title (Telegram shows the attachment name to the prospect). */
@@ -424,9 +372,11 @@ export const handleIncomingMessage = async (message: TelegramMessage): Promise<v
     }
   }
 
-  // Triage failing must not leave the prospect on read. Falling back to the old
-  // length heuristic keeps the bot useful when the model is unavailable.
-  const shouldGenerate = triage ? triage.readyToGenerate : incoming.length >= FALLBACK_BRIEF_LENGTH;
+  // Only GENERATE produces anything. DISCOVERY and OFFER are pure conversation:
+  // Berry asks questions, then asks which deliverable they want, and just talks.
+  // Without triage (model down) we fall back to the length heuristic so the bot
+  // still works, producing the full set.
+  const shouldGenerate = triage ? triage.phase === "GENERATE" : incoming.length >= FALLBACK_BRIEF_LENGTH;
   const brief = triage?.brief?.trim() || incoming;
 
   if (triage && !shouldGenerate) {
@@ -454,9 +404,8 @@ export const handleIncomingMessage = async (message: TelegramMessage): Promise<v
     appendTurn(appendTurn(history, "user", incoming), "bot", triage?.reply ?? ""),
   );
 
-  // What the prospect actually asked for. Without triage we produce everything,
-  // which is the old behaviour and the safe default.
-  const wanted = new Set(triage?.deliverables ?? ["DOC", "MOCKUPS", "SLIDES"]);
+  // Exactly what the prospect chose. No triage → the whole set (fallback path).
+  const wanted = new Set(triage?.deliverables ?? ["PROTOTYPE", "DOC", "SLIDES"]);
 
   await telegram.sendMessage(chatId, triage?.reply || t.preparing);
   await telegram.sendChatAction(chatId, "typing");
@@ -483,112 +432,114 @@ export const handleIncomingMessage = async (message: TelegramMessage): Promise<v
     // One theme lookup for the whole proposal — doc, diagram and deck.
     const branding = await resolveWorkspaceBranding(link.workspaceId);
 
-    const doc = await docGenerationService.startGeneration(link.userId, link.workspaceId, {
-      title: "Propuesta de producto",
-      prompt:
-        "Eres un consultor técnico preparando una propuesta comercial breve para un cliente " +
-        "potencial a partir de su descripción. Escribe en el mismo idioma que el cliente. " +
-        "Incluye: resumen del problema, alcance propuesto por módulos, un diagrama de " +
-        "arquitectura en un bloque ```mermaid, fases con estimación aproximada, y qué haría " +
-        "falta decidir antes de empezar. Sé concreto y honesto con las estimaciones; no " +
-        "prometas plazos imposibles.",
-      transcriptIds: [transcript.id],
-      // Themes the doc's public web view. Was null before, so the online
-      // proposal rendered unbranded.
-      themeId: branding.themeId ?? undefined,
-    });
+    // The prototype is independent of the doc, so kick it off FIRST and let it
+    // run while the doc generates. It's also the piece that lands visually.
+    const wantsProto = wanted.has("PROTOTYPE");
+    const protoPromise = wantsProto
+      ? deliverPrototype(chatId, brief, link.workspaceId, link.userId, transcript.id, t, lang)
+      : Promise.resolve(false);
 
-    // Mockups run CONCURRENTLY with doc generation and are delivered FIRST.
-    // Two reasons, both learned the hard way in review: the visual is the piece
-    // that actually lands with a client, so making it arrive fourth at t+90s
-    // wastes it; and if `awaitGeneratedDoc` below returns null we would have
-    // thrown away mockups that were ready at t+8s.
-    const mockups = wanted.has("MOCKUPS")
-      ? await deliverDesigns(chatId, brief, link.workspaceId, link.userId, transcript.id, t, lang)
-      : false;
+    // The doc is generated when the prospect wants the DOC itself OR the SLIDES
+    // (the deck is built from the doc's content). If they only want a prototype,
+    // we never touch the doc pipeline.
+    const needsDoc = wanted.has("DOC") || wanted.has("SLIDES");
 
-    // Publish the doc so it can be opened from the phone as a web page.
-    //
-    // Set here rather than via `CreateDocInput.isPublic`: that field is declared
-    // on the input type but `startGeneration` never writes it, so passing it
-    // would be silently ignored. Doing it explicitly also keeps publishing a
-    // Telegram-only behaviour — docs created in the app stay private.
-    await prisma.docDocument
-      .update({ where: { id: doc.id }, data: { isPublic: true } })
-      .catch((err) => logger.warn(`[telegram] could not publish doc ${doc.id}`, err));
+    let docSent = false;
+    if (needsDoc) {
+      const doc = await docGenerationService.startGeneration(link.userId, link.workspaceId, {
+        title: "Propuesta de producto",
+        prompt:
+          "Eres un consultor técnico preparando una propuesta comercial breve para un cliente " +
+          "potencial a partir de su descripción. Escribe en el mismo idioma que el cliente. " +
+          "Incluye: resumen del problema, alcance propuesto por módulos, un diagrama de " +
+          "arquitectura en un bloque ```mermaid, fases con estimación aproximada, y qué haría " +
+          "falta decidir antes de empezar. Sé concreto y honesto con las estimaciones; no " +
+          "prometas plazos imposibles.",
+        transcriptIds: [transcript.id],
+        // Themes the doc's public web view. Was null before, so the online
+        // proposal rendered unbranded.
+        themeId: branding.themeId ?? undefined,
+      });
 
-    const generated = await awaitGeneratedDoc(doc.id);
-    if (!generated) {
-      // The prospect still has something in hand if the mockups landed.
-      await telegram.sendMessage(chatId, mockups ? t.partial : t.failed);
-      return;
-    }
+      // Publish so the doc can be opened from the phone as a web page. Set here
+      // rather than via `CreateDocInput.isPublic` (declared but never written by
+      // startGeneration); doing it explicitly also keeps publishing Telegram-only.
+      await prisma.docDocument
+        .update({ where: { id: doc.id }, data: { isPublic: true } })
+        .catch((err) => logger.warn(`[telegram] could not publish doc ${doc.id}`, err));
 
-    // Diagram first: it's the piece that lands visually, and it should arrive
-    // even if the .docx conversion below fails.
-    const [diagram] = extractMermaidBlocks(generated.content);
-    let diagramPng: Buffer | null = null;
-    // Rendered whenever a diagram exists: even when the prospect only wants
-    // slides, the deck's architecture slide needs the image.
-    if (diagram && (wanted.has("DOC") || wanted.has("SLIDES"))) {
-      diagramPng = await renderMermaidToPng(diagram, branding.mermaid);
-      // Shown in the chat only alongside the document — with slides alone the
-      // diagram belongs inside the deck, not loose in the conversation.
-      if (diagramPng && wanted.has("DOC")) {
-        await telegram.sendChatAction(chatId, "upload_photo");
-        await telegram.sendPhoto(chatId, diagramPng, "arquitectura.png", "Arquitectura propuesta");
+      const generated = await awaitGeneratedDoc(doc.id);
+      if (!generated) {
+        const proto = await protoPromise;
+        await telegram.sendMessage(chatId, proto ? t.partial : t.failed);
+        return;
       }
-    }
 
-    if (wanted.has("DOC")) {
-      await telegram.sendChatAction(chatId, "upload_document");
-      const docx = await DocumentGenerator.generateDocx(stripMermaidBlocks(generated.content));
-      await telegram.sendDocument(
-        chatId,
-        docx,
-        `${safeFilename(generated.title)}.docx`,
-        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        t.docCaption,
-      );
-    }
+      const [diagram] = extractMermaidBlocks(generated.content);
+      let diagramPng: Buffer | null = null;
+      if (diagram) {
+        diagramPng = await renderMermaidToPng(diagram, branding.mermaid);
+        // Shown in the chat only alongside the document; with slides alone the
+        // diagram belongs inside the deck, not loose in the conversation.
+        if (diagramPng && wanted.has("DOC")) {
+          await telegram.sendChatAction(chatId, "upload_photo");
+          await telegram.sendPhoto(chatId, diagramPng, "arquitectura.png", "Arquitectura");
+        }
+      }
 
-    // The link is the version that actually works on a phone: it renders the
-    // Mermaid diagram inline and needs no Word or PowerPoint. The attachments
-    // above are what the prospect forwards to a colleague.
-    await telegram.sendMessageWithLink(chatId, t.viewOnline, [
-      { label: t.viewProposalLabel, url: `${APP_URL}/doc/public/${doc.id}` },
-    ]);
-
-    // Deck last: it's the least essential of the three, so a failure here must
-    // not cost the prospect the document and diagram they already received.
-    // Skipping it must NOT skip the lead alert and Linear sync below, so this is
-    // a conditional block rather than an early return.
-    if (wanted.has("SLIDES")) {
-      try {
-        const body = stripMermaidBlocks(generated.content);
+      if (wanted.has("DOC")) {
         await telegram.sendChatAction(chatId, "upload_document");
-        const deck = await buildSalesDeck({
-          title: generated.title,
-          summary: extractSummary(body),
-          scope: extractBullets(body),
-          diagramPng,
-          labels: {
-            subtitle: t.deckSubtitle,
-            challenge: t.deckChallenge,
-            scope: t.deckScope,
-            architecture: t.deckArchitecture,
-          },
-          theme: branding.deck,
-        });
+        const docx = await DocumentGenerator.generateDocx(stripMermaidBlocks(generated.content));
         await telegram.sendDocument(
           chatId,
-          deck,
-          `${safeFilename(generated.title)}.pptx`,
-          "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+          docx,
+          `${safeFilename(generated.title)}.docx`,
+          "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+          t.docCaption,
         );
-      } catch (deckErr) {
-        logger.warn(`[telegram] deck build failed for chat ${chatId}`, deckErr);
+        await telegram.sendMessageWithLink(chatId, t.viewOnline, [
+          { label: t.viewProposalLabel, url: `${APP_URL}/doc/public/${doc.id}` },
+        ]);
+        docSent = true;
       }
+
+      // Deck: built from the doc content. A failure here must not cost the doc.
+      if (wanted.has("SLIDES")) {
+        try {
+          const body = stripMermaidBlocks(generated.content);
+          await telegram.sendChatAction(chatId, "upload_document");
+          const deck = await buildSalesDeck({
+            title: generated.title,
+            summary: extractSummary(body),
+            scope: extractBullets(body),
+            diagramPng,
+            labels: {
+              subtitle: t.deckSubtitle,
+              challenge: t.deckChallenge,
+              scope: t.deckScope,
+              architecture: t.deckArchitecture,
+            },
+            theme: branding.deck,
+          });
+          await telegram.sendDocument(
+            chatId,
+            deck,
+            `${safeFilename(generated.title)}.pptx`,
+            "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+          );
+          docSent = true;
+        } catch (deckErr) {
+          logger.warn(`[telegram] deck build failed for chat ${chatId}`, deckErr);
+        }
+      }
+    }
+
+    const protoSent = await protoPromise;
+
+    // Nothing landed at all → tell them, so they're not left waiting.
+    if (!protoSent && !docSent) {
+      await telegram.sendMessage(chatId, t.failed);
+      return;
     }
 
     // Tell a human. Fire-and-forget by design: the prospect already has their
@@ -622,14 +573,11 @@ export const handleIncomingMessage = async (message: TelegramMessage): Promise<v
       });
     }
 
-    // Record what was actually delivered so the NEXT message has context. The
-    // history was saved before generation with only the "preparing…" reply, so
-    // without this a prospect replying "el oscuro" to the design choice reaches
-    // triage with no idea a choice was ever offered.
-    // Neutral, language-agnostic markers — this is context for the triage model,
-    // not shown to the prospect. Kept terse so it doesn't bias the reply language.
+    // Record what was actually delivered so the NEXT message has context (e.g.
+    // the prospect asking for another deliverable). Neutral, language-agnostic
+    // markers — context for the triage model, not shown to the prospect.
     const deliveredSummary = [
-      mockups ? "[sent two designs: Light and Dark; asked which they prefer]" : "",
+      protoSent ? "[sent the navigable prototype]" : "",
       wanted.has("DOC") ? "[sent the proposal document with its diagram]" : "",
       wanted.has("SLIDES") ? "[sent the slides]" : "",
     ]
@@ -645,7 +593,9 @@ export const handleIncomingMessage = async (message: TelegramMessage): Promise<v
       await saveConversation(link.id, appendTurn(history, "bot", deliveredSummary));
     }
 
-    logger.info(`[telegram] delivered proposal for chat ${chatId} (doc ${doc.id})`);
+    logger.info(
+      `[telegram] delivered to chat ${chatId} (${[...wanted].join("+") || "nothing"})`,
+    );
   } catch (err) {
     logger.error(`[telegram] intake failed for chat ${chatId}`, err);
     await telegram

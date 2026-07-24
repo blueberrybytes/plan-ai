@@ -36,29 +36,18 @@ export interface BerryStrings {
   listening: string;
   preparing: string;
   prototypesReady: string;
-  chooseDesign: string;
   docCaption: string;
   viewOnline: string;
   viewProposalLabel: string;
-  openPrototypeLabel: (variant: string) => string;
-  designOption: (variant: string) => string;
-  /** Human label for a variant key, e.g. "Claro" → "Light" in English. */
-  variantLabel: (variantKey: string) => string;
+  openPrototypeLabel: string;
   // Deck section titles.
   deckSubtitle: string;
   deckChallenge: string;
   deckScope: string;
   deckArchitecture: string;
-  // Prototype fallback screen.
-  fallbackTitle: string;
-  fallbackBody: string;
-  fallbackBack: string;
+  /** Generic screen label when a prototype screen has no title. */
+  screenLabel: string;
 }
-
-const VARIANT_LABELS: Record<string, { en: string; es: string }> = {
-  Claro: { en: "Light", es: "Claro" },
-  Oscuro: { en: "Dark", es: "Oscuro" },
-};
 
 const en: BerryStrings = {
   greeting:
@@ -86,27 +75,19 @@ const en: BerryStrings = {
   listening: "Listening to your audio 🎧",
   preparing: "Great, give me a few seconds and I'll put the proposal together ⚙️",
   prototypesReady:
-    "And here they are, navigable, so you can open them on your phone. " +
-    "They're prototypes to set the direction — the final design is worked out with you.",
-  chooseDesign:
-    "Which one fits you better, light or dark? It's a sketch to set the direction — " +
-    "the final design is worked out with you.",
+    "Here's a navigable prototype — open it on your phone and tap through the screens. " +
+    "It's to set the direction; the final design is worked out with you.",
   docCaption:
     "Here's the proposal. Generated with AI and reviewed by our team before any commitment — " +
     "if it fits, we'll build you the prototype.",
   viewOnline: "You can also view it online, with the diagram included.",
   viewProposalLabel: "View the proposal",
-  openPrototypeLabel: (v) => `Open ${v} prototype`,
-  designOption: (v) => `${v} option`,
-  variantLabel: (key) => VARIANT_LABELS[key]?.en ?? key,
+  openPrototypeLabel: "Open the prototype",
   deckSubtitle: "Preliminary proposal · BlueberryBytes",
   deckChallenge: "The challenge",
   deckScope: "Proposed scope",
   deckArchitecture: "Architecture",
-  fallbackTitle: "Screen under construction",
-  fallbackBody:
-    "This part of the flow is built in the final project. This is a prototype to set the direction.",
-  fallbackBack: "Back",
+  screenLabel: "Screen",
 };
 
 const es: BerryStrings = {
@@ -135,27 +116,19 @@ const es: BerryStrings = {
   listening: "Escuchando tu audio 🎧",
   preparing: "Perfecto, dame unos segundos y te preparo la propuesta ⚙️",
   prototypesReady:
-    "Y aquí los tienes navegables, para que los abras en el móvil. " +
-    "Son prototipos para fijar la dirección — el diseño final se trabaja contigo.",
-  chooseDesign:
-    "¿Cuál te encaja más, la clara o la oscura? Es un boceto para fijar la dirección — " +
-    "el diseño final se trabaja contigo.",
+    "Aquí tienes un prototipo navegable — ábrelo en el móvil y recorre las pantallas. " +
+    "Es para fijar la dirección; el diseño final se trabaja contigo.",
   docCaption:
     "Aquí tienes la propuesta. Generada con IA y revisada por nuestro equipo antes de " +
     "cualquier compromiso — si te encaja, te preparamos el prototipo.",
   viewOnline: "También puedes verla online, con el diagrama incluido.",
   viewProposalLabel: "Ver la propuesta",
-  openPrototypeLabel: (v) => `Abrir prototipo ${v}`,
-  designOption: (v) => `Opción ${v}`,
-  variantLabel: (key) => VARIANT_LABELS[key]?.es ?? key,
+  openPrototypeLabel: "Abrir el prototipo",
   deckSubtitle: "Propuesta preliminar · BlueberryBytes",
   deckChallenge: "El reto",
   deckScope: "Alcance propuesto",
   deckArchitecture: "Arquitectura",
-  fallbackTitle: "Pantalla en construcción",
-  fallbackBody:
-    "Esta parte del flujo se desarrolla en el proyecto final. Es un prototipo para fijar la dirección.",
-  fallbackBack: "Volver",
+  screenLabel: "Pantalla",
 };
 
 const STRINGS: Record<Lang, BerryStrings> = { en, es };

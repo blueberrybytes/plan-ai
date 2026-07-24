@@ -147,6 +147,9 @@ const ALLOWED_ATTR = [
   // pure-CSS `:target` flow that lets a prototype have several screens with no
   // JavaScript. It is constrained to fragments only by ALLOWED_URI_REGEXP below.
   "href",
+  // The screen label our tab bar reads. Explicitly allowed because
+  // ALLOW_DATA_ATTR is off, which would otherwise strip every data-* attribute.
+  "data-title",
 ];
 
 /**
@@ -292,7 +295,10 @@ export const sanitizePrototypeHtml = (raw: string): SanitizeResult | null => {
     // them makes the intent explicit to anyone editing the list above.
     FORBID_TAGS: ["script", "iframe", "object", "embed", "link", "base", "form"],
     FORBID_ATTR: ["onerror", "onload", "onclick", "srcdoc", "formaction"],
-    ALLOW_DATA_ATTR: false,
+    // data-* attributes are inert (no execution, no requests) and we need
+    // `data-title` to survive for the tab bar. DOMPurify strips ALL data-*
+    // when this is false, even ones named in ALLOWED_ATTR.
+    ALLOW_DATA_ATTR: true,
   });
 
   if (purify.removed.length) removed.push(`dompurify:${purify.removed.length}`);
@@ -337,84 +343,93 @@ ${bodyHtml}
 </html>`;
 };
 
-/** id used for the injected "not yet implemented" screen. */
-const FALLBACK_SCREEN_ID = "pendiente-berry";
+const esc = (s: string) => s.replace(/[<>&"]/g, "");
 
 /**
- * Assembles the final prototype document from the sanitized (whole-document)
- * HTML, doing two things a raw wrap cannot:
+ * Assembles the final prototype from the model's SCREENS, adding navigation we
+ * generate ourselves.
  *
- * 1. WIRES DEAD LINKS. A generated `:target` flow always has buttons whose
- *    `href="#algo"` points at a screen the model never built — the prospect
- *    taps and nothing happens, which reads as broken. Every dangling fragment
- *    is redirected to an injected "en construcción" screen, so every button
- *    goes somewhere and the prototype feels complete.
- * 2. COLLAPSES the double document. Sanitization runs in WHOLE_DOCUMENT mode and
- *    returns a full `<html>`; wrapping that again nested two documents. Here we
- *    lift the styles and body out and emit ONE clean document with the CSP.
+ * The model is asked for polished single screens (`<section class="berry-screen"
+ * data-title="…">`) and NO navigation — because wiring `:target`/href flows is
+ * exactly what it got wrong, leaving most buttons dead. Here we build a
+ * DETERMINISTIC tab bar with the pure-CSS radio (`:checked`) technique: one
+ * hidden radio per screen, a label per tab, and CSS that shows the screen whose
+ * radio is checked. Toggling a radio is native browser behaviour — no
+ * JavaScript, so it runs inside the fully-sandboxed iframe — and because WE
+ * generate the wiring it can never point at a screen that doesn't exist.
+ *
+ * Also collapses the double document (sanitization runs WHOLE_DOCUMENT and
+ * returns a full <html>; we lift out styles + screens and emit one clean doc).
  */
-export interface FallbackLabels {
-  title: string;
-  body: string;
-  back: string;
+export interface PhoneChrome {
+  /** Shown when a screen fails to extract. */
+  emptyLabel: string;
 }
-
-const DEFAULT_FALLBACK: FallbackLabels = {
-  title: "Screen under construction",
-  body: "This part of the flow is built in the final project. This is a prototype to set the direction.",
-  back: "Back",
-};
 
 export const finalizePrototypeHtml = (
   sanitizedHtml: string,
   title: string,
-  labels: FallbackLabels = DEFAULT_FALLBACK,
+  chrome: PhoneChrome = { emptyLabel: "Screen" },
 ): string => {
   const $ = cheerio.load(sanitizedHtml);
-
-  // Every id present in the document — the set of valid link targets.
-  const ids = new Set<string>();
-  $("[id]").each((_, el) => {
-    const id = $(el).attr("id");
-    if (id) ids.add(id);
-  });
-
-  // Redirect fragment links whose target does not exist. A bare "#" counts as
-  // dead too — it is the model's placeholder for "no destination yet".
-  let dangling = 0;
-  $('a[href^="#"]').each((_, el) => {
-    const href = $(el).attr("href") ?? "";
-    const target = href.slice(1);
-    if (!target || !ids.has(target)) {
-      $(el).attr("href", `#${FALLBACK_SCREEN_ID}`);
-      dangling += 1;
-    }
-  });
-
-  if (dangling) logger.info(`[prototype] ${dangling} enlace(s) muerto(s) → pantalla de aviso`);
 
   const styles = $("style")
     .map((_, el) => $(el).html() ?? "")
     .get()
     .join("\n");
 
-  const body = $("body").html() ?? sanitizedHtml;
+  // The model's screens. Fall back to the whole body as a single screen if it
+  // ignored the convention, so we always render something.
+  let screens = $(".berry-screen")
+    .map((i, el) => ({
+      title: $(el).attr("data-title")?.trim() || `${chrome.emptyLabel} ${i + 1}`,
+      html: $.html(el),
+    }))
+    .get();
 
-  // The fallback screen. `.screen` + `:target` styling comes from the model's
-  // own CSS, so it hides until a redirected link targets it. The extra rules
-  // here are namespaced to its id so they cannot disturb the design.
-  const esc = (s: string) => s.replace(/[<>&"]/g, "");
-  const fallback = `
-<section class="screen" id="${FALLBACK_SCREEN_ID}">
-  <div style="min-height:60vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:32px;gap:12px">
-    <div style="font-size:40px">🚧</div>
-    <div style="font-size:18px;font-weight:600">${esc(labels.title)}</div>
-    <div style="font-size:14px;opacity:0.7;max-width:280px">${esc(labels.body)}</div>
-    <a href="#" style="margin-top:8px;font-size:14px;text-decoration:underline">${esc(labels.back)}</a>
-  </div>
-</section>`;
+  if (!screens.length) {
+    screens = [{ title: chrome.emptyLabel, html: `<section>${$("body").html() ?? ""}</section>` }];
+  }
 
-  const safeTitle = title.replace(/[<>&"]/g, "");
+  // Strip any stray navigation the model added despite instructions — with our
+  // tabs it is redundant, and a leftover href="#x" could still dead-end.
+  const stripped = screens.map((s) =>
+    s.html.replace(/\shref="[^"]*"/gi, "").replace(/class="berry-screen"/gi, 'class="berry-screen"'),
+  );
+
+  const radios = screens
+    .map((_, i) => `<input type="radio" name="berry-nav" id="berry-scr-${i}"${i === 0 ? " checked" : ""} class="berry-radio">`)
+    .join("\n");
+
+  const tabs = screens
+    .map((s, i) => `<label for="berry-scr-${i}" class="berry-tab">${esc(s.title)}</label>`)
+    .join("\n");
+
+  const stage = stripped
+    .map((html, i) => `<div class="berry-frame" data-idx="${i}">${html}</div>`)
+    .join("\n");
+
+  // Per-screen visibility rules: show the frame whose radio is checked, and
+  // highlight its tab. Generated deterministically so navigation always works.
+  const navRules = screens
+    .map(
+      (_, i) =>
+        `#berry-scr-${i}:checked ~ .berry-stage .berry-frame[data-idx="${i}"]{display:block}\n` +
+        `#berry-scr-${i}:checked ~ .berry-tabs .berry-tab:nth-of-type(${i + 1}){background:rgba(0,0,0,0.06);font-weight:600}`,
+    )
+    .join("\n");
+
+  const shellCss = `
+.berry-shell{max-width:420px;margin:0 auto;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+.berry-radio{position:absolute;left:-9999px}
+.berry-tabs{display:flex;gap:6px;padding:10px 12px;overflow-x:auto;border-bottom:1px solid rgba(0,0,0,0.08)}
+.berry-tab{flex:0 0 auto;padding:6px 14px;border-radius:999px;font-size:13px;cursor:pointer;white-space:nowrap;background:rgba(0,0,0,0.03);user-select:none}
+.berry-stage{position:relative}
+.berry-frame{display:none}
+.berry-phone{border:10px solid #111;border-radius:36px;overflow:hidden;margin:16px auto;max-width:400px;box-shadow:0 20px 60px rgba(0,0,0,0.25)}
+.berry-phone .berry-frame{height:720px;overflow-y:auto}
+${navRules}`;
+
   const csp =
     "default-src 'none'; style-src 'unsafe-inline'; img-src data:; font-src data:; base-uri 'none'; form-action 'none'";
 
@@ -424,12 +439,20 @@ export const finalizePrototypeHtml = (
 <meta charset="utf-8">
 <meta http-equiv="Content-Security-Policy" content="${csp}">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>${safeTitle}</title>
-<style>${styles}</style>
+<title>${esc(title)}</title>
+<style>${styles}
+${shellCss}</style>
 </head>
 <body>
-${body}
-${fallback}
+<div class="berry-shell">
+${radios}
+<div class="berry-tabs">
+${tabs}
+</div>
+<div class="berry-stage berry-phone">
+${stage}
+</div>
+</div>
 </body>
 </html>`;
 };

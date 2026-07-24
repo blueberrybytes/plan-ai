@@ -256,37 +256,39 @@ describe("navegación multipantalla (:target)", () => {
   });
 });
 
-describe("finalizePrototypeHtml — enlaces muertos y documento único", () => {
-  const raw = `<style>.screen{display:none}.screen:target{display:block}#p1{display:block}</style>
-    <section class="screen" id="p1"><a href="#p2">Válido</a><a href="#noexiste">Muerto</a><a href="#">Vacío</a></section>
-    <section class="screen" id="p2"><a href="#p1">Volver</a></section>`;
+describe("finalizePrototypeHtml — pestañas deterministas", () => {
+  const raw = `<style>.card{padding:12px}</style>
+    <section class="berry-screen" data-title="Catálogo"><h1>Cactus</h1><a href="#nope">Ver</a></section>
+    <section class="berry-screen" data-title="Ficha"><h1>Echeveria</h1></section>
+    <section class="berry-screen" data-title="Cesta"><h1>Tu cesta</h1></section>`;
   const build = () => finalizePrototypeHtml(sanitizePrototypeHtml(raw)!.html, "Prototipo");
 
-  it("deja intactos los enlaces a pantallas que existen", () => {
-    expect(build()).toContain('href="#p2"');
-  });
-
-  it("redirige los enlaces muertos a la pantalla de aviso", () => {
+  it("genera una radio por pantalla, con la primera activa", () => {
     const html = build();
-    expect(html).toContain('href="#pendiente-berry"');
-    expect(html).not.toContain('href="#noexiste"');
+    expect((html.match(/type="radio"/g) || []).length).toBe(3);
+    expect((html.match(/ checked/g) || []).length).toBe(1);
   });
 
-  it("inyecta la pantalla de aviso 'en construcción'", () => {
+  it("construye una pestaña por pantalla con su data-title", () => {
     const html = build();
-    expect(html).toContain('id="pendiente-berry"');
-    // Default labels are English; the Telegram path passes localized ones.
-    expect(html).toContain("under construction");
+    expect(html).toContain(">Catálogo<");
+    expect(html).toContain(">Ficha<");
+    expect(html).toContain(">Cesta<");
   });
 
-  it("usa las etiquetas localizadas cuando se le pasan", () => {
-    const html = finalizePrototypeHtml(sanitizePrototypeHtml(raw)!.html, "Prototipo", {
-      title: "Pantalla en construcción",
-      body: "Cuerpo",
-      back: "Volver",
-    });
-    expect(html).toContain("Pantalla en construcción");
-    expect(html).toContain("Volver");
+  it("elimina cualquier href que dejara el modelo (navegación la ponemos nosotros)", () => {
+    expect(build()).not.toContain("#nope");
+  });
+
+  it("cae a una sola pantalla cuando el modelo ignora la convención", () => {
+    const noScreens = finalizePrototypeHtml(
+      sanitizePrototypeHtml("<div><h1>Hola</h1><p>Contenido de una sola vista sin secciones</p></div>")!
+        .html,
+      "Prototipo",
+      { emptyLabel: "Pantalla" },
+    );
+    expect((noScreens.match(/type="radio"/g) || []).length).toBe(1);
+    expect(noScreens).toContain(">Pantalla<");
   });
 
   it("produce UN solo documento, no dos anidados", () => {
@@ -296,6 +298,6 @@ describe("finalizePrototypeHtml — enlaces muertos y documento único", () => {
   it("conserva la CSP y el CSS del modelo", () => {
     const html = build();
     expect(html).toContain("default-src 'none'");
-    expect(html).toContain(":target");
+    expect(html).toContain(".card{padding:12px}");
   });
 });

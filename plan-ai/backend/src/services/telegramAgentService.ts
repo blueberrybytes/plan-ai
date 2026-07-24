@@ -30,10 +30,17 @@ export interface ConversationTurn {
 
 // `.nullable()` not `.optional()`: strict structured-output providers require
 // every property in `required`. Same convention as `aiTaskCoachService`.
+// `.nullable()` not `.optional()`: strict structured-output providers require
+// every property in `required`. Same convention as `aiTaskCoachService`.
 const TriageSchema = z.object({
-  intent: z
-    .enum(["GREETING", "QUESTION", "BRIEF", "NEEDS_MORE", "OFF_TOPIC", "FOLLOW_UP"])
-    .describe("What the prospect is doing in their latest message"),
+  phase: z
+    .enum(["DISCOVERY", "OFFER", "GENERATE"])
+    .describe(
+      "Where the conversation is. DISCOVERY = still asking questions to understand the product; " +
+        "do NOT generate. OFFER = you understand enough and are asking WHICH deliverable they " +
+        "want (prototype / document / slides); do NOT generate yet. GENERATE = the prospect has " +
+        "chosen what they want; produce it.",
+    ),
   language: z
     .enum(["en", "es"])
     .describe(
@@ -44,22 +51,19 @@ const TriageSchema = z.object({
   reply: z
     .string()
     .describe("What to say back, in the prospect's language. Conversational, max 2 sentences."),
-  readyToGenerate: z
-    .boolean()
-    .describe("True ONLY when there is enough detail to produce a real proposal"),
   brief: z
     .string()
     .nullable()
     .describe(
-      "When readyToGenerate is true: the consolidated brief across the whole conversation, in the prospect's language. Otherwise null.",
+      "In GENERATE: the consolidated brief across the whole conversation, in the prospect's " +
+        "language. Otherwise null.",
     ),
   deliverables: z
-    .array(z.enum(["DOC", "MOCKUPS", "SLIDES"]))
+    .array(z.enum(["PROTOTYPE", "DOC", "SLIDES"]))
     .describe(
-      "What to actually produce. DOC = written proposal + architecture diagram. " +
-        "MOCKUPS = two screen designs to choose from. SLIDES = a branded deck. " +
-        "Honour an explicit request ('mándame unas slides', 'quiero ver cómo quedaría'); " +
-        "otherwise return all three.",
+      "In GENERATE: what the prospect CHOSE. PROTOTYPE = a navigable app prototype they can tap " +
+        "through. DOC = written proposal + architecture diagram. SLIDES = a branded deck. Only " +
+        "what they asked for. Empty in DISCOVERY/OFFER.",
     ),
 });
 
@@ -67,8 +71,9 @@ export type TriageResult = z.infer<typeof TriageSchema>;
 
 const SYSTEM = `Eres Berry, el asistente comercial de BlueberryBytes, una agencia de software.
 
-Hablas con un cliente potencial por Telegram. Tu trabajo es entender qué producto
-quiere y, cuando tengas suficiente, avisar de que ya se puede generar la propuesta.
+Hablas con un cliente potencial por Telegram. Trabajas como un buen consultor: primero
+ENTIENDES lo que quiere, luego le PREGUNTAS qué entregable prefiere, y solo entonces
+lo generas. Nunca dispares a generar en cuanto oyes una idea.
 
 CÓMO RESPONDER
 - Responde SIEMPRE en el idioma del cliente.
@@ -76,35 +81,32 @@ CÓMO RESPONDER
 - Nunca inventes plazos, precios ni compromisos.
 - No digas que eres una IA salvo que te lo pregunten directamente.
 
-QUÉ MARCAR
-- GREETING: saludo o presentación. Preséntate y pregunta qué quiere construir.
-- QUESTION: pregunta sobre vosotros, el proceso, idiomas, precios. Respóndela con
-  naturalidad y reconduce hacia qué quiere construir. Sobre precios: depende del
-  alcance y se ve en una llamada.
-- BRIEF: describe un producto con suficiente detalle (qué es, para quién o para qué).
-  Marca readyToGenerate=true y rellena "brief".
-- NEEDS_MORE: menciona algo pero es demasiado vago para diseñar nada
-  ("quiero una app", "algo para mi negocio"). Haz UNA pregunta concreta que
-  desbloquee: para quién es, o qué problema resuelve.
-- FOLLOW_UP: reacciona a algo que YA le has enviado. Muy habitual: acabas de
-  mandarle dos diseños (Claro y Oscuro) y responde eligiendo ("el oscuro", "me
-  gusta el claro", "el segundo"), o comenta la propuesta. Mira el historial: si
-  ya has entregado algo, un mensaje corto casi siempre es esto, NO un tema nuevo.
-- OFF_TOPIC: nada que ver. Reconduce con amabilidad.
+LAS TRES FASES (campo "phase")
 
-CÓMO TRATAR UN FOLLOW_UP
-- readyToGenerate=false SIEMPRE (ya está generado; no lo repitas).
-- Si elige un diseño: alégrate, confírmale su elección por su nombre ("¡genial,
-  nos quedamos con el oscuro!") y ofrece el siguiente paso — una llamada rápida
-  con el equipo para concretar. Nunca le pidas que vuelva a describir la idea.
-- Si comenta o pide un cambio: reconócelo y dile que lo revisa el equipo.
+1) DISCOVERY — entender el producto.
+   Haz preguntas concretas y útiles, de una en una o de dos en dos: para quién es,
+   qué problema resuelve, funciones clave, si es app/web, estilo que le gusta.
+   Con 1 o 2 rondas de preguntas suele bastar; no interrogues sin fin.
+   NO generes. deliverables = [].
 
-CUÁNDO GENERAR
-Sé generoso: si sabes QUÉ se construye y PARA QUIÉN, ya es suficiente. No
-interrogues al cliente. Dos o tres intercambios como mucho.
-Si en varios mensajes ha ido dando detalles sueltos, JÚNTALOS en "brief" — el
-cliente no tiene por qué repetirlo todo en un solo mensaje.
-NUNCA vuelvas a generar por un mensaje corto de reacción: eso es FOLLOW_UP.`;
+2) OFFER — ya entiendes lo suficiente. Ahora pregúntale QUÉ quiere que le prepares:
+   «¿Te preparo un prototipo navegable de la app, un documento de propuesta, o unas
+   slides para presentarlo? Puedo hacer los que quieras.»
+   NO generes todavía. deliverables = [].
+
+3) GENERATE — el cliente ha ELEGIDO. Marca phase=GENERATE, rellena "brief" juntando
+   todo lo hablado, y pon en "deliverables" SOLO lo que pidió:
+   - «un prototipo» / «quiero verlo» → ["PROTOTYPE"]
+   - «un documento» / «la propuesta» → ["DOC"]
+   - «unas slides» / «un powerpoint» → ["SLIDES"]
+   - «todo» / «las tres» → ["PROTOTYPE","DOC","SLIDES"]
+
+REGLAS
+- No pases a OFFER hasta tener una idea clara del producto y para quién es.
+- No pases a GENERATE hasta que el cliente diga explícitamente qué quiere.
+- Si después pide OTRO entregable, vuelve a GENERATE con ese en "deliverables".
+- Si es un saludo o una pregunta sobre vosotros, respóndela y sigue en DISCOVERY.
+- Sobre precios: depende del alcance y se ve en una llamada.`;
 
 /** Formats history for the prompt. */
 const renderHistory = (history: ConversationTurn[]): string =>
@@ -153,16 +155,16 @@ export const triageMessage = async (
     const result = response.output as TriageResult;
     if (!result?.reply?.trim()) return null;
 
-    // A model that omits `deliverables` (or returns []) would silently produce
-    // nothing at all — the prospect would get a "here you go" and no files.
-    if (!result.deliverables?.length) {
-      result.deliverables = ["DOC", "MOCKUPS", "SLIDES"];
-    }
-
-    // A model can set readyToGenerate without producing a brief; generating from
-    // an empty string would burn the pipeline on nothing.
-    if (result.readyToGenerate && !result.brief?.trim()) {
-      return { ...result, readyToGenerate: false };
+    // Guard the GENERATE phase against two model slips that would waste the
+    // pipeline: generating with no brief, or generating with no chosen
+    // deliverable. Either one means "not actually ready" — fall back to OFFER so
+    // Berry asks what they want instead of producing nothing.
+    if (result.phase === "GENERATE") {
+      if (!result.brief?.trim() || !result.deliverables?.length) {
+        return { ...result, phase: "OFFER", deliverables: [] };
+      }
+    } else {
+      result.deliverables = [];
     }
 
     return result;
