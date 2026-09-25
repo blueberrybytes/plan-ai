@@ -15,7 +15,7 @@
   },
   "scripts": {
     "prebuild": "node scripts/prebuild-native.js",
-    "predev": "node scripts/prebuild-native.js || true",
+    "predev": "node scripts/ensure-electron.js && (node scripts/prebuild-native.js || true)",
     "dev": "electron-vite dev",
     "dev:housegroup": "export BRAND_KEY=housegroup && set -a && source .env.housegroup && set +a && electron-vite dev",
     "build": "electron-vite build",

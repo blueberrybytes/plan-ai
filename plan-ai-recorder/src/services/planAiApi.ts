@@ -1,37 +1,52 @@
 const BASE_URL = import.meta.env.VITE_PLAN_AI_API_URL ?? "";
 import * as Sentry from "@sentry/electron/renderer";
-import type { components } from '../types/api';
+import type { components } from "../types/api";
+
+/** Fired on window when a request can't reach the backend at all. */
+export const API_UNREACHABLE_EVENT = "plan-ai-api-unreachable";
 
 // ── Types sourced from the generated backend swagger ──────────────────────────
-export type Workspace             = components['schemas']['WorkspaceResponse'];
-export type WorkspaceMemberResponse = components['schemas']['WorkspaceMemberResponse'];
-export type WorkspaceTeamResponse = components['schemas']['WorkspaceTeamResponse'];
-export type Project               = components['schemas']['ProjectResponse'];
-export type Task                  = components['schemas']['TaskResponse'];
+export type Workspace = components["schemas"]["WorkspaceResponse"];
+export type WorkspaceMemberResponse =
+  components["schemas"]["WorkspaceMemberResponse"];
+export type WorkspaceTeamResponse =
+  components["schemas"]["WorkspaceTeamResponse"];
+export type Project = components["schemas"]["ProjectResponse"];
+export type Task = components["schemas"]["TaskResponse"];
 // StandaloneTranscriptResponse includes mobile-specific fields:
 // durationSeconds, speakerCount, sentiment, tasks, utterances, chatThread
-export type TranscriptMetadata = components['schemas']['TranscriptMetadata'];
+export type TranscriptMetadata = components["schemas"]["TranscriptMetadata"];
 
-export type Transcript = Omit<components['schemas']['StandaloneTranscriptResponse'], 'metadata'> & {
+export type Transcript = Omit<
+  components["schemas"]["StandaloneTranscriptResponse"],
+  "metadata"
+> & {
   metadata?: TranscriptMetadata | null;
 };
-export type Context               = components['schemas']['ContextResponse'];
-export type AiModel               = components['schemas']['AiModelResponse'];
-export type UserIntegrationSummary = components['schemas']['IntegrationSummaryResponse'];
-export type TwentyCompanyItem      = components['schemas']['TwentyCompanyItem'];
-export type UserResponse = components['schemas']['UserResponse'];
-export type CreateStandaloneTranscriptBody = components['schemas']['CreateStandaloneTranscriptBody'];
-export type SubscriptionStatusResponse = components['schemas']['SubscriptionStatusResponse'];
-export type UpdateSpeakerNamesBody = components['schemas']['UpdateSpeakerNamesBody'];
+export type Context = components["schemas"]["ContextResponse"];
+export type AiModel = components["schemas"]["AiModelResponse"];
+export type UserIntegrationSummary =
+  components["schemas"]["IntegrationSummaryResponse"];
+export type TwentyCompanyItem = components["schemas"]["TwentyCompanyItem"];
+export type UserResponse = components["schemas"]["UserResponse"];
+export type CreateStandaloneTranscriptBody =
+  components["schemas"]["CreateStandaloneTranscriptBody"];
+export type SubscriptionStatusResponse =
+  components["schemas"]["SubscriptionStatusResponse"];
+export type UpdateSpeakerNamesBody =
+  components["schemas"]["UpdateSpeakerNamesBody"];
 
 async function handleResponseWithRetry<T>(
   res: Response,
   retryRequest: () => Promise<Response>,
 ): Promise<T> {
   if (res.status >= 500) {
-    Sentry.captureException(new Error(`API 5xx Error: ${res.status} on ${res.url}`), {
-      extra: { status: res.status, url: res.url, statusText: res.statusText }
-    });
+    Sentry.captureException(
+      new Error(`API 5xx Error: ${res.status} on ${res.url}`),
+      {
+        extra: { status: res.status, url: res.url, statusText: res.statusText },
+      },
+    );
   }
 
   // 403 = role-based permission failure — refreshing the token won't help, return error immediately
@@ -45,10 +60,14 @@ async function handleResponseWithRetry<T>(
     console.log(`HTTP 401 encountered, attempting token refresh...`);
     const refreshedRes = await retryRequest();
     if (!refreshedRes.ok) {
-      const body = await refreshedRes.json().catch(() => ({ message: refreshedRes.statusText }));
-      throw new Error((body as { message?: string }).message ?? `HTTP ${refreshedRes.status}`);
+      const body = await refreshedRes
+        .json()
+        .catch(() => ({ message: refreshedRes.statusText }));
+      throw new Error(
+        (body as { message?: string }).message ?? `HTTP ${refreshedRes.status}`,
+      );
     }
-    const json = await refreshedRes.json() as any;
+    const json = (await refreshedRes.json()) as any;
     return json.data !== undefined ? json.data : json;
   }
 
@@ -58,17 +77,28 @@ async function handleResponseWithRetry<T>(
     const data = body as Record<string, unknown>;
     if (data.code === "usage_limit_exceeded") {
       const limitType = data.limitType as string;
-      const friendly = limitType === "llm" ? "AI token" : limitType === "recording" ? "recording hour" : "generation";
-      throw new Error(`You've reached your monthly ${friendly} limit. Upgrade your plan or wait until next billing cycle.`);
+      const friendly =
+        limitType === "llm"
+          ? "AI token"
+          : limitType === "recording"
+            ? "recording hour"
+            : "generation";
+      throw new Error(
+        `You've reached your monthly ${friendly} limit. Upgrade your plan or wait until next billing cycle.`,
+      );
     }
-    throw new Error("Rate limit reached. Please wait a moment before trying again.");
+    throw new Error(
+      "Rate limit reached. Please wait a moment before trying again.",
+    );
   }
 
   if (!res.ok) {
     const body = await res.json().catch(() => ({ message: res.statusText }));
-    throw new Error((body as { message?: string }).message ?? `HTTP ${res.status}`);
+    throw new Error(
+      (body as { message?: string }).message ?? `HTTP ${res.status}`,
+    );
   }
-  const json = await res.json() as any;
+  const json = (await res.json()) as any;
   return json.data !== undefined ? json.data : json;
 }
 
@@ -90,7 +120,12 @@ export const createPlanAiApi = (
     return headers;
   };
 
-  const safeFetch = async (url: string, init?: RequestInit, silent = false, timeoutMs = 30000): Promise<Response> => {
+  const safeFetch = async (
+    url: string,
+    init?: RequestInit,
+    silent = false,
+    timeoutMs = 30000,
+  ): Promise<Response> => {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
@@ -102,11 +137,16 @@ export const createPlanAiApi = (
       clearTimeout(timeoutId);
       console.error("[planAiApi] Network/CORS/DNS Error:", err);
       if (!silent) {
-        if (err.name === 'AbortError') {
-          alert(`API Connection Timeout: The server did not respond after ${timeoutMs/1000}s. \nURL: ${url}`);
-        } else {
-          alert(`API Connection Error: ${err instanceof Error ? err.message : String(err)} \nURL: ${url}`);
-        }
+        // Not alert(): in Electron it blocks the whole renderer, WebSocket
+        // events and re-renders included. With the server down, the recording
+        // screen refetches on every window focus, and closing the alert gives
+        // focus back, so it looped forever and the UI never saw the reconnect.
+        // ApiUnreachableNotice turns this into one non-blocking notice.
+        window.dispatchEvent(
+          new CustomEvent(API_UNREACHABLE_EVENT, {
+            detail: { url, timedOut: err?.name === "AbortError" },
+          }),
+        );
       }
       throw err;
     }
@@ -133,7 +173,9 @@ export const createPlanAiApi = (
         });
 
       const res = await req(false);
-      return handleResponseWithRetry<WorkspaceTeamResponse>(res, () => req(true));
+      return handleResponseWithRetry<WorkspaceTeamResponse>(res, () =>
+        req(true),
+      );
     },
 
     async listProjects(): Promise<Project[]> {
@@ -143,12 +185,15 @@ export const createPlanAiApi = (
         });
 
       const res = await req(false);
-      return handleResponseWithRetry<{ projects: Project[] }>(res, () => req(true)).then(
-        (d) => d.projects,
-      );
+      return handleResponseWithRetry<{ projects: Project[] }>(res, () =>
+        req(true),
+      ).then((d) => d.projects);
     },
 
-    async createProject(payload: { title: string; description?: string }): Promise<Project> {
+    async createProject(payload: {
+      title: string;
+      description?: string;
+    }): Promise<Project> {
       const req = async (force: boolean) =>
         safeFetch(`${BASE_URL}/api/projects`, {
           method: "POST",
@@ -167,9 +212,9 @@ export const createPlanAiApi = (
         });
 
       const res = await req(false);
-      return handleResponseWithRetry<{ contexts: Context[] }>(res, () => req(true)).then(
-        (d) => d.contexts,
-      );
+      return handleResponseWithRetry<{ contexts: Context[] }>(res, () =>
+        req(true),
+      ).then((d) => d.contexts);
     },
 
     async listAiModels(): Promise<AiModel[]> {
@@ -182,7 +227,10 @@ export const createPlanAiApi = (
       return handleResponseWithRetry<AiModel[]>(res, () => req(true));
     },
 
-    async listTranscripts(q?: string, projectId?: string): Promise<Transcript[]> {
+    async listTranscripts(
+      q?: string,
+      projectId?: string,
+    ): Promise<Transcript[]> {
       const req = async (force: boolean) => {
         const url = new URL(`${BASE_URL}/api/transcripts`);
         url.searchParams.set("pageSize", "50");
@@ -197,17 +245,20 @@ export const createPlanAiApi = (
       };
 
       const res = await req(false);
-      return handleResponseWithRetry<{ transcripts: Transcript[] }>(res, () => req(true)).then(
-        (d) => d.transcripts,
-      );
+      return handleResponseWithRetry<{ transcripts: Transcript[] }>(res, () =>
+        req(true),
+      ).then((d) => d.transcripts);
     },
 
     /** Companies from the connected Twenty CRM, for the post-recording picker. */
     async searchTwentyCompanies(q: string): Promise<TwentyCompanyItem[]> {
       const req = async (force: boolean) =>
-        safeFetch(`${BASE_URL}/api/twenty/companies?q=${encodeURIComponent(q)}`, {
-          headers: await getAuthHeaders(force),
-        });
+        safeFetch(
+          `${BASE_URL}/api/twenty/companies?q=${encodeURIComponent(q)}`,
+          {
+            headers: await getAuthHeaders(force),
+          },
+        );
 
       const res = await req(false);
       return handleResponseWithRetry<TwentyCompanyItem[]>(res, () => req(true));
@@ -220,10 +271,15 @@ export const createPlanAiApi = (
         });
 
       const res = await req(false);
-      return handleResponseWithRetry<UserIntegrationSummary[]>(res, () => req(true));
+      return handleResponseWithRetry<UserIntegrationSummary[]>(res, () =>
+        req(true),
+      );
     },
 
-    async transcribeChunk(chunks: { mic?: Blob; system?: Blob }): Promise<string> {
+    async transcribeChunk(chunks: {
+      mic?: Blob;
+      system?: Blob;
+    }): Promise<string> {
       const req = async (force: boolean) => {
         const token = await getToken(force);
         if (!token) throw new Error("No auth token available");
@@ -234,11 +290,18 @@ export const createPlanAiApi = (
         }
         if (chunks.system) {
           const isMacNative =
-            chunks.system.type.includes("mp4") || chunks.system.type.includes("m4a");
-          form.append("system", chunks.system, isMacNative ? "system.m4a" : "system.webm");
+            chunks.system.type.includes("mp4") ||
+            chunks.system.type.includes("m4a");
+          form.append(
+            "system",
+            chunks.system,
+            isMacNative ? "system.m4a" : "system.webm",
+          );
         }
 
-        const headers: Record<string, string> = { Authorization: `Bearer ${token}` };
+        const headers: Record<string, string> = {
+          Authorization: `Bearer ${token}`,
+        };
         const wsId = getWorkspaceId();
         if (wsId) headers["X-Workspace-Id"] = wsId;
 
@@ -250,7 +313,9 @@ export const createPlanAiApi = (
       };
 
       const res = await req(false);
-      return handleResponseWithRetry<{ text: string }>(res, () => req(true)).then((d) => d.text);
+      return handleResponseWithRetry<{ text: string }>(res, () =>
+        req(true),
+      ).then((d) => d.text);
     },
 
     async startAudioStream(
@@ -262,7 +327,9 @@ export const createPlanAiApi = (
       if (!token) throw new Error("No auth token available");
 
       const wsProtocol = BASE_URL.startsWith("https") ? "wss:" : "ws:";
-      const wsUrl = new URL(`${wsProtocol}//${BASE_URL.replace(/^https?:\/\//, "")}/api/audio/stream`);
+      const wsUrl = new URL(
+        `${wsProtocol}//${BASE_URL.replace(/^https?:\/\//, "")}/api/audio/stream`,
+      );
       wsUrl.searchParams.set("token", token);
 
       if (language) {
@@ -284,7 +351,6 @@ export const createPlanAiApi = (
       return ws;
     },
 
-
     async getCurrentUser(): Promise<UserResponse> {
       const req = async (force: boolean) =>
         safeFetch(`${BASE_URL}/api/session/me`, {
@@ -302,7 +368,9 @@ export const createPlanAiApi = (
         });
 
       const res = await req(false);
-      return handleResponseWithRetry<SubscriptionStatusResponse>(res, () => req(true));
+      return handleResponseWithRetry<SubscriptionStatusResponse>(res, () =>
+        req(true),
+      );
     },
 
     async deleteMyAccount(): Promise<void> {
@@ -316,58 +384,67 @@ export const createPlanAiApi = (
       await handleResponseWithRetry(res, () => req(true));
     },
 
-    async saveRecording(payload: CreateStandaloneTranscriptBody & {
-      taskStrategy?: "AUTO" | "SINGLE_TICKET" | "SPECIFIC_COUNT";
-      taskCount?: number;
-      micFile?: Blob;
-      sysFile?: Blob;
-      /** Stop-time echo-canceller outcome (see audioRecorder AecTelemetry). */
-      aecTelemetry?: object;
-      /**
-       * Real wall-clock instant capture began (ISO 8601), and elapsed capture
-       * seconds. `recordedAt` above is upload time — the backend needs this pair
-       * to tell whether two teammates' recordings of the same meeting overlap.
-       */
-      recordingStartedAt?: string;
-      recordingWallClockSeconds?: number;
-      skipAi?: boolean;
-      /** Twenty company chosen for THIS meeting (destination of the CRM note). */
-      twentyCompanyId?: string;
-      exportToGoogleDrive?: boolean;
-      exportToOneDrive?: boolean;
-      createDoc?: boolean;
-      createSlides?: boolean;
-    }): Promise<Transcript> {
+    async saveRecording(
+      payload: CreateStandaloneTranscriptBody & {
+        taskStrategy?: "AUTO" | "SINGLE_TICKET" | "SPECIFIC_COUNT";
+        taskCount?: number;
+        micFile?: Blob;
+        sysFile?: Blob;
+        /** Stop-time echo-canceller outcome (see audioRecorder AecTelemetry). */
+        aecTelemetry?: object;
+        /**
+         * Real wall-clock instant capture began (ISO 8601), and elapsed capture
+         * seconds. `recordedAt` above is upload time — the backend needs this pair
+         * to tell whether two teammates' recordings of the same meeting overlap.
+         */
+        recordingStartedAt?: string;
+        recordingWallClockSeconds?: number;
+        skipAi?: boolean;
+        /** Twenty company chosen for THIS meeting (destination of the CRM note). */
+        twentyCompanyId?: string;
+        exportToGoogleDrive?: boolean;
+        exportToOneDrive?: boolean;
+        createDoc?: boolean;
+        createSlides?: boolean;
+      },
+    ): Promise<Transcript> {
       const req = async (force: boolean) => {
         const formData = new FormData();
-        
+
         // Append all text payload properties individually or as serialized JSON.
         // The backend `transcriptsController.ts` will parse them.
         formData.append("source", "RECORDING");
         if (payload.content) formData.append("content", payload.content);
         if (payload.title) formData.append("title", payload.title);
-        if (payload.recordedAt) formData.append("recordedAt", payload.recordedAt);
+        if (payload.recordedAt)
+          formData.append("recordedAt", payload.recordedAt);
         if (payload.projectId) formData.append("projectId", payload.projectId);
         // ASR language the user picked ("ca", "es", …) — the backend stores it
         // so batch re-diarization honours it instead of defaulting to "multi".
         if (payload.language) formData.append("language", payload.language);
         if (payload.modelKey) formData.append("modelKey", payload.modelKey);
-        if (payload.complexityLevel) formData.append("complexityLevel", payload.complexityLevel);
+        if (payload.complexityLevel)
+          formData.append("complexityLevel", payload.complexityLevel);
         if (payload.syncToJira) formData.append("syncToJira", "true");
         if (payload.syncToLinear) formData.append("syncToLinear", "true");
         if (payload.syncToTrello) formData.append("syncToTrello", "true");
         if (payload.syncToNotion) formData.append("syncToNotion", "true");
         if (payload.syncToAsana) formData.append("syncToAsana", "true");
         if (payload.syncToTwenty) formData.append("syncToTwenty", "true");
-        if (payload.twentyCompanyId) formData.append("twentyCompanyId", payload.twentyCompanyId);
-        if (payload.exportToGoogleDrive) formData.append("exportToGoogleDrive", "true");
-        if (payload.exportToOneDrive) formData.append("exportToOneDrive", "true");
+        if (payload.twentyCompanyId)
+          formData.append("twentyCompanyId", payload.twentyCompanyId);
+        if (payload.exportToGoogleDrive)
+          formData.append("exportToGoogleDrive", "true");
+        if (payload.exportToOneDrive)
+          formData.append("exportToOneDrive", "true");
         if (payload.createDoc) formData.append("createDoc", "true");
         if (payload.createSlides) formData.append("createSlides", "true");
-        if (payload.taskStrategy) formData.append("taskStrategy", payload.taskStrategy);
-        if (payload.taskCount) formData.append("taskCount", payload.taskCount.toString());
+        if (payload.taskStrategy)
+          formData.append("taskStrategy", payload.taskStrategy);
+        if (payload.taskCount)
+          formData.append("taskCount", payload.taskCount.toString());
         if (payload.skipAi) formData.append("skipAi", "true");
-        
+
         if (payload.contextIds && payload.contextIds.length > 0) {
           formData.append("contextIds", JSON.stringify(payload.contextIds));
         }
@@ -381,7 +458,10 @@ export const createPlanAiApi = (
           formData.append("recordingStartedAt", payload.recordingStartedAt);
         }
         if (payload.recordingWallClockSeconds) {
-          formData.append("recordingWallClockSeconds", payload.recordingWallClockSeconds.toString());
+          formData.append(
+            "recordingWallClockSeconds",
+            payload.recordingWallClockSeconds.toString(),
+          );
         }
 
         // Determine mime types based on platform or defaults. The mic may be an
@@ -389,30 +469,44 @@ export const createPlanAiApi = (
         // Opus webm, so name it by the blob's actual type.
         if (payload.micFile) {
           const mt = payload.micFile.type;
-          const micName = mt.includes("mpeg") || mt.includes("mp3")
-            ? "mic.mp3"
-            : mt.includes("wav")
-              ? "mic.wav"
-              : "mic.webm";
+          const micName =
+            mt.includes("mpeg") || mt.includes("mp3")
+              ? "mic.mp3"
+              : mt.includes("wav")
+                ? "mic.wav"
+                : "mic.webm";
           formData.append("micFile", payload.micFile, micName);
         }
         if (payload.sysFile) {
-          const isMacNative = payload.sysFile.type.includes("mp4") || payload.sysFile.type.includes("m4a");
-          formData.append("sysFile", payload.sysFile, isMacNative ? "sys.m4a" : "sys.webm");
+          const isMacNative =
+            payload.sysFile.type.includes("mp4") ||
+            payload.sysFile.type.includes("m4a");
+          formData.append(
+            "sysFile",
+            payload.sysFile,
+            isMacNative ? "sys.m4a" : "sys.webm",
+          );
         }
 
         const token = await getToken(force);
         if (!token) throw new Error("No auth token available");
 
-        const headers: Record<string, string> = { Authorization: `Bearer ${token}` };
+        const headers: Record<string, string> = {
+          Authorization: `Bearer ${token}`,
+        };
         const wsId = getWorkspaceId();
         if (wsId) headers["X-Workspace-Id"] = wsId;
 
-        return safeFetch(`${BASE_URL}/api/transcripts/recorder-upload`, {
-          method: "POST",
-          headers,
-          body: formData,
-        }, false, 300000); // 5 minute timeout for large audio file uploads
+        return safeFetch(
+          `${BASE_URL}/api/transcripts/recorder-upload`,
+          {
+            method: "POST",
+            headers,
+            body: formData,
+          },
+          false,
+          300000,
+        ); // 5 minute timeout for large audio file uploads
       };
 
       const res = await req(false);
@@ -429,7 +523,10 @@ export const createPlanAiApi = (
       return handleResponseWithRetry<Transcript>(res, () => req(true));
     },
 
-    async updateTranscript(id: string, payload: { title?: string }): Promise<Transcript> {
+    async updateTranscript(
+      id: string,
+      payload: { title?: string },
+    ): Promise<Transcript> {
       const req = async (force: boolean) =>
         safeFetch(`${BASE_URL}/api/transcripts/${id}`, {
           method: "PUT",
@@ -499,7 +596,9 @@ export const createPlanAiApi = (
         );
 
       const res = await req(false);
-      return handleResponseWithRetry<{ success: boolean }>(res, () => req(true));
+      return handleResponseWithRetry<{ success: boolean }>(res, () =>
+        req(true),
+      );
     },
 
     async sendLiveChatMessage(payload: {
@@ -514,14 +613,21 @@ export const createPlanAiApi = (
       const req = async (force: boolean) =>
         // Live chat during recording: silent (the chat UI surfaces failures
         // itself — no blocking native alert) and a 120s timeout.
-        safeFetch(`${BASE_URL}/api/chat/live`, {
-          method: "POST",
-          headers: await getAuthHeaders(force),
-          body: JSON.stringify(payload),
-        }, true, 120000);
+        safeFetch(
+          `${BASE_URL}/api/chat/live`,
+          {
+            method: "POST",
+            headers: await getAuthHeaders(force),
+            body: JSON.stringify(payload),
+          },
+          true,
+          120000,
+        );
 
       const res = await req(false);
-      return handleResponseWithRetry<{ response: string }>(res, () => req(true));
+      return handleResponseWithRetry<{ response: string }>(res, () =>
+        req(true),
+      );
     },
 
     async getLiveSummary(payload: {
@@ -534,33 +640,42 @@ export const createPlanAiApi = (
       const req = async (force: boolean) =>
         // Background auto-summary: silent (never pop a blocking alert mid-recording)
         // and a tighter 90s timeout — if it's slow, the next update retries.
-        safeFetch(`${BASE_URL}/api/chat/live-summary`, {
-          method: "POST",
-          headers: await getAuthHeaders(force),
-          body: JSON.stringify(payload),
-        }, true, 90000);
+        safeFetch(
+          `${BASE_URL}/api/chat/live-summary`,
+          {
+            method: "POST",
+            headers: await getAuthHeaders(force),
+            body: JSON.stringify(payload),
+          },
+          true,
+          90000,
+        );
 
       const res = await req(false);
-      return handleResponseWithRetry<{ summary: string }>(res, () => req(true)).then(
-        (d) => d.summary,
-      );
+      return handleResponseWithRetry<{ summary: string }>(res, () =>
+        req(true),
+      ).then((d) => d.summary);
     },
 
     async autoSyncTranscript(
       transcriptId: string,
     ): Promise<{ pushed: number; skipped: number; errors: string[] }> {
       const req = async (force: boolean) =>
-        safeFetch(`${BASE_URL}/api/tasks/auto-sync-transcript/${transcriptId}`, {
-          method: "POST",
-          headers: await getAuthHeaders(force),
-          body: JSON.stringify({}),
-        });
+        safeFetch(
+          `${BASE_URL}/api/tasks/auto-sync-transcript/${transcriptId}`,
+          {
+            method: "POST",
+            headers: await getAuthHeaders(force),
+            body: JSON.stringify({}),
+          },
+        );
 
       const res = await req(false);
-      return handleResponseWithRetry<{ pushed: number; skipped: number; errors: string[] }>(
-        res,
-        () => req(true),
-      );
+      return handleResponseWithRetry<{
+        pushed: number;
+        skipped: number;
+        errors: string[];
+      }>(res, () => req(true));
     },
   };
 };

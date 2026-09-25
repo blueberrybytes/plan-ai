@@ -30,7 +30,6 @@ const REQUEST_TIMEOUT_MS = 15_000;
 /** Never ship a wall of raw transcript into someone's CRM. */
 const MAX_NOTE_MARKDOWN_CHARS = 20_000;
 
-
 /**
  * Section labels for the note and the transcript file, by meeting language.
  *
@@ -98,7 +97,6 @@ const labelsFor = (language?: string | null): NoteLabels => {
   if (l.startsWith("ca")) return NOTE_LABELS.ca;
   return NOTE_LABELS.es;
 };
-
 
 // ── transcript attachment ──────────────────────────────────────────────────
 //

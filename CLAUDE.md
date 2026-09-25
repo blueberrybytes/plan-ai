@@ -77,7 +77,7 @@ Run from the **repository root** before committing:
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **plan** (50503 symbols, 123051 relationships, 570 execution flows).
+This project is indexed by GitNexus as **plan** (50521 symbols, 123091 relationships, 570 execution flows).
 
 > Index stale? Run `node .gitnexus/run.cjs analyze --index-only` from the project root — it auto-selects an available runner. No `.gitnexus/run.cjs` yet? Bootstrap with `npx`, `bunx`, or `pnpm dlx` — e.g. `bunx gitnexus@latest analyze` (npm 11 npx crash; #1939).
 

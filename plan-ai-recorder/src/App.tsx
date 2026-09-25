@@ -16,6 +16,7 @@ import {
   Typography,
 } from "@mui/material";
 import { useAutoUpdater } from "./hooks/useAutoUpdater";
+import { ApiUnreachableNotice } from "./components/ApiUnreachableNotice";
 
 const WEB_APP_URL =
   import.meta.env.VITE_PLAN_AI_WEB_URL || "http://localhost:3000";
@@ -236,10 +237,10 @@ const AppRoutes: React.FC = () => {
           API Keys Required
         </Typography>
         <Typography color="text.secondary" sx={{ maxWidth: 400 }}>
-          Your workspace "{activeWorkspace.name}" uses Bring Your Own Key
-          (BYOK) mode and is missing API keys. Configure your OpenRouter and
-          Deepgram keys on the web dashboard, then tap "I've Completed Setup"
-          to continue.
+          Your workspace "{activeWorkspace.name}" uses Bring Your Own Key (BYOK)
+          mode and is missing API keys. Configure your OpenRouter and Deepgram
+          keys on the web dashboard, then tap "I've Completed Setup" to
+          continue.
         </Typography>
         <GateActions
           dashboardPath="/team"
@@ -256,7 +257,8 @@ const AppRoutes: React.FC = () => {
     // (Web /team to remove members or open seat management) than the
     // generic "no subscription" gate.
     const isOverQuota = subscription.reason === "over_quota";
-    const canSubscribe = activeWorkspace?.role === "OWNER" || activeWorkspace?.role === "ADMIN";
+    const canSubscribe =
+      activeWorkspace?.role === "OWNER" || activeWorkspace?.role === "ADMIN";
 
     const reasonCopy = isOverQuota
       ? "Your team has more members than paid seats. Remove members or add more seats in the Web Dashboard to keep recording."
@@ -272,8 +274,14 @@ const AppRoutes: React.FC = () => {
       ? "This workspace has more members than paid seats. Ask your admin to remove members or add more seats."
       : "This workspace doesn't have an active subscription. Ask your workspace admin to choose a plan in the Web Dashboard.";
 
-    const dashboardPath = canSubscribe ? (isOverQuota ? "/team" : "/billing") : "/home";
-    const title = isOverQuota ? "Too Many Seats In Use" : "Subscription Required";
+    const dashboardPath = canSubscribe
+      ? isOverQuota
+        ? "/team"
+        : "/billing"
+      : "/home";
+    const title = isOverQuota
+      ? "Too Many Seats In Use"
+      : "Subscription Required";
 
     return (
       <Box
@@ -288,7 +296,12 @@ const AppRoutes: React.FC = () => {
           textAlign: "center",
         }}
       >
-        <Typography variant="h5" fontWeight="bold" color="warning.main" gutterBottom>
+        <Typography
+          variant="h5"
+          fontWeight="bold"
+          color="warning.main"
+          gutterBottom
+        >
           {title}
         </Typography>
         <Typography color="text.secondary" sx={{ maxWidth: 420 }}>
@@ -334,19 +347,21 @@ const AppRoutes: React.FC = () => {
 };
 
 const App: React.FC = () => {
-  const { 
-    masUpdate, 
-    otaAvailable, 
-    otaDownloaded, 
+  const {
+    masUpdate,
+    otaAvailable,
+    otaDownloaded,
     handleMasUpdate,
     handleOtaRestart,
     dismissMasUpdate,
-    dismissOtaDownloaded
+    dismissOtaDownloaded,
   } = useAutoUpdater();
 
   return (
     <HashRouter>
       <AppRoutes />
+
+      <ApiUnreachableNotice />
 
       {/* Update Snackbars */}
       <Snackbar
@@ -382,8 +397,8 @@ const App: React.FC = () => {
         anchorOrigin={{ vertical: "top", horizontal: "center" }}
         onClose={dismissOtaDownloaded}
       >
-        <Alert 
-          severity="success" 
+        <Alert
+          severity="success"
           onClose={dismissOtaDownloaded}
           action={
             <Button color="inherit" size="small" onClick={handleOtaRestart}>

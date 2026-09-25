@@ -384,7 +384,33 @@ const startServer = async () => {
 void startServer();
 
 // Handle graceful shutdown
+/**
+ * Longest a shutdown may wait before cutting what's still open. Without it a
+ * single long-lived connection (a live audio WebSocket, an MCP stream, an SSE)
+ * keeps `server.close()` waiting forever, and a worker in the middle of a job
+ * can hold `close()` for minutes. The process then stays alive with the port
+ * taken: nodemon's next start fails with EADDRINUSE, and on Railway a deploy
+ * waits until the platform kills the old instance.
+ */
+const SHUTDOWN_GRACE_MS = 10_000;
+
 const closeServer = async (cb?: () => void) => {
+  let finished = false;
+  const finish = () => {
+    if (finished) return;
+    finished = true;
+    clearTimeout(deadline);
+    if (cb) cb();
+  };
+  const deadline = setTimeout(() => {
+    logger.warn(
+      `[Shutdown] Still closing after ${SHUTDOWN_GRACE_MS / 1000}s, cutting open connections`,
+    );
+    server?.closeAllConnections();
+    finish();
+  }, SHUTDOWN_GRACE_MS);
+  deadline.unref();
+
   logger.info("Closing background workers...");
   await githubContextWorker.close();
   await pricingSyncWorker.close();
@@ -397,10 +423,10 @@ const closeServer = async (cb?: () => void) => {
   if (server) {
     server.close(() => {
       logger.info("HTTP server closed");
-      if (cb) cb();
+      finish();
     });
   } else {
-    if (cb) cb();
+    finish();
   }
 };
 

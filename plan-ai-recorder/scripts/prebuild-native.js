@@ -17,7 +17,16 @@ if (process.platform !== "darwin") {
   process.exit(0);
 }
 
-const SIGN_IDENTITY = "8NN84K7QKJ";
+// The full certificate name, not just the team ID: "8NN84K7QKJ" matches every
+// certificate of the team (iPhone Distribution, Mac App Store, Developer ID),
+// and codesign refuses as soon as two of them share a name, which happens
+// when a certificate is renewed and the old one stays in the keychain.
+// Developer ID is what the direct-download build is signed with.
+// MACOS_SIGN_IDENTITY overrides it (a SHA-1 from `security find-identity`
+// works too, and "-" signs ad hoc on a machine without the team's certs).
+const SIGN_IDENTITY =
+  process.env.MACOS_SIGN_IDENTITY ||
+  "Developer ID Application: BLUEBERRYBYTES SERVICES FZCO (8NN84K7QKJ)";
 const MACOS_DIR = path.resolve(__dirname, "../macos");
 const ENTITLEMENTS = path.join(MACOS_DIR, "entitlements.plist");
 

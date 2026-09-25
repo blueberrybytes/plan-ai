@@ -123,7 +123,9 @@ export class AudioRecorder {
   // uploaded audio at the end.
   private reconnectAttempts = 0;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
-  private static readonly MAX_RECONNECT_DELAY_MS = 30_000;
+  // 10 s, not 30: after a long outage the backoff sits at the cap, so this is
+  // how long the recorder can stay offline after the server is already back.
+  private static readonly MAX_RECONNECT_DELAY_MS = 10_000;
   private sysAudioInterval: ReturnType<typeof setInterval> | null = null;
   private sysAudioPlaybackTime: number = 0;
 
@@ -168,7 +170,12 @@ export class AudioRecorder {
   // phantom ~2.75s "deficit" in the diagnostics (seen 2026-07-06).
   private recStopWallMs = 0;
   // macOS sys-scheduler health counters (see the chunk interval in start()).
-  private sysChunkStats = { chunks: 0, decodedSeconds: 0, resets: 0, gapSeconds: 0 };
+  private sysChunkStats = {
+    chunks: 0,
+    decodedSeconds: 0,
+    resets: 0,
+    gapSeconds: 0,
+  };
   // macOS: the AEC sys reference is appended straight from the DECODED capture
   // chunks (contiguous capture timeline) instead of the worklet playback tap.
   // Playback scheduling re-anchors on every decode hiccup (field test
@@ -210,12 +217,17 @@ export class AudioRecorder {
    * cap; past the cap we drop the buffers and fall back to the raw mic.
    */
   private bufferPcmForAec(source: "mic" | "sys", buffer: ArrayBuffer): void {
-    if (this.state !== "recording" || !this.speakerMode || this.aecOverCap) return;
+    if (this.state !== "recording" || !this.speakerMode || this.aecOverCap)
+      return;
     // Downsample to the 16 kHz processing rate at capture. The resampler writes
     // a fresh owned array, so no extra copy of the worklet's transferred buffer
     // is needed.
     const inputRate = this.audioContext?.sampleRate ?? 24000;
-    const pcm = this.downsampleForAec(this.aecDs[source], new Int16Array(buffer), inputRate);
+    const pcm = this.downsampleForAec(
+      this.aecDs[source],
+      new Int16Array(buffer),
+      inputRate,
+    );
     if (pcm.length === 0) return;
     if (source === "mic") {
       this.aecMicPcm.push(pcm);
@@ -236,7 +248,9 @@ export class AudioRecorder {
       this.aecTelemetry = {
         outcome: "skipped",
         reason: "pcm-cap-exceeded",
-        bufferedSeconds: Math.round(AudioRecorder.AEC_MAX_SAMPLES / AudioRecorder.AEC_RATE),
+        bufferedSeconds: Math.round(
+          AudioRecorder.AEC_MAX_SAMPLES / AudioRecorder.AEC_RATE,
+        ),
       };
       console.warn(
         "[AudioRecorder] AEC PCM cap reached — echo cancellation skipped for this long recording (raw mic kept).",
@@ -300,7 +314,8 @@ export class AudioRecorder {
 
     // Buffers are already at the 16 kHz processing rate (downsampled at capture).
     const sampleRate = AudioRecorder.AEC_RATE;
-    const round2 = (v?: number) => (v == null ? undefined : Math.round(v * 100) / 100);
+    const round2 = (v?: number) =>
+      v == null ? undefined : Math.round(v * 100) / 100;
     const bufferedSeconds = round2(this.aecMicSamples / sampleRate);
     const sysBufferedSeconds = round2(this.aecSysSamples / sampleRate);
     const wallSeconds = round2(
@@ -453,9 +468,15 @@ export class AudioRecorder {
 
     try {
       this.state = "recording";
+      window.addEventListener("online", this.handleOnline);
       this.recStartWallMs = Date.now();
       this.recStopWallMs = 0;
-      this.sysChunkStats = { chunks: 0, decodedSeconds: 0, resets: 0, gapSeconds: 0 };
+      this.sysChunkStats = {
+        chunks: 0,
+        decodedSeconds: 0,
+        resets: 0,
+        gapSeconds: 0,
+      };
       this.aecTelemetry = null;
       this.sysAecTapDirect = false;
 
@@ -530,9 +551,18 @@ export class AudioRecorder {
       });
 
       // Monitor track health
-      micTrack.onended = () => console.error(`[AudioRecorder] ⚠️ Mic track ENDED unexpectedly! (label: ${micTrack.label})`);
-      micTrack.onmute = () => console.warn(`[AudioRecorder] ⚠️ Mic track MUTED (label: ${micTrack.label})`);
-      micTrack.onunmute = () => console.log(`[AudioRecorder] Mic track UN-MUTED (label: ${micTrack.label})`);
+      micTrack.onended = () =>
+        console.error(
+          `[AudioRecorder] ⚠️ Mic track ENDED unexpectedly! (label: ${micTrack.label})`,
+        );
+      micTrack.onmute = () =>
+        console.warn(
+          `[AudioRecorder] ⚠️ Mic track MUTED (label: ${micTrack.label})`,
+        );
+      micTrack.onunmute = () =>
+        console.log(
+          `[AudioRecorder] Mic track UN-MUTED (label: ${micTrack.label})`,
+        );
 
       //const audioTrack = this.micStream.getAudioTracks()[0];
 
@@ -569,9 +599,14 @@ export class AudioRecorder {
       }
 
       // Diagnostic: sample rate mismatch check
-      const micNativeRate = this.micStream.getAudioTracks()[0]?.getSettings()?.sampleRate ?? 0;
-      console.log(`[AudioRecorder] 🔄 Sample rates: mic=${micNativeRate}Hz, context=${this.audioContext.sampleRate}Hz${micNativeRate !== this.audioContext.sampleRate ? ' ⚠️ MISMATCH (browser will resample)' : ' ✅ match'}`);
-      console.log(`[AudioRecorder] AudioContext state=${this.audioContext.state}, baseLatency=${this.audioContext.baseLatency?.toFixed(4)}s, outputLatency=${(this.audioContext as any).outputLatency?.toFixed(4) ?? 'n/a'}s`);
+      const micNativeRate =
+        this.micStream.getAudioTracks()[0]?.getSettings()?.sampleRate ?? 0;
+      console.log(
+        `[AudioRecorder] 🔄 Sample rates: mic=${micNativeRate}Hz, context=${this.audioContext.sampleRate}Hz${micNativeRate !== this.audioContext.sampleRate ? " ⚠️ MISMATCH (browser will resample)" : " ✅ match"}`,
+      );
+      console.log(
+        `[AudioRecorder] AudioContext state=${this.audioContext.state}, baseLatency=${this.audioContext.baseLatency?.toFixed(4)}s, outputLatency=${(this.audioContext as any).outputLatency?.toFixed(4) ?? "n/a"}s`,
+      );
 
       // For Windows Electron (file://), using a real file path instantly crashes with
       // 'The user aborted a request' due to chromium site isolation.
@@ -621,9 +656,15 @@ export class AudioRecorder {
               chunksSent: micChunksSent,
               rmsMic: event.data.rmsMic?.toFixed(4),
               elapsed: `${elapsed}s`,
-              wsState: this.ws ? ['CONNECTING','OPEN','CLOSING','CLOSED'][this.ws.readyState] : 'null',
-              micTrackState: this.micStream?.getAudioTracks()[0]?.readyState ?? 'n/a',
-              micTrackMuted: this.micStream?.getAudioTracks()[0]?.muted ?? 'n/a',
+              wsState: this.ws
+                ? ["CONNECTING", "OPEN", "CLOSING", "CLOSED"][
+                    this.ws.readyState
+                  ]
+                : "null",
+              micTrackState:
+                this.micStream?.getAudioTracks()[0]?.readyState ?? "n/a",
+              micTrackMuted:
+                this.micStream?.getAudioTracks()[0]?.muted ?? "n/a",
             });
           }
           return;
@@ -791,7 +832,11 @@ export class AudioRecorder {
               // Chunks are contiguous capture, so concatenation IS the capture
               // timeline — playback scheduling (and its re-anchor jumps) never
               // touches the reference the canceller aligns against.
-              if (this.state === "recording" && this.speakerMode && !this.aecOverCap) {
+              if (
+                this.state === "recording" &&
+                this.speakerMode &&
+                !this.aecOverCap
+              ) {
                 let mono = audioBuffer.getChannelData(0);
                 if (audioBuffer.numberOfChannels > 1) {
                   const ch1 = audioBuffer.getChannelData(1);
@@ -821,7 +866,9 @@ export class AudioRecorder {
                   `[AudioRecorder] 📊 sys pipeline: chunks=${s.chunks} decoded=${s.decodedSeconds.toFixed(1)}s ` +
                     `resets=${s.resets} gaps=${s.gapSeconds.toFixed(1)}s | aecBuf mic=${(
                       this.aecMicSamples / AudioRecorder.AEC_RATE
-                    ).toFixed(1)}s sys=${(this.aecSysSamples / AudioRecorder.AEC_RATE).toFixed(1)}s ` +
+                    ).toFixed(
+                      1,
+                    )}s sys=${(this.aecSysSamples / AudioRecorder.AEC_RATE).toFixed(1)}s ` +
                     `wall=${wall.toFixed(1)}s`,
                 );
               }
@@ -900,6 +947,7 @@ export class AudioRecorder {
   async stop(): Promise<{ micBlob?: Blob; sysBlob?: Blob }> {
     if (this.state !== "recording") return {};
     this.state = "stopping";
+    window.removeEventListener("online", this.handleOnline);
     // Buffering effectively ends here (worklets are severed below); stamp it so
     // the AEC diagnostics compare buffered seconds against the true window.
     this.recStopWallMs = Date.now();
@@ -1027,6 +1075,7 @@ export class AudioRecorder {
     this.aecSysSamples = 0;
     this.aecOverCap = false;
 
+    window.removeEventListener("online", this.handleOnline);
     this.state = "idle";
   }
 
@@ -1133,16 +1182,23 @@ export class AudioRecorder {
           } else if (data.type === "error") {
             this.lastTypedError = {
               code: typeof data.code === "string" ? data.code : undefined,
-              provider: typeof data.provider === "string" ? data.provider : undefined,
-              message: typeof data.message === "string" ? data.message : "Unknown error",
+              provider:
+                typeof data.provider === "string" ? data.provider : undefined,
+              message:
+                typeof data.message === "string"
+                  ? data.message
+                  : "Unknown error",
             };
-            Sentry.captureException(new Error(`WS backend error: ${this.lastTypedError.message}`), {
-              tags: {
-                source: "audio_stream_ws",
-                code: this.lastTypedError.code ?? "unknown",
-                provider: this.lastTypedError.provider ?? "unknown",
+            Sentry.captureException(
+              new Error(`WS backend error: ${this.lastTypedError.message}`),
+              {
+                tags: {
+                  source: "audio_stream_ws",
+                  code: this.lastTypedError.code ?? "unknown",
+                  provider: this.lastTypedError.provider ?? "unknown",
+                },
               },
-            });
+            );
             const err = new Error(this.lastTypedError.message) as Error & {
               code?: string;
               provider?: string;
@@ -1168,7 +1224,10 @@ export class AudioRecorder {
 
         // Fatal config/billing errors won't fix themselves — surface them and
         // don't loop reconnecting. Network/transport errors → auto-reconnect.
-        if (this.lastTypedError && this.isFatalError(this.lastTypedError.code)) {
+        if (
+          this.lastTypedError &&
+          this.isFatalError(this.lastTypedError.code)
+        ) {
           const err = new Error(this.lastTypedError.message) as Error & {
             code?: string;
             provider?: string;
@@ -1184,7 +1243,10 @@ export class AudioRecorder {
 
       this.ws.onclose = () => {
         console.log("WebSocket closed.");
-        if (this.state !== "stopping" && !(this.lastTypedError && this.isFatalError(this.lastTypedError.code))) {
+        if (
+          this.state !== "stopping" &&
+          !(this.lastTypedError && this.isFatalError(this.lastTypedError.code))
+        ) {
           this.options.onDisconnect?.();
           this.scheduleReconnect();
         }
@@ -1232,6 +1294,32 @@ export class AudioRecorder {
     }, delay);
   }
 
+  /**
+   * Reconnect right away, dropping any pending backoff timer: for the
+   * RECONNECT button and for the network coming back. Without clearing the
+   * timer, the pending attempt would fire later and tear down the socket that
+   * just connected.
+   */
+  reconnectNow = (): void => {
+    if (this.state !== "recording") return;
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
+    // Makes onopen report the recovery even if no backoff had started yet.
+    this.reconnectAttempts = Math.max(1, this.reconnectAttempts);
+    this.options.onReconnecting?.(this.reconnectAttempts);
+    this.reconnect().catch((err) => {
+      console.error("Reconnect attempt failed, will retry:", err);
+      this.scheduleReconnect();
+    });
+  };
+
+  /** The OS says the network is back: no reason to wait out the backoff. */
+  private handleOnline = (): void => {
+    if (this.reconnectAttempts > 0) this.reconnectNow();
+  };
+
   async reconnect(): Promise<void> {
     if (this.state !== "recording") return;
 
@@ -1241,7 +1329,10 @@ export class AudioRecorder {
       this.ws.onmessage = null;
       this.ws.onerror = null;
       this.ws.onclose = null;
-      if (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING) {
+      if (
+        this.ws.readyState === WebSocket.OPEN ||
+        this.ws.readyState === WebSocket.CONNECTING
+      ) {
         this.ws.close();
       }
       this.ws = null;

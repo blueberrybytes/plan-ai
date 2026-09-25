@@ -37,14 +37,27 @@ import { IconButton, TextField } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 import { AudioRecorder, type AecTelemetry } from "../services/audioRecorder";
-import { loadConfig, saveConfig, saveLanguagePreference } from "../utils/recorderConfig";
+import {
+  loadConfig,
+  saveConfig,
+  saveLanguagePreference,
+} from "../utils/recorderConfig";
 import {
   persistUnsavedTranscript,
   clearUnsavedTranscript,
 } from "../utils/unsavedTranscript";
 import ReactMarkdown from "react-markdown";
-import { DEEPGRAM_LANGUAGES, AUTO_LANGUAGE_OPTION } from "../utils/deepgramLanguages";
-import type { Context, Project, AiModel, UserIntegrationSummary, TwentyCompanyItem } from "../services/planAiApi";
+import {
+  DEEPGRAM_LANGUAGES,
+  AUTO_LANGUAGE_OPTION,
+} from "../utils/deepgramLanguages";
+import type {
+  Context,
+  Project,
+  AiModel,
+  UserIntegrationSummary,
+  TwentyCompanyItem,
+} from "../services/planAiApi";
 
 type Phase = "recording" | "context_selection" | "saving" | "done" | "error";
 
@@ -213,18 +226,152 @@ const normalizeForCompare = (s: string): string =>
 // CONTENT words only.
 const ECHO_STOPWORDS = new Set([
   // Spanish
-  "el","la","los","las","un","una","unos","unas","de","del","al","a","en","y","o","u",
-  "que","qué","no","sí","si","es","está","estás","esta","este","esto","con","por","para",
-  "se","me","te","le","lo","mi","tu","su","nos","os","les","pero","como","cómo","más",
-  "menos","muy","ya","hay","ha","he","has","han","ser","son","era","fue","yo","tú","él",
-  "ella","eso","esa","ese","cuando","cuándo","donde","dónde","porque","pues","también",
-  "bien","vale","ahora","luego","entonces","aquí","ahí","allí",
+  "el",
+  "la",
+  "los",
+  "las",
+  "un",
+  "una",
+  "unos",
+  "unas",
+  "de",
+  "del",
+  "al",
+  "a",
+  "en",
+  "y",
+  "o",
+  "u",
+  "que",
+  "qué",
+  "no",
+  "sí",
+  "si",
+  "es",
+  "está",
+  "estás",
+  "esta",
+  "este",
+  "esto",
+  "con",
+  "por",
+  "para",
+  "se",
+  "me",
+  "te",
+  "le",
+  "lo",
+  "mi",
+  "tu",
+  "su",
+  "nos",
+  "os",
+  "les",
+  "pero",
+  "como",
+  "cómo",
+  "más",
+  "menos",
+  "muy",
+  "ya",
+  "hay",
+  "ha",
+  "he",
+  "has",
+  "han",
+  "ser",
+  "son",
+  "era",
+  "fue",
+  "yo",
+  "tú",
+  "él",
+  "ella",
+  "eso",
+  "esa",
+  "ese",
+  "cuando",
+  "cuándo",
+  "donde",
+  "dónde",
+  "porque",
+  "pues",
+  "también",
+  "bien",
+  "vale",
+  "ahora",
+  "luego",
+  "entonces",
+  "aquí",
+  "ahí",
+  "allí",
   // English
-  "the","a","an","of","to","in","on","at","and","or","is","are","was","were","be","been",
-  "it","its","this","that","these","those","i","you","he","she","we","they","my","your",
-  "his","her","our","their","not","no","yes","do","does","did","have","has","had","but",
-  "so","if","then","there","here","what","when","where","why","how","with","for","as",
-  "by","about","just","like","okay","ok","right","well","now",
+  "the",
+  "a",
+  "an",
+  "of",
+  "to",
+  "in",
+  "on",
+  "at",
+  "and",
+  "or",
+  "is",
+  "are",
+  "was",
+  "were",
+  "be",
+  "been",
+  "it",
+  "its",
+  "this",
+  "that",
+  "these",
+  "those",
+  "i",
+  "you",
+  "he",
+  "she",
+  "we",
+  "they",
+  "my",
+  "your",
+  "his",
+  "her",
+  "our",
+  "their",
+  "not",
+  "no",
+  "yes",
+  "do",
+  "does",
+  "did",
+  "have",
+  "has",
+  "had",
+  "but",
+  "so",
+  "if",
+  "then",
+  "there",
+  "here",
+  "what",
+  "when",
+  "where",
+  "why",
+  "how",
+  "with",
+  "for",
+  "as",
+  "by",
+  "about",
+  "just",
+  "like",
+  "okay",
+  "ok",
+  "right",
+  "well",
+  "now",
 ]);
 
 const contentTokens = (normalized: string): Set<string> =>
@@ -267,9 +414,16 @@ const echoScore = (micNorm: string, sysNorm: string): EchoScore => {
   mic.forEach((tok) => {
     if (sys.has(tok)) shared.push(tok);
   });
-  const eligible = mic.size >= ECHO_MIN_CONTENT_WORDS && sys.size >= ECHO_MIN_CONTENT_WORDS;
+  const eligible =
+    mic.size >= ECHO_MIN_CONTENT_WORDS && sys.size >= ECHO_MIN_CONTENT_WORDS;
   const score = eligible ? shared.length / Math.min(mic.size, sys.size) : 0;
-  return { score, micContent: mic.size, sysContent: sys.size, shared, eligible };
+  return {
+    score,
+    micContent: mic.size,
+    sysContent: sys.size,
+    shared,
+    eligible,
+  };
 };
 
 const isEchoMatch = (micNorm: string, sysNorm: string): boolean =>
@@ -305,30 +459,41 @@ const Recording: React.FC = () => {
   const [projects, setProjects] = useState<Project[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState<string>(() => {
     const config = loadConfig();
-    if (config?.projectIds && config.projectIds.length > 0) return config.projectIds[0];
+    if (config?.projectIds && config.projectIds.length > 0)
+      return config.projectIds[0];
     return "";
   });
 
   const [contexts, setContexts] = useState<Context[]>([]);
   const [selectedContextId, setSelectedContextId] = useState<string>(() => {
     const config = loadConfig();
-    return config?.contextIds && config.contextIds.length > 0 ? config.contextIds[0] : "";
+    return config?.contextIds && config.contextIds.length > 0
+      ? config.contextIds[0]
+      : "";
   });
 
   const [aiModels, setAiModels] = useState<AiModel[]>([]);
   const [modelKey, setModelKey] = useState<string>("");
   const [complexityLevel, setComplexityLevel] = useState<string>("");
 
-  const [integrations, setIntegrations] = useState<UserIntegrationSummary[]>([]);
+  const [integrations, setIntegrations] = useState<UserIntegrationSummary[]>(
+    [],
+  );
 
   // ── Twenty CRM destination ────────────────────────────────────────────────
   // The company is chosen PER RECORDING: one person meets several different
   // clients in a day, and most recordings don't even have a project yet (the
   // picker defaults to "Create new project for me"). The project's linked
   // company, when there is one, only pre-fills the field.
-  const hasTwenty = integrations.some((i) => i.provider === "TWENTY" && i.status === "CONNECTED");
-  const [twentyCompany, setTwentyCompany] = useState<TwentyCompanyItem | null>(null);
-  const [twentyCompanies, setTwentyCompanies] = useState<TwentyCompanyItem[]>([]);
+  const hasTwenty = integrations.some(
+    (i) => i.provider === "TWENTY" && i.status === "CONNECTED",
+  );
+  const [twentyCompany, setTwentyCompany] = useState<TwentyCompanyItem | null>(
+    null,
+  );
+  const [twentyCompanies, setTwentyCompanies] = useState<TwentyCompanyItem[]>(
+    [],
+  );
   const [twentyQuery, setTwentyQuery] = useState("");
   const [isSearchingCompanies, setIsSearchingCompanies] = useState(false);
 
@@ -337,10 +502,15 @@ const Recording: React.FC = () => {
     if (twentyCompany) return;
     const project = projects.find((p) => p.id === selectedProjectId);
     const meta =
-      (project?.metadata as { twentyCompanyId?: string; twentyCompanyName?: string } | null) ??
-      null;
+      (project?.metadata as {
+        twentyCompanyId?: string;
+        twentyCompanyName?: string;
+      } | null) ?? null;
     if (meta?.twentyCompanyId) {
-      setTwentyCompany({ id: meta.twentyCompanyId, name: meta.twentyCompanyName ?? "Linked company" });
+      setTwentyCompany({
+        id: meta.twentyCompanyId,
+        name: meta.twentyCompanyName ?? "Linked company",
+      });
     }
   }, [projects, selectedProjectId, twentyCompany]);
 
@@ -370,9 +540,12 @@ const Recording: React.FC = () => {
   const [syncToNotion, setSyncToNotion] = useState<boolean>(false);
   const [syncToAsana, setSyncToAsana] = useState<boolean>(false);
   const [syncToTwenty, setSyncToTwenty] = useState<boolean>(false);
-  const [exportToGoogleDrive, setExportToGoogleDrive] = useState<boolean>(false);
+  const [exportToGoogleDrive, setExportToGoogleDrive] =
+    useState<boolean>(false);
   const [exportToOneDrive, setExportToOneDrive] = useState<boolean>(false);
-  const [taskStrategy, setTaskStrategy] = useState<"AUTO" | "SINGLE_TICKET" | "SPECIFIC_COUNT">("AUTO");
+  const [taskStrategy, setTaskStrategy] = useState<
+    "AUTO" | "SINGLE_TICKET" | "SPECIFIC_COUNT"
+  >("AUTO");
   const [taskCount, setTaskCount] = useState<number>(5);
 
   const [createDoc, setCreateDoc] = useState<boolean>(true);
@@ -429,11 +602,15 @@ const Recording: React.FC = () => {
     ].join("\n");
 
     const body = blocks
-      .map((b) => `[${stamp(b.ts)}] ${b.source === "mic" ? "Me" : "Others"}: ${b.text}`)
+      .map(
+        (b) =>
+          `[${stamp(b.ts)}] ${b.source === "mic" ? "Me" : "Others"}: ${b.text}`,
+      )
       .join("\n");
 
     const interim: string[] = [];
-    if (micDelta.trim()) interim.push(`[${formatTime(elapsed)}] Me: ${micDelta.trim()}`);
+    if (micDelta.trim())
+      interim.push(`[${formatTime(elapsed)}] Me: ${micDelta.trim()}`);
     if (sysDelta.trim())
       interim.push(`[${formatTime(elapsed)}] Others: ${sysDelta.trim()}`);
 
@@ -461,7 +638,9 @@ const Recording: React.FC = () => {
   // Recent finalized system ("Others") segments, used to detect mic echo.
   const recentSysSegmentsRef = useRef<{ text: string; ts: number }[]>([]);
   // Mic finals waiting out the grace period (far side active) before painting.
-  const pendingMicRef = useRef<{ text: string; normalized: string; ts: number }[]>([]);
+  const pendingMicRef = useRef<
+    { text: string; normalized: string; ts: number }[]
+  >([]);
   // Last time ANY system audio activity (interim or final) was observed.
   const lastSysSeenRef = useRef(0);
   const chatBoxRef = useRef<HTMLDivElement>(null);
@@ -523,21 +702,32 @@ const Recording: React.FC = () => {
   // (by spoken-at timestamp), merging into an adjacent same-speaker bubble.
   // The ONLY place that paints final text. Deferred commits from the grace
   // queue land where they were actually said — never misordered at the end.
-  const appendBlock = useCallback((source: "mic" | "sys", text: string, ts: number) => {
-    setBlocks((prev) => {
-      // Position: after every block spoken at or before `ts`.
-      let idx = prev.length;
-      while (idx > 0 && prev[idx - 1].ts > ts) idx--;
-      if (idx > 0 && prev[idx - 1].source === source) {
+  const appendBlock = useCallback(
+    (source: "mic" | "sys", text: string, ts: number) => {
+      setBlocks((prev) => {
+        // Position: after every block spoken at or before `ts`.
+        let idx = prev.length;
+        while (idx > 0 && prev[idx - 1].ts > ts) idx--;
+        if (idx > 0 && prev[idx - 1].source === source) {
+          const updated = [...prev];
+          updated[idx - 1] = {
+            ...updated[idx - 1],
+            text: `${updated[idx - 1].text} ${text}`,
+          };
+          return updated;
+        }
         const updated = [...prev];
-        updated[idx - 1] = { ...updated[idx - 1], text: `${updated[idx - 1].text} ${text}` };
+        updated.splice(idx, 0, {
+          id: Math.random().toString(),
+          source,
+          text,
+          ts,
+        });
         return updated;
-      }
-      const updated = [...prev];
-      updated.splice(idx, 0, { id: Math.random().toString(), source, text, ts });
-      return updated;
-    });
-  }, []);
+      });
+    },
+    [],
+  );
 
   const handleTranscript = useCallback(
     (source: "mic" | "sys", text: string, isFinal: boolean) => {
@@ -560,7 +750,9 @@ const Recording: React.FC = () => {
       if (isFinal) {
         const normalized = normalizeForCompare(cleanText);
         const now = Date.now();
-        echoDbg(`FINAL ${source} @${new Date(now).toISOString().slice(11, 23)} "${cleanText}"`);
+        echoDbg(
+          `FINAL ${source} @${new Date(now).toISOString().slice(11, 23)} "${cleanText}"`,
+        );
 
         if (source === "sys") {
           lastSysSeenRef.current = now;
@@ -602,7 +794,9 @@ const Recording: React.FC = () => {
               }
             }
             if (dropped) {
-              echoDbg(`  mic verdict: DROPPED (echo already on sys) words=${wordCount}`);
+              echoDbg(
+                `  mic verdict: DROPPED (echo already on sys) words=${wordCount}`,
+              );
               setMicDelta("");
               return; // speaker echo — already captured on the "Others" track
             }
@@ -612,15 +806,22 @@ const Recording: React.FC = () => {
           // hasn't arrived yet. While the far side is active, hold this final
           // in the grace queue — the interim text stays on screen, and the
           // flusher either paints it or (if the late twin matches) never does.
-          const farSideActive = now - lastSysSeenRef.current <= FAR_SIDE_ACTIVE_MS;
+          const farSideActive =
+            now - lastSysSeenRef.current <= FAR_SIDE_ACTIVE_MS;
           if (farSideActive) {
-            pendingMicRef.current.push({ text: cleanText, normalized, ts: now });
+            pendingMicRef.current.push({
+              text: cleanText,
+              normalized,
+              ts: now,
+            });
             echoDbg(
               `  mic verdict: DEFERRED ${ECHO_PENDING_GRACE_MS / 1000}s (far side active) pending=${pendingMicRef.current.length}`,
             );
             return; // micDelta stays visible — live feedback is not lost
           }
-          echoDbg(`  mic verdict: KEPT (no far-side activity) words=${wordCount}`);
+          echoDbg(
+            `  mic verdict: KEPT (no far-side activity) words=${wordCount}`,
+          );
         }
 
         appendBlock(source, cleanText, now);
@@ -654,7 +855,9 @@ const Recording: React.FC = () => {
     const iv = setInterval(() => {
       if (pendingMicRef.current.length === 0) return;
       const now = Date.now();
-      const ready = pendingMicRef.current.filter((p) => now - p.ts >= ECHO_PENDING_GRACE_MS);
+      const ready = pendingMicRef.current.filter(
+        (p) => now - p.ts >= ECHO_PENDING_GRACE_MS,
+      );
       if (ready.length === 0) return;
       pendingMicRef.current = pendingMicRef.current.filter(
         (p) => now - p.ts < ECHO_PENDING_GRACE_MS,
@@ -713,159 +916,166 @@ const Recording: React.FC = () => {
     return () => window.removeEventListener("beforeunload", onBeforeUnload);
   }, [phase, blocks.length]);
 
-  const handleSave = useCallback(async (
-    skipAiParam?: boolean | React.MouseEvent,
-    options?: { skipAudio?: boolean },
-  ) => {
-    const skipAi = typeof skipAiParam === 'boolean' ? skipAiParam : false;
-    const skipAudio = options?.skipAudio === true;
-    if (!token) return;
-    setPhase("saving");
+  const handleSave = useCallback(
+    async (
+      skipAiParam?: boolean | React.MouseEvent,
+      options?: { skipAudio?: boolean },
+    ) => {
+      const skipAi = typeof skipAiParam === "boolean" ? skipAiParam : false;
+      const skipAudio = options?.skipAudio === true;
+      if (!token) return;
+      setPhase("saving");
 
-    try {
-      // Build final block text
-      let fullPayload = blocks
-        .map((b) => `${b.source === "mic" ? "User" : "Others"}: ${b.text}`)
-        .join("\n");
+      try {
+        // Build final block text
+        let fullPayload = blocks
+          .map((b) => `${b.source === "mic" ? "User" : "Others"}: ${b.text}`)
+          .join("\n");
 
-      // Resolve any mic finals still in the grace queue: drop only proven
-      // echoes (late sys twin matched); everything else is SAVED — stopping
-      // the recording must never lose the user's words.
-      for (const p of pendingMicRef.current) {
-        const isLateEcho = recentSysSegmentsRef.current.some(
-          (s) => s.ts >= p.ts - 1000 && isEchoMatch(p.normalized, s.text),
-        );
-        if (!isLateEcho) fullPayload += `\nUser: ${p.text}`;
-      }
-      pendingMicRef.current = [];
+        // Resolve any mic finals still in the grace queue: drop only proven
+        // echoes (late sys twin matched); everything else is SAVED — stopping
+        // the recording must never lose the user's words.
+        for (const p of pendingMicRef.current) {
+          const isLateEcho = recentSysSegmentsRef.current.some(
+            (s) => s.ts >= p.ts - 1000 && isEchoMatch(p.normalized, s.text),
+          );
+          if (!isLateEcho) fullPayload += `\nUser: ${p.text}`;
+        }
+        pendingMicRef.current = [];
 
-      if (micDelta) fullPayload += `\nUser: ${micDelta}`;
-      if (sysDelta) fullPayload += `\nOthers: ${sysDelta}`;
+        if (micDelta) fullPayload += `\nUser: ${micDelta}`;
+        if (sysDelta) fullPayload += `\nOthers: ${sysDelta}`;
 
-      // Retain the transcript so the error screen can recover it (retry /
-      // text-only save / copy) and so it survives a crash via localStorage.
-      lastPayloadRef.current = fullPayload;
-      persistUnsavedTranscript(fullPayload);
+        // Retain the transcript so the error screen can recover it (retry /
+        // text-only save / copy) and so it survives a crash via localStorage.
+        lastPayloadRef.current = fullPayload;
+        persistUnsavedTranscript(fullPayload);
 
-      let targetProjectId = selectedProjectId;
+        let targetProjectId = selectedProjectId;
 
-      if (!targetProjectId) {
-        const now = new Date();
-        const hour = now.getHours();
-        let timeLabel = "Meeting";
-        if (hour < 12) timeLabel = "Morning Sync";
-        else if (hour < 17) timeLabel = "Afternoon Sync";
-        else timeLabel = "Evening Sync";
+        if (!targetProjectId) {
+          const now = new Date();
+          const hour = now.getHours();
+          let timeLabel = "Meeting";
+          if (hour < 12) timeLabel = "Morning Sync";
+          else if (hour < 17) timeLabel = "Afternoon Sync";
+          else timeLabel = "Evening Sync";
 
-        const formattedDate = new Intl.DateTimeFormat(navigator.language || 'en-US', {
-          month: 'short',
-          day: 'numeric',
-          hour: 'numeric',
-          minute: '2-digit'
-        }).format(now);
+          const formattedDate = new Intl.DateTimeFormat(
+            navigator.language || "en-US",
+            {
+              month: "short",
+              day: "numeric",
+              hour: "numeric",
+              minute: "2-digit",
+            },
+          ).format(now);
 
-        let aiTitle: string | null = null;
-        try {
-          if (!skipAi && fullPayload.length > 50) {
-            const res = await api.sendLiveChatMessage({
-              content: "Generate a short, concise, 3-5 word title for this meeting based on the transcript. Reply ONLY with the title string, no quotes.",
-              liveTranscript: fullPayload,
-            });
-            if (res.response) {
-              aiTitle = res.response.replace(/["']/g, "").trim();
+          let aiTitle: string | null = null;
+          try {
+            if (!skipAi && fullPayload.length > 50) {
+              const res = await api.sendLiveChatMessage({
+                content:
+                  "Generate a short, concise, 3-5 word title for this meeting based on the transcript. Reply ONLY with the title string, no quotes.",
+                liveTranscript: fullPayload,
+              });
+              if (res.response) {
+                aiTitle = res.response.replace(/["']/g, "").trim();
+              }
             }
+          } catch (e) {
+            console.warn("Failed to generate AI project title", e);
           }
-        } catch (e) {
-          console.warn("Failed to generate AI project title", e);
+
+          const newProject = await api.createProject({
+            title: aiTitle || `${timeLabel} (${formattedDate})`,
+            description:
+              "Automatically created to hold tasks generated from your recent audio recording.",
+          });
+          targetProjectId = newProject.id;
         }
 
-        const newProject = await api.createProject({
-          title: aiTitle || `${timeLabel} (${formattedDate})`,
-          description:
-            "Automatically created to hold tasks generated from your recent audio recording.",
+        const startedAt = recordingStartedAtRef.current;
+        const savedTranscript = await api.saveRecording({
+          content: fullPayload,
+          recordedAt: new Date().toISOString(),
+          recordingStartedAt: startedAt ? startedAt.toISOString() : undefined,
+          recordingWallClockSeconds: startedAt
+            ? Math.round((Date.now() - startedAt.getTime()) / 1000)
+            : undefined,
+          projectId: targetProjectId,
+          // Selected ASR language ("" = auto) — persisted so the backend's batch
+          // re-diarization uses it instead of "multi" (which has no Catalan).
+          language: language || undefined,
+          // contextIds intentionally not passed — backend resolves from projectId
+          // (the project's paired Context) when omitted.
+          contextIds: selectedContextId ? [selectedContextId] : undefined,
+          chatHistory: chatHistory.length > 0 ? chatHistory : undefined,
+          modelKey: modelKey || undefined,
+          complexityLevel: complexityLevel || undefined,
+          syncToJira,
+          syncToLinear,
+          syncToTrello,
+          syncToNotion,
+          syncToAsana,
+          // Send the flag as CHECKED even without a company: the backend then
+          // records a SKIPPED step explaining why, instead of the client
+          // silently dropping it and the user seeing nothing at all.
+          syncToTwenty,
+          twentyCompanyId: twentyCompany?.id,
+          exportToGoogleDrive,
+          exportToOneDrive,
+          taskStrategy,
+          taskCount,
+          createDoc,
+          createSlides,
+          skipAi,
+          // Text-only retry: drop the heavy audio blobs (the usual cause of the
+          // upload timing out / aborting) so the transcript itself still saves.
+          micFile: skipAudio ? undefined : blobs.micBlob,
+          sysFile: skipAudio ? undefined : blobs.sysBlob,
+          aecTelemetry: aecTelemetry ?? undefined,
         });
-        targetProjectId = newProject.id;
+
+        // Saved successfully — clear the local recovery copy.
+        clearUnsavedTranscript();
+
+        // Navigate back to the home/dashboard immediately to allow async processing
+        navigate(`/`);
+      } catch (err) {
+        setError(
+          err instanceof Error ? err.message : "Failed to save transcript.",
+        );
+        setPhase("error");
       }
-
-      const startedAt = recordingStartedAtRef.current;
-      const savedTranscript = await api.saveRecording({
-        content: fullPayload,
-        recordedAt: new Date().toISOString(),
-        recordingStartedAt: startedAt ? startedAt.toISOString() : undefined,
-        recordingWallClockSeconds: startedAt
-          ? Math.round((Date.now() - startedAt.getTime()) / 1000)
-          : undefined,
-        projectId: targetProjectId,
-        // Selected ASR language ("" = auto) — persisted so the backend's batch
-        // re-diarization uses it instead of "multi" (which has no Catalan).
-        language: language || undefined,
-        // contextIds intentionally not passed — backend resolves from projectId
-        // (the project's paired Context) when omitted.
-        contextIds: selectedContextId ? [selectedContextId] : undefined,
-        chatHistory: chatHistory.length > 0 ? chatHistory : undefined,
-        modelKey: modelKey || undefined,
-        complexityLevel: complexityLevel || undefined,
-        syncToJira,
-        syncToLinear,
-        syncToTrello,
-        syncToNotion,
-        syncToAsana,
-        // Send the flag as CHECKED even without a company: the backend then
-        // records a SKIPPED step explaining why, instead of the client
-        // silently dropping it and the user seeing nothing at all.
-        syncToTwenty,
-        twentyCompanyId: twentyCompany?.id,
-        exportToGoogleDrive,
-        exportToOneDrive,
-        taskStrategy,
-        taskCount,
-        createDoc,
-        createSlides,
-        skipAi,
-        // Text-only retry: drop the heavy audio blobs (the usual cause of the
-        // upload timing out / aborting) so the transcript itself still saves.
-        micFile: skipAudio ? undefined : blobs.micBlob,
-        sysFile: skipAudio ? undefined : blobs.sysBlob,
-        aecTelemetry: aecTelemetry ?? undefined,
-      });
-
-      // Saved successfully — clear the local recovery copy.
-      clearUnsavedTranscript();
-
-      // Navigate back to the home/dashboard immediately to allow async processing
-      navigate(`/`);
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Failed to save transcript.",
-      );
-      setPhase("error");
-    }
-  }, [
-    token,
-    api,
-    selectedProjectId,
-    selectedContextId,
-    blocks,
-    micDelta,
-    sysDelta,
-    blobs,
-    syncToJira,
-    syncToLinear,
-    syncToTrello,
-    syncToNotion,
-    syncToAsana,
-    syncToTwenty,
-    twentyCompany,
-    exportToGoogleDrive,
-    exportToOneDrive,
-    taskStrategy,
-    taskCount,
-    createDoc,
-    createSlides,
-    chatHistory,
-    modelKey,
-    complexityLevel,
-  ]);
+    },
+    [
+      token,
+      api,
+      selectedProjectId,
+      selectedContextId,
+      blocks,
+      micDelta,
+      sysDelta,
+      blobs,
+      syncToJira,
+      syncToLinear,
+      syncToTrello,
+      syncToNotion,
+      syncToAsana,
+      syncToTwenty,
+      twentyCompany,
+      exportToGoogleDrive,
+      exportToOneDrive,
+      taskStrategy,
+      taskCount,
+      createDoc,
+      createSlides,
+      chatHistory,
+      modelKey,
+      complexityLevel,
+    ],
+  );
 
   const handleStop = useCallback(() => {
     if (!token) return;
@@ -877,44 +1087,75 @@ const Recording: React.FC = () => {
     if (phase === "context_selection") {
       api.listProjects().then(setProjects).catch(console.error);
       if (api.listIntegrations) {
-        api.listIntegrations().then((ints) => {
-          setIntegrations(ints);
-          const jira = ints.find((i) => i.provider === "JIRA" && i.status === "CONNECTED");
-          if (jira && (jira.metadata as Record<string, unknown>)?.defaultProjectId) {
-            setSyncToJira(true);
-          }
-          const linear = ints.find((i) => i.provider === "LINEAR" && i.status === "CONNECTED");
-          if (linear && (linear.metadata as Record<string, unknown>)?.defaultTeamId) {
-            setSyncToLinear(true);
-          }
-          const trello = ints.find((i) => i.provider === "TRELLO" && i.status === "CONNECTED");
-          if (trello && (trello.metadata as Record<string, unknown>)?.defaultBoardId) {
-            setSyncToTrello(true);
-          }
-          const notion = ints.find((i) => i.provider === "NOTION" && i.status === "CONNECTED");
-          if (notion) {
-            setSyncToNotion(true);
-          }
-          const asana = ints.find((i) => i.provider === "ASANA" && i.status === "CONNECTED");
-          if (asana && (asana.metadata as Record<string, unknown>)?.defaultProjectGid) {
-            setSyncToAsana(true);
-          }
-          const google = ints.find((i) => i.provider === "GOOGLE_DRIVE" && i.status === "CONNECTED");
-          if (google) {
-            setExportToGoogleDrive(true);
-          }
-          const onedrive = ints.find((i) => i.provider === "ONEDRIVE" && i.status === "CONNECTED");
-          if (onedrive) {
-            setExportToOneDrive(true);
-          }
-          // Same rule as Drive/OneDrive: connected means it's wanted. Without a
-          // company chosen the push is a harmless no-op (SKIPPED), and having it
-          // pre-checked is what surfaces the company picker in the first place.
-          const twenty = ints.find((i) => i.provider === "TWENTY" && i.status === "CONNECTED");
-          if (twenty) {
-            setSyncToTwenty(true);
-          }
-        }).catch(console.error);
+        api
+          .listIntegrations()
+          .then((ints) => {
+            setIntegrations(ints);
+            const jira = ints.find(
+              (i) => i.provider === "JIRA" && i.status === "CONNECTED",
+            );
+            if (
+              jira &&
+              (jira.metadata as Record<string, unknown>)?.defaultProjectId
+            ) {
+              setSyncToJira(true);
+            }
+            const linear = ints.find(
+              (i) => i.provider === "LINEAR" && i.status === "CONNECTED",
+            );
+            if (
+              linear &&
+              (linear.metadata as Record<string, unknown>)?.defaultTeamId
+            ) {
+              setSyncToLinear(true);
+            }
+            const trello = ints.find(
+              (i) => i.provider === "TRELLO" && i.status === "CONNECTED",
+            );
+            if (
+              trello &&
+              (trello.metadata as Record<string, unknown>)?.defaultBoardId
+            ) {
+              setSyncToTrello(true);
+            }
+            const notion = ints.find(
+              (i) => i.provider === "NOTION" && i.status === "CONNECTED",
+            );
+            if (notion) {
+              setSyncToNotion(true);
+            }
+            const asana = ints.find(
+              (i) => i.provider === "ASANA" && i.status === "CONNECTED",
+            );
+            if (
+              asana &&
+              (asana.metadata as Record<string, unknown>)?.defaultProjectGid
+            ) {
+              setSyncToAsana(true);
+            }
+            const google = ints.find(
+              (i) => i.provider === "GOOGLE_DRIVE" && i.status === "CONNECTED",
+            );
+            if (google) {
+              setExportToGoogleDrive(true);
+            }
+            const onedrive = ints.find(
+              (i) => i.provider === "ONEDRIVE" && i.status === "CONNECTED",
+            );
+            if (onedrive) {
+              setExportToOneDrive(true);
+            }
+            // Same rule as Drive/OneDrive: connected means it's wanted. Without a
+            // company chosen the push is a harmless no-op (SKIPPED), and having it
+            // pre-checked is what surfaces the company picker in the first place.
+            const twenty = ints.find(
+              (i) => i.provider === "TWENTY" && i.status === "CONNECTED",
+            );
+            if (twenty) {
+              setSyncToTwenty(true);
+            }
+          })
+          .catch(console.error);
       }
     }
   }, [phase, api]);
@@ -1020,12 +1261,25 @@ const Recording: React.FC = () => {
       // Auto-reconnect feedback: keep the "reconnecting" banner up while the
       // recorder retries in the background, then restore once it's back.
       onReconnecting: () => setIsWsConnected(false),
-      onReconnected: () => setIsWsConnected(true),
+      onReconnected: () => {
+        setIsWsConnected(true);
+        // Whatever went wrong while offline is resolved by the reconnect;
+        // a leftover banner made the screen look broken after recovering.
+        setError(null);
+        setErrorCode(null);
+      },
       onError: (err) => {
-        setError(err.message || "Connection lost. Audio transcription stopped.");
+        setError(
+          err.message || "Connection lost. Audio transcription stopped.",
+        );
         const code = (err as Error & { code?: string }).code ?? null;
         setErrorCode(code);
-        if (code === "MISSING_API_KEY" || code === "INVALID_API_KEY" || code === "USAGE_LIMIT_EXCEEDED" || code === "SUBSCRIPTION_REQUIRED") {
+        if (
+          code === "MISSING_API_KEY" ||
+          code === "INVALID_API_KEY" ||
+          code === "USAGE_LIMIT_EXCEEDED" ||
+          code === "SUBSCRIPTION_REQUIRED"
+        ) {
           setPhase("error");
         }
       },
@@ -1106,13 +1360,35 @@ const Recording: React.FC = () => {
         }}
       >
         <Typography variant="h6">Recording stopped</Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', maxWidth: 400 }}>
+        <Typography
+          variant="body2"
+          color="text.secondary"
+          sx={{ textAlign: "center", maxWidth: 400 }}
+        >
           Configure how you want this recording processed before saving.
         </Typography>
 
         {/* ── Group 1: Project & Task Strategy ── */}
-        <Box sx={{ width: '100%', maxWidth: 480, p: 2, border: '1px solid rgba(255,255,255,0.1)', borderRadius: 2, bgcolor: 'background.paper' }}>
-          <Typography variant="overline" sx={{ fontWeight: 700, letterSpacing: 1, color: 'text.secondary', display: 'block', mb: 1.5 }}>
+        <Box
+          sx={{
+            width: "100%",
+            maxWidth: 480,
+            p: 2,
+            border: "1px solid rgba(255,255,255,0.1)",
+            borderRadius: 2,
+            bgcolor: "background.paper",
+          }}
+        >
+          <Typography
+            variant="overline"
+            sx={{
+              fontWeight: 700,
+              letterSpacing: 1,
+              color: "text.secondary",
+              display: "block",
+              mb: 1.5,
+            }}
+          >
             Project & Task Strategy
           </Typography>
           <Stack spacing={2}>
@@ -1140,12 +1416,23 @@ const Recording: React.FC = () => {
               <Select
                 value={taskStrategy}
                 label="Agile Task Generation"
-                onChange={(e) => setTaskStrategy(e.target.value as "AUTO" | "SINGLE_TICKET" | "SPECIFIC_COUNT")}
+                onChange={(e) =>
+                  setTaskStrategy(
+                    e.target.value as
+                      | "AUTO"
+                      | "SINGLE_TICKET"
+                      | "SPECIFIC_COUNT",
+                  )
+                }
                 displayEmpty
               >
-                <MenuItem value="AUTO">AI Slice & Dice (1 Epic + Auto Sub-tasks)</MenuItem>
+                <MenuItem value="AUTO">
+                  AI Slice & Dice (1 Epic + Auto Sub-tasks)
+                </MenuItem>
                 <MenuItem value="SINGLE_TICKET">Force 1 Mega-Ticket</MenuItem>
-                <MenuItem value="SPECIFIC_COUNT">Specific fixed number of tasks</MenuItem>
+                <MenuItem value="SPECIFIC_COUNT">
+                  Specific fixed number of tasks
+                </MenuItem>
               </Select>
             </FormControl>
 
@@ -1156,7 +1443,9 @@ const Recording: React.FC = () => {
                 label="Number of Tasks"
                 type="number"
                 value={taskCount}
-                onChange={(e) => setTaskCount(Math.max(1, parseInt(e.target.value) || 1))}
+                onChange={(e) =>
+                  setTaskCount(Math.max(1, parseInt(e.target.value) || 1))
+                }
                 inputProps={{ min: 1, max: 20 }}
               />
             )}
@@ -1165,43 +1454,103 @@ const Recording: React.FC = () => {
 
         {/* ── Group 2: Sync to Integrations ── */}
         {integrations.some((i) => i.status === "CONNECTED") && (
-          <Box sx={{ width: '100%', maxWidth: 480, p: 2, border: '1px solid rgba(255,255,255,0.1)', borderRadius: 2, bgcolor: 'background.paper' }}>
-            <Typography variant="overline" sx={{ fontWeight: 700, letterSpacing: 1, color: 'text.secondary', display: 'block', mb: 1 }}>
+          <Box
+            sx={{
+              width: "100%",
+              maxWidth: 480,
+              p: 2,
+              border: "1px solid rgba(255,255,255,0.1)",
+              borderRadius: 2,
+              bgcolor: "background.paper",
+            }}
+          >
+            <Typography
+              variant="overline"
+              sx={{
+                fontWeight: 700,
+                letterSpacing: 1,
+                color: "text.secondary",
+                display: "block",
+                mb: 1,
+              }}
+            >
               Sync to Integrations
             </Typography>
-            <FormGroup sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 0.5 }}>
-              {integrations.some((i) => i.provider === "JIRA" && i.status === "CONNECTED") && (
+            <FormGroup
+              sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 0.5 }}
+            >
+              {integrations.some(
+                (i) => i.provider === "JIRA" && i.status === "CONNECTED",
+              ) && (
                 <FormControlLabel
-                  control={<Checkbox size="small" checked={syncToJira} onChange={(e) => setSyncToJira(e.target.checked)} />}
+                  control={
+                    <Checkbox
+                      size="small"
+                      checked={syncToJira}
+                      onChange={(e) => setSyncToJira(e.target.checked)}
+                    />
+                  }
                   label={<Typography variant="body2">Jira</Typography>}
                 />
               )}
-              {integrations.some((i) => i.provider === "LINEAR" && i.status === "CONNECTED") && (
+              {integrations.some(
+                (i) => i.provider === "LINEAR" && i.status === "CONNECTED",
+              ) && (
                 <FormControlLabel
-                  control={<Checkbox size="small" checked={syncToLinear} onChange={(e) => setSyncToLinear(e.target.checked)} />}
+                  control={
+                    <Checkbox
+                      size="small"
+                      checked={syncToLinear}
+                      onChange={(e) => setSyncToLinear(e.target.checked)}
+                    />
+                  }
                   label={<Typography variant="body2">Linear</Typography>}
                 />
               )}
-              {integrations.some((i) => i.provider === "TRELLO" && i.status === "CONNECTED") && (
+              {integrations.some(
+                (i) => i.provider === "TRELLO" && i.status === "CONNECTED",
+              ) && (
                 <FormControlLabel
-                  control={<Checkbox size="small" checked={syncToTrello} onChange={(e) => setSyncToTrello(e.target.checked)} />}
+                  control={
+                    <Checkbox
+                      size="small"
+                      checked={syncToTrello}
+                      onChange={(e) => setSyncToTrello(e.target.checked)}
+                    />
+                  }
                   label={<Typography variant="body2">Trello</Typography>}
                 />
               )}
-              {integrations.some((i) => i.provider === "NOTION" && i.status === "CONNECTED") && (
+              {integrations.some(
+                (i) => i.provider === "NOTION" && i.status === "CONNECTED",
+              ) && (
                 <FormControlLabel
-                  control={<Checkbox size="small" checked={syncToNotion} onChange={(e) => setSyncToNotion(e.target.checked)} />}
+                  control={
+                    <Checkbox
+                      size="small"
+                      checked={syncToNotion}
+                      onChange={(e) => setSyncToNotion(e.target.checked)}
+                    />
+                  }
                   label={<Typography variant="body2">Notion</Typography>}
                 />
               )}
-              {integrations.some((i) => i.provider === "ASANA" && i.status === "CONNECTED") && (
+              {integrations.some(
+                (i) => i.provider === "ASANA" && i.status === "CONNECTED",
+              ) && (
                 <FormControlLabel
-                  control={<Checkbox size="small" checked={syncToAsana} onChange={(e) => setSyncToAsana(e.target.checked)} />}
+                  control={
+                    <Checkbox
+                      size="small"
+                      checked={syncToAsana}
+                      onChange={(e) => setSyncToAsana(e.target.checked)}
+                    />
+                  }
                   label={<Typography variant="body2">Asana</Typography>}
                 />
               )}
               {hasTwenty && (
-                <Box sx={{ gridColumn: '1 / -1' }}>
+                <Box sx={{ gridColumn: "1 / -1" }}>
                   <FormControlLabel
                     control={
                       <Checkbox
@@ -1228,7 +1577,7 @@ const Recording: React.FC = () => {
                       onInputChange={(_, v) => setTwentyQuery(v)}
                       onChange={(_, v) => setTwentyCompany(v)}
                       noOptionsText={
-                        isSearchingCompanies ? 'Loading…' : 'No companies found'
+                        isSearchingCompanies ? "Loading…" : "No companies found"
                       }
                       renderInput={(params) => (
                         <TextField
@@ -1238,8 +1587,8 @@ const Recording: React.FC = () => {
                           error={syncToTwenty && !twentyCompany}
                           helperText={
                             syncToTwenty && !twentyCompany
-                              ? 'Pick a company or the note will be skipped'
-                              : ' '
+                              ? "Pick a company or the note will be skipped"
+                              : " "
                           }
                         />
                       )}
@@ -1247,15 +1596,32 @@ const Recording: React.FC = () => {
                   )}
                 </Box>
               )}
-              {integrations.find((i) => i.provider === "GOOGLE_DRIVE" && i.status === "CONNECTED") && (
+              {integrations.find(
+                (i) =>
+                  i.provider === "GOOGLE_DRIVE" && i.status === "CONNECTED",
+              ) && (
                 <FormControlLabel
-                  control={<Checkbox size="small" checked={exportToGoogleDrive} onChange={(e) => setExportToGoogleDrive(e.target.checked)} />}
+                  control={
+                    <Checkbox
+                      size="small"
+                      checked={exportToGoogleDrive}
+                      onChange={(e) => setExportToGoogleDrive(e.target.checked)}
+                    />
+                  }
                   label={<Typography variant="body2">Google Drive</Typography>}
                 />
               )}
-              {integrations.find((i) => i.provider === "ONEDRIVE" && i.status === "CONNECTED") && (
+              {integrations.find(
+                (i) => i.provider === "ONEDRIVE" && i.status === "CONNECTED",
+              ) && (
                 <FormControlLabel
-                  control={<Checkbox size="small" checked={exportToOneDrive} onChange={(e) => setExportToOneDrive(e.target.checked)} />}
+                  control={
+                    <Checkbox
+                      size="small"
+                      checked={exportToOneDrive}
+                      onChange={(e) => setExportToOneDrive(e.target.checked)}
+                    />
+                  }
                   label={<Typography variant="body2">OneDrive</Typography>}
                 />
               )}
@@ -1264,36 +1630,75 @@ const Recording: React.FC = () => {
         )}
 
         {/* ── Group 3: Generate Assets ── */}
-        <Box sx={{ width: '100%', maxWidth: 480, p: 2, border: '1px solid rgba(255,255,255,0.1)', borderRadius: 2, bgcolor: 'background.paper' }}>
-          <Typography variant="overline" sx={{ fontWeight: 700, letterSpacing: 1, color: 'text.secondary', display: 'block', mb: 1 }}>
+        <Box
+          sx={{
+            width: "100%",
+            maxWidth: 480,
+            p: 2,
+            border: "1px solid rgba(255,255,255,0.1)",
+            borderRadius: 2,
+            bgcolor: "background.paper",
+          }}
+        >
+          <Typography
+            variant="overline"
+            sx={{
+              fontWeight: 700,
+              letterSpacing: 1,
+              color: "text.secondary",
+              display: "block",
+              mb: 1,
+            }}
+          >
             Generate Assets
           </Typography>
-          <FormGroup sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
+          <FormGroup sx={{ display: "grid", gridTemplateColumns: "1fr 1fr" }}>
             <FormControlLabel
-              control={<Checkbox size="small" checked={createDoc} onChange={(e) => setCreateDoc(e.target.checked)} />}
+              control={
+                <Checkbox
+                  size="small"
+                  checked={createDoc}
+                  onChange={(e) => setCreateDoc(e.target.checked)}
+                />
+              }
               label={<Typography variant="body2">📄 Document</Typography>}
             />
             <FormControlLabel
-              control={<Checkbox size="small" checked={createSlides} onChange={(e) => setCreateSlides(e.target.checked)} />}
+              control={
+                <Checkbox
+                  size="small"
+                  checked={createSlides}
+                  onChange={(e) => setCreateSlides(e.target.checked)}
+                />
+              }
               label={<Typography variant="body2">📊 Slides</Typography>}
             />
           </FormGroup>
         </Box>
 
         {/* ── Actions ── */}
-        <Stack direction="column" spacing={1.5} sx={{ width: '100%', maxWidth: 480, mt: 1 }}>
-          <Button variant="contained" fullWidth onClick={() => handleSave(false)} sx={{ py: 1.5 }}>
+        <Stack
+          direction="column"
+          spacing={1.5}
+          sx={{ width: "100%", maxWidth: 480, mt: 1 }}
+        >
+          <Button
+            variant="contained"
+            fullWidth
+            onClick={() => handleSave(false)}
+            sx={{ py: 1.5 }}
+          >
             Save & Generate Summary and Tasks
           </Button>
           <Button
             variant="text"
             size="small"
             onClick={() => handleSave(true)}
-            sx={{ 
-              textDecoration: "underline", 
-              color: "text.secondary", 
+            sx={{
+              textDecoration: "underline",
+              color: "text.secondary",
               fontSize: "0.8rem",
-              "&:hover": { color: "text.primary" } 
+              "&:hover": { color: "text.primary" },
             }}
           >
             Save Recording Only (Discard Tasks)
@@ -1319,7 +1724,7 @@ const Recording: React.FC = () => {
               textDecoration: "underline",
               color: "error.main",
               fontSize: "0.8rem",
-              "&:hover": { color: "error.dark" }
+              "&:hover": { color: "error.dark" },
             }}
           >
             Ignore all and do not store
@@ -1387,18 +1792,27 @@ const Recording: React.FC = () => {
     const isKeyIssue =
       errorCode === "MISSING_API_KEY" ||
       errorCode === "INVALID_API_KEY" ||
-      (error ? /MISSING_API_KEY|INVALID_API_KEY|API key|Deepgram|OpenRouter/i.test(error) : false);
+      (error
+        ? /MISSING_API_KEY|INVALID_API_KEY|API key|Deepgram|OpenRouter/i.test(
+            error,
+          )
+        : false);
 
     const isQuotaIssue = errorCode === "USAGE_LIMIT_EXCEEDED";
     const isSubIssue = errorCode === "SUBSCRIPTION_REQUIRED";
 
     const openWorkspaceSettings = () => {
-      const baseUrl = import.meta.env.VITE_PLAN_AI_WEB_URL || "http://localhost:3000";
-      window.open(`${baseUrl.replace(/\/+$/, "")}/settings/workspace`, "_blank");
+      const baseUrl =
+        import.meta.env.VITE_PLAN_AI_WEB_URL || "http://localhost:3000";
+      window.open(
+        `${baseUrl.replace(/\/+$/, "")}/settings/workspace`,
+        "_blank",
+      );
     };
 
     const openBilling = () => {
-      const baseUrl = import.meta.env.VITE_PLAN_AI_WEB_URL || "http://localhost:3000";
+      const baseUrl =
+        import.meta.env.VITE_PLAN_AI_WEB_URL || "http://localhost:3000";
       window.open(`${baseUrl.replace(/\/+$/, "")}/billing`, "_blank");
     };
 
@@ -1414,7 +1828,10 @@ const Recording: React.FC = () => {
           p: 4,
         }}
       >
-        <Alert severity={isQuotaIssue ? "warning" : "error"} sx={{ width: "100%", maxWidth: 400 }}>
+        <Alert
+          severity={isQuotaIssue ? "warning" : "error"}
+          sx={{ width: "100%", maxWidth: 400 }}
+        >
           {error ?? "An unexpected error occurred."}
         </Alert>
         {isKeyIssue && (
@@ -1493,7 +1910,7 @@ const Recording: React.FC = () => {
         }}
       >
         <Stack direction="row" spacing={1.5} alignItems="center">
-          {(isMicSpeaking || isSysSpeaking) ? (
+          {isMicSpeaking || isSysSpeaking ? (
             <Waveform active={true} />
           ) : (
             <Box
@@ -1511,7 +1928,7 @@ const Recording: React.FC = () => {
             />
           )}
           <Typography variant="subtitle2" fontWeight={700}>
-            {(isMicSpeaking || isSysSpeaking) ? "Speaking..." : "Listening..."}
+            {isMicSpeaking || isSysSpeaking ? "Speaking..." : "Listening..."}
           </Typography>
           <Chip label={formatTime(elapsed)} size="small" variant="outlined" />
         </Stack>
@@ -1523,7 +1940,8 @@ const Recording: React.FC = () => {
               options={LANGUAGE_OPTIONS}
               getOptionLabel={(option) => option.name}
               value={
-                LANGUAGE_OPTIONS.find((o) => o.code === language) || LANGUAGE_OPTIONS[0]
+                LANGUAGE_OPTIONS.find((o) => o.code === language) ||
+                LANGUAGE_OPTIONS[0]
               }
               onChange={(_, newValue) => {
                 handleLanguageChange(newValue ? newValue.code : "");
@@ -1532,7 +1950,7 @@ const Recording: React.FC = () => {
                 option.code === value.code
               }
               ListboxProps={{
-                sx: { maxHeight: 250 }
+                sx: { maxHeight: 250 },
               }}
               renderInput={(params) => (
                 <TextField
@@ -1577,7 +1995,13 @@ const Recording: React.FC = () => {
           <Button
             variant="contained"
             color="error"
-            startIcon={isStopping ? <CircularProgress size={16} color="inherit" /> : <StopIcon />}
+            startIcon={
+              isStopping ? (
+                <CircularProgress size={16} color="inherit" />
+              ) : (
+                <StopIcon />
+              )
+            }
             onClick={() => void stopRecording()}
             size="small"
             disabled={isStopping}
@@ -1596,12 +2020,9 @@ const Recording: React.FC = () => {
               color="inherit"
               size="small"
               onClick={() => {
-                if (recorderRef.current) {
-                  recorderRef.current.reconnect();
-                  setIsWsConnected(true);
-                  setError(null);
-                  setErrorCode(null);
-                }
+                // No optimistic "connected": onReconnected flips it once the
+                // socket is really open, and a failed try keeps retrying.
+                recorderRef.current?.reconnectNow();
               }}
             >
               RECONNECT
@@ -1781,7 +2202,9 @@ const Recording: React.FC = () => {
               <Box key={block.id}>
                 <Typography
                   variant="caption"
-                  color={block.source === "mic" ? "primary.main" : "secondary.main"}
+                  color={
+                    block.source === "mic" ? "primary.main" : "secondary.main"
+                  }
                   sx={{ fontWeight: "bold" }}
                 >
                   {block.source === "mic" ? "Me" : "Others"}
@@ -1798,9 +2221,7 @@ const Recording: React.FC = () => {
                 </Typography>
               </Box>
             ))}
-
           </Box>
-
         </Box>
 
         {/* Live Meeting Assistant Sidebar */}
@@ -1847,8 +2268,6 @@ const Recording: React.FC = () => {
               borderBottom: "1px solid rgba(255,255,255,0.06)",
             }}
           >
-
-
             <FormControl fullWidth size="small" sx={{ mt: 1 }}>
               <Select
                 value={modelKey}

@@ -74,9 +74,7 @@ const main = async (): Promise<void> => {
     // pins the provider (`allow_fallbacks: false`, used for the cached-context
     // model), where there is no reroute to a bigger endpoint.
     const real = model?.context_length ?? 0;
-    const providerFloor = Number.isFinite(smallestProviderContext)
-      ? smallestProviderContext
-      : real;
+    const providerFloor = Number.isFinite(smallestProviderContext) ? smallestProviderContext : real;
     const hasSchema = (model?.supported_parameters ?? []).includes("structured_outputs");
 
     const issues: string[] = [];
