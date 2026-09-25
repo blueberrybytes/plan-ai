@@ -1,3 +1,4 @@
+import { getLlmProvider } from "./utils/localAi";
 import dotenv from "dotenv";
 dotenv.config();
 import "./sentry/sentry";
@@ -326,17 +327,24 @@ const startServer = async () => {
     process.exit(1);
   }
 
-  try {
-    const job = await pricingSyncQueue.add(
-      "sync-models",
-      {},
-      {
-        repeat: { pattern: "0 * * * *" },
-      },
-    );
-    logger.info(`Scheduled OpenRouter pricing sync job: ${job.id}`);
-  } catch (error) {
-    logger.error("Failed to schedule pricing sync job", error);
+  // OpenRouter's price list is useless to a self-hosted model and, on a server
+  // without internet, would only log errors every hour.
+  const selfHostedLlm = getLlmProvider() === "local";
+  if (selfHostedLlm) {
+    logger.info("[Startup] LLM_PROVIDER=local: OpenRouter pricing sync is off");
+  } else {
+    try {
+      const job = await pricingSyncQueue.add(
+        "sync-models",
+        {},
+        {
+          repeat: { pattern: "0 * * * *" },
+        },
+      );
+      logger.info(`Scheduled OpenRouter pricing sync job: ${job.id}`);
+    } catch (error) {
+      logger.error("Failed to schedule pricing sync job", error);
+    }
   }
 
   try {
@@ -353,8 +361,8 @@ const startServer = async () => {
     logger.error("Failed to schedule weekly digest job", error);
   }
 
-  // Initialize in-memory pricing cache
-  await pricingCacheService.init();
+  // Initialize in-memory pricing cache (OpenRouter prices; not needed self-hosted)
+  if (!selfHostedLlm) await pricingCacheService.init();
 
   server = app.listen(PORT, () => {
     logger.info(`Server is running on port ${PORT}`);

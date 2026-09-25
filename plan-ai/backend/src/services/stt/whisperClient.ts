@@ -1,5 +1,6 @@
 import { getWhisperConfig, type WhisperConfig } from "./sttConfig";
 import { writeWavHeader } from "../../utils/audioPcm";
+import { withLongRequestDispatcher } from "./longRequest";
 
 /**
  * Client for a self-hosted Whisper server speaking the OpenAI
@@ -266,12 +267,15 @@ export const transcribeWithWhisper = async (
 
   let res: Response;
   try {
-    res = await fetch(`${config.baseUrl}/v1/audio/transcriptions`, {
-      method: "POST",
-      headers: config.apiKey ? { Authorization: `Bearer ${config.apiKey}` } : undefined,
-      body: form,
-      signal: AbortSignal.timeout(options.timeoutMs ?? config.batchTimeoutMs),
-    });
+    res = await fetch(
+      `${config.baseUrl}/v1/audio/transcriptions`,
+      withLongRequestDispatcher({
+        method: "POST",
+        headers: config.apiKey ? { Authorization: `Bearer ${config.apiKey}` } : undefined,
+        body: form,
+        signal: AbortSignal.timeout(options.timeoutMs ?? config.batchTimeoutMs),
+      }),
+    );
   } catch (err) {
     const reason = err instanceof Error ? err.message : String(err);
     throw new WhisperRequestError(`Whisper server unreachable at ${config.baseUrl}: ${reason}`);

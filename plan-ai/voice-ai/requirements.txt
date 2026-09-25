@@ -5,3 +5,5 @@ httpx
 speechbrain
 torchaudio
 sentry-sdk[fastapi]
+scipy
+numpy

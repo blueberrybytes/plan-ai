@@ -2,6 +2,7 @@ import type { Express } from "express";
 import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
 import { OpenAIEmbeddings } from "@langchain/openai";
 import { logger } from "../utils/logger";
+import { getEmbeddingsProvider, getLocalEmbeddingsConfig } from "../utils/localAi";
 import {
   resolveWorkspaceEmbeddingConfig,
   type WorkspaceEmbeddingConfig,
@@ -22,7 +23,10 @@ import {
 import { v4 as uuidv4 } from "uuid";
 import { extractTextFromUpload, isSupportedUploadMimeType } from "../utils/documentTextExtractor";
 
-const EMBEDDING_DIMENSION = Number.parseInt(process.env.OPENAI_EMBEDDING_DIMENSION ?? "1536", 10);
+const embeddingDimension = (): number =>
+  getEmbeddingsProvider() === "local"
+    ? getLocalEmbeddingsConfig().dimension
+    : Number.parseInt(process.env.OPENAI_EMBEDDING_DIMENSION ?? "1536", 10);
 const TEXT_CHUNK_SIZE = Number.parseInt(process.env.CONTEXT_VECTOR_CHUNK_SIZE ?? "800", 10);
 const TEXT_CHUNK_OVERLAP = Number.parseInt(process.env.CONTEXT_VECTOR_CHUNK_OVERLAP ?? "160", 10);
 // Cap on the text embedded for a RAG QUERY. text-embedding-3-small accepts
@@ -37,7 +41,7 @@ const MAX_EMBED_QUERY_CHARS = Number.parseInt(process.env.MAX_EMBED_QUERY_CHARS 
 // instead of a global singleton, so each customer's embeddings bill their own
 // key. Embeddings run through the workspace's OpenRouter key by default (with an
 // OpenAI fallback for legacy keys) — see resolveWorkspaceEmbeddingConfig.
-const buildEmbeddings = (config: WorkspaceEmbeddingConfig) =>
+export const buildEmbeddings = (config: WorkspaceEmbeddingConfig) =>
   new OpenAIEmbeddings({
     openAIApiKey: config.apiKey,
     model: config.model,
@@ -52,7 +56,7 @@ const textSplitter = new RecursiveCharacterTextSplitter({
 });
 
 const ensureCollectionIfNeeded = async (): Promise<void> => {
-  await ensureContextCollection(EMBEDDING_DIMENSION);
+  await ensureContextCollection(embeddingDimension());
 };
 
 export const initializeContextVectorStore = ensureCollectionIfNeeded;

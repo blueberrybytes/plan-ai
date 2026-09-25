@@ -1,0 +1,25 @@
+# NVIDIA override for the self-hosted stack:
+#   docker compose -f docker-compose.yml -f docker-compose.gpu.yml --profile private up -d
+# Needs the NVIDIA driver and the NVIDIA Container Toolkit on the host.
+services:
+  whisper:
+    image: ghcr.io/speaches-ai/speaches:latest-cuda
+    environment:
+      # float16 is what the models ship in and what GPUs run fastest.
+      WHISPER__COMPUTE_TYPE: float16
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+  ollama:
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]

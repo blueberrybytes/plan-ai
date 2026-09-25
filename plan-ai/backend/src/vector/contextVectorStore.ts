@@ -205,17 +205,18 @@ export const queryVectors = async (
   };
 
   const name = getContextCollectionName();
-  const results = await withQdrantRetry("search", () =>
-    qdrantClient.search(name, {
-      vector,
+  // Universal Query API. The client dropped `search` in 1.19; a plain vector
+  // as `query` is the same nearest-neighbour search, filter and limit included.
+  const results = await withQdrantRetry("query", () =>
+    qdrantClient.query(name, {
+      query: vector,
       filter,
       limit,
       with_payload: true,
     }),
   );
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return results.map((res: any) => ({
+  return results.points.map((res) => ({
     id: String(res.id),
     vector: [], // We don't need the vector back usually
     payload: res.payload as unknown as ContextVectorPayload,

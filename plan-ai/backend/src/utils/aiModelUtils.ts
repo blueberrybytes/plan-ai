@@ -3,6 +3,12 @@ import EnvUtils from "./EnvUtils";
 import { AI_MODEL_LIMITS } from "../services/aiContextRouter";
 import prisma from "../prisma/prismaClient";
 import { logger } from "./logger";
+import {
+  getEmbeddingsProvider,
+  getLlmProvider,
+  getLocalEmbeddingsConfig,
+  getLocalLanguageModel,
+} from "./localAi";
 
 // Gemini 3.7 Flash. Handles structured extraction and prose for the whole app.
 //
@@ -101,6 +107,9 @@ export class MissingApiKeyError extends Error {
  */
 export function getConfiguredModel(modelKey?: string, apiKey?: string) {
   const primaryModel = modelKey && modelKey.length > 0 ? modelKey : DEFAULT_AI_MODEL;
+  // Self-hosted (LLM_PROVIDER=local): one local model stands in for whatever
+  // id was asked for, and no key is involved. See utils/localAi.ts.
+  if (getLlmProvider() === "local") return getLocalLanguageModel(primaryModel === FAST_AI_MODEL);
   const fallbacks = FALLBACK_MODELS.filter((m) => m !== primaryModel);
 
   const openrouter = createOpenRouter({
@@ -149,6 +158,7 @@ async function resolveWorkspaceApiKey(workspaceId: string): Promise<string> {
 }
 
 export async function getWorkspaceModel(workspaceId: string, modelKey?: string) {
+  if (getLlmProvider() === "local") return getConfiguredModel(modelKey);
   const apiKey = await resolveWorkspaceApiKey(workspaceId);
   return getConfiguredModel(modelKey, apiKey);
 }
@@ -234,6 +244,16 @@ export interface WorkspaceEmbeddingConfig {
 export async function resolveWorkspaceEmbeddingConfig(
   workspaceId: string,
 ): Promise<WorkspaceEmbeddingConfig> {
+  if (getEmbeddingsProvider() === "local") {
+    const local = getLocalEmbeddingsConfig();
+    return {
+      apiKey: local.apiKey ?? "local",
+      baseURL: local.baseUrl,
+      model: local.model,
+      usedFallback: false,
+    };
+  }
+
   const OR_MODEL = "openai/text-embedding-3-small";
   const OAI_MODEL = process.env.OPENAI_EMBEDDING_MODEL ?? "text-embedding-3-small";
 
@@ -299,6 +319,7 @@ export async function resolveWorkspaceEmbeddingConfig(
  * what earns the cache hit.
  */
 export async function getCachedContextModel(workspaceId: string) {
+  if (getLlmProvider() === "local") return getLocalLanguageModel();
   const apiKey = await resolveWorkspaceApiKey(workspaceId);
   const openrouter = createOpenRouter({ apiKey });
   return openrouter(CACHED_CONTEXT_MODEL, {

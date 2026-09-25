@@ -1,3 +1,4 @@
+import { getLlmProvider, getLocalLlmConfig } from "../utils/localAi";
 import { PrismaClient } from "@prisma/client";
 import { logger } from "../utils/logger";
 
@@ -253,7 +254,12 @@ export class AIContextRouter {
       };
     }
 
-    const limits = AI_MODEL_LIMITS[modelKey];
+    // Self-hosted: whatever id was asked for, the local model answers, and its
+    // window is typically 32k to 128k rather than the catalogue's 1M.
+    const limits =
+      getLlmProvider() === "local"
+        ? { maxTokens: getLocalLlmConfig().contextTokens }
+        : AI_MODEL_LIMITS[modelKey];
     if (!limits) {
       logger.warn(
         `Model key [${modelKey}] not found in AI_MODEL_LIMITS router. Defaulting to RAG.`,

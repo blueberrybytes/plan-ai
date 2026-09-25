@@ -18,18 +18,26 @@ services:
       retries: 5
 
   qdrant:
-    image: qdrant/qdrant:v1.15
+    image: qdrant/qdrant:v1.19.1
     container_name: plan-ai-qdrant
-    #environment:
-    # Use env var if provided, fall back to test value
-    # QDRANT__SERVICE__API_KEY: planai123
+    environment:
+      # Qdrant reports anonymous usage to its servers by default. A private
+      # install must not phone home.
+      QDRANT__TELEMETRY_DISABLED: "true"
+      # Use env var if provided, fall back to test value
+      # QDRANT__SERVICE__API_KEY: planai123
     ports:
       - "6333:6333" # REST
       - "6334:6334" # gRPC (optional)
     volumes:
       - qdrant-storage:/qdrant/storage
     healthcheck:
-      test: ["CMD-SHELL", "curl -fsS http://localhost:6333/ready || exit 1"]
+      # The qdrant image ships without curl or wget; bash's /dev/tcp is enough.
+      test:
+        [
+          "CMD-SHELL",
+          "bash -c 'exec 3<>/dev/tcp/127.0.0.1/6333 && printf \"GET /readyz HTTP/1.0\\r\\n\\r\\n\" >&3 && head -1 <&3 | grep -q 200'",
+        ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -54,8 +62,9 @@ services:
   whisper:
     image: ghcr.io/speaches-ai/speaches:latest-cpu
     container_name: plan-ai-whisper
-    # Opt-in: a 2 GB image plus models. `yarn docker:whisper` from the root.
-    profiles: ["whisper"]
+    # Opt-in: a 2 GB image plus models. `yarn docker:whisper` from the root,
+    # or `yarn docker:private` for the whole self-hosted stack.
+    profiles: ["whisper", "private"]
     environment:
       # The models ship as float16, which CPUs can't run efficiently, so
       # CTranslate2 silently falls back to float32. int8 is 2-4x faster on
@@ -75,8 +84,79 @@ services:
       timeout: 5s
       retries: 5
 
+  # ── Self-hosted stack (profile "private") ─────────────────────────────────
+  # Everything a customer install needs so that no audio and no meeting text
+  # leaves the machine: Whisper (above), the voice service (speaker separation
+  # and voice profiles), and a local LLM + embeddings server. Start with
+  # `yarn docker:private`; on an NVIDIA host add docker-compose.gpu.yml.
+  # The backend is pointed at it through .env (see "Self-hosted AI" in
+  # .env.template).
+
+  voice:
+    build: ../voice-ai
+    container_name: plan-ai-voice
+    profiles: ["private"]
+    environment:
+      VOICE_AI_API_KEY: ${VOICE_AI_API_KEY:-}
+      # A customer install must not report errors (with PII) to our Sentry.
+      SENTRY_DSN: ""
+    ports:
+      # 8002 on the host: `yarn dev:voice` uses 8001 during development.
+      - "8002:8000"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8000/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: plan-ai-ollama
+    profiles: ["private"]
+    environment:
+      # Ollama's default window is 4096 tokens, and the OpenAI-compatible API
+      # can't raise it per request: a long transcript would be cut silently.
+      # Keep in step with LOCAL_LLM_CONTEXT_TOKENS in the backend.
+      OLLAMA_CONTEXT_LENGTH: ${LOCAL_LLM_CONTEXT_TOKENS:-32768}
+      # Keep models loaded; reloading a 30B model costs seconds per request.
+      OLLAMA_KEEP_ALIVE: "-1"
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama-models:/root/.ollama
+    healthcheck:
+      test: ["CMD-SHELL", "ollama list >/dev/null 2>&1 || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+
+  # One-shot: downloads the models the first time, then exits. Re-running is
+  # cheap, both servers skip models they already have.
+  models-init:
+    image: curlimages/curl:latest
+    container_name: plan-ai-models-init
+    profiles: ["private"]
+    depends_on:
+      whisper:
+        condition: service_healthy
+      ollama:
+        condition: service_healthy
+    restart: "no"
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - >-
+        set -e;
+        echo "Whisper model ${WHISPER_MODEL:-deepdml/faster-whisper-large-v3-turbo-ct2}";
+        curl -fsS -X POST http://whisper:8000/v1/models/${WHISPER_MODEL:-deepdml/faster-whisper-large-v3-turbo-ct2};
+        echo; echo "LLM ${LOCAL_LLM_MODEL:-gemma3:27b}";
+        curl -fsS http://ollama:11434/api/pull -d '{"model":"${LOCAL_LLM_MODEL:-gemma3:27b}","stream":false}';
+        echo; echo "Embeddings ${LOCAL_EMBEDDINGS_MODEL:-bge-m3}";
+        curl -fsS http://ollama:11434/api/pull -d '{"model":"${LOCAL_EMBEDDINGS_MODEL:-bge-m3}","stream":false}';
+        echo; echo "All models ready."
+
 volumes:
   plan-ai-db-data:
   qdrant-storage:
   plan-ai-redis-data:
   whisper-models:
+  ollama-models:

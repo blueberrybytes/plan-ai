@@ -39,7 +39,7 @@ graph TD
   FE --> FirebaseAuth[Firebase Auth]
   BE --> Postgres[(PostgreSQL 16)]
   BE --> FirebaseStorage[(Firebase Storage)]
-  BE --> Qdrant[(Qdrant v1.15 Vector DB)]
+  BE --> Qdrant[(Qdrant v1.19 Vector DB)]
   BE --> OpenRouter[(OpenRouter · Gemini 2.0 Flash)]
   BE --> OpenAI[(OpenAI · text-embedding-3-small)]
   BE --> Integrations[(Jira · Linear · Trello · Notion)]
@@ -54,7 +54,7 @@ graph TD
 | Web App        | React 18, TypeScript 5.7, MUI v6, RTK Query, Redux Saga, redux-persist, i18next, react-router-dom v6      |
 | Landing Page   | Next.js App Router, React 19, Tailwind CSS v4, Lucide React                                               |
 | Backend        | Node.js 20, Express 4, TSOA 6, Prisma 6, Zod, Helmet, Vitest                                              |
-| Data & storage | PostgreSQL 16, Qdrant v1.15, Firebase Storage                                                             |
+| Data & storage | PostgreSQL 16, Qdrant v1.19, Firebase Storage                                                             |
 | AI             | OpenRouter (Gemini 2.0 Flash `google/gemini-2.0-flash-001`), OpenAI embeddings (`text-embedding-3-small`) |
 | Auth           | Firebase Authentication (email/password, Google OAuth, Microsoft OAuth)                                   |
 | Integrations   | Jira Cloud, Linear, Trello, Notion (OAuth 2.0), Google Drive, Microsoft OneDrive                          |
@@ -79,7 +79,7 @@ graph TD
 - Node.js `22.23.1` (`.nvmrc` provided)
 - Yarn `1.22.x`
 - macOS (required for native recorder)
-- Docker Desktop (runs PostgreSQL 16, Redis 7 and Qdrant v1.15, plus an optional Whisper server)
+- Docker Desktop (runs PostgreSQL 16, Redis 7 and Qdrant v1.19, plus an optional Whisper server)
 - A Firebase project with **Authentication** and **Storage** enabled
 - An [OpenRouter](https://openrouter.ai/) API key (for Gemini 2.0 Flash)
 - An OpenAI API key (for embeddings)
@@ -148,7 +148,7 @@ Fill in your credentials. Both templates include inline comments for every key.
 ### 3 — Start databases and dev servers
 
 ```bash
-# Terminal A – spin up PostgreSQL 16 (port 5433), Redis 7 and Qdrant v1.15
+# Terminal A – spin up PostgreSQL 16 (port 5433), Redis 7 and Qdrant v1.19
 yarn docker
 # …or, to transcribe on your own machine instead of Deepgram (STT_PROVIDER=whisper):
 yarn docker:whisper
@@ -203,7 +203,7 @@ plan-ai/
 │   │   └── logos/
 │   ├── .env.template
 │   └── Dockerfile
-├── docker-compose.yml           # PostgreSQL 16 (5433), Redis 7, Qdrant v1.15, optional Whisper (8010)
+├── docker-compose.yml           # PostgreSQL 16 (5433), Redis 7, Qdrant v1.19, optional Whisper (8010)
 └── package.json                 # Root workspace scripts
 ```
 
@@ -296,7 +296,7 @@ Supported slide types: `title_only`, `text_block`, `text_image`, `bullet_list`, 
 
 ## Deployment (self-hosted)
 
-1. **Provision infrastructure**: PostgreSQL 16, Redis 7, Qdrant v1.15, Firebase project (Auth + Storage), OpenRouter and OpenAI API keys, and speech-to-text: a Deepgram key, or a Whisper server with `STT_PROVIDER=whisper` (see [Speech-to-Text](../docs/src/self-hosting/speech-to-text.md)).
+1. **Provision infrastructure**: PostgreSQL 16, Redis 7, Qdrant v1.19, Firebase project (Auth + Storage), OpenRouter and OpenAI API keys, and speech-to-text: a Deepgram key, or a Whisper server with `STT_PROVIDER=whisper` (see [Speech-to-Text](../docs/src/self-hosting/speech-to-text.md)).
 2. **Set CI/CD secrets** mirroring the `.env` templates.
 3. **Build & deploy backend**:
    ```bash

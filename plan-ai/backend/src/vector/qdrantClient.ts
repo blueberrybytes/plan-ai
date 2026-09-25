@@ -1,3 +1,4 @@
+import { getEmbeddingsProvider, getLocalEmbeddingsConfig } from "../utils/localAi";
 import { QdrantClient } from "@qdrant/js-client-rest";
 import { logger } from "../utils/logger";
 
@@ -27,5 +28,12 @@ export const qdrantClient = new QdrantClient({
 });
 
 export const getContextCollectionName = (): string => {
-  return process.env.QDRANT_CONTEXT_COLLECTION ?? "context_files";
+  const base = process.env.QDRANT_CONTEXT_COLLECTION ?? "context_files";
+  // Local embedding models produce vectors of another size (bge-m3: 1024,
+  // OpenAI: 1536), and one collection can't hold both. Each local model gets
+  // its own collection, so switching providers never mixes vectors, and
+  // switching back finds the original collection untouched.
+  if (getEmbeddingsProvider() !== "local") return base;
+  const { model, dimension } = getLocalEmbeddingsConfig();
+  return `${base}__${model.replace(/[^a-zA-Z0-9_-]/g, "-")}_${dimension}`;
 };

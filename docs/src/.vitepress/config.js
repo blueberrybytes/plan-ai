@@ -57,6 +57,7 @@ export default withMermaid(defineConfig({
           { text: 'Environment Variables', link: '/self-hosting/environment-variables' },
           { text: 'Docker Deployment', link: '/self-hosting/docker-deployment' },
           { text: 'Speech-to-Text (Deepgram or Whisper)', link: '/self-hosting/speech-to-text' },
+          { text: 'Private Deployment', link: '/self-hosting/private-stack' },
           { text: 'Database Migrations', link: '/self-hosting/database-migrations' },
           { text: 'Stripe Billing (optional)', link: '/self-hosting/stripe-billing' }
         ]

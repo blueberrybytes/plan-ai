@@ -86,7 +86,30 @@ The compose file uses the CPU image with int8, eight threads, and models kept in
 
 A CPU host is fine for the post-meeting pass: large-v3-turbo runs about 4 times faster than real time on 8 cores, and nobody waits on it. Live captions work on CPU but arrive a few seconds after each sentence. Railway, for example, only offers CPU.
 
+## Telling speakers apart
+
+Whisper returns no speakers. For the system-audio channel (everyone except the user) the backend sends Whisper's utterances to the voice service's `/diarize`, which groups them by voice, so remote participants come out as `Others 0`, `Others 1`… as with Deepgram. The mic channel is always the user and isn't separated.
+
+It's on whenever `VOICE_AI_URL` is set. Measured against human annotations of the AMI meeting corpus, see `DIARIZACION.md` at the repository root.
+
+| Variable | Default | |
+| --- | --- | --- |
+| `WHISPER_DIARIZE` | on when `VOICE_AI_URL` is set | `false` leaves everyone else as one speaker |
+| `WHISPER_DIARIZE_MAX_SPEAKERS` | `8` | Upper bound |
+| `WHISPER_DIARIZE_THRESHOLD` | `0.5` | Cosine distance under which two utterances count as the same voice |
+
+## Naming speakers by voice
+
+With either provider, workspace members who recorded a voice profile in the mobile app are recognised in the system audio: `Others 1` becomes `Marta Ruiz` in every meeting, instead of a name the LLM guessed. The voice service compares each speaker with the profiles and pairs them one to one when the voices are close enough; anyone without a profile keeps their anonymous label.
+
+| Variable | Default | |
+| --- | --- | --- |
+| `VOICE_IDENTIFY` | on when `VOICE_AI_URL` is set | `false` turns it off |
+| `VOICE_IDENTIFY_MIN_SIMILARITY` | `0.45` | Cosine similarity needed to call a speaker and a profile the same person |
+
+The threshold was set on synthetic voices, where the same voice scored 0.91 to 0.95. Profiles recorded on a phone and meetings heard through a laptop score lower, so check it with real recordings.
+
 ## Known limits
 
-- Whisper doesn't tell speakers apart. The mic channel is still the user and the system channel is still everyone else, but several remote participants come out as one speaker. Adding a diarization model (pyannote) is the next step.
+- Speaker separation groups whole utterances, so two people talking over each other, or a change of speaker without a pause, ends up under one of them.
 - The desktop recorder still asks BYOK workspace owners for a Deepgram key before recording, even when the backend uses Whisper. Self-hosted instances without Stripe don't hit this check.

@@ -6,7 +6,8 @@ import {
   type WhisperTranscription,
   type WhisperWord,
 } from "./whisperClient";
-import { getWhisperConfig, type WhisperConfig } from "./sttConfig";
+import { getWhisperConfig, type WhisperConfig, type WhisperDiarizeConfig } from "./sttConfig";
+import { diarizeUtterances } from "./whisperDiarization";
 
 /**
  * Post-meeting transcription of one recorded channel with Whisper.
@@ -45,6 +46,10 @@ export interface ChannelTranscription {
   utterances: ChannelUtterance[];
   detectedLanguage?: string;
   durationSeconds?: number;
+  /** Distinct speakers after separation; 1 when the channel wasn't separated. */
+  speakerCount?: number;
+  /** Why speaker separation didn't happen, when it was asked for and failed. */
+  diarizationError?: string;
 }
 
 /** Same pause Deepgram splits utterances on in the recorder pass (`utt_split: 0.5`). */
@@ -153,7 +158,16 @@ export const toChannelUtterances = (
 export const transcribeChannelWithWhisper = async (
   source: AudioSource,
   language: string,
-  options: { keyterms?: string[]; config?: WhisperConfig } = {},
+  options: {
+    keyterms?: string[];
+    config?: WhisperConfig;
+    /**
+     * Separate speakers within the channel. Only the system-audio channel
+     * needs it: the mic is always the user.
+     */
+    diarize?: boolean;
+    diarizeConfig?: WhisperDiarizeConfig;
+  } = {},
 ): Promise<ChannelTranscription> => {
   const config = options.config ?? getWhisperConfig();
   const { audio, filename, mimeType } = await loadAudio(source);
@@ -162,9 +176,25 @@ export const transcribeChannelWithWhisper = async (
     { model: config.model, language, keyterms: options.keyterms, filename, mimeType },
     config,
   );
-  return {
-    utterances: toChannelUtterances(result, options.keyterms),
+  const utterances = toChannelUtterances(result, options.keyterms);
+  const base = {
     detectedLanguage: result.language,
     durationSeconds: result.duration,
+  };
+  if (!options.diarize) {
+    return { ...base, utterances, speakerCount: utterances.length > 0 ? 1 : 0 };
+  }
+  // Same bytes Whisper just got: the voice service doesn't download again.
+  const diarized = await diarizeUtterances(
+    audio,
+    { filename, mimeType },
+    utterances,
+    options.diarizeConfig,
+  );
+  return {
+    ...base,
+    utterances: diarized.utterances,
+    speakerCount: diarized.speakerCount,
+    diarizationError: diarized.error,
   };
 };

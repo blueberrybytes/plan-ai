@@ -29,6 +29,7 @@ import { getSttProvider, getWhisperConfig } from "./stt/sttConfig";
 import { transcribeChannelWithWhisper } from "./stt/whisperPrerecorded";
 import { WhisperRequestError } from "./stt/whisperClient";
 import { collectContextKeyterms } from "./stt/keyterms";
+import { identifyOtherSpeakers, loadWorkspaceVoices } from "./voiceIdentityService";
 import { dropEchoUtterances, estimateMicSysOffsetMs } from "../utils/echoDedup";
 import { cancelEcho } from "../utils/echoCancel";
 import { decodeUrlToMonoPcm, encodeWavPcm16 } from "../utils/audioPcm";
@@ -489,7 +490,11 @@ export class ProjectTranscriptService {
         if (sttProvider === "whisper") {
           let channel;
           try {
-            channel = await transcribeChannelWithWhisper(source, lang, { keyterms });
+            channel = await transcribeChannelWithWhisper(source, lang, {
+              keyterms,
+              // The mic is always the user; only the system audio mixes people.
+              diarize: speakerPrefix === "Others",
+            });
           } catch (err) {
             // For Whisper "multi" only means auto-detect, so a retry can only
             // help when the server rejected the request itself (a 4xx, e.g. a
@@ -501,8 +506,14 @@ export class ProjectTranscriptService {
             return failChannel(err instanceof Error ? err.message : String(err), rejected);
           }
           console.log(
-            `[Diarization] ${speakerPrefix} | provider=whisper requested=${lang} detected=${channel.detectedLanguage ?? "?"} duration=${channel.durationSeconds?.toFixed(1) ?? "?"}s utterances=${channel.utterances.length}`,
+            `[Diarization] ${speakerPrefix} | provider=whisper requested=${lang} detected=${channel.detectedLanguage ?? "?"} duration=${channel.durationSeconds?.toFixed(1) ?? "?"}s utterances=${channel.utterances.length} speakers=${channel.speakerCount ?? "?"}`,
           );
+          if (channel.diarizationError) {
+            // The transcript is fine, only the speakers are merged. Recorded so
+            // it doesn't pass for a one-speaker meeting.
+            logger.warn(`[Diarization] ${speakerPrefix}: ${channel.diarizationError}`);
+            diagnostics.push(`${speakerPrefix}: ${channel.diarizationError}`);
+          }
           return channel.utterances.map((u) => ({
             speaker: `${speakerPrefix} ${u.speaker}`,
             transcript: u.transcript,
@@ -859,6 +870,35 @@ export class ProjectTranscriptService {
 
           // Re-generate combined text
           combinedText = utterances.map((u) => `${u.speaker}: ${u.transcript}`).join("\n");
+        }
+      }
+
+      // Name the other participants by voice: workspace members who recorded
+      // a voice profile are recognised in the system audio. Works the same
+      // with Deepgram or Whisper, both label that channel "Others N".
+      if (existing.rawSysUrl) {
+        const voices = await loadWorkspaceVoices(input.workspaceId, input.userId);
+        if (voices.length > 0) {
+          const { names, error } = await identifyOtherSpeakers(
+            existing.rawSysUrl,
+            utterances,
+            voices,
+          );
+          if (error) {
+            logger.warn(`[Voice AI] ${existing.id}: ${error}`);
+            diarizationDiagnostics = [...diarizationDiagnostics, `Others: ${error}`];
+          }
+          if (Object.keys(names).length > 0) {
+            logger.info(
+              `[Voice AI] ${existing.id}: recognised ${Object.entries(names)
+                .map(([label, name]) => `${label} as ${name}`)
+                .join(", ")}`,
+            );
+            utterances = utterances.map((u) =>
+              names[u.speaker] ? { ...u, speaker: names[u.speaker] } : u,
+            );
+            combinedText = utterances.map((u) => `${u.speaker}: ${u.transcript}`).join("\n");
+          }
         }
       }
 

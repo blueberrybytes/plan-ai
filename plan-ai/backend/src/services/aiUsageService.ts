@@ -2,8 +2,21 @@ import prisma from "../prisma/prismaClient";
 import { Prisma } from "@prisma/client";
 import { logger } from "../utils/logger";
 import { pricingCacheService } from "./pricingCacheService";
+import {
+  getEmbeddingsProvider,
+  getLlmProvider,
+  getLocalEmbeddingsConfig,
+  getLocalLlmConfig,
+} from "../utils/localAi";
 
 const BLUEBERRY_TOKEN_MARKUP = 2;
+
+/** Speech-to-text rows are seconds of audio, not tokens, and keep their provider. */
+const SPEECH_PROVIDERS = new Set(["DEEPGRAM", "WHISPER"]);
+
+const isEmbeddingModel = (model: string): boolean =>
+  /embed/i.test(model) ||
+  (getEmbeddingsProvider() === "local" && model === getLocalEmbeddingsConfig().model);
 const BLUEBERRY_TOKEN_EXCHANGE_RATE = 10000;
 
 export interface LogUsageParams {
@@ -33,8 +46,19 @@ export class AiUsageService {
     const totalTokens = params.inputTokens + params.outputTokens;
     let actualProvider = params.provider;
 
+    // Self-hosted model or embeddings: the call ran on the customer's own
+    // hardware, whatever catalogue id the caller logged. Recorded as LOCAL at
+    // zero cost so usage reports and billing don't invent a Gemini bill.
+    const embedding = isEmbeddingModel(params.model);
+    const local =
+      !SPEECH_PROVIDERS.has(params.provider) &&
+      (embedding ? getEmbeddingsProvider() === "local" : getLlmProvider() === "local");
+    const model = local && !embedding ? getLocalLlmConfig().model : params.model;
+
     // Automatically parse provider from OpenRouter model ids (e.g., "google/gemini-2.5-flash" -> "GOOGLE")
-    if (params.model.includes("/")) {
+    if (local) {
+      actualProvider = "LOCAL";
+    } else if (params.model.includes("/")) {
       const parts = params.model.split("/");
       actualProvider = parts[0].toUpperCase();
     }
@@ -42,7 +66,9 @@ export class AiUsageService {
     let estimatedCost = 0;
     const pricingMap = pricingCacheService.getAllPricing();
 
-    if (typeof params.cost === "number" && params.cost >= 0) {
+    if (local) {
+      estimatedCost = 0;
+    } else if (typeof params.cost === "number" && params.cost >= 0) {
       // Real cost from OpenRouter usage accounting — already reflects any
       // prompt-cache discount, so prefer it over the estimate.
       estimatedCost = params.cost;
@@ -67,10 +93,12 @@ export class AiUsageService {
       estimatedCost = totalTokens * 0.000001;
     }
 
-    const blueberryTokens = Math.max(
-      1,
-      Math.ceil(estimatedCost * BLUEBERRY_TOKEN_MARKUP * BLUEBERRY_TOKEN_EXCHANGE_RATE),
-    );
+    const blueberryTokens = local
+      ? 0
+      : Math.max(
+          1,
+          Math.ceil(estimatedCost * BLUEBERRY_TOKEN_MARKUP * BLUEBERRY_TOKEN_EXCHANGE_RATE),
+        );
 
     try {
       await prisma.aiUsageLog.create({
@@ -80,7 +108,7 @@ export class AiUsageService {
           projectId: params.projectId || null,
           feature: params.feature,
           provider: actualProvider,
-          model: params.model,
+          model,
           inputTokens: params.inputTokens,
           outputTokens: params.outputTokens,
           cachedTokens: params.cachedTokens ?? 0,

@@ -1,0 +1,8 @@
+# Local development only. The image installs its own dependencies and
+# downloads the model at build time; copying these over would ship a macOS
+# virtualenv and replace the model with symlinks into the host's cache.
+.venv
+model
+__pycache__
+.pytest_cache
+tests

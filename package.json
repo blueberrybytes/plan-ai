@@ -24,6 +24,7 @@
     "build:all": "yarn --cwd plan-ai/backend build:ts && yarn --cwd plan-ai/frontend build:ts && yarn --cwd plan-ai-recorder typecheck",
     "docker": "cd plan-ai/backend && docker compose up -d && echo 'Postgres listens on host port 5433 (not 5432): DATABASE_URL must use localhost:5433'",
     "docker:whisper": "cd plan-ai/backend && docker compose --profile whisper up -d",
+    "docker:private": "cd plan-ai/backend && docker compose --profile private up -d",
     "db:migrate": "cd plan-ai/backend && yarn prisma:migrate",
     "db:seed": "cd plan-ai/backend && yarn prisma:seed",
     "install:all": "yarn && (cd plan-ai/backend && yarn) && (cd plan-ai/frontend && yarn) && (cd plan-ai-recorder && yarn) && (cd plan-ai-mobile && yarn) && (cd docs && yarn) && (cd plan-ai/voice-ai && uv sync)",

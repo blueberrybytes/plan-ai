@@ -345,6 +345,7 @@ We provide several helper scripts in the root `package.json` to make development
 | `yarn dev:voice`            | Start the Python Voice AI microservice locally using `uv` (useful if not using Docker)                               |
 | `yarn docker`               | Start Postgres (port 5433), Redis and Qdrant via Docker Compose                                                      |
 | `yarn docker:whisper`       | Same, plus the self-hosted Whisper transcription server on port 8010                                                 |
+| `yarn docker:private`       | Whole self-hosted AI stack: Whisper, voice service, Ollama (LLM and embeddings), models downloaded on first start    |
 | `yarn install:all`          | Install dependencies across all sub-projects                                                                         |
 | `yarn clean:install`        | Wipe all `node_modules` / `yarn.lock` and reinstall cleanly                                                          |
 | `yarn setup:env`            | Create `.env` files from `.env.template` defaults                                                                    |
@@ -409,6 +410,7 @@ Plan AI is built with privacy in mind. When you self-host, your data remains com
 
 - **BYOK (Bring Your Own Key):** API keys for Deepgram and OpenRouter are stored per `Workspace`, not globally. Courtesy workspaces (flagged `isCourtesy`) bypass the key requirement for managed/demo accounts.
 - **Self-hosted transcription:** `STT_PROVIDER=whisper` makes the backend transcribe on a Whisper server you run (live captions, the post-meeting pass and Telegram voice notes). No audio goes to Deepgram, and no Deepgram key is needed. Deepgram stays the default. See [Speech-to-Text](docs/src/self-hosting/speech-to-text.md).
+- **Private deployment:** with `LLM_PROVIDER=local` and `EMBEDDINGS_PROVIDER=local` on top of Whisper, no meeting audio or meeting text goes to an AI provider. `yarn docker:private` starts the whole stack. See [Private Deployment](docs/src/self-hosting/private-stack.md).
 - **Key masking:** API keys are masked as `••••••••••••••••` in all API responses. The backend ignores this placeholder on `PUT` requests to avoid overwriting real keys.
 - **Auto-Admin:** To make self-hosting easy, any new user who registers on your local instance is automatically granted the **`ADMIN`** role, bypassing the standard SaaS "Pending Approval" state.
 - **Secrets:** All `.env` files and Google service accounts are strictly excluded from version control to prevent accidental leaks.

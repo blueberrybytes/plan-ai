@@ -1,3 +1,4 @@
+import { getLlmProvider } from "../utils/localAi";
 import { openai } from "@ai-sdk/openai";
 import { generateImage } from "ai";
 import { logger } from "../utils/logger";
@@ -17,6 +18,10 @@ export class ImageGenerationService {
     userId: string,
     presentationId: string,
   ): Promise<string | null> {
+    // Self-hosted deployments have no image model, and the prompt is built
+    // from the meeting's content, so it must not go to OpenRouter or OpenAI.
+    // Slides already handle a missing image.
+    if (getLlmProvider() === "local") return null;
     try {
       logger.info(`Generating image for presentation ${presentationId} with prompt: "${prompt}"`);
 

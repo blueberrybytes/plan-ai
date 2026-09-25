@@ -75,3 +75,34 @@ export const getWhisperConfig = (): WhisperConfig => {
     batchTimeoutMs: readNumber("WHISPER_TIMEOUT_MS", DEFAULT_BATCH_TIMEOUT_MS),
   };
 };
+
+/**
+ * Speaker separation for the Whisper provider. Whisper returns no speakers,
+ * so the system-audio channel (everyone but the user) goes to the voice
+ * service, which groups its utterances by voice. See DIARIZACION.md.
+ */
+export interface WhisperDiarizeConfig {
+  enabled: boolean;
+  voiceAiUrl: string;
+  apiKey?: string;
+  /** Upper bound on speakers found in the system channel. */
+  maxSpeakers: number;
+  /** Cosine distance under which two utterances count as the same voice. */
+  threshold: number;
+  timeoutMs: number;
+}
+
+const DEFAULT_DIARIZE_THRESHOLD = 0.5;
+
+export const getWhisperDiarizeConfig = (): WhisperDiarizeConfig => {
+  const voiceAiUrl = (process.env.VOICE_AI_URL?.trim() || "").replace(/\/+$/, "");
+  return {
+    // On by default wherever the voice service is configured.
+    enabled: process.env.WHISPER_DIARIZE?.trim().toLowerCase() !== "false" && voiceAiUrl !== "",
+    voiceAiUrl,
+    apiKey: process.env.VOICE_AI_API_KEY?.trim() || undefined,
+    maxSpeakers: Math.max(1, Math.round(readNumber("WHISPER_DIARIZE_MAX_SPEAKERS", 8))),
+    threshold: readNumber("WHISPER_DIARIZE_THRESHOLD", DEFAULT_DIARIZE_THRESHOLD),
+    timeoutMs: readNumber("WHISPER_DIARIZE_TIMEOUT_MS", 10 * 60 * 1000),
+  };
+};

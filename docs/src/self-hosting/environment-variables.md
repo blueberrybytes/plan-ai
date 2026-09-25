@@ -40,6 +40,16 @@ This is the most critical environment file. It handles database connections, API
 | `WHISPER_MODEL` | Whisper model for the post-meeting pass and voice notes. | `deepdml/faster-whisper-large-v3-turbo-ct2` |
 | `WHISPER_LIVE_MODEL` | Whisper model for live captions. Defaults to `WHISPER_MODEL`. | `Systran/faster-whisper-small` |
 | `WHISPER_LIVE_INTERIM_MS` | Interim live captions every N ms; `0` turns them off. | `1500` |
+| `WHISPER_DIARIZE` | Separate speakers in the system audio when using Whisper. On when `VOICE_AI_URL` is set. | `true` |
+| `WHISPER_DIARIZE_THRESHOLD` | Cosine distance under which two utterances count as the same voice. | `0.5` |
+| `VOICE_IDENTIFY` | Name speakers after workspace members' voice profiles. On when `VOICE_AI_URL` is set. | `true` |
+| `VOICE_IDENTIFY_MIN_SIMILARITY` | Similarity needed to match a speaker with a profile. | `0.45` |
+| `LLM_PROVIDER` | `openrouter` (default) or `local` for a self-hosted OpenAI-compatible server. See [Private Deployment](/self-hosting/private-stack). | `local` |
+| `LOCAL_LLM_BASE_URL` | Local LLM server, including `/v1`. | `http://localhost:11434/v1` |
+| `LOCAL_LLM_MODEL` | Local model that answers every AI call. | `gemma3:27b` |
+| `LOCAL_LLM_CONTEXT_TOKENS` | Context window of the local model; must match the server's. | `32768` |
+| `EMBEDDINGS_PROVIDER` | `openrouter` (default) or `local`. Local vectors get their own Qdrant collection. | `local` |
+| `LOCAL_EMBEDDINGS_MODEL` / `LOCAL_EMBEDDINGS_DIMENSION` | Local embedding model and its vector size. | `bge-m3` / `1024` |
 | `OPENAI_API_KEY` | Optional OpenAI key. | `sk-proj-xxxx` |
 | `GROQ_API_KEY` | Optional Groq key. | `gsk_xxxx` |
 | `VOICE_AI_URL` | Internal URL for the Python Voice API. | `http://localhost:8001` |
