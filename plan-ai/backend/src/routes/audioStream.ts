@@ -6,8 +6,17 @@ import prisma from "../prisma/prismaClient";
 import { logger } from "../utils/logger";
 import EnvUtils from "../utils/EnvUtils";
 import { EchoDeduper, wordsFromDeepgram, wordsFromText } from "../utils/echoDedup";
-import { createClient, LiveTranscriptionEvents } from "@deepgram/sdk";
-import type { ListenLiveClient } from "@deepgram/sdk";
+import { LiveTranscriptionEvents } from "@deepgram/sdk";
+import { getSttProvider } from "../services/stt/sttConfig";
+import {
+  createDeepgramLiveTranscriber,
+  createWhisperLiveTranscriber,
+  type LiveTranscriber,
+} from "../services/stt/liveTranscriber";
+import type {
+  LiveTranscriptionConfig,
+  LiveTranscriptionConnection,
+} from "../services/stt/liveTypes";
 import { aiUsageService } from "../services/aiUsageService";
 import { checkSubscription } from "../services/subscriptionGuard";
 import { checkUsageLimit, UsageLimitExceededError } from "../services/usageLimitGuard";
@@ -34,8 +43,8 @@ export function setupAudioStream(server: Server) {
     let isSysReady = false;
     const micBuffer: ArrayBuffer[] = [];
     const sysBuffer: ArrayBuffer[] = [];
-    let dgConnMic: ListenLiveClient | null = null;
-    let dgConnSys: ListenLiveClient | null = null;
+    let dgConnMic: LiveTranscriptionConnection | null = null;
+    let dgConnSys: LiveTranscriptionConnection | null = null;
 
     const totalAudioSeconds = { mic: 0, sys: 0 };
     const bytesPerSecond = 24000 * 2; // sample_rate * bytes_per_sample (16bit=2)
@@ -52,9 +61,12 @@ export function setupAudioStream(server: Server) {
     // per-stream `start` offsets (seconds) onto one shared clock.
     const streamEpochMs: { mic?: number; sys?: number } = {};
 
-    let dgConfig: Parameters<ReturnType<typeof createClient>["listen"]["live"]>[0];
-    let deepgram: ReturnType<typeof createClient>;
-    let setupDgListeners: (dgConn: ListenLiveClient, source: "mic" | "sys") => void;
+    let dgConfig: LiveTranscriptionConfig;
+    // Deepgram or the self-hosted Whisper server, per STT_PROVIDER. Both hand
+    // out connections with Deepgram's interface, so the rest of this handler
+    // doesn't know which one it's talking to.
+    let liveTranscriber: LiveTranscriber | undefined;
+    let setupDgListeners: (dgConn: LiveTranscriptionConnection, source: "mic" | "sys") => void;
 
     // We define this higher up so it can be called dynamically
     ws.on("message", (message: Buffer | string) => {
@@ -79,13 +91,14 @@ export function setupAudioStream(server: Server) {
 
           const totalSecs = Math.max(totalAudioSeconds.mic, totalAudioSeconds.sys);
           if (totalSecs > 0 && currentWorkspaceId && currentWorkspaceId !== "placeholder") {
+            const usage = liveTranscriber?.usage ?? { provider: "DEEPGRAM", model: "nova-3-live" };
             aiUsageService
               .logUsage({
                 userId: currentUserId,
                 workspaceId: currentWorkspaceId,
                 feature: "RECORDER",
-                provider: "DEEPGRAM",
-                model: "nova-3-live",
+                provider: usage.provider,
+                model: usage.model,
                 inputTokens: Math.ceil(totalSecs),
                 outputTokens: 0,
               })
@@ -95,8 +108,8 @@ export function setupAudioStream(server: Server) {
         }
 
         if (data.type === "change_language") {
-          if (!dgConfig || !deepgram || !setupDgListeners) {
-            logger.warn("Received change_language before Deepgram was initialized");
+          if (!dgConfig || !liveTranscriber || !setupDgListeners) {
+            logger.warn("Received change_language before live transcription was initialized");
             return;
           }
           logger.info(`Changing stream language to ${data.language}`);
@@ -108,8 +121,8 @@ export function setupAudioStream(server: Server) {
           const oldMic = dgConnMic;
           const oldSys = dgConnSys;
 
-          dgConnMic = deepgram.listen.live(dgConfig);
-          dgConnSys = deepgram.listen.live(dgConfig);
+          dgConnMic = liveTranscriber.live(dgConfig);
+          dgConnSys = liveTranscriber.live(dgConfig);
 
           isMicReady = false;
           isSysReady = false;
@@ -292,39 +305,47 @@ export function setupAudioStream(server: Server) {
         }
       }
 
-      console.log("[DEBUG WS] looking up DEEPGRAM_API_KEY");
-      let deepgramApiKey: string | undefined = undefined;
-      const isCourtesy = workspaceRecord?.isCourtesy ?? false;
+      const sttProvider = getSttProvider();
+      if (sttProvider === "whisper") {
+        // Self-hosted Whisper: no per-workspace key, and the audio never leaves
+        // our own servers.
+        console.log("[DEBUG WS] using the self-hosted Whisper server");
+        liveTranscriber = createWhisperLiveTranscriber();
+      } else {
+        console.log("[DEBUG WS] looking up DEEPGRAM_API_KEY");
+        let deepgramApiKey: string | undefined = undefined;
+        const isCourtesy = workspaceRecord?.isCourtesy ?? false;
 
-      // Deepgram keys are 32+ char hex strings — basic shape check rejects obvious junk
-      if (
-        workspaceRecord?.deepgramKey &&
-        /^[a-f0-9]{32,}$/i.test(workspaceRecord.deepgramKey.trim())
-      ) {
-        deepgramApiKey = workspaceRecord.deepgramKey.trim();
+        // Deepgram keys are 32+ char hex strings — basic shape check rejects obvious junk
+        if (
+          workspaceRecord?.deepgramKey &&
+          /^[a-f0-9]{32,}$/i.test(workspaceRecord.deepgramKey.trim())
+        ) {
+          deepgramApiKey = workspaceRecord.deepgramKey.trim();
+        }
+
+        // Fall back to the global key ONLY if the workspace has courtesy access
+        if (!deepgramApiKey && isCourtesy) {
+          deepgramApiKey = EnvUtils.get("DEEPGRAM_API_KEY");
+        }
+
+        if (!deepgramApiKey) {
+          ws.send(
+            JSON.stringify({
+              type: "error",
+              code: "MISSING_API_KEY",
+              provider: "DEEPGRAM",
+              message:
+                "MISSING_API_KEY: Configure a Deepgram API key in Workspace Settings to start recording.",
+            }),
+          );
+          ws.close(1011, "MISSING_API_KEY");
+          return;
+        }
+
+        console.log("[DEBUG WS] creating deepgram client");
+        liveTranscriber = createDeepgramLiveTranscriber(deepgramApiKey);
       }
-
-      // Fall back to the global key ONLY if the workspace has courtesy access
-      if (!deepgramApiKey && isCourtesy) {
-        deepgramApiKey = EnvUtils.get("DEEPGRAM_API_KEY");
-      }
-
-      if (!deepgramApiKey) {
-        ws.send(
-          JSON.stringify({
-            type: "error",
-            code: "MISSING_API_KEY",
-            provider: "DEEPGRAM",
-            message:
-              "MISSING_API_KEY: Configure a Deepgram API key in Workspace Settings to start recording.",
-          }),
-        );
-        ws.close(1011, "MISSING_API_KEY");
-        return;
-      }
-
-      console.log("[DEBUG WS] creating deepgram client");
-      deepgram = createClient(deepgramApiKey);
 
       // Collect keywords from contexts
       let keyterms: string[] | undefined = undefined;
@@ -369,13 +390,13 @@ export function setupAudioStream(server: Server) {
       };
 
       console.log(
-        "[DEBUG WS] invoking deepgram.listen.live for MIC and SYS with config:",
+        `[DEBUG WS] opening ${sttProvider} live transcription for MIC and SYS with config:`,
         JSON.stringify(dgConfig),
       );
-      dgConnMic = deepgram.listen.live(dgConfig);
-      dgConnSys = deepgram.listen.live(dgConfig);
+      dgConnMic = liveTranscriber.live(dgConfig);
+      dgConnSys = liveTranscriber.live(dgConfig);
 
-      setupDgListeners = (dgConn: ListenLiveClient, source: "mic" | "sys") => {
+      setupDgListeners = (dgConn: LiveTranscriptionConnection, source: "mic" | "sys") => {
         // Diagnostic interval to track readyState
         const diagInterval = setInterval(() => {
           try {
@@ -527,8 +548,13 @@ export function setupAudioStream(server: Server) {
             else if (typeof err === "string") errMsg = err;
             else errMsg = String(err);
 
-            // Auth errors get a structured code so the recorder can show an actionable CTA
-            if (/401|403|unauthor|invalid_auth/i.test(errMsg)) {
+            // Auth errors get a structured code so the recorder can show an
+            // actionable CTA. Only for Deepgram: the CTA sends the user to the
+            // workspace key, and a Whisper server's key is the operator's.
+            if (
+              liveTranscriber?.provider === "deepgram" &&
+              /401|403|unauthor|invalid_auth/i.test(errMsg)
+            ) {
               logger.error(
                 `[Deepgram] Auth failure on ${source} stream for workspace ${currentWorkspaceId}`,
                 err,
@@ -566,9 +592,9 @@ export function setupAudioStream(server: Server) {
           //console.log(`[Deepgram] Stream Closed: ${source}. Details: ${JSON.stringify(event)}`);
 
           // Automatically Reconnect if Deepgram dropped the socket but the user is still actively recording!
-          if (!isClientEnding && ws.readyState === ws.OPEN) {
+          if (!isClientEnding && ws.readyState === ws.OPEN && liveTranscriber) {
             //console.log(`[Deepgram] Reconnecting dropped ${source} stream...`);
-            const newConn = deepgram.listen.live(dgConfig);
+            const newConn = liveTranscriber.live(dgConfig);
             if (source === "mic") {
               isMicReady = false;
               dgConnMic = newConn;

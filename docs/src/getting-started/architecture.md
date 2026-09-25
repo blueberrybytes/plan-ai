@@ -16,7 +16,7 @@ graph TD
     %% Backend & Integrations
     Backend[⚙️ Backend API<br>Node / Express]
     DB[(🗄️ PostgreSQL Database)]
-    AI_Deepgram[🎙️ Deepgram API<br>Audio Transcription]
+    AI_STT[🎙️ Speech-to-Text<br>Deepgram API or self-hosted Whisper]
     AI_OpenRouter[🧠 OpenRouter API<br>LLM Processing]
     Auth[🔐 Firebase<br>Authentication]
     Ext_Trackers[🔌 Issue Trackers<br>Jira, Linear, Trello, Notion, Asana]
@@ -29,7 +29,7 @@ graph TD
     Desktop -->|Uploads System Audio| Backend
     Web <-->|Manages Meetings & Tasks| Backend
     Backend <--> DB
-    Backend <--> AI_Deepgram
+    Backend <--> AI_STT
     Backend <--> AI_OpenRouter
     Backend <--> Ext_Trackers
     Backend <--> Ext_Crm
@@ -74,7 +74,7 @@ graph TD
     %% AI & Analysis
     subgraph Intelligence[AI & Analysis]
     LLMs[🤖 OpenRouter]
-    Speech[🎙️ Deepgram]
+    Speech[🎙️ Speech-to-Text<br>Deepgram or Whisper]
     VoiceAI[🗣️ Voice Biometrics<br>Python / SpeechBrain]
     end
 

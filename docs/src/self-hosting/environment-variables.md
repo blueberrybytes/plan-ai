@@ -35,6 +35,11 @@ This is the most critical environment file. It handles database connections, API
 | **AI Providers** | | |
 | `OPENROUTER_API_KEY` | System-level OpenRouter fallback key. | `sk-or-v1-xxxx` |
 | `DEEPGRAM_API_KEY` | System-level Deepgram fallback key. | `xxxx` |
+| `STT_PROVIDER` | Speech-to-text engine for the whole backend: `deepgram` (default) or `whisper` (self-hosted). See [Speech-to-Text](/self-hosting/speech-to-text). | `whisper` |
+| `WHISPER_BASE_URL` | URL of the self-hosted Whisper server, without `/v1`. Only with `STT_PROVIDER=whisper`. | `http://localhost:8010` |
+| `WHISPER_MODEL` | Whisper model for the post-meeting pass and voice notes. | `deepdml/faster-whisper-large-v3-turbo-ct2` |
+| `WHISPER_LIVE_MODEL` | Whisper model for live captions. Defaults to `WHISPER_MODEL`. | `Systran/faster-whisper-small` |
+| `WHISPER_LIVE_INTERIM_MS` | Interim live captions every N ms; `0` turns them off. | `1500` |
 | `OPENAI_API_KEY` | Optional OpenAI key. | `sk-proj-xxxx` |
 | `GROQ_API_KEY` | Optional Groq key. | `gsk_xxxx` |
 | `VOICE_AI_URL` | Internal URL for the Python Voice API. | `http://localhost:8001` |

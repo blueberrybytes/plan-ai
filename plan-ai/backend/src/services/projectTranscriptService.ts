@@ -25,6 +25,9 @@ import {
   getMaxContextChunks,
   extractOpenRouterUsage,
 } from "../utils/aiModelUtils";
+import { getSttProvider, getWhisperConfig } from "./stt/sttConfig";
+import { transcribeChannelWithWhisper } from "./stt/whisperPrerecorded";
+import { collectContextKeyterms } from "./stt/keyterms";
 import { dropEchoUtterances, estimateMicSysOffsetMs } from "../utils/echoDedup";
 import { cancelEcho } from "../utils/echoCancel";
 import { decodeUrlToMonoPcm, encodeWavPcm16 } from "../utils/audioPcm";
@@ -427,6 +430,8 @@ export class ProjectTranscriptService {
     micUrl: string | null,
     sysUrl: string | null,
     language?: string | null,
+    /** Project vocabulary. Only the Whisper pass uses it, as its decoder prompt. */
+    keyterms?: string[],
   ): Promise<{
     combinedText: string;
     utterances: Utterance[];
@@ -436,7 +441,12 @@ export class ProjectTranscriptService {
      * the live text and silently drop everything the live WS missed). */
     diagnostics: string[];
   }> {
-    const deepgram = new DeepgramClient({ key: process.env.DEEPGRAM_API_KEY! });
+    const sttProvider = getSttProvider();
+    // Built on first use: Deepgram's SDK throws without a key, and a
+    // Whisper-only deployment may not have one at all.
+    let deepgram: DeepgramClient | null = null;
+    const getDeepgram = (): DeepgramClient =>
+      (deepgram ??= new DeepgramClient({ key: process.env.DEEPGRAM_API_KEY! }));
     const diagnostics: string[] = [];
 
     // Honour the language the user picked in the recorder. nova-3 supports the
@@ -464,7 +474,9 @@ export class ProjectTranscriptService {
       // retry once with "multi" — a degraded transcript beats losing the whole
       // channel (which silently falls back to the live text).
       const failChannel = async (errMsg: string): Promise<Utterance[]> => {
-        logger.error(`[Diarization] Deepgram error for ${speakerPrefix} (lang=${lang}): ${errMsg}`);
+        logger.error(
+          `[Diarization] ${sttProvider} error for ${speakerPrefix} (lang=${lang}): ${errMsg}`,
+        );
         diagnostics.push(`${speakerPrefix} (language=${lang}): ${errMsg}`);
         if (lang !== "multi") {
           logger.warn(`[Diarization] Retrying ${speakerPrefix} with language=multi`);
@@ -473,6 +485,20 @@ export class ProjectTranscriptService {
         return [];
       };
       try {
+        if (sttProvider === "whisper") {
+          const channel = await transcribeChannelWithWhisper(source, lang, { keyterms });
+          console.log(
+            `[Diarization] ${speakerPrefix} | provider=whisper requested=${lang} detected=${channel.detectedLanguage ?? "?"} duration=${channel.durationSeconds?.toFixed(1) ?? "?"}s utterances=${channel.utterances.length}`,
+          );
+          return channel.utterances.map((u) => ({
+            speaker: `${speakerPrefix} ${u.speaker}`,
+            transcript: u.transcript,
+            start: u.start,
+            end: u.end,
+            words: u.words.map((w) => ({ ...w, globalSpeaker: `${speakerPrefix} ${w.speaker}` })),
+          }));
+        }
+
         const dgOptions = {
           diarize: true,
           model: "nova-3",
@@ -484,8 +510,8 @@ export class ProjectTranscriptService {
         };
         const res =
           "url" in source
-            ? await deepgram.listen.prerecorded.transcribeUrl({ url: source.url }, dgOptions)
-            : await deepgram.listen.prerecorded.transcribeFile(source.buffer, dgOptions);
+            ? await getDeepgram().listen.prerecorded.transcribeUrl({ url: source.url }, dgOptions)
+            : await getDeepgram().listen.prerecorded.transcribeFile(source.buffer, dgOptions);
         if (res.error) {
           return failChannel(res.error.message);
         }
@@ -759,10 +785,17 @@ export class ProjectTranscriptService {
         ((existing.metadata as Prisma.JsonObject | null)?.recordingLanguage as
           | string
           | undefined) ?? null;
+      // Whisper gets the project's vocabulary as a prompt (Deepgram's pass
+      // here never used keyterms, and stays as it was).
+      const keyterms =
+        getSttProvider() === "whisper" && existing.contextIds.length > 0
+          ? await collectContextKeyterms(existing.contextIds)
+          : undefined;
       const diarizationResult = await this.diarizeAudio(
         existing.rawMicUrl,
         existing.rawSysUrl,
         recordingLanguage,
+        keyterms,
       );
       let { combinedText, utterances } = diarizationResult;
       const { totalSeconds } = diarizationResult;
@@ -773,19 +806,20 @@ export class ProjectTranscriptService {
         );
       }
 
-      // Log Deepgram Usage
+      // Log speech-to-text usage (seconds of audio, in inputTokens)
       if (totalSeconds > 0) {
+        const whisper = getSttProvider() === "whisper";
         aiUsageService
           .logUsage({
             userId: input.userId,
             workspaceId: input.workspaceId,
             feature: "RECORDER",
-            provider: "DEEPGRAM",
-            model: "nova-3-prerecorded",
+            provider: whisper ? "WHISPER" : "DEEPGRAM",
+            model: whisper ? getWhisperConfig().model : "nova-3-prerecorded",
             inputTokens: totalSeconds,
             outputTokens: 0,
           })
-          .catch((err) => logger.warn("Failed to log Deepgram diarization usage:", err));
+          .catch((err) => logger.warn("Failed to log diarization usage:", err));
       }
 
       // Check for Voice Profile to enforce Speaker Identification

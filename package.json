@@ -23,6 +23,7 @@
     "typecheck:all": "concurrently --prefix-colors \"bgBlue,bgGreen,bgMagenta,bgYellow\" --prefix \"[{name}]\" --names \"backend,frontend,recorder,mobile\" \"yarn --cwd plan-ai/backend build:ts\" \"yarn --cwd plan-ai/frontend build:ts\" \"yarn --cwd plan-ai-recorder typecheck\" \"yarn --cwd plan-ai-mobile typecheck\"",
     "build:all": "yarn --cwd plan-ai/backend build:ts && yarn --cwd plan-ai/frontend build:ts && yarn --cwd plan-ai-recorder typecheck",
     "docker": "cd plan-ai/backend && docker compose up -d",
+    "docker:whisper": "cd plan-ai/backend && docker compose --profile whisper up -d",
     "db:migrate": "cd plan-ai/backend && yarn prisma:migrate",
     "db:seed": "cd plan-ai/backend && yarn prisma:seed",
     "install:all": "yarn && (cd plan-ai/backend && yarn) && (cd plan-ai/frontend && yarn) && (cd plan-ai-recorder && yarn) && (cd plan-ai-mobile && yarn) && (cd docs && yarn) && (cd plan-ai/voice-ai && uv sync)",

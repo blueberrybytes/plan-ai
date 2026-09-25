@@ -1,6 +1,8 @@
 # Setting up Deepgram
 
-Plan AI uses [Deepgram](https://deepgram.com/) as its primary audio transcription engine. 
+Plan AI uses [Deepgram](https://deepgram.com/) as its default audio transcription engine.
+
+If your instance runs with `STT_PROVIDER=whisper`, transcription happens on a Whisper server you host and no Deepgram key is needed. See [Speech-to-Text](/self-hosting/speech-to-text). The rest of this page is for the default, Deepgram.
 
 Deepgram is the industry standard for Voice AI. It provides incredibly fast, highly accurate transcriptions that are vastly superior to traditional providers like Google Cloud or AWS Transcribe, especially when dealing with technical jargon and multiple speakers.
 

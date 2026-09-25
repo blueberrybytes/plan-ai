@@ -1,4 +1,6 @@
 import { DeepgramClient } from "@deepgram/sdk";
+import { getSttProvider, getWhisperConfig } from "./stt/sttConfig";
+import { isLikelyHallucination, transcribeWithWhisper } from "./stt/whisperClient";
 import { PrismaClient } from "@prisma/client";
 import { logger } from "../utils/logger";
 import { getFileUrl } from "./telegramService";
@@ -52,8 +54,10 @@ export const transcribeVoiceNote = async (
   fileId: string,
   workspaceId: string,
 ): Promise<string | null> => {
-  const key = await resolveDeepgramKey(workspaceId);
-  if (!key) {
+  const provider = getSttProvider();
+  // The self-hosted Whisper server needs no per-workspace key.
+  const key = provider === "deepgram" ? await resolveDeepgramKey(workspaceId) : null;
+  if (provider === "deepgram" && !key) {
     logger.error(`[telegram] no Deepgram key available for workspace ${workspaceId}`);
     return null;
   }
@@ -83,7 +87,24 @@ export const transcribeVoiceNote = async (
     return null;
   }
 
-  const deepgram = new DeepgramClient({ key });
+  if (provider === "whisper") {
+    try {
+      const whisper = getWhisperConfig();
+      const result = await transcribeWithWhisper(
+        audio,
+        // Telegram voice notes are Opus in an Ogg container.
+        { model: whisper.model, language: LANGUAGE, filename: "voice.ogg", mimeType: "audio/ogg" },
+        whisper,
+      );
+      // "multi" means auto-detect for Whisper, so there's no language retry to do.
+      return isLikelyHallucination(result.text) ? "" : result.text;
+    } catch (err) {
+      logger.error(`[telegram] Whisper transcription failed for file ${fileId}`, err);
+      return null;
+    }
+  }
+
+  const deepgram = new DeepgramClient({ key: key! });
 
   const attempt = async (language: string): Promise<string | null> => {
     const result = await deepgram.listen.prerecorded.transcribeFile(audio, {

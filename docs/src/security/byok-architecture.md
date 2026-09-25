@@ -9,7 +9,7 @@ Plan AI mitigates this by using a **Bring Your Own Key (BYOK)** architecture.
 Instead of BlueberryBytes acting as a middleman and storing your data to train our own models, Plan AI is simply the "Engine". **You** provide the keys to the underlying AI providers.
 
 1.  **Wholesale Pricing:** Because you are using your own API keys, you pay the exact wholesale API cost for transcription and LLM inference. We do not charge a "token tax" or markup your usage.
-2.  **No Middleman:** Your audio is sent directly to Deepgram, and your transcripts are sent directly to OpenRouter. 
+2.  **No Middleman:** Your audio is sent directly to Deepgram, and your transcripts are sent directly to OpenRouter. Self-hosted instances can go one step further with `STT_PROVIDER=whisper`: audio is transcribed on their own server and never leaves it. See [Speech-to-Text](/self-hosting/speech-to-text).
 3.  **Workspace Isolation:** API keys are bound to a specific `Workspace` in the database. They are never shared globally across the platform.
 
 ### Key Masking Security

@@ -30,7 +30,7 @@ Before starting, ensure you have the following installed on your machine:
 
 You will also need two API keys:
 1.  [OpenRouter API Key](https://openrouter.ai/) for LLM processing.
-2.  [Deepgram API Key](https://deepgram.com/) for audio transcription.
+2.  [Deepgram API Key](https://deepgram.com/) for audio transcription, unless you run your own Whisper server (`STT_PROVIDER=whisper`, see [Speech-to-Text](/self-hosting/speech-to-text)).
 
 ## 1. Install Dependencies
 
@@ -54,7 +54,7 @@ Generate the necessary `.env` files for all applications across the monorepo by 
 yarn setup:env
 ```
 
-Once the `.env` files are created, open `plan-ai/backend/.env` and insert your `OPENROUTER_API_KEY` and `DEEPGRAM_API_KEY`.
+Once the `.env` files are created, open `plan-ai/backend/.env` and insert your `OPENROUTER_API_KEY` and `DEEPGRAM_API_KEY` (or set `STT_PROVIDER=whisper` to transcribe on your own server).
 
 *(Note: You will also need to configure your Firebase project credentials in these files for authentication to work properly).*
 
@@ -64,6 +64,13 @@ Before starting the applications, you must start the local Postgres, Redis, and 
 
 ```bash
 yarn docker
+```
+
+Postgres is published on port `5433` (not `5432`) so it doesn't collide with another project's database; `DATABASE_URL` in the template already points there. To transcribe on your own machine instead of Deepgram, start the Whisper server too and download a model once (see [Speech-to-Text](/self-hosting/speech-to-text)):
+
+```bash
+yarn docker:whisper
+curl -X POST http://localhost:8010/v1/models/deepdml/faster-whisper-large-v3-turbo-ct2
 ```
 
 Once the database containers are running, push the latest Prisma schema migrations to set up your tables:

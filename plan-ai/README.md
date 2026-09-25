@@ -79,10 +79,11 @@ graph TD
 - Node.js `22.17.1` (`.nvmrc` provided)
 - Yarn `1.22.x`
 - macOS (required for native recorder)
-- Docker Desktop (runs PostgreSQL 16 + Qdrant v1.15)
+- Docker Desktop (runs PostgreSQL 16, Redis 7 and Qdrant v1.15, plus an optional Whisper server)
 - A Firebase project with **Authentication** and **Storage** enabled
 - An [OpenRouter](https://openrouter.ai/) API key (for Gemini 2.0 Flash)
 - An OpenAI API key (for embeddings)
+- A [Deepgram](https://deepgram.com/) API key for transcription, or a self-hosted Whisper server (`STT_PROVIDER=whisper`, see [Speech-to-Text](../docs/src/self-hosting/speech-to-text.md))
 
 ### 1 — Install dependencies
 
@@ -105,11 +106,15 @@ Fill in your credentials. Both templates include inline comments for every key.
 | --------------------------- | ----------------------------------------------------- |
 | `PORT`                      | API server port (default `8080`)                      |
 | `FRONTEND_URL`              | Allowed CORS origin (default `http://localhost:3000`) |
-| `DATABASE_URL`              | PostgreSQL connection string                          |
+| `DATABASE_URL`              | PostgreSQL connection string (Compose publishes Postgres on `5433`) |
 | `QDRANT_URL`                | Qdrant REST URL (default `http://127.0.0.1:6333`)     |
 | `QDRANT_CONTEXT_COLLECTION` | Qdrant collection name (default `context_files`)      |
 | `OPENROUTER_API_KEY`        | OpenRouter key for Gemini 2.0 Flash                   |
 | `OPENAI_API_KEY`            | OpenAI key for embeddings                             |
+| `DEEPGRAM_API_KEY`          | Platform Deepgram key (workspaces normally bring their own) |
+| `STT_PROVIDER`              | `deepgram` (default) or `whisper` for a self-hosted server |
+| `WHISPER_BASE_URL`          | Whisper server URL, only with `STT_PROVIDER=whisper` (default `http://localhost:8010`) |
+| `WHISPER_MODEL`             | Whisper model (default `deepdml/faster-whisper-large-v3-turbo-ct2`) |
 | `FIREBASE_SERVICE_KEY`      | Firebase Admin SDK service account JSON (stringified) |
 | `FIREBASE_STORAGE_BUCKET`   | Firebase Storage bucket name                          |
 | `JIRA_CLIENT_ID`            | Jira OAuth 2.0 client ID                              |
@@ -143,8 +148,10 @@ Fill in your credentials. Both templates include inline comments for every key.
 ### 3 — Start databases and dev servers
 
 ```bash
-# Terminal A – spin up PostgreSQL 16 + Qdrant v1.15
+# Terminal A – spin up PostgreSQL 16 (port 5433), Redis 7 and Qdrant v1.15
 yarn docker
+# …or, to transcribe on your own machine instead of Deepgram (STT_PROVIDER=whisper):
+yarn docker:whisper
 
 # Terminal B – backend (port 8080) + frontend (port 3000) concurrently
 yarn dev
@@ -196,7 +203,7 @@ plan-ai/
 │   │   └── logos/
 │   ├── .env.template
 │   └── Dockerfile
-├── docker-compose.yml           # PostgreSQL 16 + Qdrant v1.15
+├── docker-compose.yml           # PostgreSQL 16 (5433), Redis 7, Qdrant v1.15, optional Whisper (8010)
 └── package.json                 # Root workspace scripts
 ```
 
@@ -289,7 +296,7 @@ Supported slide types: `title_only`, `text_block`, `text_image`, `bullet_list`, 
 
 ## Deployment (self-hosted)
 
-1. **Provision infrastructure**: PostgreSQL 16, Qdrant v1.15, Firebase project (Auth + Storage), OpenRouter and OpenAI API keys.
+1. **Provision infrastructure**: PostgreSQL 16, Redis 7, Qdrant v1.15, Firebase project (Auth + Storage), OpenRouter and OpenAI API keys, and speech-to-text: a Deepgram key, or a Whisper server with `STT_PROVIDER=whisper` (see [Speech-to-Text](../docs/src/self-hosting/speech-to-text.md)).
 2. **Set CI/CD secrets** mirroring the `.env` templates.
 3. **Build & deploy backend**:
    ```bash
@@ -321,7 +328,8 @@ The repo ships a `Dockerfile` for each package. The backend image installs FFmpe
 | `yarn dev`              | Run backend + frontend dev servers concurrently               |
 | `yarn dev:recorder`     | Run the native macOS Electron recorder application            |
 | `yarn package:recorder` | Build the native macOS `.app` bundle from source              |
-| `yarn docker`           | Start PostgreSQL + Qdrant via Docker Compose                  |
+| `yarn docker`           | Start PostgreSQL (5433), Redis and Qdrant via Docker Compose  |
+| `yarn docker:whisper`   | Same, plus the self-hosted Whisper server (8010)              |
 | `yarn update`           | Regenerate TSOA routes, Prisma client, and frontend API types |
 | `yarn build`            | Production build for both packages                            |
 | `yarn lint`             | ESLint for both packages (strict TypeScript, no `any`)        |

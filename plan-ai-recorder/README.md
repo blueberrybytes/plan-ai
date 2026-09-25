@@ -9,7 +9,7 @@ Plan AI Desktop Recorder is a macOS desktop application that captures meetings i
 - **Native System Audio Capture**: Utilizes custom Swift scripts (`AudioCapture.swift`) to reliably record macOS system audio output.
 - **Smart Active Microphone Detection**: A background Swift process (`MicActivity.swift`) monitors when your microphone becomes active (e.g., joining a Zoom/Meet call) and sends a toast notification to start recording.
 - **Seamless Web Authentication**: Deep linking with a custom protocol (`blueberrybytes-recorder://`) and a local auth server allows smooth login via the Plan AI web application.
-- **Chunked Audio Upload**: Automatically chunks audio recordings and streams them to the Plan AI backend for transcription (`audioRecorder.ts`, `planAiApi.ts`).
+- **Live Audio Streaming**: Streams microphone and system audio as PCM over a WebSocket to the Plan AI backend, which transcribes with whatever provider it's configured for (Deepgram, or a self-hosted Whisper server). The recorder doesn't know which one is in use (`audioRecorder.ts`, `planAiApi.ts`).
 - **Modern UI**: Built with React, Material-UI, and Emotion for a sleek, dark-themed interface.
 
 ## Technology Stack

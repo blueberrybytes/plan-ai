@@ -15,6 +15,10 @@ If you are running locally or on a single VPS, we provide a `docker-compose.yml`
 yarn docker
 ```
 
+Postgres is published on port 5433, not 5432, so it doesn't collide with another project's Postgres on the same machine. `DATABASE_URL` in `.env.template` already points there.
+
+The same file has an optional `whisper` service (port 8010) for self-hosted transcription. It's behind a Compose profile, so it only runs with `yarn docker:whisper`, and the backend only uses it with `STT_PROVIDER=whisper`. See [Speech-to-Text](/self-hosting/speech-to-text).
+
 If you are deploying to a production environment (like Railway), you should provision these three databases as separate managed services and pass their connection strings via the environment variables (`DATABASE_URL`, `REDIS_URL`, `QDRANT_URL`).
 
 ## Building the Production Services

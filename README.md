@@ -130,7 +130,7 @@ graph TD
     %% Backend & Integrations
     Backend[⚙️ Backend API<br>Node / Express]
     DB[(🗄️ PostgreSQL Database)]
-    AI_Deepgram[🎙️ Deepgram API<br>Audio Transcription]
+    AI_STT[🎙️ Speech-to-Text<br>Deepgram API or self-hosted Whisper]
     AI_OpenRouter[🧠 OpenRouter API<br>LLM Processing]
     Auth[🔐 Firebase<br>Authentication]
     Sentry[🐛 Sentry<br>Error Tracking]
@@ -141,7 +141,7 @@ graph TD
     Desktop -->|Uploads System Audio| Backend
     Web <-->|Manages Meetings & Tasks| Backend
     Backend <--> DB
-    Backend <--> AI_Deepgram
+    Backend <--> AI_STT
     Backend <--> AI_OpenRouter
     Backend <--> Ext_Integrations
     Mobile --> Auth
@@ -188,7 +188,7 @@ graph TD
     %% AI & Analysis
     subgraph Intelligence[AI & Analysis]
         LLMs[🤖 OpenRouter / OpenAI]
-        Speech[🎙️ Deepgram]
+        Speech[🎙️ Speech-to-Text<br>Deepgram or Whisper]
         VoiceAI[🗣️ Voice Biometrics<br>Python / SpeechBrain]
         Cortex[🔍 Plan Cortex]
     end
@@ -240,7 +240,7 @@ You will need a few external services configured for the platform to work:
 1. **Firebase Project**: Used for user authentication. You'll need your Firebase client config for the frontend/apps, and a base64 encoded Firebase Admin SDK service account key placed in the `FIREBASE_SERVICE_KEY` environment variable for the backend.
    - For the **Mobile App**, you must download your `google-services.json` (Android) and `GoogleService-Info.plist` (iOS) from the Firebase Console and place them inside the `plan-ai-mobile/` directory. (Note: Do not commit these files to version control!)
 2. **OpenRouter API Key**: Used for LLM task extraction and intelligence.
-3. **Deepgram API Key**: Used for fast, accurate audio transcription.
+3. **Speech-to-text**: a Deepgram API key, or a Whisper server you run yourself (`STT_PROVIDER=whisper`). With Whisper, meeting audio never leaves your infrastructure. See [Speech-to-Text](docs/src/self-hosting/speech-to-text.md).
 4. **Python Microservice (Voice AI)**: For advanced speaker verification and biometrics. This is handled locally via a Python microservice using `SpeechBrain` and `uvicorn`. It runs as a Docker container.
 5. **Sentry (optional)**: Error tracking. The backend reads `SENTRY_DSN`, the web frontend reads `REACT_APP_SENTRY_DSN`, and the desktop recorder reads `VITE_SENTRY_DSN`. All three are commented out in the `.env.template` files — leave them unset to disable, and the apps run fine without it.
 6. **GitNexus (MCP)**: This monorepo utilizes `gitnexus` for semantic code intelligence. When using AI coding assistants (like Cline, Cursor, or Gemini), they leverage GitNexus tools (`gitnexus_query`, `gitnexus_impact`) to safely navigate the monorepo architecture and understand execution flows before modifying shared backend services.
@@ -267,7 +267,7 @@ Generate the necessary environment files for all applications across the monorep
 yarn setup:env
 ```
 
-Once the `.env` files are created, open them and insert your `OPENROUTER_API_KEY`, `DEEPGRAM_API_KEY`, and your **Firebase configuration variables** (such as project IDs and service account paths).
+Once the `.env` files are created, open them and insert your `OPENROUTER_API_KEY`, `DEEPGRAM_API_KEY` (or `STT_PROVIDER=whisper` to transcribe on your own server), and your **Firebase configuration variables** (such as project IDs and service account paths).
 
 ### 3. Start Local Services
 
@@ -276,6 +276,17 @@ Before starting the applications, you must start the local Postgres, Redis, and 
 ```bash
 yarn docker
 ```
+
+Postgres is published on port `5433`, not `5432`, so it doesn't collide with another project's Postgres on your machine. `DATABASE_URL` in `.env.template` already points there.
+
+To transcribe locally instead of with Deepgram, also start the Whisper server and download a model once. It's behind a Compose profile, so plain `yarn docker` never pulls its 2 GB image:
+
+```bash
+yarn docker:whisper
+curl -X POST http://localhost:8010/v1/models/deepdml/faster-whisper-large-v3-turbo-ct2
+```
+
+Then set `STT_PROVIDER=whisper` in `plan-ai/backend/.env`. Details, models and measured speeds are in [Speech-to-Text](docs/src/self-hosting/speech-to-text.md).
 
 Once the database containers are running, push the latest Prisma schema migrations to set up your tables:
 
@@ -332,6 +343,8 @@ We provide several helper scripts in the root `package.json` to make development
 | `yarn dev:mobile`           | Start the Expo mobile app                                                                                            |
 | `yarn dev:docs`             | Start the VitePress documentation site locally                                                                       |
 | `yarn dev:voice`            | Start the Python Voice AI microservice locally using `uv` (useful if not using Docker)                               |
+| `yarn docker`               | Start Postgres (port 5433), Redis and Qdrant via Docker Compose                                                      |
+| `yarn docker:whisper`       | Same, plus the self-hosted Whisper transcription server on port 8010                                                 |
 | `yarn install:all`          | Install dependencies across all sub-projects                                                                         |
 | `yarn clean:install`        | Wipe all `node_modules` / `yarn.lock` and reinstall cleanly                                                          |
 | `yarn setup:env`            | Create `.env` files from `.env.template` defaults                                                                    |
@@ -395,6 +408,7 @@ const status = (item.metadata as Record<string, unknown>)?.processingStatus;
 Plan AI is built with privacy in mind. When you self-host, your data remains completely under your control.
 
 - **BYOK (Bring Your Own Key):** API keys for Deepgram and OpenRouter are stored per `Workspace`, not globally. Courtesy workspaces (flagged `isCourtesy`) bypass the key requirement for managed/demo accounts.
+- **Self-hosted transcription:** `STT_PROVIDER=whisper` makes the backend transcribe on a Whisper server you run (live captions, the post-meeting pass and Telegram voice notes). No audio goes to Deepgram, and no Deepgram key is needed. Deepgram stays the default. See [Speech-to-Text](docs/src/self-hosting/speech-to-text.md).
 - **Key masking:** API keys are masked as `••••••••••••••••` in all API responses. The backend ignores this placeholder on `PUT` requests to avoid overwriting real keys.
 - **Auto-Admin:** To make self-hosting easy, any new user who registers on your local instance is automatically granted the **`ADMIN`** role, bypassing the standard SaaS "Pending Approval" state.
 - **Secrets:** All `.env` files and Google service accounts are strictly excluded from version control to prevent accidental leaks.

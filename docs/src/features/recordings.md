@@ -32,4 +32,4 @@ You can download the Plan AI tools for your devices:
     *   **System Audio Access:** To capture the voices of the other people on the call.
 5.  When the meeting is over, click **Stop**.
 
-The audio file is immediately encrypted and securely uploaded to the Plan AI backend. Within seconds, it is transcribed by Deepgram and becomes available in your Web Dashboard for ticket generation and chat querying.
+The audio file is immediately encrypted and securely uploaded to the Plan AI backend. It is then transcribed by the speech-to-text provider your instance is configured with (Deepgram, or a self-hosted Whisper server) and becomes available in your Web Dashboard for ticket generation and chat querying.
