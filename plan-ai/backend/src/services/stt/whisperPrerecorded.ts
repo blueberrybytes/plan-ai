@@ -8,6 +8,8 @@ import {
 } from "./whisperClient";
 import { getWhisperConfig, type WhisperConfig, type WhisperDiarizeConfig } from "./sttConfig";
 import { diarizeUtterances } from "./whisperDiarization";
+import { transcodeToWav16kMono } from "../../utils/audioPcm";
+import { logger } from "../../utils/logger";
 
 /**
  * Post-meeting transcription of one recorded channel with Whisper.
@@ -89,11 +91,26 @@ const loadAudio = async (
   const res = await fetch(source.url, { signal: AbortSignal.timeout(DOWNLOAD_TIMEOUT_MS) });
   if (!res.ok) throw new Error(`Could not download the recording (HTTP ${res.status})`);
   const contentType = res.headers.get("content-type");
-  return {
-    audio: Buffer.from(await res.arrayBuffer()),
-    filename: fileNameFor(source.url, contentType),
-    mimeType: contentType?.split(";")[0].trim() || "application/octet-stream",
-  };
+  const original = Buffer.from(await res.arrayBuffer());
+  try {
+    // See transcodeToWav16kMono: the recorder's WebM, sent as is, loses words.
+    return {
+      audio: await transcodeToWav16kMono(original),
+      filename: "audio.wav",
+      mimeType: "audio/wav",
+    };
+  } catch (err) {
+    // Without ffmpeg the original still transcribes, only worse. Better than
+    // failing the channel, and the warning says what to fix.
+    logger.warn(
+      `[Whisper] Couldn't convert the recording to WAV, sending it as is: ${err instanceof Error ? err.message : err}`,
+    );
+    return {
+      audio: original,
+      filename: fileNameFor(source.url, contentType),
+      mimeType: contentType?.split(";")[0].trim() || "application/octet-stream",
+    };
+  }
 };
 
 const toUtterance = (words: WhisperWord[]): ChannelUtterance => {

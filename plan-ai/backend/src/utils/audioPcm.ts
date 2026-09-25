@@ -131,6 +131,47 @@ export function encodeWavPcm16(samples: Float32Array, sampleRate: number): Buffe
   return buf;
 }
 
+/**
+ * Any audio ffmpeg can read, as 16 kHz mono 16-bit WAV at a normal loudness:
+ * what Whisper should be given.
+ *
+ * The loudness step is the part that matters. A real recorder mic track
+ * averaged -47 dB, and Whisper's voice filter (Silero VAD) threw away 187 of
+ * its 198 seconds. What survived came back as one run-on segment, lowercase,
+ * unpunctuated and cut short ("¿qué le enviamos" without "a Edu"), and the
+ * result flipped between good and bad with rounding-level changes in the
+ * audio. After EBU R128 normalisation (loudnorm, -18 LUFS) the same file came
+ * back as five clean, complete sentences, identically in both of the
+ * server's decoding modes. Deepgram copes with quiet audio on its own;
+ * Whisper needs this. Straight to s16le, not through the float32 path
+ * above, so a long meeting doesn't hold two copies in memory.
+ */
+export async function transcodeToWav16kMono(input: Buffer): Promise<Buffer> {
+  const tmp = path.join(os.tmpdir(), `stt-in-${randomUUID()}`);
+  await fs.writeFile(tmp, input);
+  try {
+    const pcm = await runFfmpegToBuffer([
+      "-hide_banner",
+      "-loglevel",
+      "error",
+      "-i",
+      tmp,
+      "-ac",
+      "1",
+      "-ar",
+      "16000",
+      "-af",
+      "loudnorm=I=-18:TP=-1.5:LRA=11",
+      "-f",
+      "s16le",
+      "pipe:1",
+    ]);
+    return Buffer.concat([writeWavHeader(16000, pcm.length), pcm]);
+  } finally {
+    await fs.unlink(tmp).catch(() => {});
+  }
+}
+
 /** True when ffmpeg can actually be invoked (probe used to fail open, not throw). */
 export async function ffmpegAvailable(): Promise<boolean> {
   try {

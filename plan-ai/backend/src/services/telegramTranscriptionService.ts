@@ -1,6 +1,7 @@
 import { DeepgramClient } from "@deepgram/sdk";
 import { getSttProvider, getWhisperConfig } from "./stt/sttConfig";
 import { isLikelyHallucination, transcribeWithWhisper } from "./stt/whisperClient";
+import { transcodeToWav16kMono } from "../utils/audioPcm";
 import { PrismaClient } from "@prisma/client";
 import { logger } from "../utils/logger";
 import { getFileUrl } from "./telegramService";
@@ -90,10 +91,25 @@ export const transcribeVoiceNote = async (
   if (provider === "whisper") {
     try {
       const whisper = getWhisperConfig();
+      // Same normalisation as the meeting pass (see transcodeToWav16kMono);
+      // if ffmpeg isn't there, the Ogg still transcribes, only less reliably.
+      const wav = await transcodeToWav16kMono(audio).catch(() => null);
       const result = await transcribeWithWhisper(
-        audio,
-        // Telegram voice notes are Opus in an Ogg container.
-        { model: whisper.model, language: LANGUAGE, filename: "voice.ogg", mimeType: "audio/ogg" },
+        wav ?? audio,
+        wav
+          ? {
+              model: whisper.model,
+              language: LANGUAGE,
+              filename: "voice.wav",
+              mimeType: "audio/wav",
+            }
+          : // Telegram voice notes are Opus in an Ogg container.
+            {
+              model: whisper.model,
+              language: LANGUAGE,
+              filename: "voice.ogg",
+              mimeType: "audio/ogg",
+            },
         whisper,
       );
       // "multi" means auto-detect for Whisper, so there's no language retry to do.

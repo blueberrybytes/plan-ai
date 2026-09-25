@@ -9,6 +9,7 @@ import {
   buildPrompt,
   isLikelyHallucination,
   isLowConfidenceSegment,
+  normalizePcm16,
   pcm16ToWav,
   toDeepgramWord,
   toWhisperLanguage,
@@ -185,6 +186,32 @@ describe("word mapping to Deepgram's shape", () => {
 
   it("keeps inner apostrophes (Catalan l'informe)", () => {
     expect(toDeepgramWord({ word: " l'informe.", start: 0, end: 1 }).word).toBe("l'informe");
+  });
+});
+
+describe("normalizePcm16 (live sentences from a quiet mic)", () => {
+  const pcm = (values: number[]) => {
+    const b = Buffer.alloc(values.length * 2);
+    values.forEach((v, i) => b.writeInt16LE(v, i * 2));
+    return b;
+  };
+  const peak = (b: Buffer) =>
+    Math.max(...Array.from({ length: b.length / 2 }, (_, i) => Math.abs(b.readInt16LE(i * 2))));
+
+  it("brings quiet speech up to about -3 dBFS", () => {
+    // Peak 2000 is about -24 dBFS, like the -47 dB-average mic that lost words.
+    expect(peak(normalizePcm16(pcm([0, 2000, -1500, 500])))).toBeCloseTo(0.7 * 32767, -2);
+  });
+
+  it("caps the gain, so room noise doesn't turn into something voice-like", () => {
+    expect(peak(normalizePcm16(pcm([0, 100, -80])))).toBe(1600);
+  });
+
+  it("leaves silence and already-loud audio untouched", () => {
+    const silence = pcm([0, 0, 0]);
+    const loud = pcm([0, 30000, -28000]);
+    expect(normalizePcm16(silence)).toBe(silence);
+    expect(normalizePcm16(loud)).toBe(loud);
   });
 });
 

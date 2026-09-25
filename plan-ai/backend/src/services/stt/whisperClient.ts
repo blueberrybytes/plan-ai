@@ -183,6 +183,35 @@ export const toDeepgramWord = (
   };
 };
 
+/**
+ * Brings a live sentence to a normal level before Whisper sees it: the same
+ * problem transcodeToWav16kMono solves for recordings (a quiet mic makes
+ * Whisper's voice filter drop real speech), done in place because live
+ * sentences are raw PCM already. Peak-based, aiming at about -3 dBFS, and the
+ * gain is capped: a clip that's quiet because it's only room noise must not
+ * be turned into something that sounds like a voice.
+ */
+const TARGET_PEAK = 0.7;
+const MAX_GAIN = 16;
+
+export const normalizePcm16 = (pcm: Buffer): Buffer => {
+  const samples = pcm.length >> 1;
+  let peak = 0;
+  for (let i = 0; i < samples; i++) {
+    const v = Math.abs(pcm.readInt16LE(i * 2));
+    if (v > peak) peak = v;
+  }
+  if (peak === 0) return pcm;
+  const gain = Math.min(MAX_GAIN, (TARGET_PEAK * 32767) / peak);
+  if (gain <= 1) return pcm;
+  const out = Buffer.alloc(pcm.length);
+  for (let i = 0; i < samples; i++) {
+    const v = Math.round(pcm.readInt16LE(i * 2) * gain);
+    out.writeInt16LE(Math.max(-32768, Math.min(32767, v)), i * 2);
+  }
+  return out;
+};
+
 /** Wrap raw 16-bit little-endian mono PCM in a WAV header, without re-encoding. */
 export const pcm16ToWav = (pcm: Buffer, sampleRate: number): Buffer =>
   Buffer.concat([writeWavHeader(sampleRate, pcm.length), pcm]);

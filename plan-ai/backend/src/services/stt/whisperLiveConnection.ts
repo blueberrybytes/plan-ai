@@ -5,6 +5,7 @@ import type { LiveTranscriptionConnection } from "./liveTypes";
 import {
   buildPrompt,
   isNoiseSegment,
+  normalizePcm16,
   pcm16ToWav,
   toDeepgramWord,
   transcribeWithWhisper,
@@ -340,7 +341,7 @@ export class WhisperLiveConnection extends EventEmitter implements LiveTranscrip
     let result: WhisperTranscription;
     const requestedAt = Date.now();
     try {
-      result = await this.transcribe(pcm16ToWav(pcm, rate), {
+      result = await this.transcribe(pcm16ToWav(normalizePcm16(pcm), rate), {
         model: this.options.model,
         language: this.options.language,
         keyterms: this.options.keyterms,
