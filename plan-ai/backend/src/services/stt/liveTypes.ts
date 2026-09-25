@@ -21,8 +21,10 @@ export interface LiveTranscriptionConnection {
   keepAlive(): void;
   /** WebSocket-style: 0 connecting, 1 open, 2 closing, 3 closed. */
   getReadyState(): number;
-  // Same listener type as Node's EventEmitter, which both implementations
-  // extend. Each event has its own payload, so there's no narrower common type.
+  // Same listener type as Node's EventEmitter. Each event has its own payload
+  // and callers pass listeners typed for one event; with strictFunctionTypes a
+  // `(...args: unknown[]) => void` parameter rejects every one of them (tried),
+  // so this is the one place `any` is the honest type.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   on(event: string, listener: (...args: any[]) => void): unknown;
   removeAllListeners(event?: string): unknown;

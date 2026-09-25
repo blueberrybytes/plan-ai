@@ -8,6 +8,7 @@ import { getSttProvider, getWhisperConfig, DEFAULT_WHISPER_MODEL } from "../stt/
 import {
   buildPrompt,
   isLikelyHallucination,
+  isLowConfidenceSegment,
   pcm16ToWav,
   toDeepgramWord,
   toWhisperLanguage,
@@ -115,6 +116,57 @@ describe("hallucination filter", () => {
     expect(isLikelyHallucination("Gracias")).toBe(false);
     expect(isLikelyHallucination("Thank you")).toBe(false);
     expect(isLikelyHallucination("Gracias por ver el vídeo de ayer, Marta")).toBe(false);
+  });
+});
+
+describe("Whisper's own confidence signals", () => {
+  const seg = (extra: Record<string, number>) => ({ start: 0, end: 1, text: "x", ...extra });
+
+  it("drops a no-speech window decoded with low confidence, in any language", () => {
+    expect(isLowConfidenceSegment(seg({ noSpeechProb: 0.9, avgLogprob: -1.6 }))).toBe(true);
+  });
+
+  it("keeps real speech even when no_speech_prob alone is high", () => {
+    // Measured on a real sample: nsp=0.68 with lp=-0.70 was correct text.
+    expect(isLowConfidenceSegment(seg({ noSpeechProb: 0.68, avgLogprob: -0.7 }))).toBe(false);
+  });
+
+  it("drops a decoder loop (very compressible text)", () => {
+    expect(isLowConfidenceSegment(seg({ compressionRatio: 3.1 }))).toBe(true);
+    expect(isLowConfidenceSegment(seg({ compressionRatio: 1.4 }))).toBe(false);
+  });
+
+  it("keeps everything when a server doesn't return the signals", () => {
+    expect(isLowConfidenceSegment(seg({}))).toBe(false);
+  });
+
+  it("reads the signals from the server's verbose_json", () => {
+    const utterances = toChannelUtterances({
+      text: "",
+      segments: [
+        {
+          start: 0,
+          end: 1,
+          text: " Hola",
+          words: [{ word: " Hola", start: 0, end: 0.5 }],
+          noSpeechProb: 0.95,
+          avgLogprob: -2,
+        },
+        {
+          start: 1,
+          end: 2,
+          text: " Buenos días",
+          words: [
+            { word: " Buenos", start: 1, end: 1.4 },
+            { word: " días", start: 1.4, end: 1.9 },
+          ],
+          noSpeechProb: 0.1,
+          avgLogprob: -0.3,
+        },
+      ],
+      words: [],
+    });
+    expect(utterances.map((u) => u.transcript)).toEqual(["Buenos días"]);
   });
 });
 
@@ -258,6 +310,40 @@ describe("post-meeting pass with Whisper", () => {
     expect((form.get("file") as File).name).toBe("audio.webm");
     expect(result.utterances).toHaveLength(2);
     expect(result.detectedLanguage).toBe("es");
+  });
+
+  it("parses no_speech_prob, avg_logprob and compression_ratio from the response", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async () =>
+          new Response(
+            JSON.stringify({
+              text: "x",
+              segments: [
+                {
+                  start: 0,
+                  end: 1,
+                  text: "x",
+                  no_speech_prob: 0.7,
+                  avg_logprob: -1.2,
+                  compression_ratio: 1.1,
+                },
+              ],
+            }),
+          ),
+      ),
+    );
+    const t = await transcribeWithWhisper(
+      Buffer.alloc(4),
+      { model: "m" },
+      { baseUrl: "http://w", model: "m", liveModel: "m", liveInterimMs: 0, batchTimeoutMs: 1000 },
+    );
+    expect(t.segments[0]).toMatchObject({
+      noSpeechProb: 0.7,
+      avgLogprob: -1.2,
+      compressionRatio: 1.1,
+    });
   });
 
   it("lets Whisper detect the language when the recorder asked for multi", async () => {

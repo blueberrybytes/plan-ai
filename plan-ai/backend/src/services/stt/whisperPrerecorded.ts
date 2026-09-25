@@ -1,6 +1,6 @@
 import {
   buildPrompt,
-  isLikelyHallucination,
+  isNoiseSegment,
   toDeepgramWord,
   transcribeWithWhisper,
   type WhisperTranscription,
@@ -117,7 +117,7 @@ export const toChannelUtterances = (
   const prompt = buildPrompt(keyterms);
   const out: ChannelUtterance[] = [];
   for (const segment of t.segments) {
-    if (isLikelyHallucination(segment.text, prompt)) continue;
+    if (isNoiseSegment(segment, prompt)) continue;
 
     const words = segment.words?.length
       ? segment.words

@@ -4,7 +4,7 @@
   "description": "Plan AI - AI-assisted meeting planning & execution platform by Blueberrybytes",
   "main": "index.js",
   "engines": {
-    "node": "22.17.1"
+    "node": "22.23.1"
   },
   "scripts": {
     "clean:install": "rm -rf node_modules && rm -rf yarn.lock && yarn install && cd backend && rm -rf node_modules && rm -rf yarn.lock && yarn install && cd ../frontend && rm -rf node_modules && rm -rf yarn.lock && yarn install && cd ../recorder && rm -rf node_modules && rm -rf yarn.lock && yarn install",

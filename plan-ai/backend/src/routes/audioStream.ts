@@ -8,6 +8,7 @@ import EnvUtils from "../utils/EnvUtils";
 import { EchoDeduper, wordsFromDeepgram, wordsFromText } from "../utils/echoDedup";
 import { LiveTranscriptionEvents } from "@deepgram/sdk";
 import { getSttProvider } from "../services/stt/sttConfig";
+import { collectContextKeyterms } from "../services/stt/keyterms";
 import {
   createDeepgramLiveTranscriber,
   createWhisperLiveTranscriber,
@@ -347,31 +348,15 @@ export function setupAudioStream(server: Server) {
         liveTranscriber = createDeepgramLiveTranscriber(deepgramApiKey);
       }
 
-      // Collect keywords from contexts
-      let keyterms: string[] | undefined = undefined;
-      if (contextIdsParam) {
-        const ids = contextIdsParam.split(",");
-        const contexts = await prisma.context.findMany({
-          where: { id: { in: ids } },
-          select: { keywords: true },
-        });
-
-        const allKeywords = new Set<string>();
-        contexts.forEach((c) => {
-          if (c.keywords && Array.isArray(c.keywords)) {
-            c.keywords.forEach((kw) => allKeywords.add(kw));
-          }
-        });
-
-        if (allKeywords.size > 0) {
-          // Deepgram Nova-3 caps keyterms at 100; cap defensively so a
-          // huge project with many files doesn't break the WS handshake.
-          const DEEPGRAM_KEYTERM_LIMIT = 100;
-          keyterms = Array.from(allKeywords).slice(0, DEEPGRAM_KEYTERM_LIMIT);
-          console.log(
-            `[DEBUG WS] Loaded ${keyterms.length} keyterms from contexts (of ${allKeywords.size} available).`,
-          );
-        }
+      // Project vocabulary from the contexts. Deepgram's Nova-3 caps keyterms
+      // at 100, so the list is capped defensively: a huge project with many
+      // files mustn't break the WS handshake.
+      const DEEPGRAM_KEYTERM_LIMIT = 100;
+      const keyterms = contextIdsParam
+        ? await collectContextKeyterms(contextIdsParam.split(","), DEEPGRAM_KEYTERM_LIMIT)
+        : [];
+      if (keyterms.length > 0) {
+        console.log(`[DEBUG WS] Loaded ${keyterms.length} keyterms from contexts.`);
       }
 
       dgConfig = {
@@ -386,7 +371,7 @@ export function setupAudioStream(server: Server) {
         utterance_end_ms: 1000,
         vad_events: true,
         filler_words: false,
-        ...(keyterms && keyterms.length > 0 ? { keyterm: keyterms } : {}),
+        ...(keyterms.length > 0 ? { keyterm: keyterms } : {}),
       };
 
       console.log(

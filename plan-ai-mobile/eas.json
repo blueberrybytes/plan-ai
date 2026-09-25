@@ -5,7 +5,7 @@
   },
   "build": {
     "development-debug": {
-      "node": "22.17.1",
+      "node": "22.23.1",
       "env": {
         "NODE_ENV": "development"
       },
@@ -17,7 +17,7 @@
       "autoIncrement": true
     },
     "production-debug": {
-      "node": "22.17.1",
+      "node": "22.23.1",
       "env": {
         "NODE_ENV": "production"
       },
@@ -28,7 +28,7 @@
       "autoIncrement": true
     },
     "production": {
-      "node": "22.17.1",
+      "node": "22.23.1",
       "developmentClient": false,
       "env": {
         "NODE_ENV": "production"

@@ -32,8 +32,8 @@ export interface WhisperConfig {
   liveInterimMs: number;
   /**
    * Timeout for one post-meeting request. A long channel on CPU takes minutes
-   * (large-v3-turbo runs about 3x faster than real time on 12 CPU cores), so
-   * this is generous.
+   * (measured: large-v3-turbo in int8 with 8 threads does 24 s of audio in
+   * 6.3 s, about 4x faster than real time), so this is generous.
    */
   batchTimeoutMs: number;
 }

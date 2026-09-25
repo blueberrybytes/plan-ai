@@ -27,6 +27,7 @@ import {
 } from "../utils/aiModelUtils";
 import { getSttProvider, getWhisperConfig } from "./stt/sttConfig";
 import { transcribeChannelWithWhisper } from "./stt/whisperPrerecorded";
+import { WhisperRequestError } from "./stt/whisperClient";
 import { collectContextKeyterms } from "./stt/keyterms";
 import { dropEchoUtterances, estimateMicSysOffsetMs } from "../utils/echoDedup";
 import { cancelEcho } from "../utils/echoCancel";
@@ -473,12 +474,12 @@ export class ProjectTranscriptService {
       // transcript's metadata, and when a monolingual language was requested
       // retry once with "multi" — a degraded transcript beats losing the whole
       // channel (which silently falls back to the live text).
-      const failChannel = async (errMsg: string): Promise<Utterance[]> => {
+      const failChannel = async (errMsg: string, retryWithMulti = true): Promise<Utterance[]> => {
         logger.error(
           `[Diarization] ${sttProvider} error for ${speakerPrefix} (lang=${lang}): ${errMsg}`,
         );
         diagnostics.push(`${speakerPrefix} (language=${lang}): ${errMsg}`);
-        if (lang !== "multi") {
+        if (retryWithMulti && lang !== "multi") {
           logger.warn(`[Diarization] Retrying ${speakerPrefix} with language=multi`);
           return resolveDiarization(source, speakerPrefix, "multi");
         }
@@ -486,7 +487,19 @@ export class ProjectTranscriptService {
       };
       try {
         if (sttProvider === "whisper") {
-          const channel = await transcribeChannelWithWhisper(source, lang, { keyterms });
+          let channel;
+          try {
+            channel = await transcribeChannelWithWhisper(source, lang, { keyterms });
+          } catch (err) {
+            // For Whisper "multi" only means auto-detect, so a retry can only
+            // help when the server rejected the request itself (a 4xx, e.g. a
+            // language code it doesn't take). A server that's down or timing
+            // out would just get the whole channel uploaded again for nothing,
+            // and on CPU that's minutes of worker time per channel.
+            const status = err instanceof WhisperRequestError ? err.status : undefined;
+            const rejected = status !== undefined && status >= 400 && status < 500;
+            return failChannel(err instanceof Error ? err.message : String(err), rejected);
+          }
           console.log(
             `[Diarization] ${speakerPrefix} | provider=whisper requested=${lang} detected=${channel.detectedLanguage ?? "?"} duration=${channel.durationSeconds?.toFixed(1) ?? "?"}s utterances=${channel.utterances.length}`,
           );

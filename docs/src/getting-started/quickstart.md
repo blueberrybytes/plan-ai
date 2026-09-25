@@ -23,7 +23,7 @@ We’ve designed Plan AI to be incredibly easy to spin up locally. If you want t
 ## Prerequisites
 
 Before starting, ensure you have the following installed on your machine:
-*   **Node.js** (v22.17.1 or higher)
+*   **Node.js** (v22.23.1 or higher)
 *   **Yarn**
 *   **Docker Desktop** (For running the local Postgres, Redis, and Qdrant databases)
 *   **Python** (via `uv` for the Voice AI microservice)

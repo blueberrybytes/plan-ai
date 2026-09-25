@@ -4,7 +4,7 @@ import { logger } from "../../utils/logger";
 import type { LiveTranscriptionConnection } from "./liveTypes";
 import {
   buildPrompt,
-  isLikelyHallucination,
+  isNoiseSegment,
   pcm16ToWav,
   toDeepgramWord,
   transcribeWithWhisper,
@@ -85,6 +85,14 @@ const MIN_INTERIM_AUDIO_MS = 1000;
 const LIVE_REQUEST_TIMEOUT_MS = 30_000;
 /** One failing server shouldn't flood the recorder with banners. */
 const ERROR_REPORT_INTERVAL_MS = 30_000;
+/**
+ * Wall-clock idle time before the watchdog treats the client as gone and
+ * flushes the sentence in progress. Deliberately far above `endpointing`:
+ * that one measures silence in the audio, this one measures missing packets,
+ * and a renderer stall of a few hundred milliseconds must not split a
+ * sentence that the audio itself continues.
+ */
+const IDLE_FLUSH_MS = 4000;
 
 interface Segment {
   id: number;
@@ -353,7 +361,7 @@ export class WhisperLiveConnection extends EventEmitter implements LiveTranscrip
     if (!isFinal && (this.segment?.id !== segmentId || this.pendingFinals > 0)) return;
 
     const prompt = buildPrompt(this.options.keyterms);
-    const kept = result.segments.filter((s) => !isLikelyHallucination(s.text, prompt));
+    const kept = result.segments.filter((s) => !isNoiseSegment(s, prompt));
     const transcript = kept
       .map((s) => s.text)
       .join(" ")
@@ -390,12 +398,17 @@ export class WhisperLiveConnection extends EventEmitter implements LiveTranscrip
     const now = Date.now();
     if (now - this.lastErrorReportAt < ERROR_REPORT_INTERVAL_MS) return;
     this.lastErrorReportAt = now;
-    if (this.readyState === 1 || this.readyState === 2) {
-      this.emit(
-        LiveTranscriptionEvents.Error,
-        new Error(`Live transcription failed on the Whisper server: ${message}`),
-      );
-    }
+    if (this.readyState !== 1 && this.readyState !== 2) return;
+    // EventEmitter turns an "error" nobody listens to into a throw. The audio
+    // stream detaches every listener from a connection it's replacing (language
+    // change) while this connection's health check or last request can still
+    // be in flight, so the throw would land in a promise nobody awaits and
+    // take the process down.
+    if (this.listenerCount(LiveTranscriptionEvents.Error) === 0) return;
+    this.emit(
+      LiveTranscriptionEvents.Error,
+      new Error(`Live transcription failed on the Whisper server: ${message}`),
+    );
   }
 
   private async checkServer(): Promise<void> {
@@ -417,18 +430,22 @@ export class WhisperLiveConnection extends EventEmitter implements LiveTranscrip
    * Silence normally arrives as audio (the recorder sends zeros), and the
    * frame logic ends sentences on it. This covers a client that simply stops
    * sending: without it the last sentence would wait until the socket closes.
+   * It only fires after IDLE_FLUSH_MS, so a brief gap in packets doesn't cut
+   * a sentence the way audio silence would.
    */
   private startWatchdog(): void {
     const every = this.options.watchdogMs ?? 250;
     if (every <= 0) return;
+    const flushAfterMs = Math.max(this.options.endpointingMs, IDLE_FLUSH_MS);
+    const turnEndAfterMs = Math.max(this.options.utteranceEndMs, IDLE_FLUSH_MS);
     this.watchdog = setInterval(() => {
       if (this.readyState !== 1) return;
       const idleMs = Date.now() - this.lastAudioAt;
-      if (this.segment && idleMs >= this.options.endpointingMs) {
+      if (this.segment && idleMs >= flushAfterMs) {
         this.silentFramesSinceSpeech = Math.floor(idleMs / FRAME_MS);
         this.finalizeSegment();
       }
-      if (!this.segment && idleMs >= this.options.utteranceEndMs) {
+      if (!this.segment && idleMs >= turnEndAfterMs) {
         this.silentFramesSinceSpeech = Math.max(
           this.silentFramesSinceSpeech,
           Math.floor(idleMs / FRAME_MS),

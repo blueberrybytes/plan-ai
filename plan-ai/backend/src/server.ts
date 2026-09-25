@@ -295,7 +295,29 @@ Sentry.setupExpressErrorHandler(app);
 
 let server: ReturnType<typeof app.listen> | null = null;
 
+/**
+ * docker-compose.yml publishes Postgres on host port 5433 (5432 is usually
+ * taken by another project's database). A local .env written before that
+ * change still says 5432 and only fails later, deep in Prisma, with a P1001
+ * that doesn't mention ports. This says it up front.
+ */
+const warnIfLocalDatabasePortLooksStale = (): void => {
+  try {
+    const url = new URL(process.env.DATABASE_URL ?? "");
+    const local = url.hostname === "localhost" || url.hostname === "127.0.0.1";
+    if (local && (url.port === "" || url.port === "5432")) {
+      logger.warn(
+        "[Startup] DATABASE_URL points at localhost:5432, but docker-compose.yml publishes Postgres on 5433. " +
+          "If the database is the one from `yarn docker`, change the port in plan-ai/backend/.env.",
+      );
+    }
+  } catch {
+    // Not a URL we can read; Prisma will report it properly.
+  }
+};
+
 const startServer = async () => {
+  warnIfLocalDatabasePortLooksStale();
   try {
     await initializeContextVectorStore();
     logger.info("Qdrant context collection verified.");

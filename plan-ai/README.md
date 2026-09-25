@@ -76,7 +76,7 @@ graph TD
 
 ### Prerequisites
 
-- Node.js `22.17.1` (`.nvmrc` provided)
+- Node.js `22.23.1` (`.nvmrc` provided)
 - Yarn `1.22.x`
 - macOS (required for native recorder)
 - Docker Desktop (runs PostgreSQL 16, Redis 7 and Qdrant v1.15, plus an optional Whisper server)

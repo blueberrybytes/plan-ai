@@ -280,6 +280,30 @@ describe("WhisperLiveConnection", () => {
     expect(events.filter((e) => e.name === "error")).toHaveLength(1);
   });
 
+  it("stays quiet when every listener is gone (language change mid health check)", async () => {
+    // audioStream detaches all listeners from the connection it replaces. An
+    // "error" emitted with none attached would throw out of a void promise
+    // and take the process down.
+    const unhandled: unknown[] = [];
+    const onUnhandled = (reason: unknown) => unhandled.push(reason);
+    process.on("unhandledRejection", onUnhandled);
+    try {
+      let resolveCheck!: (ok: boolean) => void;
+      const { conn } = await open({
+        transcribe: fakeWhisper(["x"]),
+        healthCheck: () => new Promise<boolean>((r) => (resolveCheck = r)),
+      });
+      conn.removeAllListeners();
+      resolveCheck(false);
+      await sleep(20);
+      expect(unhandled).toEqual([]);
+      conn.requestClose();
+      await sleep(5);
+    } finally {
+      process.off("unhandledRejection", onUnhandled);
+    }
+  });
+
   it("warns right away when the server isn't reachable", async () => {
     const { conn, events } = await open({
       transcribe: fakeWhisper(["x"]),

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { encodeWavPcm16 } from "../audioPcm";
+import { encodeWavPcm16, writeWavHeader } from "../audioPcm";
 
 describe("encodeWavPcm16", () => {
   it("writes a valid 16-bit mono WAV header", () => {
@@ -25,5 +25,12 @@ describe("encodeWavPcm16", () => {
     expect(buf.readInt16LE(48)).toBe(-0x8000); // -1.0 → min
     expect(buf.readInt16LE(50)).toBe(0x7fff); // +2.0 clamped
     expect(buf.readInt16LE(52)).toBe(-0x8000); // -2.0 clamped
+  });
+});
+
+describe("writeWavHeader", () => {
+  it("is the header encodeWavPcm16 writes, so both WAV writers agree", () => {
+    const wav = encodeWavPcm16(new Float32Array([0, 0.5, -0.5]), 16000);
+    expect(wav.subarray(0, 44).equals(writeWavHeader(16000, 6))).toBe(true);
   });
 });

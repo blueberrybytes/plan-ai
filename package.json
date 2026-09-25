@@ -4,7 +4,7 @@
   "description": "Plan AI - AI-assisted meeting planning & execution platform by Blueberrybytes",
   "main": "index.js",
   "engines": {
-    "node": "22.17.1"
+    "node": "22.23.1"
   },
   "scripts": {
     "clean:install": "rm -rf node_modules yarn.lock && yarn install && (cd plan-ai/backend && yarn install) && (cd plan-ai/frontend && yarn install) && (cd plan-ai-recorder && yarn install) && (cd plan-ai-mobile && yarn install) && (cd docs && yarn install) && (cd plan-ai/voice-ai && rm -rf .venv && uv sync)",
@@ -22,7 +22,7 @@
     "gitnexus:mobile": "cd plan-ai-mobile && npx gitnexus analyze --skip-git --name plan-mobile",
     "typecheck:all": "concurrently --prefix-colors \"bgBlue,bgGreen,bgMagenta,bgYellow\" --prefix \"[{name}]\" --names \"backend,frontend,recorder,mobile\" \"yarn --cwd plan-ai/backend build:ts\" \"yarn --cwd plan-ai/frontend build:ts\" \"yarn --cwd plan-ai-recorder typecheck\" \"yarn --cwd plan-ai-mobile typecheck\"",
     "build:all": "yarn --cwd plan-ai/backend build:ts && yarn --cwd plan-ai/frontend build:ts && yarn --cwd plan-ai-recorder typecheck",
-    "docker": "cd plan-ai/backend && docker compose up -d",
+    "docker": "cd plan-ai/backend && docker compose up -d && echo 'Postgres listens on host port 5433 (not 5432): DATABASE_URL must use localhost:5433'",
     "docker:whisper": "cd plan-ai/backend && docker compose --profile whisper up -d",
     "db:migrate": "cd plan-ai/backend && yarn prisma:migrate",
     "db:seed": "cd plan-ai/backend && yarn prisma:seed",

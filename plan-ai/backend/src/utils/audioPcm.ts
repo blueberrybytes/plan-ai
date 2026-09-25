@@ -97,11 +97,11 @@ export async function decodeUrlToMonoPcm(url: string, sampleRate = 16000): Promi
 }
 
 /** Encode mono float32 PCM as a 16-bit WAV buffer (for Deepgram transcribeFile). */
-export function encodeWavPcm16(samples: Float32Array, sampleRate: number): Buffer {
-  const n = samples.length;
-  const buf = Buffer.alloc(44 + n * 2);
+/** The 44-byte RIFF/WAVE header for 16-bit mono PCM of `dataBytes` bytes. */
+export function writeWavHeader(sampleRate: number, dataBytes: number): Buffer {
+  const buf = Buffer.alloc(44);
   buf.write("RIFF", 0, "ascii");
-  buf.writeUInt32LE(36 + n * 2, 4);
+  buf.writeUInt32LE(36 + dataBytes, 4);
   buf.write("WAVE", 8, "ascii");
   buf.write("fmt ", 12, "ascii");
   buf.writeUInt32LE(16, 16); // PCM fmt chunk size
@@ -112,7 +112,14 @@ export function encodeWavPcm16(samples: Float32Array, sampleRate: number): Buffe
   buf.writeUInt16LE(2, 32); // block align
   buf.writeUInt16LE(16, 34); // bits per sample
   buf.write("data", 36, "ascii");
-  buf.writeUInt32LE(n * 2, 40);
+  buf.writeUInt32LE(dataBytes, 40);
+  return buf;
+}
+
+export function encodeWavPcm16(samples: Float32Array, sampleRate: number): Buffer {
+  const n = samples.length;
+  const buf = Buffer.alloc(44 + n * 2);
+  writeWavHeader(sampleRate, n * 2).copy(buf, 0);
   let o = 44;
   for (let i = 0; i < n; i++) {
     let s = samples[i];

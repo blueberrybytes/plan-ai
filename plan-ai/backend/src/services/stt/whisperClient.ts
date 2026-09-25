@@ -1,4 +1,5 @@
 import { getWhisperConfig, type WhisperConfig } from "./sttConfig";
+import { writeWavHeader } from "../../utils/audioPcm";
 
 /**
  * Client for a self-hosted Whisper server speaking the OpenAI
@@ -18,6 +19,12 @@ export interface WhisperSegment {
   end: number;
   text: string;
   words?: WhisperWord[];
+  /** Whisper's own estimate that the window held no speech, 0 to 1. */
+  noSpeechProb?: number;
+  /** Mean log-probability of the decoded tokens; near 0 is confident. */
+  avgLogprob?: number;
+  /** gzip ratio of the text; high values mean the decoder is looping. */
+  compressionRatio?: number;
 }
 
 export interface WhisperTranscription {
@@ -93,7 +100,7 @@ const normalizeForMatch = (text: string): string =>
   text
     .toLowerCase()
     .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
+    .replace(/[\u0300-\u036f]/g, "")
     .replace(/[^\p{L}\p{N}\s]/gu, "")
     .replace(/\s+/g, " ")
     .trim();
@@ -128,6 +135,34 @@ export const isLikelyHallucination = (text: string, prompt?: string): boolean =>
 };
 
 /**
+ * Whisper's own signals for invented text, with Whisper's own thresholds:
+ * a window that probably held no speech (no_speech_prob > 0.6) decoded with
+ * low confidence (avg_logprob < -1.0), or text so repetitive that gzip packs
+ * it more than 2.4 to 1, which is the decoder stuck in a loop. These work in
+ * every language; the phrase list above is only the backstop for servers
+ * that don't return them.
+ */
+const NO_SPEECH_THRESHOLD = 0.6;
+const LOGPROB_THRESHOLD = -1.0;
+const COMPRESSION_RATIO_THRESHOLD = 2.4;
+
+export const isLowConfidenceSegment = (s: WhisperSegment): boolean => {
+  if (
+    s.noSpeechProb !== undefined &&
+    s.avgLogprob !== undefined &&
+    s.noSpeechProb > NO_SPEECH_THRESHOLD &&
+    s.avgLogprob < LOGPROB_THRESHOLD
+  ) {
+    return true;
+  }
+  return s.compressionRatio !== undefined && s.compressionRatio > COMPRESSION_RATIO_THRESHOLD;
+};
+
+/** A segment worth dropping, by Whisper's signals or by the phrase list. */
+export const isNoiseSegment = (s: WhisperSegment, prompt?: string): boolean =>
+  isLowConfidenceSegment(s) || isLikelyHallucination(s.text, prompt);
+
+/**
  * Whisper words carry a leading space and the punctuation of the sentence.
  * Deepgram gives two fields for the same thing: `word` lowercase and bare,
  * and `punctuated_word` as displayed. The rest of the pipeline (echo dedup,
@@ -148,30 +183,20 @@ export const toDeepgramWord = (
 };
 
 /** Wrap raw 16-bit little-endian mono PCM in a WAV header, without re-encoding. */
-export const pcm16ToWav = (pcm: Buffer, sampleRate: number): Buffer => {
-  const header = Buffer.alloc(44);
-  header.write("RIFF", 0, "ascii");
-  header.writeUInt32LE(36 + pcm.length, 4);
-  header.write("WAVE", 8, "ascii");
-  header.write("fmt ", 12, "ascii");
-  header.writeUInt32LE(16, 16);
-  header.writeUInt16LE(1, 20); // PCM
-  header.writeUInt16LE(1, 22); // mono
-  header.writeUInt32LE(sampleRate, 24);
-  header.writeUInt32LE(sampleRate * 2, 28);
-  header.writeUInt16LE(2, 32);
-  header.writeUInt16LE(16, 34);
-  header.write("data", 36, "ascii");
-  header.writeUInt32LE(pcm.length, 40);
-  return Buffer.concat([header, pcm]);
-};
+export const pcm16ToWav = (pcm: Buffer, sampleRate: number): Buffer =>
+  Buffer.concat([writeWavHeader(sampleRate, pcm.length), pcm]);
 
 interface RawSegment {
   start?: unknown;
   end?: unknown;
   text?: unknown;
   words?: unknown;
+  no_speech_prob?: unknown;
+  avg_logprob?: unknown;
+  compression_ratio?: unknown;
 }
+
+const optionalNumber = (v: unknown): number | undefined => (typeof v === "number" ? v : undefined);
 
 const parseWords = (raw: unknown): WhisperWord[] => {
   if (!Array.isArray(raw)) return [];
@@ -200,6 +225,9 @@ const parseTranscription = (body: unknown): WhisperTranscription => {
           end: s.end as number,
           text: typeof s.text === "string" ? s.text.trim() : "",
           words: parseWords(s.words),
+          noSpeechProb: optionalNumber(s.no_speech_prob),
+          avgLogprob: optionalNumber(s.avg_logprob),
+          compressionRatio: optionalNumber(s.compression_ratio),
         }))
     : [];
   return {

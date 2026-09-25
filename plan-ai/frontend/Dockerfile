@@ -1,5 +1,5 @@
 # Build stage
-FROM node:22.17.1 AS build
+FROM node:22.23.1 AS build
 
 ARG REACT_APP_API_BACKEND_URL
 ARG REACT_APP_CRON_BACKEND_URL
