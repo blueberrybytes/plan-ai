@@ -44,6 +44,7 @@ import {
   useDeleteContextFileMutation,
   useRetryContextFileMutation,
   useImportFromGoogleDriveMutation,
+  useLazyGetContextFileUrlQuery,
 } from "../../store/apis/contextApi";
 import { useListIntegrationsQuery } from "../../store/apis/integrationApi";
 import { useGooglePicker } from "../../hooks/useGooglePicker";
@@ -95,6 +96,31 @@ const ProjectFilesTab: React.FC<ProjectFilesTabProps> = ({ projectId, contextId 
   const [deleteFile] = useDeleteContextFileMutation();
   const [deletingFileIds, setDeletingFileIds] = useState<Set<string>>(new Set());
   const [retryFile] = useRetryContextFileMutation();
+  const [getFileUrl] = useLazyGetContextFileUrlQuery();
+
+  // Files are private in storage: the download asks the backend for a signed
+  // URL first. The tab opens on the click itself so popup blockers allow it.
+  const handleDownload = useCallback(
+    async (fileId: string) => {
+      const tab = window.open("", "_blank");
+      try {
+        const url = (await getFileUrl({ contextId, fileId }).unwrap()).data?.url;
+        if (!url) throw new Error("No URL returned");
+        if (tab) {
+          tab.opener = null;
+          tab.location.href = url;
+        } else {
+          window.location.href = url;
+        }
+      } catch {
+        tab?.close();
+        dispatch(
+          setToastMessage({ severity: "error", message: t("contexts.messages.openFileError") }),
+        );
+      }
+    },
+    [getFileUrl, contextId, dispatch, t],
+  );
   const [importFromGoogleDrive, { isLoading: isImportingGoogleDrive }] =
     useImportFromGoogleDriveMutation();
 
@@ -504,13 +530,7 @@ const ProjectFilesTab: React.FC<ProjectFilesTabProps> = ({ projectId, contextId 
                         <IconButton
                           onClick={(e) => {
                             e.stopPropagation();
-                            const link = document.createElement("a");
-                            link.href = file.publicUrl;
-                            link.download = file.fileName;
-                            link.target = "_blank";
-                            document.body.appendChild(link);
-                            link.click();
-                            document.body.removeChild(link);
+                            void handleDownload(file.id);
                           }}
                           size="small"
                         >

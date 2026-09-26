@@ -380,7 +380,10 @@
       "deleteContextError": "Failed to delete context. Please try again.",
       "connectGoogleDriveFirst": "Please connect Google Drive in Integrations first.",
       "googleDriveImportStarted": "Import from Google Drive started.",
-      "googleDriveImportError": "Failed to start Google Drive import."
+      "googleDriveImportError": "Failed to start Google Drive import.",
+      "openFileError": "Could not open the file. Try again.",
+      "textPreviewOnly": "Text preview. Open the original file to see its formatting.",
+      "noTextContent": "No text could be extracted from this file."
     }
   },
   "integrationsPage": {
@@ -967,6 +970,12 @@
       "summary": "Summary",
       "recorded": "Recorded",
       "updated": "Updated {{timestamp}}"
+    },
+    "sharing": {
+      "openPublicLink": "Share and open the public link",
+      "stopSharing": "Stop sharing. The public link stops working.",
+      "stopped": "No longer shared. The public link no longer works.",
+      "failed": "Could not update sharing. Try again."
     }
   },
   "users": {
@@ -1465,5 +1474,10 @@
     "Structured Output": "Structured Output",
     "Unfiltered": "Unfiltered",
     "Writing": "Writing"
+  },
+  "taskDialog": {
+    "generatedAssets": "Generated from the meeting",
+    "document": "Document",
+    "slides": "Slides"
   }
 }

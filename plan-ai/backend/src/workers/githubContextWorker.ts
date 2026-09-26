@@ -221,7 +221,7 @@ export const githubContextWorker = new Worker<GithubContextJobPayload>(
           }
 
           // Upload to Firebase so UI can download/view it natively
-          const { storagePath, publicUrl } = await uploadContextFileToFirebaseStorage(
+          const { storagePath } = await uploadContextFileToFirebaseStorage(
             Buffer.from(repoText, "utf-8"),
             context.userId,
             contextId,
@@ -239,7 +239,6 @@ export const githubContextWorker = new Worker<GithubContextJobPayload>(
               mimeType: "text/markdown",
               sizeBytes: Buffer.byteLength(repoText, "utf-8"),
               metadata: {
-                publicUrl,
                 source: "GITHUB_SYNC",
                 repo: githubRepoId,
                 branch: job.data.branch || "HEAD",

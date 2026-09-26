@@ -486,6 +486,18 @@ class TwentyIntegrationService {
    * Relative paths are useless inside a CRM note — whoever opens it is not on
    * our domain — so this resolves against APP_URL.
    */
+  /**
+   * Documents are private until someone shares them. Writing a document's
+   * link into a CRM note shares it with people who may have no Plan AI
+   * account, so the document is made public right before the link goes in.
+   * Only a document of this workspace, found by the id in its link.
+   */
+  private async shareLinkedDoc(workspaceId: string, publicDocPath: string): Promise<void> {
+    const id = publicDocPath.match(/\/doc\/public\/([^/?#]+)/)?.[1];
+    if (!id) return;
+    await prisma.docDocument.updateMany({ where: { id, workspaceId }, data: { isPublic: true } });
+  }
+
   private resolvePublicDocUrl(transcript: Transcript): string | undefined {
     const metadata = (transcript.metadata ?? null) as TranscriptMetadata | null;
     const path = metadata?.postMeetingTasks?.doc?.publicUrl;
@@ -538,6 +550,7 @@ class TwentyIntegrationService {
     const body = note?.bodyV2?.markdown ?? "";
     if (body.includes(url)) return;
 
+    await this.shareLinkedDoc(workspaceId, publicDocPath);
     await this.fetchTwenty<unknown>(
       integration.baseUrl,
       integration.apiKey,
@@ -909,7 +922,9 @@ class TwentyIntegrationService {
     // manual push of an older meeting. When it doesn't (the automatic push runs
     // before the document is generated) `appendDocLinkToNote` patches it in
     // later, so the link lands either way.
-    const markdown = this.buildNoteMarkdown(transcript, this.resolvePublicDocUrl(transcript));
+    const docUrl = this.resolvePublicDocUrl(transcript);
+    if (docUrl) await this.shareLinkedDoc(workspaceId, docUrl);
+    const markdown = this.buildNoteMarkdown(transcript, docUrl);
     const personIds = args.personIds ?? [];
 
     // Walk buckets: base, then #2, #3… when the user insists it's a distinct meeting.

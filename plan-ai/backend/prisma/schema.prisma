@@ -679,6 +679,8 @@ model Presentation {
   slidesJson  Json
   contextIds  String[]
   status      String   @default("DRAFT") @db.VarChar(24)
+  /// Readable by anyone at /p/<id> only while true. Set by "Public link".
+  isPublic    Boolean  @default(false)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   workspaceId String

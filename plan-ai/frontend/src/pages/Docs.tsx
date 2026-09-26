@@ -33,8 +33,12 @@ import PageHeader from "../components/layout/PageHeader";
 import {
   useGetDocsQuery,
   useDeleteDocMutation,
+  useUpdateDocMutation,
   type DocDocumentResponse,
 } from "../store/apis/docApi";
+import { useDispatch } from "react-redux";
+import { setToastMessage } from "../store/slices/app/appSlice";
+import { openSharedLink } from "../utils/openSharedLink";
 import { useListProjectsQuery } from "../store/apis/projectApi";
 
 const Docs: React.FC = () => {
@@ -51,6 +55,20 @@ const Docs: React.FC = () => {
     refetchOnFocus: true,
   });
   const [deleteDoc] = useDeleteDocMutation();
+  const [updateDoc] = useUpdateDocMutation();
+  const dispatch = useDispatch();
+
+  const handleOpenPublicLink = async (doc: DocDocumentResponse) => {
+    try {
+      await openSharedLink(`/doc/public/${doc.id}`, () =>
+        doc.isPublic
+          ? Promise.resolve()
+          : updateDoc({ id: doc.id, data: { isPublic: true } }).unwrap(),
+      );
+    } catch {
+      dispatch(setToastMessage({ severity: "error", message: t("common.sharing.failed") }));
+    }
+  };
 
   const { data: projectsData } = useListProjectsQuery(undefined);
   const projects = projectsData?.data?.projects ?? [];
@@ -264,10 +282,10 @@ const Docs: React.FC = () => {
                       </IconButton>
                       <IconButton
                         size="small"
-                        title="Public Link"
+                        title={t("common.sharing.openPublicLink")}
                         onClick={(e) => {
                           e.stopPropagation();
-                          window.open(`/doc/public/${doc.id}`, "_blank");
+                          void handleOpenPublicLink(doc);
                         }}
                       >
                         <LanguageIcon fontSize="small" />

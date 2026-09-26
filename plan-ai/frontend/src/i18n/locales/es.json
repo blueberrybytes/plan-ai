@@ -380,7 +380,10 @@
       "deleteContextError": "No se pudo eliminar el contexto. Inténtalo de nuevo.",
       "connectGoogleDriveFirst": "Por favor, conecta Google Drive en Integraciones primero.",
       "googleDriveImportStarted": "Importación de Google Drive iniciada.",
-      "googleDriveImportError": "Error al iniciar la importación de Google Drive."
+      "googleDriveImportError": "Error al iniciar la importación de Google Drive.",
+      "openFileError": "No se pudo abrir el archivo. Inténtalo de nuevo.",
+      "textPreviewOnly": "Vista de solo texto. Abre el archivo original para ver el formato.",
+      "noTextContent": "No se ha podido extraer texto de este archivo."
     }
   },
   "integrationsPage": {
@@ -961,6 +964,12 @@
       "summary": "Resumen",
       "recorded": "Grabado",
       "updated": "Actualizado {{timestamp}}"
+    },
+    "sharing": {
+      "openPublicLink": "Compartir y abrir el enlace público",
+      "stopSharing": "Dejar de compartir. El enlace público deja de funcionar.",
+      "stopped": "Ya no se comparte. El enlace público ha dejado de funcionar.",
+      "failed": "No se ha podido cambiar cómo se comparte. Inténtalo de nuevo."
     }
   },
   "users": {
@@ -1459,5 +1468,10 @@
     "Structured Output": "Salida estructurada",
     "Unfiltered": "Sin censura",
     "Writing": "Redacción"
+  },
+  "taskDialog": {
+    "generatedAssets": "Generado a partir de la reunión",
+    "document": "Documento",
+    "slides": "Presentación"
   }
 }

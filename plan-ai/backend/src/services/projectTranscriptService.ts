@@ -78,6 +78,7 @@ import { ladybugService } from "./ladybugService";
 import { taskRefinementQueue } from "../queue/taskRefinementQueue";
 import { generateProjectDigest } from "./projectDigestService";
 import { twentyIntegrationService } from "./twentyIntegrationService";
+import { readableUrl } from "../firebase/privateStorage";
 
 /**
  * Which Twenty company a meeting note is filed under.
@@ -467,7 +468,7 @@ export class ProjectTranscriptService {
       console.log(
         `[Diarization] Starting ${speakerPrefix} | lang=${lang} | ${
           "url" in source
-            ? `url: ${source.url.slice(0, 80)}...`
+            ? `url: ${source.url.split("?")[0].slice(0, 80)}...`
             : `cleaned buffer ${source.buffer.length}B`
         }`,
       );
@@ -704,9 +705,11 @@ export class ProjectTranscriptService {
       const uniqueSpeakers = Array.from(new Set(utterances.map((u) => u.speaker)));
       if (uniqueSpeakers.length < 2) return uniqueSpeakers[0] ?? null;
 
+      // Signed now: a long transcription can run past the hour the
+      // recording URLs signed before it were valid for.
       const formData = new FormData();
-      formData.append("profile_url", voiceProfileUrl);
-      formData.append("meeting_url", micUrl);
+      formData.append("profile_url", await readableUrl(voiceProfileUrl));
+      formData.append("meeting_url", await readableUrl(micUrl));
 
       // Call the Python Microservice
       const voiceAiUrl = process.env.VOICE_AI_URL || "http://localhost:8001";
@@ -815,9 +818,16 @@ export class ProjectTranscriptService {
         getSttProvider() === "whisper" && existing.contextIds.length > 0
           ? await collectContextKeyterms(existing.contextIds)
           : undefined;
+      // Recordings are private. Deepgram fetches the URL itself and Whisper's
+      // path downloads it, both right away, so a short-lived signature is
+      // enough. Signed here and not earlier: jobs can wait in the queue.
+      const [micUrl, sysUrl] = await Promise.all([
+        existing.rawMicUrl ? readableUrl(existing.rawMicUrl) : null,
+        existing.rawSysUrl ? readableUrl(existing.rawSysUrl) : null,
+      ]);
       const diarizationResult = await this.diarizeAudio(
-        existing.rawMicUrl,
-        existing.rawSysUrl,
+        micUrl,
+        sysUrl,
         recordingLanguage,
         keyterms,
       );
@@ -1391,8 +1401,9 @@ export class ProjectTranscriptService {
               ),
             );
 
-          // Batch-update all tasks with publicDocUrl in a single transaction
-          // instead of N findUnique+update calls.
+          // Batch-update all tasks with the document's in-app page in a single
+          // transaction instead of N findUnique+update calls. The public link
+          // only exists for Twenty, which shares the document on purpose.
           const taskIds = result.createdTasks.map((t) => t.id);
           if (taskIds.length > 0) {
             const tasksWithMeta = await prisma.task.findMany({
@@ -1402,7 +1413,7 @@ export class ProjectTranscriptService {
             await prisma.$transaction(
               tasksWithMeta.map((t) => {
                 const metadata: TaskMetadata = (t.metadata as TaskMetadata) ?? {};
-                metadata.publicDocUrl = publicUrl;
+                metadata.docUrl = `/docs/view/${doc.id}`;
                 return prisma.task.update({
                   where: { id: t.id },
                   data: { metadata: metadata as Prisma.InputJsonObject },
@@ -1439,13 +1450,13 @@ export class ProjectTranscriptService {
         )
         .then(async (pres) => {
           logger.info(`Auto-generated slides ${pres.id} for transcript ${result.transcript.id}`);
-          const publicUrl = `/p/${pres.id}`;
+          const slidesUrl = `/slides/view/${pres.id}`;
           await this.setPostMeetingTaskStatus(result.transcript.id, "slides", {
             status: "OK",
-            url: `/presentations/${pres.id}`,
+            url: slidesUrl,
           });
 
-          // Batch-update all tasks with publicSlidesUrl in a single transaction
+          // Batch-update all tasks with the slides' in-app page in a single transaction
           const taskIds = result.createdTasks.map((t) => t.id);
           if (taskIds.length > 0) {
             const tasksWithMeta = await prisma.task.findMany({
@@ -1455,7 +1466,7 @@ export class ProjectTranscriptService {
             await prisma.$transaction(
               tasksWithMeta.map((t) => {
                 const metadata: TaskMetadata = (t.metadata as TaskMetadata) ?? {};
-                metadata.publicSlidesUrl = publicUrl;
+                metadata.slidesUrl = slidesUrl;
                 return prisma.task.update({
                   where: { id: t.id },
                   data: { metadata: metadata as Prisma.InputJsonObject },

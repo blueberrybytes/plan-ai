@@ -1100,8 +1100,9 @@ const TranscriptView: React.FC = () => {
                           ) : null}
 
                           {/* Generated Assets */}
-                          {((selectedTask.metadata as Record<string, unknown> | null)?.publicDocUrl ||
-                            (selectedTask.metadata as Record<string, unknown> | null)?.publicSlidesUrl) ? (
+                          {/* In-app pages of the web app: they ask for a login. */}
+                          {((selectedTask.metadata as Record<string, unknown> | null)?.docUrl ||
+                            (selectedTask.metadata as Record<string, unknown> | null)?.slidesUrl) ? (
                             <Box sx={{ mb: 3 }}>
                               <Typography
                                 variant="subtitle2"
@@ -1115,30 +1116,30 @@ const TranscriptView: React.FC = () => {
                                 Generated Assets
                               </Typography>
                               <Stack direction="row" spacing={1}>
-                                {(selectedTask.metadata as Record<string, unknown> | null)?.publicDocUrl ? (
+                                {(selectedTask.metadata as Record<string, unknown> | null)?.docUrl ? (
                                   <Chip
-                                    label="📄 Public Document"
+                                    label="📄 Document"
                                     size="small"
                                     color="secondary"
                                     variant="outlined"
                                     onClick={() =>
                                       window.open(
-                                        `${import.meta.env.VITE_PLAN_AI_WEB_URL}${(selectedTask.metadata as Record<string, unknown>)?.publicDocUrl}`,
+                                        `${import.meta.env.VITE_PLAN_AI_WEB_URL}${(selectedTask.metadata as Record<string, unknown>)?.docUrl}`,
                                         "_blank",
                                       )
                                     }
                                     sx={{ cursor: "pointer", fontWeight: 600 }}
                                   />
                                 ) : null}
-                                {(selectedTask.metadata as Record<string, unknown> | null)?.publicSlidesUrl ? (
+                                {(selectedTask.metadata as Record<string, unknown> | null)?.slidesUrl ? (
                                   <Chip
-                                    label="📊 Public Slides"
+                                    label="📊 Slides"
                                     size="small"
                                     color="secondary"
                                     variant="outlined"
                                     onClick={() =>
                                       window.open(
-                                        `${import.meta.env.VITE_PLAN_AI_WEB_URL}${(selectedTask.metadata as Record<string, unknown>)?.publicSlidesUrl}`,
+                                        `${import.meta.env.VITE_PLAN_AI_WEB_URL}${(selectedTask.metadata as Record<string, unknown>)?.slidesUrl}`,
                                         "_blank",
                                       )
                                     }

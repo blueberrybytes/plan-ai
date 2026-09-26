@@ -6,6 +6,8 @@ export type ApiResponseContextListResponse =
   components["schemas"]["ApiResponse_ContextListResponse_"];
 export type ApiResponseContextResponse = components["schemas"]["ApiResponse_ContextResponse_"];
 export type ApiResponseNull = components["schemas"]["ApiResponse_null_"];
+export type ApiResponseContextFileUrlResponse =
+  components["schemas"]["ApiResponse_ContextFileUrlResponse_"];
 
 export type CreateContextRequest =
   operations["CreateContext"]["requestBody"]["content"]["application/json"];
@@ -22,6 +24,11 @@ export interface UploadContextFileArgs {
 }
 
 export interface DeleteContextFileArgs {
+  contextId: string;
+  fileId: string;
+}
+
+export interface ContextFileUrlArgs {
   contextId: string;
   fileId: string;
 }
@@ -58,6 +65,15 @@ export const contextApi = createApi({
         method: "GET",
       }),
       providesTags: (result, error, contextId) => [{ type: "Context" as const, id: contextId }],
+    }),
+    // Files are private: this returns a signed URL that works for an hour.
+    getContextFileUrl: builder.query<ApiResponseContextFileUrlResponse, ContextFileUrlArgs>({
+      query: ({ contextId, fileId }) => ({
+        url: `/api/contexts/${contextId}/files/${fileId}/url`,
+        method: "GET",
+      }),
+      // Never hand out a cached URL that may be close to expiring.
+      keepUnusedDataFor: 0,
     }),
     createContext: builder.mutation<ApiResponseContextResponse, CreateContextRequest>({
       query: (body) => ({
@@ -205,6 +221,8 @@ export const contextApi = createApi({
 export const {
   useListContextsQuery,
   useGetContextQuery,
+  useGetContextFileUrlQuery,
+  useLazyGetContextFileUrlQuery,
   useCreateContextMutation,
   useUpdateContextMutation,
   useDeleteContextMutation,

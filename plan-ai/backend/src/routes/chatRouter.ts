@@ -34,31 +34,39 @@ import {
 } from "../services/subscriptionGuard";
 import { checkUsageLimit, UsageLimitExceededError } from "../services/usageLimitGuard";
 import { extractTextFromBuffer } from "../utils/documentTextExtractor";
+import { downloadPath, signedUrlForPath } from "../firebase/privateStorage";
+import {
+  ownedAttachmentPath,
+  toStoredAttachments,
+  type ChatAttachmentRef,
+} from "../services/chatAttachments";
 
 const router = Router();
 
 // Cap per-attachment extracted text injected into the prompt (~25k tokens).
 const MAX_ATTACHMENT_CHARS = 100_000;
-// Cache extracted attachment text by URL. Document content is immutable per
-// URL (Firebase paths are uuid-stamped), so long threads — which replay every
-// past attachment on every message — extract each file only ONCE instead of
-// re-fetching + re-parsing it on every turn.
+// Cache extracted attachment text by storage path. Document content is
+// immutable per path (Firebase paths are uuid-stamped), so long threads —
+// which replay every past attachment on every message — extract each file
+// only ONCE instead of re-downloading + re-parsing it on every turn.
 const attachmentTextCache = new Map<string, string>();
 
 /**
- * Fetch a non-image/non-PDF chat attachment from its (public) URL and extract
- * its text so the model can actually read it. Returns "" on any failure — a
+ * Read a non-image/non-PDF chat attachment from the bucket and extract its
+ * text so the model can actually read it. Returns "" on any failure — a
  * broken attachment must never break the chat. Images and PDFs are handled
  * natively by the multimodal message and never reach here.
  */
-async function extractAttachmentText(url: string, type: string, name: string): Promise<string> {
-  const cached = attachmentTextCache.get(url);
+async function extractAttachmentText(
+  storagePath: string,
+  type: string,
+  name: string,
+): Promise<string> {
+  const cached = attachmentTextCache.get(storagePath);
   if (cached !== undefined) return cached;
   let out = "";
   try {
-    const res = await fetch(url, { signal: AbortSignal.timeout(15000) });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const buf = Buffer.from(await res.arrayBuffer());
+    const buf = await downloadPath(storagePath);
     let text = await extractTextFromBuffer(buf, type);
     if (text.length > MAX_ATTACHMENT_CHARS) {
       text = `${text.slice(0, MAX_ATTACHMENT_CHARS)}\n…[truncated — attachment longer than ${MAX_ATTACHMENT_CHARS} chars]`;
@@ -69,7 +77,7 @@ async function extractAttachmentText(url: string, type: string, name: string): P
     out = "";
   }
   if (attachmentTextCache.size > 500) attachmentTextCache.clear();
-  attachmentTextCache.set(url, out);
+  attachmentTextCache.set(storagePath, out);
   return out;
 }
 
@@ -139,15 +147,17 @@ router.post(
         },
       });
 
-      // 1. Save User Message (with optional image/PDF attachments)
+      // 1. Save User Message (with optional image/PDF attachments). Only the
+      // user's own uploads are kept, as private gs:// URIs.
+      const storedAttachments = toStoredAttachments(attachments, user.id);
       await prisma.chatMessage.create({
         data: {
           threadId,
           role: "USER",
           content,
           attachments:
-            attachments && attachments.length > 0
-              ? (attachments as unknown as import("@prisma/client").Prisma.InputJsonValue)
+            storedAttachments.length > 0
+              ? (storedAttachments as unknown as import("@prisma/client").Prisma.InputJsonValue)
               : undefined,
         },
       });
@@ -261,16 +271,15 @@ Context:
 ${contextText}
 `;
 
-      type AttachmentRef = { url: string; type: string; name: string; size?: number };
-
       // Build a multimodal user message for the LLM when an attachment is
-      // present. Images/PDFs go to the model natively; every OTHER document
-      // type (CSV, TXT, MD, JSON, XLSX, DOCX, …) is read back from storage and
-      // inlined as text — without this, those attachments were silently
-      // dropped and the model replied "I don't see the attachment".
+      // present. Images/PDFs go to the model natively, through a signed URL
+      // that expires; every OTHER document type (CSV, TXT, MD, JSON, XLSX,
+      // DOCX, …) is read back from storage and inlined as text — without
+      // this, those attachments were silently dropped and the model replied
+      // "I don't see the attachment".
       const buildUserMessage = async (
         text: string,
-        atts?: AttachmentRef[] | null,
+        atts?: ChatAttachmentRef[] | null,
       ): Promise<ModelMessage> => {
         if (!atts || atts.length === 0) {
           return { role: "user", content: text };
@@ -282,12 +291,19 @@ ${contextText}
         > = [];
         if (text) parts.push({ type: "text", text });
         for (const a of atts) {
-          if (a.type.startsWith("image/")) {
-            parts.push({ type: "image", image: new URL(a.url) });
+          const storagePath = ownedAttachmentPath(a.url, user.id);
+          if (!storagePath) {
+            parts.push({ type: "text", text: `\n\n[Attachment: ${a.name} — could not be read]` });
+          } else if (a.type.startsWith("image/")) {
+            parts.push({ type: "image", image: new URL(await signedUrlForPath(storagePath)) });
           } else if (a.type === "application/pdf") {
-            parts.push({ type: "file", data: new URL(a.url), mediaType: a.type });
+            parts.push({
+              type: "file",
+              data: new URL(await signedUrlForPath(storagePath)),
+              mediaType: a.type,
+            });
           } else {
-            const extracted = await extractAttachmentText(a.url, a.type, a.name);
+            const extracted = await extractAttachmentText(storagePath, a.type, a.name);
             parts.push({
               type: "text",
               text: extracted
@@ -314,7 +330,7 @@ ${contextText}
             }
           }
           if (m.role === "USER") {
-            const pastAttachments = (m.attachments ?? null) as AttachmentRef[] | null;
+            const pastAttachments = (m.attachments ?? null) as ChatAttachmentRef[] | null;
             return buildUserMessage(cleanContent, pastAttachments);
           }
           return { role: "assistant", content: cleanContent };
@@ -323,7 +339,7 @@ ${contextText}
 
       const messages: ModelMessage[] = [
         ...historyMessages,
-        await buildUserMessage(content, attachments),
+        await buildUserMessage(content, storedAttachments),
       ];
 
       const requestedModelKey = modelKey && modelKey.length > 0 ? modelKey : DEFAULT_AI_MODEL;

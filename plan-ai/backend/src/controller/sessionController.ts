@@ -7,6 +7,8 @@ import { firebaseAdmin, setUserRole } from "../firebase/firebaseAdmin";
 import prisma from "../prisma/prismaClient";
 import { AuthenticatedRequest } from "../middleware/authMiddleware";
 import crypto from "crypto";
+import { DISPLAY_URL_TTL_MS, readableUrl, uploadPrivateFile } from "../firebase/privateStorage";
+import { logger } from "../utils/logger";
 
 const MS_CLIENT_ID = process.env.MICROSOFT_CLIENT_ID ?? "";
 const MS_CLIENT_SECRET = process.env.MICROSOFT_CLIENT_SECRET ?? "";
@@ -34,6 +36,21 @@ interface UserResponse {
   hasVoiceProfile: boolean;
   voiceProfileUrl: string | null;
 }
+
+/**
+ * The voice profile is stored as a private gs:// URI. The mobile app plays it
+ * back, so responses carry a signed URL. If signing fails the profile still
+ * exists; the player just has nothing to play.
+ */
+const voiceProfileDisplayUrl = async (stored: string | null): Promise<string | null> => {
+  if (!stored) return null;
+  try {
+    return await readableUrl(stored, DISPLAY_URL_TTL_MS);
+  } catch (err) {
+    logger.warn("[Session] Couldn't sign the voice profile URL", err);
+    return null;
+  }
+};
 
 @Route("api/session")
 @Tags("Session")
@@ -265,7 +282,7 @@ export class SessionController {
         hasCompletedOnboarding: customTheme !== null,
         hasCompletedHomeTour: user.hasCompletedHomeTour,
         hasVoiceProfile: user.hasVoiceProfile,
-        voiceProfileUrl: user.voiceProfileUrl,
+        voiceProfileUrl: await voiceProfileDisplayUrl(user.voiceProfileUrl),
       };
 
       return {
@@ -335,7 +352,7 @@ export class SessionController {
         hasCompletedOnboarding: user.customTheme !== null,
         hasCompletedHomeTour: user.hasCompletedHomeTour,
         hasVoiceProfile: user.hasVoiceProfile,
-        voiceProfileUrl: user.voiceProfileUrl,
+        voiceProfileUrl: await voiceProfileDisplayUrl(user.voiceProfileUrl),
       };
 
       return {
@@ -376,12 +393,13 @@ export class SessionController {
 
       let voiceProfileUrl = user.voiceProfileUrl;
       if (voiceFile) {
-        const bucket = firebaseAdmin.storage().bucket();
+        // A voice print is biometric data: private, signed URLs only.
         const ext = voiceFile.originalname.split(".").pop() || "m4a";
-        const fileRef = bucket.file(`voice-profiles/${user.id}/profile.${ext}`);
-        await fileRef.save(voiceFile.buffer, { contentType: voiceFile.mimetype });
-        await fileRef.makePublic();
-        voiceProfileUrl = fileRef.publicUrl();
+        voiceProfileUrl = await uploadPrivateFile(
+          `voice-profiles/${user.id}/profile.${ext}`,
+          voiceFile.buffer,
+          voiceFile.mimetype,
+        );
       }
 
       const updatedUser = await prisma.user.update({
@@ -409,7 +427,7 @@ export class SessionController {
         hasCompletedOnboarding: updatedUser.customTheme !== null,
         hasCompletedHomeTour: updatedUser.hasCompletedHomeTour,
         hasVoiceProfile: updatedUser.hasVoiceProfile,
-        voiceProfileUrl: updatedUser.voiceProfileUrl,
+        voiceProfileUrl: await voiceProfileDisplayUrl(updatedUser.voiceProfileUrl),
       };
 
       return {
@@ -470,7 +488,7 @@ export class SessionController {
         hasCompletedOnboarding: updatedUser.customTheme !== null,
         hasCompletedHomeTour: updatedUser.hasCompletedHomeTour,
         hasVoiceProfile: updatedUser.hasVoiceProfile,
-        voiceProfileUrl: updatedUser.voiceProfileUrl,
+        voiceProfileUrl: await voiceProfileDisplayUrl(updatedUser.voiceProfileUrl),
       };
 
       return {

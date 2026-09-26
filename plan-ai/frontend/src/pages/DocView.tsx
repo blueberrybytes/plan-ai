@@ -27,6 +27,7 @@ import { getContrastRatio } from "@mui/material/styles";
 import {
   ArrowBack as ArrowBackIcon,
   Language as LanguageIcon,
+  LinkOff as LinkOffIcon,
   Download as DownloadIcon,
   Check as CheckIcon,
   Autorenew as AutorenewIcon,
@@ -49,6 +50,8 @@ import {
 import type { DocDocumentResponse } from "../store/apis/docApi";
 import { useGetBrandThemesQuery } from "../store/apis/brandThemeApi";
 import { useDispatch } from "react-redux";
+import { setToastMessage } from "../store/slices/app/appSlice";
+import { openSharedLink } from "../utils/openSharedLink";
 import { splitMarkdownIntoChunks, MarkdownChunk } from "../utils/markdownParser";
 import HybridChunkEditor from "../components/docs/HybridChunkEditor";
 import TiptapEditor from "../components/docs/TiptapEditor";
@@ -222,12 +225,23 @@ const DocView: React.FC = () => {
 
   const handleOpenPublicLink = async () => {
     if (!id) return;
-    // Open the tab immediately to avoid popup blockers (must happen in sync user-gesture context)
-    const win = window.open("", "_blank");
-    if (!doc?.isPublic) {
-      await updateDoc({ id, data: { isPublic: true } });
+    try {
+      await openSharedLink(`/doc/public/${id}`, () =>
+        doc?.isPublic ? Promise.resolve() : updateDoc({ id, data: { isPublic: true } }).unwrap(),
+      );
+    } catch {
+      dispatch(setToastMessage({ severity: "error", message: t("common.sharing.failed") }));
     }
-    if (win) win.location.href = `/doc/public/${id}`;
+  };
+
+  const handleStopSharing = async () => {
+    if (!id) return;
+    try {
+      await updateDoc({ id, data: { isPublic: false } }).unwrap();
+      dispatch(setToastMessage({ severity: "success", message: t("common.sharing.stopped") }));
+    } catch {
+      dispatch(setToastMessage({ severity: "error", message: t("common.sharing.failed") }));
+    }
   };
 
   const handleExportPdf = () => {
@@ -433,11 +447,18 @@ const DocView: React.FC = () => {
           >
             {isEditMode ? t("docs.view.previewMode") : t("docs.view.editMode")}
           </Button>
-          <Tooltip title={t("docs.view.publicUrl")}>
+          <Tooltip title={t("common.sharing.openPublicLink")}>
             <IconButton onClick={handleOpenPublicLink} sx={{ color: primary }}>
               <LanguageIcon />
             </IconButton>
           </Tooltip>
+          {doc?.isPublic && (
+            <Tooltip title={t("common.sharing.stopSharing")}>
+              <IconButton onClick={handleStopSharing} sx={{ color: primary }}>
+                <LinkOffIcon />
+              </IconButton>
+            </Tooltip>
+          )}
           <Tooltip title={t("docs.view.export")}>
             <IconButton onClick={(e) => setExportAnchor(e.currentTarget)} sx={{ color: primary }}>
               <DownloadIcon />

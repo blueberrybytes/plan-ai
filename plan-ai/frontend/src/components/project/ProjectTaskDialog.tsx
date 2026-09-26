@@ -1,4 +1,5 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 import {
   Chip,
   Dialog,
@@ -60,6 +61,7 @@ const ProjectTaskDialog: React.FC<ProjectTaskDialogProps> = ({
   onDelete,
   isDeleting = false,
 }) => {
+  const { t } = useTranslation();
   if (!task) {
     return null;
   }
@@ -286,50 +288,32 @@ const ProjectTaskDialog: React.FC<ProjectTaskDialogProps> = ({
               </Stack>
             </Stack>
 
-            {extendedTask.metadata?.publicDocUrl || extendedTask.metadata?.publicSlidesUrl ? (
+            {extendedTask.metadata?.docUrl || extendedTask.metadata?.slidesUrl ? (
               <Stack spacing={0.5}>
                 <Typography variant="subtitle2" color="text.secondary">
-                  Generated Assets
+                  {t("taskDialog.generatedAssets")}
                 </Typography>
                 <Stack direction="row" spacing={1}>
-                  {extendedTask.metadata?.publicDocUrl ? (
-                    <Chip
-                      label="Public Document"
-                      size="small"
-                      color="secondary"
-                      variant="filled"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (extendedTask.metadata?.publicDocUrl) {
-                          window.open(
-                            extendedTask.metadata.publicDocUrl,
-                            "_blank",
-                            "noopener,noreferrer",
-                          );
-                        }
-                      }}
-                      sx={{ cursor: "pointer", fontWeight: 600, height: 24 }}
-                    />
-                  ) : null}
-                  {extendedTask.metadata?.publicSlidesUrl ? (
-                    <Chip
-                      label="Public Slides"
-                      size="small"
-                      color="secondary"
-                      variant="filled"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (extendedTask.metadata?.publicSlidesUrl) {
-                          window.open(
-                            extendedTask.metadata.publicSlidesUrl,
-                            "_blank",
-                            "noopener,noreferrer",
-                          );
-                        }
-                      }}
-                      sx={{ cursor: "pointer", fontWeight: 600, height: 24 }}
-                    />
-                  ) : null}
+                  {[
+                    { url: extendedTask.metadata?.docUrl, label: t("taskDialog.document") },
+                    { url: extendedTask.metadata?.slidesUrl, label: t("taskDialog.slides") },
+                  ]
+                    .filter((asset): asset is { url: string; label: string } => !!asset.url)
+                    .map((asset) => (
+                      // In-app pages: they need a login, unlike the old public links.
+                      <Chip
+                        key={asset.url}
+                        label={asset.label}
+                        size="small"
+                        color="secondary"
+                        variant="filled"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          window.open(asset.url, "_blank", "noopener,noreferrer");
+                        }}
+                        sx={{ cursor: "pointer", fontWeight: 600, height: 24 }}
+                      />
+                    ))}
                 </Stack>
               </Stack>
             ) : null}

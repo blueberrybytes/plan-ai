@@ -3182,11 +3182,13 @@
 						],
 						"type": "object"
 					},
-					"publicDocUrl": {
-						"type": "string"
+					"docUrl": {
+						"type": "string",
+						"description": "In-app page of the document generated from the meeting (needs login)."
 					},
-					"publicSlidesUrl": {
-						"type": "string"
+					"slidesUrl": {
+						"type": "string",
+						"description": "In-app page of the slides generated from the meeting (needs login)."
 					},
 					"category": {
 						"$ref": "#/components/schemas/TaskCategory",
@@ -4042,6 +4044,9 @@
 					"status": {
 						"type": "string"
 					},
+					"isPublic": {
+						"type": "boolean"
+					},
 					"createdAt": {
 						"type": "string",
 						"format": "date-time"
@@ -4061,6 +4066,7 @@
 					"slidesJson",
 					"contextIds",
 					"status",
+					"isPublic",
 					"createdAt",
 					"updatedAt"
 				],
@@ -4147,7 +4153,11 @@
 						"type": "string",
 						"nullable": true
 					},
-					"slidesJson": {}
+					"slidesJson": {},
+					"isPublic": {
+						"type": "boolean",
+						"description": "Shares the presentation at /p/<id> (true) or stops sharing it (false)."
+					}
 				},
 				"type": "object",
 				"additionalProperties": false
@@ -5002,9 +5012,6 @@
 					"bucketPath": {
 						"type": "string"
 					},
-					"publicUrl": {
-						"type": "string"
-					},
 					"metadata": {
 						"allOf": [
 							{
@@ -5021,7 +5028,6 @@
 					"sizeBytes",
 					"createdAt",
 					"bucketPath",
-					"publicUrl",
 					"metadata"
 				],
 				"type": "object",
@@ -5220,6 +5226,48 @@
 				],
 				"type": "object",
 				"additionalProperties": false
+			},
+			"ContextFileUrlResponse": {
+				"properties": {
+					"url": {
+						"type": "string",
+						"description": "Signed URL to open or download the file. It stops working at expiresAt."
+					},
+					"expiresAt": {
+						"type": "string",
+						"format": "date-time"
+					}
+				},
+				"required": [
+					"url",
+					"expiresAt"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"ApiResponse_ContextFileUrlResponse_": {
+				"properties": {
+					"message": {
+						"type": "string"
+					},
+					"data": {
+						"allOf": [
+							{
+								"$ref": "#/components/schemas/ContextFileUrlResponse"
+							}
+						],
+						"nullable": true
+					},
+					"status": {
+						"type": "number",
+						"format": "double"
+					}
+				},
+				"required": [
+					"data",
+					"status"
+				],
+				"type": "object"
 			},
 			"ImportWebsiteRequest": {
 				"properties": {
@@ -13203,6 +13251,50 @@
 						}
 					}
 				}
+			}
+		},
+		"/api/contexts/{contextId}/files/{fileId}/url": {
+			"get": {
+				"operationId": "GetContextFileUrl",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiResponse_ContextFileUrlResponse_"
+								}
+							}
+						}
+					}
+				},
+				"description": "Files are private in the bucket. Opening or downloading one asks for a\nsigned URL that works for an hour, so a link that leaks stops working.",
+				"tags": [
+					"Contexts"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": [
+					{
+						"in": "path",
+						"name": "contextId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"in": "path",
+						"name": "fileId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				]
 			}
 		},
 		"/api/contexts/{contextId}/files": {

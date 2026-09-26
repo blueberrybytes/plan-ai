@@ -13,6 +13,8 @@ import {
   UploadedFile,
 } from "tsoa";
 import { uploadChatAttachmentToFirebaseStorage } from "../firebase/firebaseStorage";
+import { DISPLAY_URL_TTL_MS, signedUrlForPath } from "../firebase/privateStorage";
+import { toDisplayAttachments } from "../services/chatAttachments";
 import {
   resolveProjectIdsToContextIds,
   resolveContextIdsToProjectIds,
@@ -234,7 +236,14 @@ export class ChatController extends BaseWorkspaceController {
       },
     });
     const hydrated = await this.hydrateThreadResponse(thread);
-    return { status: 200, data: hydrated as unknown as ChatThread };
+    // Attachments are saved as private gs:// URIs; the browser gets signed URLs.
+    const messages = await Promise.all(
+      thread.messages.map(async (m) => ({
+        ...m,
+        attachments: await toDisplayAttachments(m.attachments, user.id),
+      })),
+    );
+    return { status: 200, data: { ...hydrated, messages } as unknown as ChatThread };
   }
 
   @Post("threads/{threadId}/attachments")
@@ -280,7 +289,7 @@ export class ChatController extends BaseWorkspaceController {
       throw { status: 400, message: "Attachment too large (max 20MB)" };
     }
 
-    const { publicUrl } = await uploadChatAttachmentToFirebaseStorage(
+    const { storagePath } = await uploadChatAttachmentToFirebaseStorage(
       file.buffer,
       user.id,
       threadId,
@@ -289,7 +298,7 @@ export class ChatController extends BaseWorkspaceController {
     );
 
     return {
-      url: publicUrl,
+      url: await signedUrlForPath(storagePath, DISPLAY_URL_TTL_MS),
       type: file.mimetype,
       name: file.originalname,
       size: file.size,
@@ -340,7 +349,7 @@ export class ChatController extends BaseWorkspaceController {
 
     // "workspace" stands in for the missing threadId — files share that
     // namespace per user. Cleanup policy (if any) can sweep this folder.
-    const { publicUrl } = await uploadChatAttachmentToFirebaseStorage(
+    const { storagePath } = await uploadChatAttachmentToFirebaseStorage(
       file.buffer,
       user.id,
       "workspace",
@@ -349,7 +358,7 @@ export class ChatController extends BaseWorkspaceController {
     );
 
     return {
-      url: publicUrl,
+      url: await signedUrlForPath(storagePath, DISPLAY_URL_TTL_MS),
       type: file.mimetype,
       name: file.originalname,
       size: file.size,

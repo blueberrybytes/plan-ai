@@ -32,6 +32,8 @@ interface UpdatePresentationRequest {
   status?: string;
   themeId?: string | null;
   slidesJson?: unknown;
+  /** Shares the presentation at /p/<id> (true) or stops sharing it (false). */
+  isPublic?: boolean;
 }
 
 interface UpdatePresentationStatusRequest {
@@ -69,6 +71,7 @@ interface PresentationResponse {
   slidesJson: TsoaJsonObject | null;
   contextIds: string[];
   status: string;
+  isPublic: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -449,6 +452,7 @@ export class PresentationController extends BaseWorkspaceController {
       slidesJson: presentation.slidesJson as TsoaJsonObject | null,
       contextIds: presentation.contextIds,
       status: presentation.status,
+      isPublic: presentation.isPublic,
       createdAt: presentation.createdAt,
       updatedAt: presentation.updatedAt,
     };

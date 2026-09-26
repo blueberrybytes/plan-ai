@@ -1,5 +1,6 @@
 import prisma from "../prisma/prismaClient";
 import { withLongRequestDispatcher } from "./stt/longRequest";
+import { readableUrl } from "../firebase/privateStorage";
 
 /**
  * Names the other people in a meeting by their voice.
@@ -95,13 +96,29 @@ export const identifyOtherSpeakers = async (
     .map((u) => ({ speaker: u.speaker, start: u.start, end: u.end }));
   if (!config.enabled || segments.length === 0 || voices.length === 0) return { names: {} };
 
+  // The recording and the profiles are private; the voice service downloads
+  // them through URLs signed right before the call.
+  let audioUrl: string;
+  let profiles: Array<{ id: string; url: string }>;
+  try {
+    [audioUrl, profiles] = await Promise.all([
+      readableUrl(sysAudioUrl),
+      Promise.all(
+        voices.map(async (v) => ({ id: v.userId, url: await readableUrl(v.voiceProfileUrl) })),
+      ),
+    ]);
+  } catch (err) {
+    const reason = err instanceof Error ? err.message : String(err);
+    return {
+      names: {},
+      error: `voice identification failed: couldn't sign the audio URLs (${reason})`,
+    };
+  }
+
   const form = new FormData();
-  form.append("audio_url", sysAudioUrl);
+  form.append("audio_url", audioUrl);
   form.append("segments", JSON.stringify(segments));
-  form.append(
-    "profiles",
-    JSON.stringify(voices.map((v) => ({ id: v.userId, url: v.voiceProfileUrl }))),
-  );
+  form.append("profiles", JSON.stringify(profiles));
   form.append("min_similarity", String(config.minSimilarity));
 
   let matches: unknown;

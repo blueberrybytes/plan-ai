@@ -34,6 +34,7 @@ export default withMermaid(defineConfig({
         text: 'Security & BYOK',
         items: [
           { text: 'BYOK Architecture', link: '/security/byok-architecture' },
+          { text: 'Where Your Files Live', link: '/security/data-storage' },
           { text: 'Setup OpenRouter', link: '/setup/openrouter' },
           { text: 'Setup Deepgram', link: '/setup/deepgram' },
           { text: 'Setup Mobile Firebase', link: '/setup/mobile-firebase' }

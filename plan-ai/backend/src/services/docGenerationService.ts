@@ -443,8 +443,10 @@ ${userPrompt}`;
   ): Promise<
     DocDocument & { theme: BrandTheme | null; project: { id: string; title: string } | null }
   > {
+    // Only documents someone shared. A private one answers like a missing
+    // one, so the endpoint doesn't confirm that an id exists.
     const doc = await prisma.docDocument.findFirst({
-      where: { id },
+      where: { id, isPublic: true },
       include: { theme: true, project: { select: { id: true, title: true } } },
     });
     if (!doc) throw { status: 404, message: "Document not found" };

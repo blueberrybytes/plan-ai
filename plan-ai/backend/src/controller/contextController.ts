@@ -26,6 +26,7 @@ import {
   uploadContextFileToFirebaseStorage,
   getContextFileContentFromFirebaseStorage,
 } from "../firebase/firebaseStorage";
+import { SHORT_URL_TTL_MS, signedUrlForPath } from "../firebase/privateStorage";
 import { removeContextFileVectors, removeContextVectors } from "../vector/contextFileVectorService";
 import {
   CONTEXT_SUPPORTED_FILE_LABELS,
@@ -49,8 +50,13 @@ interface ContextFileResponse {
   sizeBytes: number;
   createdAt: Date;
   bucketPath: string;
-  publicUrl: string;
   metadata: TsoaJsonObject | null;
+}
+
+interface ContextFileUrlResponse {
+  /** Signed URL to open or download the file. It stops working at expiresAt. */
+  url: string;
+  expiresAt: Date;
 }
 
 interface ContextResponse {
@@ -317,6 +323,31 @@ export class ContextController extends BaseWorkspaceController {
     };
   }
 
+  /**
+   * Files are private in the bucket. Opening or downloading one asks for a
+   * signed URL that works for an hour, so a link that leaks stops working.
+   */
+  @Get("{contextId}/files/{fileId}/url")
+  @Security("ClientLevel")
+  public async getContextFileUrl(
+    @Request() request: AuthenticatedRequest,
+    @Path() contextId: string,
+    @Path() fileId: string,
+  ): Promise<ApiResponse<ContextFileUrlResponse>> {
+    const { workspaceId } = await this.getAuthorizedWorkspaceAccess(request);
+    const context = await contextService.getContextForWorkspace(workspaceId, contextId);
+    const file = context.files.find((f) => f.id === fileId);
+
+    if (!file) {
+      this.setStatus(404);
+      throw { status: 404, message: "File not found" };
+    }
+
+    const expiresAt = new Date(Date.now() + SHORT_URL_TTL_MS);
+    const url = await signedUrlForPath(file.bucketPath, SHORT_URL_TTL_MS);
+    return { status: 200, data: { url, expiresAt } };
+  }
+
   @Post("{contextId}/files")
   @Security("ClientLevel")
   public async uploadContextFile(
@@ -345,7 +376,7 @@ export class ContextController extends BaseWorkspaceController {
 
     const parsedMetadata = this.parseOptionalJson(metadata, "metadata");
 
-    const { storagePath, publicUrl } = await uploadContextFileToFirebaseStorage(
+    const { storagePath } = await uploadContextFileToFirebaseStorage(
       file.buffer,
       user.id,
       contextId,
@@ -353,14 +384,11 @@ export class ContextController extends BaseWorkspaceController {
       file.mimetype,
     );
 
-    let metadataPayload = this.mergeMetadataWithPublicUrl(
-      parsedMetadata as Prisma.InputJsonValue | undefined,
-      publicUrl,
-    );
-
     // Tag as processing
-    metadataPayload = {
-      ...((metadataPayload as Prisma.JsonObject) || {}),
+    const metadataPayload: Prisma.JsonObject = {
+      ...(this.isJsonObject(parsedMetadata as Prisma.InputJsonValue | undefined)
+        ? (parsedMetadata as Prisma.JsonObject)
+        : {}),
       processingStatus: "PENDING",
     };
 
@@ -544,7 +572,7 @@ export class ContextController extends BaseWorkspaceController {
           continue;
         }
 
-        const { storagePath, publicUrl } = await uploadContextFileToFirebaseStorage(
+        const { storagePath } = await uploadContextFileToFirebaseStorage(
           buffer,
           user.id,
           contextId,
@@ -555,7 +583,6 @@ export class ContextController extends BaseWorkspaceController {
         const gDriveMetadata = {
           source: "GOOGLE_DRIVE",
           googleDriveFileId: fileId,
-          publicUrl,
           processingStatus: "PENDING",
         };
 
@@ -644,7 +671,7 @@ export class ContextController extends BaseWorkspaceController {
           continue;
         }
 
-        const { storagePath, publicUrl } = await uploadContextFileToFirebaseStorage(
+        const { storagePath } = await uploadContextFileToFirebaseStorage(
           buffer,
           user.id,
           contextId,
@@ -655,7 +682,6 @@ export class ContextController extends BaseWorkspaceController {
         const oneDriveMetadata = {
           source: "ONEDRIVE",
           oneDriveFileId: fileId,
-          publicUrl,
           processingStatus: "PENDING",
         };
 
@@ -735,7 +761,7 @@ export class ContextController extends BaseWorkspaceController {
       const hostName = parsedUrl.hostname.replace(/[^a-z0-9]/gi, "_").toLowerCase();
       const fileName = `website_scrape_${hostName}.md`;
 
-      const { storagePath, publicUrl } = await uploadContextFileToFirebaseStorage(
+      const { storagePath } = await uploadContextFileToFirebaseStorage(
         buffer,
         user.id,
         contextId,
@@ -748,7 +774,7 @@ export class ContextController extends BaseWorkspaceController {
         fileName: fileName,
         mimeType: finalMimeType,
         sizeBytes: buffer.length,
-        metadata: { source: "WEBSITE_SCRAPE", urls: scrapedUrls, rootUrl: body.url, publicUrl },
+        metadata: { source: "WEBSITE_SCRAPE", urls: scrapedUrls, rootUrl: body.url },
       });
 
       // Queue the document worker — extracts keywords + indexes vectors. We
@@ -814,36 +840,9 @@ export class ContextController extends BaseWorkspaceController {
         sizeBytes: file.sizeBytes,
         createdAt: file.createdAt,
         bucketPath: file.bucketPath,
-        publicUrl: this.getPublicUrlForFile(file),
         metadata: file.metadata as TsoaJsonObject | null,
       })),
     };
-  }
-
-  private getPublicUrlForFile(file: {
-    bucketPath: string;
-    metadata: TsoaJsonObject | null;
-  }): string {
-    if (file.metadata && typeof file.metadata === "object" && !Array.isArray(file.metadata)) {
-      const maybeUrl = (file.metadata as Record<string, unknown>).publicUrl;
-      if (typeof maybeUrl === "string") {
-        return maybeUrl;
-      }
-    }
-
-    const bucket = process.env.FIREBASE_STORAGE_BUCKET;
-    return `https://storage.googleapis.com/${bucket}/${file.bucketPath}`;
-  }
-
-  private mergeMetadataWithPublicUrl(
-    metadata: Prisma.InputJsonValue | undefined,
-    publicUrl: string,
-  ): Prisma.JsonObject {
-    if (this.isJsonObject(metadata)) {
-      return { ...metadata, publicUrl };
-    }
-
-    return { publicUrl };
   }
 
   private isJsonObject(

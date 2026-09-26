@@ -19,6 +19,7 @@ import {
   ChevronLeft as ChevronLeftIcon,
   ChevronRight as ChevronRightIcon,
   Language as LanguageIcon,
+  LinkOff as LinkOffIcon,
   Info as InfoIcon,
   Edit as EditIcon,
   Add as AddIcon,
@@ -32,6 +33,9 @@ import { useTranslation } from "react-i18next";
 import SidebarLayout from "../components/layout/SidebarLayout";
 import SlideRenderer from "../components/slides/SlideRenderer";
 import { useGetPresentationQuery, useUpdatePresentationMutation } from "../store/apis/slideApi";
+import { openSharedLink } from "../utils/openSharedLink";
+import { useDispatch } from "react-redux";
+import { setToastMessage } from "../store/slices/app/appSlice";
 import { useGetBrandThemesQuery } from "../store/apis/brandThemeApi";
 import { exportToPptx } from "../services/pptxExportService";
 import EditSlideTextDialog from "../components/slides/EditSlideTextDialog";
@@ -61,6 +65,9 @@ const SlideView: React.FC = () => {
   const [thumbnailMenuIndex, setThumbnailMenuIndex] = useState<number | null>(null);
 
   const [updatePresentation] = useUpdatePresentationMutation();
+  const dispatch = useDispatch();
+  const showSharingError = () =>
+    dispatch(setToastMessage({ severity: "error", message: t("common.sharing.failed") }));
   const { data: themes = [] } = useGetBrandThemesQuery();
 
   const handleThemeChange = async (event: SelectChangeEvent<string>) => {
@@ -322,8 +329,26 @@ const SlideView: React.FC = () => {
 
   const handleOpenPublicLink = async () => {
     if (!presentation?.id) return;
-    const win = window.open("", "_blank");
-    if (win) win.location.href = `/p/${presentation.id}`;
+    const presentationId = presentation.id;
+    try {
+      await openSharedLink(`/p/${presentationId}`, () =>
+        presentation.isPublic
+          ? Promise.resolve()
+          : updatePresentation({ id: presentationId, data: { isPublic: true } }).unwrap(),
+      );
+    } catch {
+      showSharingError();
+    }
+  };
+
+  const handleStopSharing = async () => {
+    if (!presentation?.id) return;
+    try {
+      await updatePresentation({ id: presentation.id, data: { isPublic: false } }).unwrap();
+      dispatch(setToastMessage({ severity: "success", message: t("common.sharing.stopped") }));
+    } catch {
+      showSharingError();
+    }
   };
 
   return (
@@ -427,11 +452,18 @@ const SlideView: React.FC = () => {
             >
               🗑 Delete
             </Button>
-            <Tooltip title={t("slides.publicMode", "Public Mode")}>
+            <Tooltip title={t("common.sharing.openPublicLink")}>
               <IconButton onClick={handleOpenPublicLink} sx={{ color: "#94a3b8" }}>
                 <LanguageIcon />
               </IconButton>
             </Tooltip>
+            {presentation?.isPublic && (
+              <Tooltip title={t("common.sharing.stopSharing")}>
+                <IconButton onClick={handleStopSharing} sx={{ color: "#94a3b8" }}>
+                  <LinkOffIcon />
+                </IconButton>
+              </Tooltip>
+            )}
             <Button
               variant="contained"
               size="small"

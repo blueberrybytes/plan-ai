@@ -16,6 +16,7 @@ const { db } = vi.hoisted(() => ({
   db: {
     workspaceIntegration: { findUnique: vi.fn() },
     transcript: { findUnique: vi.fn(), update: vi.fn() },
+    docDocument: { updateMany: vi.fn() },
   },
 }));
 
@@ -105,6 +106,11 @@ describe("appendDocLinkToNote", () => {
     // A relative path is meaningless to whoever opens the CRM.
     expect(markdown).toContain(`(${EXPECTED_URL})`);
     expect(markdown).toContain("**Fecha:** 2026-08-11");
+    // Documents are private until shared; a link in the CRM is a share.
+    expect(db.docDocument.updateMany).toHaveBeenCalledWith({
+      where: { id: "doc-42", workspaceId: "ws-1" },
+      data: { isPublic: true },
+    });
   });
 
   it("does not append the same link twice", async () => {
@@ -127,6 +133,7 @@ describe("appendDocLinkToNote", () => {
     await twentyIntegrationService.appendDocLinkToNote("ws-1", "t-1", PUBLIC_PATH);
 
     expect(calls).toEqual([]);
+    expect(db.docDocument.updateMany).not.toHaveBeenCalled();
   });
 
   it("does nothing when the meeting was never pushed", async () => {
@@ -145,5 +152,7 @@ describe("appendDocLinkToNote", () => {
     await twentyIntegrationService.appendDocLinkToNote("ws-1", "t-1", PUBLIC_PATH);
 
     expect(calls).toEqual([]);
+    // Nothing went to the CRM, so the document stays private.
+    expect(db.docDocument.updateMany).not.toHaveBeenCalled();
   });
 });

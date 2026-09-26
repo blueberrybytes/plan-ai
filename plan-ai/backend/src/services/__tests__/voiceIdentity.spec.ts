@@ -1,10 +1,17 @@
 import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
 
-const mocks = vi.hoisted(() => ({ findMany: vi.fn() }));
+const mocks = vi.hoisted(() => ({
+  findMany: vi.fn(),
+  // Recordings and profiles are private: stands in for the V4 signature.
+  readableUrl: vi.fn(async (ref: string) =>
+    ref.startsWith("gs://") ? `https://signed.example/${ref.slice(5)}?sig=1` : ref,
+  ),
+}));
 
 vi.mock("../../prisma/prismaClient", () => ({
   default: { workspaceMember: { findMany: mocks.findMany } },
 }));
+vi.mock("../../firebase/privateStorage", () => ({ readableUrl: mocks.readableUrl }));
 
 import {
   identifyOtherSpeakers,
@@ -23,8 +30,8 @@ const config: VoiceIdentityConfig = {
 };
 
 const voices = [
-  { userId: "u_marta", name: "Marta Ruiz", voiceProfileUrl: "https://storage/marta.m4a" },
-  { userId: "u_luis", name: "Luis", voiceProfileUrl: "https://storage/luis.m4a" },
+  { userId: "u_marta", name: "Marta Ruiz", voiceProfileUrl: "gs://b/voice-profiles/marta.m4a" },
+  { userId: "u_luis", name: "Luis", voiceProfileUrl: "gs://b/voice-profiles/luis.m4a" },
 ];
 
 const utterances = [
@@ -59,15 +66,21 @@ describe("naming other participants by voice", () => {
       }),
     );
 
-    const out = await identifyOtherSpeakers("https://storage/sys.m4a", utterances, voices, config);
+    const out = await identifyOtherSpeakers(
+      "gs://b/transcripts/sys.m4a",
+      utterances,
+      voices,
+      config,
+    );
 
     expect(out).toEqual({ names: { "Others 1": "Marta Ruiz" } });
-    expect(body!.get("audio_url")).toBe("https://storage/sys.m4a");
+    // The voice service only ever sees signed URLs, never the private URIs.
+    expect(body!.get("audio_url")).toBe("https://signed.example/b/transcripts/sys.m4a?sig=1");
     const segs = JSON.parse(body!.get("segments") as string) as Array<{ speaker: string }>;
     expect(segs.map((s) => s.speaker)).toEqual(["Others 0", "Others 1", "Others 0"]);
     expect(JSON.parse(body!.get("profiles") as string)).toEqual([
-      { id: "u_marta", url: "https://storage/marta.m4a" },
-      { id: "u_luis", url: "https://storage/luis.m4a" },
+      { id: "u_marta", url: "https://signed.example/b/voice-profiles/marta.m4a?sig=1" },
+      { id: "u_luis", url: "https://signed.example/b/voice-profiles/luis.m4a?sig=1" },
     ]);
     expect(body!.get("min_similarity")).toBe("0.45");
     expect(init!.dispatcher).toBe(longRequestDispatcher);
@@ -101,6 +114,18 @@ describe("naming other participants by voice", () => {
     const out = await identifyOtherSpeakers("u", utterances, voices, config);
     expect(out.names).toEqual({});
     expect(out.error).toMatch(/unreachable/);
+  });
+
+  it("reports why and doesn't call the service when the URLs can't be signed", async () => {
+    const fetchSpy = vi.fn();
+    vi.stubGlobal("fetch", fetchSpy);
+    mocks.readableUrl.mockRejectedValueOnce(new Error("no signing key"));
+    const out = await identifyOtherSpeakers("gs://b/sys.m4a", utterances, voices, config);
+    expect(out).toEqual({
+      names: {},
+      error: "voice identification failed: couldn't sign the audio URLs (no signing key)",
+    });
+    expect(fetchSpy).not.toHaveBeenCalled();
   });
 
   it("doesn't call the service without system speakers, profiles, or when turned off", async () => {

@@ -32,7 +32,7 @@ import {
   type PainPointResponse,
 } from "./projectsModelController";
 import { transcriptGenerationQueue } from "../queue/transcriptGenerationQueue";
-import { firebaseAdmin } from "../firebase/firebaseAdmin";
+import { uploadPrivateFile } from "../firebase/privateStorage";
 import { DocDocumentResponse } from "./docController";
 import { TranscriptMetadata, type PostMeetingTaskKind } from "../services/transcriptMetadataTypes";
 import { logger } from "../utils/logger";
@@ -444,8 +444,9 @@ export class TranscriptsController extends BaseWorkspaceController {
     let rawMicUrl: string | undefined;
     let rawSysUrl: string | undefined;
 
+    // Recordings are private: the database keeps gs:// URIs and the
+    // speech-to-text and voice services get signed URLs when they need them.
     if (micFile || sysFile) {
-      const bucket = firebaseAdmin.storage().bucket();
       const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
 
       if (micFile) {
@@ -461,10 +462,11 @@ export class TranscriptsController extends BaseWorkspaceController {
         }
 
         const ext = micFile.originalname.split(".").pop() || "webm";
-        const fileRef = bucket.file(`transcripts/${user.id}/${uniqueSuffix}-mic.${ext}`);
-        await fileRef.save(micFile.buffer, { contentType: micFile.mimetype });
-        await fileRef.makePublic();
-        rawMicUrl = fileRef.publicUrl();
+        rawMicUrl = await uploadPrivateFile(
+          `transcripts/${user.id}/${uniqueSuffix}-mic.${ext}`,
+          micFile.buffer,
+          micFile.mimetype,
+        );
       }
 
       if (sysFile) {
@@ -480,10 +482,11 @@ export class TranscriptsController extends BaseWorkspaceController {
         }
 
         const ext = sysFile.originalname.split(".").pop() || "webm";
-        const fileRef = bucket.file(`transcripts/${user.id}/${uniqueSuffix}-sys.${ext}`);
-        await fileRef.save(sysFile.buffer, { contentType: sysFile.mimetype });
-        await fileRef.makePublic();
-        rawSysUrl = fileRef.publicUrl();
+        rawSysUrl = await uploadPrivateFile(
+          `transcripts/${user.id}/${uniqueSuffix}-sys.${ext}`,
+          sysFile.buffer,
+          sysFile.mimetype,
+        );
       }
     }
 

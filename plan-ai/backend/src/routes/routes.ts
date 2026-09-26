@@ -1103,8 +1103,8 @@ const models: TsoaRoute.Models = {
             "trello": {"dataType":"nestedObjectLiteral","nestedProperties":{"shortLink":{"dataType":"string","required":true},"url":{"dataType":"string","required":true},"cardId":{"dataType":"string","required":true}}},
             "notion": {"dataType":"nestedObjectLiteral","nestedProperties":{"url":{"dataType":"string","required":true},"pageId":{"dataType":"string","required":true}}},
             "asana": {"dataType":"nestedObjectLiteral","nestedProperties":{"url":{"dataType":"string","required":true},"taskGid":{"dataType":"string","required":true}}},
-            "publicDocUrl": {"dataType":"string"},
-            "publicSlidesUrl": {"dataType":"string"},
+            "docUrl": {"dataType":"string"},
+            "slidesUrl": {"dataType":"string"},
             "category": {"ref":"TaskCategory"},
             "acceptanceCriteriaList": {"dataType":"array","array":{"dataType":"string"}},
         },
@@ -1367,6 +1367,7 @@ const models: TsoaRoute.Models = {
             "slidesJson": {"dataType":"union","subSchemas":[{"ref":"TsoaJsonObject"},{"dataType":"enum","enums":[null]}],"required":true},
             "contextIds": {"dataType":"array","array":{"dataType":"string"},"required":true},
             "status": {"dataType":"string","required":true},
+            "isPublic": {"dataType":"boolean","required":true},
             "createdAt": {"dataType":"datetime","required":true},
             "updatedAt": {"dataType":"datetime","required":true},
         },
@@ -1406,6 +1407,7 @@ const models: TsoaRoute.Models = {
             "status": {"dataType":"string"},
             "themeId": {"dataType":"union","subSchemas":[{"dataType":"string"},{"dataType":"enum","enums":[null]}]},
             "slidesJson": {"dataType":"any"},
+            "isPublic": {"dataType":"boolean"},
         },
         "additionalProperties": false,
     },
@@ -1731,7 +1733,6 @@ const models: TsoaRoute.Models = {
             "sizeBytes": {"dataType":"double","required":true},
             "createdAt": {"dataType":"datetime","required":true},
             "bucketPath": {"dataType":"string","required":true},
-            "publicUrl": {"dataType":"string","required":true},
             "metadata": {"dataType":"union","subSchemas":[{"ref":"TsoaJsonObject"},{"dataType":"enum","enums":[null]}],"required":true},
         },
         "additionalProperties": false,
@@ -1801,6 +1802,20 @@ const models: TsoaRoute.Models = {
             "branch": {"dataType":"string"},
         },
         "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "ContextFileUrlResponse": {
+        "dataType": "refObject",
+        "properties": {
+            "url": {"dataType":"string","required":true},
+            "expiresAt": {"dataType":"datetime","required":true},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "ApiResponse_ContextFileUrlResponse_": {
+        "dataType": "refAlias",
+        "type": {"dataType":"nestedObjectLiteral","nestedProperties":{"message":{"dataType":"string"},"data":{"dataType":"union","subSchemas":[{"ref":"ContextFileUrlResponse"},{"dataType":"enum","enums":[null]}],"required":true},"status":{"dataType":"double","required":true}},"validators":{}},
     },
     // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
     "ImportWebsiteRequest": {
@@ -6692,6 +6707,39 @@ export function RegisterRoutes(app: Router,opts?:{multer?:ReturnType<typeof mult
 
               await templateService.apiHandler({
                 methodName: 'deleteContext',
+                controller,
+                response,
+                next,
+                validatedArgs,
+                successStatus: undefined,
+              });
+            } catch (err) {
+                return next(err);
+            }
+        });
+        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+        const argsContextController_getContextFileUrl: Record<string, TsoaRoute.ParameterSchema> = {
+                request: {"in":"request","name":"request","required":true,"dataType":"object"},
+                contextId: {"in":"path","name":"contextId","required":true,"dataType":"string"},
+                fileId: {"in":"path","name":"fileId","required":true,"dataType":"string"},
+        };
+        app.get('/api/contexts/:contextId/files/:fileId/url',
+            authenticateMiddleware([{"ClientLevel":[]}]),
+            ...(fetchMiddlewares<RequestHandler>(ContextController)),
+            ...(fetchMiddlewares<RequestHandler>(ContextController.prototype.getContextFileUrl)),
+
+            async function ContextController_getContextFileUrl(request: ExRequest, response: ExResponse, next: any) {
+
+            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+
+            let validatedArgs: any[] = [];
+            try {
+                validatedArgs = templateService.getValidatedArgs({ args: argsContextController_getContextFileUrl, request, response });
+
+                const controller = new ContextController();
+
+              await templateService.apiHandler({
+                methodName: 'getContextFileUrl',
                 controller,
                 response,
                 next,

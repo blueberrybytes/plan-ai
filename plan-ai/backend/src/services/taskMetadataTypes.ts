@@ -29,8 +29,10 @@ export interface TaskMetadata {
     taskGid: string;
     url: string;
   };
-  publicDocUrl?: string;
-  publicSlidesUrl?: string;
+  /** In-app page of the document generated from the meeting (needs login). */
+  docUrl?: string;
+  /** In-app page of the slides generated from the meeting (needs login). */
+  slidesUrl?: string;
   /** Set by the AI ticket extractor. Defaults to "engineering" when absent. */
   category?: TaskCategory;
   /**

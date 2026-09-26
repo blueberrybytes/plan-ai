@@ -78,8 +78,12 @@ async def convert_to_wav16k(raw_path: str, wav_path: str) -> None:
 async def download_file(url: str) -> str:
     raw_temp = tempfile.NamedTemporaryFile(delete=False)
     wav_temp = tempfile.NamedTemporaryFile(delete=False, suffix=".wav")
-    
-    logger.info(f"Downloading audio from {url}...")
+    # The backend sends signed URLs. The query string is the signature, a
+    # credential for the file until it expires, so logs and errors get the
+    # path only.
+    safe_url = url.split("?", 1)[0]
+
+    logger.info(f"Downloading audio from {safe_url}...")
     try:
         # Stream download to disk to avoid buffering large audio files in memory
         async with httpx.AsyncClient(timeout=60.0) as client:
@@ -93,10 +97,12 @@ async def download_file(url: str) -> str:
         await convert_to_wav16k(raw_temp.name, wav_temp.name)
         return wav_temp.name
     except Exception as e:
-        sentry_sdk.capture_exception(e)
+        reason = str(e).replace(url, safe_url)
+        # httpx puts the full URL in its messages: report a redacted copy.
+        sentry_sdk.capture_message(f"Failed to process audio from {safe_url}: {reason}", level="error")
         if os.path.exists(wav_temp.name):
             os.unlink(wav_temp.name)
-        raise HTTPException(status_code=400, detail=f"Failed to process audio from {url}: {str(e)}")
+        raise HTTPException(status_code=400, detail=f"Failed to process audio from {safe_url}: {reason}")
     finally:
         if os.path.exists(raw_temp.name):
             os.unlink(raw_temp.name)

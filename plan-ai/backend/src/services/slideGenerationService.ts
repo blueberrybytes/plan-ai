@@ -587,8 +587,9 @@ CRITICAL PRESENTATION RULE: Slides must be easily readable. Do NOT write long pa
   public async getPublicPresentationById(
     presentationId: string,
   ): Promise<PresentationWithRelations> {
-    const presentation = await prisma.presentation.findUnique({
-      where: { id: presentationId },
+    // Only presentations someone shared; a private one answers like a missing one.
+    const presentation = await prisma.presentation.findFirst({
+      where: { id: presentationId, isPublic: true },
       include: { template: true, theme: true },
     });
 
@@ -637,6 +638,7 @@ CRITICAL PRESENTATION RULE: Slides must be easily readable. Do NOT write long pa
       status?: string;
       themeId?: string | null;
       slidesJson?: Prisma.InputJsonValue;
+      isPublic?: boolean;
     },
   ): Promise<PresentationWithRelations> {
     await this.getPresentationById(userId, workspaceId, presentationId);

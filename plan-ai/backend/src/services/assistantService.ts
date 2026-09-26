@@ -21,6 +21,7 @@ import { getPersonaInstructions } from "./personaService";
 import { contextService } from "./contextService";
 import { queryContexts } from "../vector/contextFileVectorService";
 import { resolveAssistantDateRange } from "./assistantDateUtils";
+import { withSignedFileParts } from "./chatAttachments";
 
 export class AssistantChatService {
   public async handleAssistantStream(
@@ -204,7 +205,8 @@ ${planAiKnowledge}
         providerOptions: getReasoningProviderOptions(selectedModel),
         maxRetries: 3,
         system: systemPrompt,
-        messages: await convertToModelMessages(messages),
+        // Attachments are private: file parts get a fresh signed URL here.
+        messages: await convertToModelMessages(await withSignedFileParts(messages, userId)),
         // Allow the model multiple tool calls so it can chain (e.g. list → get
         // → search → answer) without bailing out early.
         stopWhen: stepCountIs(8),

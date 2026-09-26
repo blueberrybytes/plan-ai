@@ -5,7 +5,7 @@ import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import SidebarLayout from "../components/layout/SidebarLayout";
 import { useNavigate, useParams } from "react-router-dom";
 import { useGetProjectQuery } from "../store/apis/projectApi";
-import { useGetContextQuery } from "../store/apis/contextApi";
+import { useGetContextFileUrlQuery, useGetContextQuery } from "../store/apis/contextApi";
 import { useTranslation } from "react-i18next";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
@@ -13,6 +13,15 @@ import { useSelector } from "react-redux";
 import { RootState } from "../store/store";
 import MarkdownRenderer from "../components/common/MarkdownRenderer";
 import CsvRenderer from "../components/common/CsvRenderer";
+
+// Word and PowerPoint files are previewed as the text the backend extracts
+// from them. They used to go through Google's online viewer, which meant
+// handing the file to Google. The original stays one click away.
+const isOfficeDocument = (mimeType: string): boolean =>
+  mimeType.includes("wordprocessingml") ||
+  mimeType.includes("msword") ||
+  mimeType.includes("presentationml") ||
+  mimeType.includes("powerpoint");
 
 const ProjectFileViewer: React.FC = () => {
   const { projectId, fileId } = useParams<{ projectId: string; fileId: string }>();
@@ -45,6 +54,14 @@ const ProjectFileViewer: React.FC = () => {
   const context = contextData?.data ?? null;
   const file = context?.files.find((f) => f.id === fileId);
 
+  // Files are private in storage. The PDF and Office previews and the "open
+  // original" button use a signed URL that works for an hour.
+  const { data: fileUrlData, isFetching: isFetchingFileUrl } = useGetContextFileUrlQuery(
+    { contextId: contextId ?? "", fileId: fileId ?? "" },
+    { skip: !contextId || !file },
+  );
+  const fileUrl = fileUrlData?.data?.url;
+
   const [textContent, setTextContent] = React.useState<string | null>(null);
   const [isFetchingText, setIsFetchingText] = React.useState(false);
 
@@ -58,7 +75,8 @@ const ProjectFileViewer: React.FC = () => {
       file.mimeType.includes("csv") ||
       file.mimeType.includes("markdown") ||
       file.mimeType.includes("spreadsheetml") ||
-      file.mimeType.includes("ms-excel");
+      file.mimeType.includes("ms-excel") ||
+      isOfficeDocument(file.mimeType);
 
     if (isTextBase && contextId && file.id && token && activeWorkspaceId) {
       setIsFetchingText(true);
@@ -97,7 +115,7 @@ const ProjectFileViewer: React.FC = () => {
         <Alert severity="warning">{t("contexts.messages.fileNotFound", "File not found.")}</Alert>
       );
 
-    const { mimeType, publicUrl } = file;
+    const { mimeType } = file;
 
     // 1. Text, JSON, XML, CSV
     if (
@@ -165,39 +183,42 @@ const ProjectFileViewer: React.FC = () => {
       );
     }
 
+    if (isOfficeDocument(mimeType)) {
+      if (isFetchingText) {
+        return (
+          <Box sx={{ display: "flex", justifyContent: "center", mt: 10 }}>
+            <CircularProgress />
+          </Box>
+        );
+      }
+      return (
+        <Box sx={{ p: 3, bgcolor: "background.paper", borderRadius: 2, height: "100%" }}>
+          <Alert severity="info" sx={{ mb: 2 }}>
+            {t("contexts.messages.textPreviewOnly")}
+          </Alert>
+          <Typography component="div" sx={{ whiteSpace: "pre-wrap", fontSize: 14 }}>
+            {textContent || t("contexts.messages.noTextContent")}
+          </Typography>
+        </Box>
+      );
+    }
+
+    if (!fileUrl) {
+      return isFetchingFileUrl ? (
+        <Box sx={{ display: "flex", justifyContent: "center", mt: 10 }}>
+          <CircularProgress />
+        </Box>
+      ) : (
+        <Alert severity="error">{t("contexts.messages.openFileError")}</Alert>
+      );
+    }
+
     // 2. PDF
     if (mimeType === "application/pdf") {
       return (
         <Box sx={{ width: "100%", height: "100%", borderRadius: 2, overflow: "hidden" }}>
           <iframe
-            src={publicUrl}
-            title={file.fileName}
-            style={{ width: "100%", height: "100%", border: "none" }}
-          />
-        </Box>
-      );
-    }
-
-    if (
-      mimeType.includes("document") ||
-      mimeType.includes("msword") ||
-      mimeType.includes("officedocument") ||
-      mimeType.includes("presentation") ||
-      mimeType.includes("powerpoint")
-    ) {
-      const googleDocsUrl = `https://docs.google.com/gview?url=${encodeURIComponent(publicUrl)}&embedded=true`;
-      return (
-        <Box
-          sx={{
-            width: "100%",
-            height: "100%",
-            borderRadius: 2,
-            overflow: "hidden",
-            bgcolor: "white",
-          }}
-        >
-          <iframe
-            src={googleDocsUrl}
+            src={fileUrl}
             title={file.fileName}
             style={{ width: "100%", height: "100%", border: "none" }}
           />
@@ -252,14 +273,9 @@ const ProjectFileViewer: React.FC = () => {
               )}
             </Box>
           </Box>
-          {file && (
+          {file && fileUrl && (
             <Tooltip title="Open Original File">
-              <IconButton
-                component="a"
-                href={file.publicUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
+              <IconButton component="a" href={fileUrl} target="_blank" rel="noopener noreferrer">
                 <OpenInNewIcon />
               </IconButton>
             </Tooltip>

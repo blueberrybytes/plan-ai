@@ -1782,6 +1782,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/contexts/{contextId}/files/{fileId}/url": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description Files are private in the bucket. Opening or downloading one asks for a
+         *     signed URL that works for an hour, so a link that leaks stops working.
+         */
+        get: operations["GetContextFileUrl"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/contexts/{contextId}/files": {
         parameters: {
             query?: never;
@@ -3642,8 +3662,10 @@ export interface components {
                 url: string;
                 taskGid: string;
             };
-            publicDocUrl?: string;
-            publicSlidesUrl?: string;
+            /** @description In-app page of the document generated from the meeting (needs login). */
+            docUrl?: string;
+            /** @description In-app page of the slides generated from the meeting (needs login). */
+            slidesUrl?: string;
             /** @description Set by the AI ticket extractor. Defaults to "engineering" when absent. */
             category?: components["schemas"]["TaskCategory"];
             /**
@@ -3869,6 +3891,7 @@ export interface components {
             slidesJson: components["schemas"]["TsoaJsonObject"] | null;
             contextIds: string[];
             status: string;
+            isPublic: boolean;
             /** Format: date-time */
             createdAt: string;
             /** Format: date-time */
@@ -3899,6 +3922,8 @@ export interface components {
             status?: string;
             themeId?: string | null;
             slidesJson?: unknown;
+            /** @description Shares the presentation at /p/<id> (true) or stops sharing it (false). */
+            isPublic?: boolean;
         };
         UpdatePresentationStatusRequest: {
             status: string;
@@ -4127,7 +4152,6 @@ export interface components {
             /** Format: date-time */
             createdAt: string;
             bucketPath: string;
-            publicUrl: string;
             metadata: components["schemas"]["TsoaJsonObject"] | null;
         };
         ContextResponse: {
@@ -4174,6 +4198,18 @@ export interface components {
             repoFullName: string;
             installationId: string;
             branch?: string;
+        };
+        ContextFileUrlResponse: {
+            /** @description Signed URL to open or download the file. It stops working at expiresAt. */
+            url: string;
+            /** Format: date-time */
+            expiresAt: string;
+        };
+        ApiResponse_ContextFileUrlResponse_: {
+            message?: string;
+            data: components["schemas"]["ContextFileUrlResponse"] | null;
+            /** Format: double */
+            status: number;
         };
         ImportWebsiteRequest: {
             url: string;
@@ -8282,6 +8318,29 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ApiResponse_ContextResponse_"];
+                };
+            };
+        };
+    };
+    GetContextFileUrl: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                contextId: string;
+                fileId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_ContextFileUrlResponse_"];
                 };
             };
         };

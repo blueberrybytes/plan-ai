@@ -32,8 +32,12 @@ import {
   useGetPresentationsQuery,
   useDeletePresentationMutation,
   useGenerateDemoPresentationMutation,
+  useUpdatePresentationMutation,
   type PresentationResponse,
 } from "../store/apis/slideApi";
+import { useDispatch } from "react-redux";
+import { setToastMessage } from "../store/slices/app/appSlice";
+import { openSharedLink } from "../utils/openSharedLink";
 import { exportToPptx } from "../services/pptxExportService";
 import EditPresentationDialog from "../components/slides/EditPresentationDialog";
 
@@ -52,6 +56,20 @@ const Slides: React.FC = () => {
     isFetching,
   } = useGetPresentationsQuery(undefined, { refetchOnFocus: true });
   const [deletePresentation] = useDeletePresentationMutation();
+  const [updatePresentation] = useUpdatePresentationMutation();
+  const dispatch = useDispatch();
+
+  const handleOpenPublicLink = async (pres: PresentationResponse) => {
+    try {
+      await openSharedLink(`/p/${pres.id}`, () =>
+        pres.isPublic
+          ? Promise.resolve()
+          : updatePresentation({ id: pres.id, data: { isPublic: true } }).unwrap(),
+      );
+    } catch {
+      dispatch(setToastMessage({ severity: "error", message: t("common.sharing.failed") }));
+    }
+  };
   const [generateDemo, { isLoading: isGeneratingDemo }] = useGenerateDemoPresentationMutation();
 
   const [editDialogOpen, setEditDialogOpen] = React.useState(false);
@@ -362,10 +380,10 @@ const Slides: React.FC = () => {
                     </IconButton>
                     <IconButton
                       size="small"
-                      title="Public Link"
+                      title={t("common.sharing.openPublicLink")}
                       onClick={(e) => {
                         e.stopPropagation();
-                        window.open(`/p/${pres.id}`, "_blank");
+                        void handleOpenPublicLink(pres);
                       }}
                     >
                       <LanguageIcon fontSize="small" />

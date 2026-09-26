@@ -5,6 +5,8 @@ import { useLocalSearchParams, router } from 'expo-router';
 import Markdown from 'react-native-markdown-display';
 import { Task } from '../../services/planAiApi';
 
+const WEB_APP_URL = process.env.EXPO_PUBLIC_PLAN_AI_WEB_URL ?? 'https://plan-ai.blueberrybytes.com';
+
 export default function TaskDetailsScreen() {
   const params = useLocalSearchParams();
   const theme = useTheme();
@@ -28,6 +30,16 @@ export default function TaskDetailsScreen() {
       </View>
     );
   }
+
+  // The meeting's document and slides open in the web app, which asks for a login.
+  const metadata = (task.metadata ?? null) as Record<string, unknown> | null;
+  const generatedAssets = [
+    { path: metadata?.docUrl, label: 'Document', icon: 'file-document-outline' },
+    { path: metadata?.slidesUrl, label: 'Slides', icon: 'presentation' },
+  ].filter(
+    (asset): asset is { path: string; label: string; icon: string } =>
+      typeof asset.path === 'string' && asset.path.length > 0,
+  );
 
   const dueDateStr = task.dueDate 
     ? new Date(task.dueDate).toLocaleDateString(undefined, { weekday: 'short', month: 'long', day: 'numeric', year: 'numeric' })
@@ -205,30 +217,18 @@ export default function TaskDetailsScreen() {
         ) : null}
 
         {/* Generated Assets */}
-        {((task.metadata as Record<string, unknown> | null)?.publicDocUrl ||
-          (task.metadata as Record<string, unknown> | null)?.publicSlidesUrl) ? (
+        {generatedAssets.length > 0 ? (
           <Card style={[styles.card, { backgroundColor: theme.colors.surface }]} mode="elevated" elevation={1}>
             <Card.Content>
               <Text variant="titleMedium" style={{ fontWeight: 'bold', color: theme.colors.primary, marginBottom: 8 }}>
                 Generated Assets
               </Text>
               <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
-                {(task.metadata as Record<string, unknown> | null)?.publicDocUrl ? (
-                  <Chip
-                    icon="file-document-outline"
-                    onPress={() => Linking.openURL(String((task.metadata as Record<string, unknown>)?.publicDocUrl))}
-                  >
-                    Public Document
+                {generatedAssets.map((asset) => (
+                  <Chip key={asset.path} icon={asset.icon} onPress={() => Linking.openURL(`${WEB_APP_URL}${asset.path}`)}>
+                    {asset.label}
                   </Chip>
-                ) : null}
-                {(task.metadata as Record<string, unknown> | null)?.publicSlidesUrl ? (
-                  <Chip
-                    icon="presentation"
-                    onPress={() => Linking.openURL(String((task.metadata as Record<string, unknown>)?.publicSlidesUrl))}
-                  >
-                    Public Slides
-                  </Chip>
-                ) : null}
+                ))}
               </View>
             </Card.Content>
           </Card>

@@ -18,6 +18,8 @@
     "stt:smoke": "env-cmd -f .env ts-node --transpile-only src/scripts/sttSmoke.ts",
     "stt:diarize-eval": "env-cmd -f .env ts-node --transpile-only src/scripts/sttDiarizeEval.ts",
     "local-ai:smoke": "env-cmd -f .env ts-node --transpile-only src/scripts/localAiSmoke.ts",
+    "storage:make-private": "env-cmd -f .env ts-node --transpile-only src/scripts/makeStoragePrivate.ts",
+    "storage:smoke": "env-cmd -f .env ts-node --transpile-only src/scripts/storageSmoke.ts",
     "verify:models": "ts-node --transpile-only src/scripts/verifyModelCatalogue.ts",
     "test:reasoning": "env-cmd -f .env ts-node --transpile-only src/scripts/testReasoning.ts",
     "lint": "eslint \"src/**/*.ts\" --max-warnings=0",
