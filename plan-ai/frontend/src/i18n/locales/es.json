@@ -511,24 +511,24 @@
       "signUp": "Registrarse"
     },
     "hero": {
-      "badge": "Hecho para agencias de software y equipos de ingeniería",
-      "title": "Standups dentro. Tickets de Jira fuera.",
-      "subtitle": "El asistente de IA para reuniones de equipos de software. Plan AI graba tus reuniones de ingeniería, entiende tu codebase y genera tickets, especificaciones y diagramas de arquitectura listos para ejecutar — automáticamente. No es para reuniones de ventas. Es para el equipo que escribe el código.",
+      "badge": "IA privada para equipos de software",
+      "title": "IA privada para tus reuniones de ingeniería.",
+      "subtitle": "Plan AI graba tus reuniones y las convierte en tickets, especificaciones y diagramas. Las grabaciones y los archivos son privados por defecto. Para el trabajo confidencial, toda la IA funciona en tus propios servidores y ningún contenido de tus reuniones llega a un proveedor de IA.",
       "cta": "Empezar gratis",
-      "ctaSecondary": "Reservar demo de 15 min"
+      "ctaSecondary": "Habla con nosotros de una instalación privada"
     },
     "stats": {
-      "faster": "Horas/semana ahorradas en specs",
-      "aiPowered": "Tickets conscientes del código",
-      "manualWork": "Bots en tus llamadas"
+      "faster": "Bots en tus llamadas",
+      "aiPowered": "Vida máxima de un enlace a tus archivos",
+      "manualWork": "De la IA puede funcionar en tus servidores"
     },
     "features": {
-      "heading": "Reuniones de ingeniería sin el impuesto de escribir specs",
-      "subheading": "Plan AI está diseñado para agencias de software y equipos de producto que convierten conversaciones en trabajo entregable. Tickets reales, specs reales, diagramas reales — informados por tu código real.",
+      "heading": "Qué hace Plan AI con tus reuniones",
+      "subheading": "Grabación, tickets, especificaciones y una memoria de cada decisión en la que puedes buscar. Hecho para agencias de software y equipos de producto, y apoyado en tu código real.",
       "items": {
         "transcript": {
           "title": "Grabación Sin Bots",
-          "description": "Grabadoras nativas para macOS, Windows, iOS y Android. Tus llamadas con clientes se quedan en tu máquina, no en los servidores de Fathom. Zoom, Meet, presenciales — todo cubierto."
+          "description": "Grabadoras nativas para macOS, Windows, iOS y Android. Ningún bot entra en la llamada. Puedes pausar cuando quieras y esa parte no se graba. Funciona con Zoom, Meet y reuniones presenciales."
         },
         "tasks": {
           "title": "Tickets Reales en Jira y Linear",
@@ -570,14 +570,14 @@
       }
     },
     "checklist": {
-      "noSetup": "BYOK o Managed",
-      "googleLogin": "Consciente del código vía GitNexus",
-      "freeTier": "100% privado — sin bots",
-      "allInOne": "Jira, Linear, GitHub, Notion"
+      "noSetup": "Privado por defecto",
+      "googleLogin": "IA en tus propios servidores",
+      "freeTier": "Sin bots en tus llamadas",
+      "allInOne": "Tus propias claves de IA"
     },
     "cta": {
-      "title": "Hecho por ingenieros, para equipos de ingeniería.",
-      "subtitle": "Las agencias de software reducen el tiempo de escritura de specs en un 80%. Los equipos de ingeniería entregan más rápido. Pruébalo gratis — trae tu propia clave de OpenRouter o deja que nosotros gestionemos la IA.",
+      "title": "Tus reuniones, solo tuyas.",
+      "subtitle": "Empieza en la nube con tus propias claves de IA, o habla con nosotros de una instalación privada en tus servidores.",
       "button": "Empezar gratis"
     },
     "footer": {
@@ -653,14 +653,37 @@
         "enterprise": {
           "name": "Enterprise",
           "price": "Custom",
-          "tagline": "Self-host, SLAs personalizados, listo para procurement.",
+          "tagline": "Instalación privada en tus propios servidores, con SLAs a medida.",
           "features": [
-            "Self-hosted o cloud dedicado",
+            "Instalación privada: la IA funciona en tus servidores",
             "Papeleo de SOC 2",
             "DPA + MSA a petición",
             "Routing personalizado de Deepgram / modelos",
             "Onboarding + training"
           ]
+        }
+      }
+    },
+    "security": {
+      "heading": "Tus reuniones siguen siendo tuyas",
+      "subheading": "Las reuniones de ingeniería están llenas de código de clientes y de planes que aún no son públicos. Plan AI está hecho para que ese material siga siendo privado.",
+      "cta": "Cómo trata Plan AI tus datos",
+      "points": {
+        "ownServers": {
+          "title": "La IA puede funcionar en tus servidores",
+          "description": "Con una instalación privada, la transcripción, la identificación de voces, el modelo de lenguaje y la búsqueda funcionan en tu propia infraestructura. Ningún contenido de tus reuniones llega a OpenAI, a Deepgram ni a ningún otro proveedor de IA."
+        },
+        "privateFiles": {
+          "title": "Archivos privados, enlaces que caducan",
+          "description": "Las grabaciones, los perfiles de voz y los archivos que subes nunca son públicos. Cada lectura pasa por un enlace firmado que caduca en un plazo de 1 a 12 horas."
+        },
+        "sharing": {
+          "title": "Nada se comparte por defecto",
+          "description": "Los documentos y las presentaciones de cada reunión se quedan dentro de tu workspace. Los compartes a propósito y puedes dejar de compartirlos cuando quieras. El enlace deja de funcionar al momento."
+        },
+        "ownKeys": {
+          "title": "Tus claves, tus contratos",
+          "description": "En la versión cloud puedes usar tus propias claves de OpenRouter y Deepgram. Así la IA funciona con tus cuentas y bajo tus propios acuerdos con esos proveedores."
         }
       }
     }

@@ -517,24 +517,24 @@
       "signUp": "Register"
     },
     "hero": {
-      "badge": "Built for software agencies and engineering teams",
-      "title": "Standups in. Jira tickets out.",
-      "subtitle": "The AI meeting assistant for software teams. Plan AI records your engineering meetings, understands your codebase, and ships proper tickets, specs, and architecture diagrams — automatically. Not built for sales calls. Built for the team that writes the code.",
+      "badge": "Private AI for software teams",
+      "title": "Private AI for your engineering meetings.",
+      "subtitle": "Plan AI records your meetings and turns them into tickets, specs and diagrams. Recordings and files are private by default. For confidential work, the whole AI stack runs on your own servers and no meeting content reaches an AI provider.",
       "cta": "Start free",
-      "ctaSecondary": "Book a 15-min demo"
+      "ctaSecondary": "Talk to us about a private install"
     },
     "stats": {
-      "faster": "Hours/week saved on specs",
-      "aiPowered": "Code-aware tickets",
-      "manualWork": "Bots in your calls"
+      "faster": "Bots in your calls",
+      "aiPowered": "Longest life of a link to your files",
+      "manualWork": "Of the AI can run on your servers"
     },
     "features": {
-      "heading": "Engineering meetings without the spec-writing tax",
-      "subheading": "Plan AI is built for software agencies and product engineering teams that turn conversations into shippable work. Real tickets, real specs, real diagrams — informed by your real code.",
+      "heading": "What Plan AI does with your meetings",
+      "subheading": "Recording, tickets, specs and a searchable memory of every decision. Built for software agencies and product engineering teams, and informed by your real code.",
       "items": {
         "transcript": {
           "title": "Bot-Free Recording",
-          "description": "Native macOS, Windows, iOS and Android recorders. Your client calls stay on your machine, not on a Fathom server. Zoom, Meet, in-person — all covered."
+          "description": "Native recorders for macOS, Windows, iOS and Android. No bot joins the call. Pause at any moment and that part is never recorded. Works with Zoom, Meet and in-person meetings."
         },
         "tasks": {
           "title": "Real Jira & Linear Tickets",
@@ -576,14 +576,14 @@
       }
     },
     "checklist": {
-      "noSetup": "BYOK or Managed pricing",
-      "googleLogin": "Code-aware via GitNexus",
-      "freeTier": "100% private — no bots",
-      "allInOne": "Jira, Linear, GitHub, Notion"
+      "noSetup": "Private by default",
+      "googleLogin": "AI on your own servers",
+      "freeTier": "No bots in your calls",
+      "allInOne": "Your own AI keys"
     },
     "cta": {
-      "title": "Built by engineers, for engineering teams.",
-      "subtitle": "Software agencies cut spec-writing time by 80%. Engineering teams ship faster. Try it free — bring your own OpenRouter key, or let us run the AI.",
+      "title": "Keep your meetings yours.",
+      "subtitle": "Start on the cloud with your own AI keys, or talk to us about a private install on your own servers.",
       "button": "Start free"
     },
     "footer": {
@@ -659,14 +659,37 @@
         "enterprise": {
           "name": "Enterprise",
           "price": "Custom",
-          "tagline": "Self-host, custom SLAs, procurement-ready.",
+          "tagline": "Private install on your own servers, with custom SLAs.",
           "features": [
-            "Self-hosted or dedicated cloud",
+            "Private install: the AI runs on your servers",
             "SOC 2 paperwork",
             "DPA + MSA on request",
             "Custom Deepgram / model routing",
             "Onboarding + training"
           ]
+        }
+      }
+    },
+    "security": {
+      "heading": "Your meetings stay yours",
+      "subheading": "Engineering meetings are full of client code and plans that are not public yet. Plan AI is built around keeping that material private.",
+      "cta": "How Plan AI handles your data",
+      "points": {
+        "ownServers": {
+          "title": "The AI can run on your servers",
+          "description": "With a private install, transcription, speaker identification, the language model and search all run on your own infrastructure. No meeting content goes to OpenAI, Deepgram or any other AI provider."
+        },
+        "privateFiles": {
+          "title": "Private files, links that expire",
+          "description": "Recordings, voice profiles and the files you upload are never public. Every read goes through a signed link that expires within 1 to 12 hours."
+        },
+        "sharing": {
+          "title": "Nothing is shared by default",
+          "description": "Meeting documents and slides stay inside your workspace. You share one on purpose, and you can stop sharing it at any moment. The link stops working straight away."
+        },
+        "ownKeys": {
+          "title": "Your keys, your provider contracts",
+          "description": "On the cloud version you can bring your own OpenRouter and Deepgram keys. The AI then runs under your own accounts and your own agreements with those providers."
         }
       }
     }

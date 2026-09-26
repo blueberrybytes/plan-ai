@@ -1,10 +1,21 @@
 # Plan AI 🚀
 
-**The AI meeting assistant for software teams.** Plan AI records your engineering meetings, understands your codebase via a code graph (Plan Cortex), and automatically ships properly scoped Jira / Linear / Trello tickets, technical specs, and architecture diagrams. Open-source core, BYOK-friendly.
+**Private AI for engineering meetings.** Plan AI records your meetings and turns them into tickets, specs and architecture diagrams, informed by your codebase through a code graph (Plan Cortex). Recordings and files are private by default, and the whole AI stack can run on your own servers.
 
 ## Video Demo (click on the image to watch it)
 
 [![Plan AI Demo](https://img.youtube.com/vi/qJBdLCjMD28/hqdefault.jpg)](https://www.youtube.com/watch?v=qJBdLCjMD28)
+
+## Privacy and security
+
+Engineering meetings carry client code and plans that are not public yet, so Plan AI keeps them private by default:
+
+- Recordings, voice profiles and files are never public. Every read goes through a signed link that expires.
+- Meeting documents and slides stay inside your workspace until you share them, and you can stop sharing at any moment.
+- On the cloud version you can bring your own OpenRouter and Deepgram keys, so the AI runs under your own accounts.
+- With a private install, transcription, speaker identification, the language model and search run on your own servers. No meeting content goes to an AI provider.
+
+Details in the [Security Overview](https://docs.plan-ai.blueberrybytes.com/security/overview).
 
 ## 🎯 Who is this for?
 
@@ -12,6 +23,7 @@ Plan AI is **purpose-built for software teams**. It's the meeting tool that know
 
 **✅ Built for:**
 
+- **Teams whose meetings are confidential**: agencies under NDA, fintech, healthtech, public sector. They get private files, sharing only on purpose and, if needed, the whole AI stack on their own servers.
 - **Software agencies and consultancies** billing clients hourly — every hour saved on spec-writing is a billable hour back.
 - **Product engineering teams** at startups and scale-ups using Jira / Linear / Notion who are tired of writing tickets from memory after standups.
 - **Engineering managers and tech leads** who want their team's design reviews, retros, and discovery calls to produce real artifacts, not Slack threads.

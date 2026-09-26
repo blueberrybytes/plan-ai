@@ -6,6 +6,12 @@ This page is the most important page in the docs. Read it before everything else
 
 ## ✅ Built for
 
+### Teams whose meetings are confidential
+
+Agencies working under NDA, fintech, healthtech, public sector: teams whose meetings carry client code, credentials read out loud or plans that must not leak. Plan AI keeps recordings and files private by default, shares documents only on purpose, and can run the whole AI stack on your own servers so that no meeting content reaches an AI provider. See the [Security Overview](/security/overview).
+
+**What they usually need:** a private install, their own storage bucket and region, and a clear answer to "where does our audio go?" before the first meeting is recorded.
+
 ### Software agencies & consultancies
 
 You bill clients hourly. Every hour your senior engineer spends transcribing a discovery call or writing acceptance criteria is **unbilled time** — Plan AI buys it back. Auto-generated client-ready specs and Jira tickets come out of the same recording.

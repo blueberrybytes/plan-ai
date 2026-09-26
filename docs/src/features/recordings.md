@@ -2,13 +2,13 @@
 
 While the Web App provides the interface for reviewing transcripts and generating tickets, the **Desktop Recorder** is the engine that securely captures the data.
 
-Unlike generic AI meeting tools that require inviting a bot to your calendar events, the Plan AI Desktop Recorder runs entirely locally on your machine.
+Unlike generic AI meeting tools that require inviting a bot to your calendar events, the Plan AI Desktop Recorder is an app on your own machine.
 
 ## Why a Native App?
 
 1.  **Privacy:** Clients and external stakeholders do not see a bot join the call. The recording happens invisibly.
 2.  **Universal Compatibility:** Because it captures audio at the operating system level, it works with Zoom, Google Meet, Microsoft Teams, Discord, or even a local video file you are watching.
-3.  **Local Control:** You can instantly pause the recording from your menu bar if a highly sensitive topic is brought up, ensuring the audio never leaves your machine.
+3.  **Local Control:** You can instantly pause the recording from your menu bar if a highly sensitive topic is brought up. That part is never captured.
 
 ## Installation
 
@@ -32,4 +32,4 @@ You can download the Plan AI tools for your devices:
     *   **System Audio Access:** To capture the voices of the other people on the call.
 5.  When the meeting is over, click **Stop**.
 
-The audio file is immediately encrypted and securely uploaded to the Plan AI backend. It is then transcribed by the speech-to-text provider your instance is configured with (Deepgram, or a self-hosted Whisper server) and becomes available in your Web Dashboard for ticket generation and chat querying.
+The recording is uploaded to the Plan AI backend over HTTPS and stored privately: it is only ever read through signed links that expire (see [Where Your Files Live](/security/data-storage)). It is then transcribed by the speech-to-text provider your instance is configured with (Deepgram, or a self-hosted Whisper server) and becomes available in your Web Dashboard for ticket generation and chat querying.

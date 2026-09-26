@@ -9,11 +9,11 @@ Plan AI mitigates this by using a **Bring Your Own Key (BYOK)** architecture.
 Instead of BlueberryBytes acting as a middleman and storing your data to train our own models, Plan AI is simply the "Engine". **You** provide the keys to the underlying AI providers.
 
 1.  **Wholesale Pricing:** Because you are using your own API keys, you pay the exact wholesale API cost for transcription and LLM inference. We do not charge a "token tax" or markup your usage.
-2.  **No Middleman:** Your audio is sent directly to Deepgram, and your transcripts are sent directly to OpenRouter. Self-hosted instances can go one step further with `STT_PROVIDER=whisper`: audio is transcribed on their own server and never leaves it. See [Speech-to-Text](/self-hosting/speech-to-text).
+2.  **Your Accounts:** Your audio is transcribed by Deepgram under your own key, and your transcripts go to OpenRouter under your own key. Your agreements with those providers apply. A [private install](/security/overview) goes one step further: transcription and the language model run on your own servers, and no meeting content reaches an AI provider.
 3.  **Workspace Isolation:** API keys are bound to a specific `Workspace` in the database. They are never shared globally across the platform.
 
 ### Key Masking Security
-When you enter your API keys into the Plan AI dashboard, they are encrypted. 
+API keys are stored in your workspace and are never sent back to the browser.
 
 If you or another TPM load the Workspace settings page, the API keys are returned from the backend completely masked (e.g., `••••••••••••••••`). The backend explicitly ignores this masked placeholder on subsequent `PUT` requests to prevent anyone from accidentally overwriting or inspecting the real keys.
 
@@ -25,6 +25,6 @@ Traditional AI meeting assistants work by dialing into your Zoom, Google Meet, o
 
 **Plan AI does not use bots.** 
 
-Instead, our native macOS and Windows desktop applications run quietly in your menu bar. They capture the raw system audio directly from your operating system's sound mixer. The recording happens entirely locally on your machine. 
+Instead, our native macOS and Windows desktop applications run quietly in your menu bar. They capture the raw system audio directly from your operating system's sound mixer. No bot joins the call.
 
-If a client starts discussing a highly sensitive NDA topic, you simply click the pause button in your menu bar. The audio never leaves your machine, and the client never knows.
+If a client starts discussing a highly sensitive NDA topic, you simply click the pause button in your menu bar. That part of the meeting is never captured, and the client never knows.

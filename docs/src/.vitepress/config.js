@@ -33,6 +33,7 @@ export default withMermaid(defineConfig({
       {
         text: 'Security & BYOK',
         items: [
+          { text: 'Security Overview', link: '/security/overview' },
           { text: 'BYOK Architecture', link: '/security/byok-architecture' },
           { text: 'Where Your Files Live', link: '/security/data-storage' },
           { text: 'Setup OpenRouter', link: '/setup/openrouter' },

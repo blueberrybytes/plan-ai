@@ -2,13 +2,16 @@
 layout: home
 hero:
   name: "Plan AI"
-  text: "Standups in. Jira tickets out."
-  tagline: "The AI meeting assistant for software teams. Record your engineering meetings, understand your codebase via a code graph, and ship proper tickets, specs, and architecture diagrams — automatically."
+  text: "Private AI for your engineering meetings."
+  tagline: "Plan AI records your meetings and turns them into tickets, specs and diagrams. Recordings and files are private by default. For confidential work, the whole AI stack runs on your own servers and no meeting content reaches an AI provider."
   image:
     src: /logos/android-chrome-512x512.png
     alt: Plan AI
   actions:
     - theme: brand
+      text: Security Overview
+      link: /security/overview
+    - theme: alt
       text: Who is this for?
       link: /getting-started/who-its-for
     - theme: alt
@@ -18,24 +21,28 @@ hero:
       text: View on GitHub
       link: https://github.com/blueberrybytes/plan-ai
 features:
-  - title: Bot-Free Native Recording
-    details: Native macOS, Windows, iOS and Android recorders. Your client calls stay on your machine, not on a Fathom server. Zoom, Meet, and in-person — all covered.
+  - title: AI on Your Own Servers
+    details: With a private install, transcription, speaker identification, the language model and search run on your infrastructure. No meeting content goes to OpenAI, Deepgram or any other AI provider.
+    link: /self-hosting/private-stack
+    icon: 🖥️
+  - title: Private by Default
+    details: Recordings, voice profiles and files are never public. Every read goes through a signed link that expires within 1 to 12 hours.
+    link: /security/data-storage
+    icon: 🔒
+  - title: Shared Only on Purpose
+    details: Meeting documents and slides stay inside your workspace. You share one when you decide to, and you can stop sharing at any moment.
+    link: /security/overview
+    icon: 🔗
+  - title: No Bots in Your Calls
+    details: Native recorders for macOS, Windows, iOS and Android. No bot joins the call, and a pause means that part is never captured.
     icon: 🎙️
-  - title: Code-Aware Ticket Generation
-    details: Plan AI reads your repo graph via Plan Cortex before writing a ticket. Properly scoped tickets with acceptance criteria, story points, and links to real files in your codebase.
-    icon: 🎫
-  - title: Bring Your Own Key (BYOK)
-    details: €6/seat with your OpenRouter + Deepgram keys, or €29/seat fully managed. No hidden token taxes, no per-message anxiety.
+  - title: Your Own AI Keys
+    details: On the cloud version, bring your own OpenRouter and Deepgram keys. The AI runs under your accounts and your agreements with those providers.
+    link: /security/byok-architecture
     icon: 🔑
-  - title: Automated Specs & Docs
-    details: Plan AI extracts architectural decisions, system changes, and acceptance criteria from your engineering standups and design reviews — ready to share with clients or paste into Notion.
-    icon: 📄
-  - title: Codebase + Meeting RAG
-    details: Ask "why did we build it this way?" and get a real answer grounded in past standups, design reviews, and the current state of your code. Connect GitHub, internal docs, anything.
-    icon: 💬
-  - title: Open Core, Self-Hostable
-    details: Built on a type-safe TypeScript monorepo. Self-host it on your own infrastructure or use our managed cloud. Same product either way.
-    icon: 🏗️
+  - title: Code-Aware Tickets and Specs
+    details: Plan AI reads your repo graph before writing a ticket. Tickets come with acceptance criteria and links to real files, and specs are ready to share with clients.
+    icon: 🎫
 ---
 
 <br><br>

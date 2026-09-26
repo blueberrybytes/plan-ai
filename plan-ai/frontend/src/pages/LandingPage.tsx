@@ -34,6 +34,7 @@ import { selectUser } from "../store/slices/auth/authSelector";
 import { useBrandIdentity } from "../hooks/useBrandIdentity";
 import { useTranslation } from "react-i18next";
 import PricingSection from "../components/landing/PricingSection";
+import SecuritySection from "../components/landing/SecuritySection";
 
 export default function LandingPage() {
   const navigate = useNavigate();
@@ -110,10 +111,13 @@ export default function LandingPage() {
     },
   ];
 
+  // Security facts, each backed by the product: no bot joins a call, file
+  // links expire within 12 hours (privateStorage.ts), and a private install
+  // runs transcription, the LLM and search on the customer's servers.
   const stats = [
-    { value: "10h", label: t("landingPage.stats.faster") },
-    { value: "100%", label: t("landingPage.stats.aiPowered") },
-    { value: "0", label: t("landingPage.stats.manualWork") },
+    { value: "0", label: t("landingPage.stats.faster") },
+    { value: "12 h", label: t("landingPage.stats.aiPowered") },
+    { value: "100%", label: t("landingPage.stats.manualWork") },
   ];
 
   const checklistItems = [
@@ -293,8 +297,7 @@ export default function LandingPage() {
                 {t("landingPage.hero.cta")}
               </Button>
               <Button
-                component={RouterLink}
-                to="/login"
+                href="mailto:hello@blueberrybytes.com?subject=Plan%20AI%20private%20install"
                 variant="outlined"
                 size="large"
                 sx={{ px: 4, py: 1.5, fontSize: "1rem" }}
@@ -505,6 +508,9 @@ export default function LandingPage() {
           </Grid>
         </Container>
       </Box>
+
+      {/* Security: the main message, right after the hero */}
+      <SecuritySection />
 
       {/* Features Grid */}
       <Box sx={{ py: { xs: 8, md: 14 } }}>
