@@ -2566,6 +2566,18 @@
 					"recording": {
 						"$ref": "#/components/schemas/RecordingWindow",
 						"description": "Real capture window reported by the client, when it sent one."
+					},
+					"recordingMode": {
+						"type": "string",
+						"enum": [
+							"in_person",
+							"remote"
+						],
+						"description": "\"in_person\": one microphone in a room with several people (mobile). The\nmic channel is diarized and its first speaker is not assumed to be the\nuser. \"remote\": the default desktop case, mic = the user, system = others."
+					},
+					"clientSessionId": {
+						"type": "string",
+						"description": "Recording session id chosen by the client. A retried upload with the same\nid returns the transcript already created instead of a duplicate."
 					}
 				},
 				"type": "object",
@@ -2823,6 +2835,76 @@
 				],
 				"type": "object"
 			},
+			"RecordingPartResponse": {
+				"properties": {
+					"index": {
+						"type": "number",
+						"format": "double"
+					},
+					"size": {
+						"type": "number",
+						"format": "double"
+					}
+				},
+				"required": [
+					"index",
+					"size"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"ApiResponse_RecordingPartResponse_": {
+				"properties": {
+					"message": {
+						"type": "string"
+					},
+					"data": {
+						"allOf": [
+							{
+								"$ref": "#/components/schemas/RecordingPartResponse"
+							}
+						],
+						"nullable": true
+					},
+					"status": {
+						"type": "number",
+						"format": "double"
+					}
+				},
+				"required": [
+					"data",
+					"status"
+				],
+				"type": "object"
+			},
+			"ApiResponse__success-boolean__": {
+				"properties": {
+					"message": {
+						"type": "string"
+					},
+					"data": {
+						"properties": {
+							"success": {
+								"type": "boolean"
+							}
+						},
+						"required": [
+							"success"
+						],
+						"type": "object",
+						"nullable": true
+					},
+					"status": {
+						"type": "number",
+						"format": "double"
+					}
+				},
+				"required": [
+					"data",
+					"status"
+				],
+				"type": "object"
+			},
 			"ApiResponse_StandaloneTranscriptResponse_": {
 				"properties": {
 					"message": {
@@ -3038,34 +3120,6 @@
 				],
 				"type": "object",
 				"additionalProperties": false
-			},
-			"ApiResponse__success-boolean__": {
-				"properties": {
-					"message": {
-						"type": "string"
-					},
-					"data": {
-						"properties": {
-							"success": {
-								"type": "boolean"
-							}
-						},
-						"required": [
-							"success"
-						],
-						"type": "object",
-						"nullable": true
-					},
-					"status": {
-						"type": "number",
-						"format": "double"
-					}
-				},
-				"required": [
-					"data",
-					"status"
-				],
-				"type": "object"
 			},
 			"PostMeetingTaskKind": {
 				"type": "string",
@@ -10291,6 +10345,96 @@
 				}
 			}
 		},
+		"/api/transcripts/recorder-upload/parts": {
+			"post": {
+				"operationId": "UploadRecordingPart",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiResponse_RecordingPartResponse_"
+								}
+							}
+						}
+					}
+				},
+				"description": "One slice of a recording sent in pieces. Long meetings from the mobile app\n(uncompressed WAV, 170 MB per hour) could not finish one upload inside the\nrequest timeout, and every retry sent the whole file again. Slices are\nsmall, a retry resends only the slice that failed, and sending the same\nslice twice just overwrites it. recorder-upload joins them in order when\nit receives `micUploadId`.",
+				"tags": [
+					"Transcripts"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": [],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"multipart/form-data": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"uploadId": {
+										"type": "string"
+									},
+									"index": {
+										"type": "string"
+									},
+									"part": {
+										"type": "string",
+										"format": "binary"
+									}
+								},
+								"required": [
+									"uploadId",
+									"index",
+									"part"
+								]
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/transcripts/recorder-upload/parts/{uploadId}": {
+			"delete": {
+				"operationId": "DeleteRecordingParts",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiResponse__success-boolean__"
+								}
+							}
+						}
+					}
+				},
+				"description": "Drops the slices of a recording the user discarded before it was joined.",
+				"tags": [
+					"Transcripts"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": [
+					{
+						"in": "path",
+						"name": "uploadId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				]
+			}
+		},
 		"/api/transcripts/recorder-upload": {
 			"post": {
 				"operationId": "CreateTranscriptFromRecording",
@@ -10408,6 +10552,22 @@
 									},
 									"recordingWallClockSeconds": {
 										"type": "string"
+									},
+									"micUploadId": {
+										"type": "string",
+										"description": "Mic audio already sent in slices to recorder-upload/parts under this id."
+									},
+									"micPartCount": {
+										"type": "string",
+										"description": "How many slices were sent for micUploadId (0 … count-1)."
+									},
+									"clientSessionId": {
+										"type": "string",
+										"description": "Client recording session id; a retry with the same id is not duplicated."
+									},
+									"recordingMode": {
+										"type": "string",
+										"description": "\"in_person\" (one mic, several people in the room) or \"remote\"."
 									},
 									"micFile": {
 										"type": "string",

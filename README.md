@@ -2,9 +2,11 @@
 
 **Private AI for engineering meetings.** Plan AI records your meetings and turns them into tickets, specs and architecture diagrams, informed by your codebase through a code graph (Plan Cortex). Recordings and files are private by default, and the whole AI stack can run on your own servers.
 
-## Video Demo (click on the image to watch it)
+## Video: where does your meeting go? (65 s, click to play)
 
-[![Plan AI Demo](https://img.youtube.com/vi/qJBdLCjMD28/hqdefault.jpg)](https://www.youtube.com/watch?v=qJBdLCjMD28)
+[![Where does your meeting go? Plan AI in 65 seconds](docs/src/public/videos/ep01-poster.jpg)](https://docs.plan-ai.blueberrybytes.com/videos/ep01-where-does-your-meeting-go.mp4)
+
+Full product demo: [watch it on YouTube](https://www.youtube.com/watch?v=qJBdLCjMD28).
 
 ## Privacy and security
 

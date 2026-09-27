@@ -54,6 +54,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
         "android.permission.RECORD_AUDIO",
         "android.permission.FOREGROUND_SERVICE",
         "android.permission.FOREGROUND_SERVICE_MICROPHONE",
+        "android.permission.POST_NOTIFICATIONS",
         "android.permission.ACCESS_FINE_LOCATION",
         "android.permission.ACCESS_COARSE_LOCATION",
       ],
@@ -118,6 +119,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       ],
       "./plugins/with-rnfb-fix.js",
       "./plugins/with-adi-registration.js",
+      "./plugins/with-notifee-microphone-service.js",
     ],
     experiments: {
       typedRoutes: true,

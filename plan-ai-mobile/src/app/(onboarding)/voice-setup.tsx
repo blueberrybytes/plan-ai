@@ -26,6 +26,7 @@ import {
 } from "expo-audio";
 import { File, Paths } from "expo-file-system";
 import { useAuth } from "../../context/AuthContext";
+import { recordingService } from "../../services/recordingService";
 
 export const WAVEFORM_FILE = "voice_waveform.json";
 const NUM_BARS = 60;
@@ -239,6 +240,11 @@ export default function VoiceSetupScreen() {
       console.log("Recording permission:", permission);
       if (!permission.granted) {
         alert("Microphone permission is required to save your voice profile.");
+        return;
+      }
+      // Recording a voice sample would take the microphone from a meeting.
+      if (recordingService.isMeetingActive()) {
+        alert("A meeting is being recorded. Record your voice profile after it stops.");
         return;
       }
       console.log("Setting audio mode...");

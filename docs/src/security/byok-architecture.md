@@ -21,10 +21,10 @@ If you or another TPM load the Workspace settings page, the API keys are returne
 
 Traditional AI meeting assistants work by dialing into your Zoom, Google Meet, or Teams call as a visible participant (a "bot"). This creates two massive privacy issues:
 1.  **The Chilling Effect:** Participants behave differently when they know a third-party bot is recording them.
-2.  **Lack of Control:** You cannot easily pause or redact sensitive moments without everyone seeing you interact with the bot.
+2.  **A Third Party in the Room:** The bot is a separate participant run by the vendor, joining calls your client never agreed to share with it.
 
 **Plan AI does not use bots.** 
 
 Instead, our native macOS and Windows desktop applications run quietly in your menu bar. They capture the raw system audio directly from your operating system's sound mixer. No bot joins the call.
 
-If a client starts discussing a highly sensitive NDA topic, you simply click the pause button in your menu bar. That part of the meeting is never captured, and the client never knows.
+Recording starts and stops on your machine, when you decide. Nothing joins the call on anyone else's behalf.

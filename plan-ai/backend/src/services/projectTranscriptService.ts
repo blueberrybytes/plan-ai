@@ -379,6 +379,8 @@ export interface CreateTranscriptInput {
   agenticInvestigation?: boolean;
   createDoc?: boolean;
   createSlides?: boolean;
+  /** Transcribe the uploaded audio and stop: no summary, tasks or AI exports. */
+  transcribeOnly?: boolean;
 }
 
 export interface CreateTranscriptResult {
@@ -435,6 +437,11 @@ export class ProjectTranscriptService {
     language?: string | null,
     /** Project vocabulary. Only the Whisper pass uses it, as its decoder prompt. */
     keyterms?: string[],
+    /**
+     * Split the mic channel by speaker too. Only for in-person recordings,
+     * where one microphone hears everyone in the room.
+     */
+    diarizeMic = false,
   ): Promise<{
     combinedText: string;
     utterances: Utterance[];
@@ -493,8 +500,9 @@ export class ProjectTranscriptService {
           try {
             channel = await transcribeChannelWithWhisper(source, lang, {
               keyterms,
-              // The mic is always the user; only the system audio mixes people.
-              diarize: speakerPrefix === "Others",
+              // On a call the mic is the user and only the system audio mixes
+              // people. In a room the mic hears everyone.
+              diarize: speakerPrefix === "Others" || diarizeMic,
             });
           } catch (err) {
             // For Whisper "multi" only means auto-detect, so a retry can only
@@ -801,6 +809,10 @@ export class ProjectTranscriptService {
     const user = await prisma.user.findUnique({ where: { id: input.userId } });
     let principalSpeaker: string | undefined;
     let diarizationDiagnostics: string[] = [];
+    // In a room, one mic hears everyone: the first mic speaker is not
+    // necessarily the user, so only a voice-profile match may claim "You".
+    const inPerson =
+      (existing.metadata as Prisma.JsonObject | null)?.recordingMode === "in_person";
 
     if (existing.rawMicUrl || existing.rawSysUrl) {
       logger.info(`Starting batch diarization for ${existing.id}...`);
@@ -830,6 +842,7 @@ export class ProjectTranscriptService {
         sysUrl,
         recordingLanguage,
         keyterms,
+        inPerson,
       );
       let { combinedText, utterances } = diarizationResult;
       const { totalSeconds } = diarizationResult;
@@ -912,7 +925,7 @@ export class ProjectTranscriptService {
         }
       }
 
-      if (!principalSpeaker && utterances.length > 0) {
+      if (!principalSpeaker && utterances.length > 0 && !inPerson) {
         // Fallback to the first microphone speaker or the first speaker overall
         principalSpeaker =
           utterances.find((u) => u.speaker.toLowerCase().startsWith("user "))?.speaker ??
@@ -925,6 +938,36 @@ export class ProjectTranscriptService {
         speakerCount = new Set(utterances.map((u) => u.speaker)).size;
         durationSeconds = Math.ceil(utterances[utterances.length - 1].end);
       }
+    }
+
+    // "Save transcript only" with audio and no live text: keep the
+    // transcription and stop here, like the text-only save does.
+    if (input.transcribeOnly) {
+      const currentMetadata = (existing.metadata as Record<string, unknown>) || {};
+      const updated = await prisma.transcript.update({
+        where: { id: transcriptId },
+        data: {
+          title:
+            existing.title === "Generating Transcript..." ? "Untitled meeting" : existing.title,
+          transcript: processedContent,
+          durationSeconds: durationSeconds ?? null,
+          speakerCount: speakerCount ?? null,
+          utterances: (utterancesJson as unknown as Prisma.InputJsonValue) ?? Prisma.DbNull,
+          metadata: {
+            ...currentMetadata,
+            processingStatus: "DONE",
+            principalSpeaker,
+            ...(diarizationDiagnostics.length > 0 ? { diarizationDiagnostics } : {}),
+          } as unknown as Prisma.InputJsonValue,
+        },
+      });
+      if (input.syncToTwenty) {
+        void this.autoPushToTwenty(input.workspaceId, updated, input.twentyCompanyId).catch(
+          (err) => logger.error(`Failed to push transcript ${transcriptId} to Twenty`, err),
+        );
+      }
+      logger.info(`[processPendingTranscript] ${transcriptId} transcribed only (no AI steps)`);
+      return { transcript: updated, tasks: [], analysis: { language: "", tasks: [] } };
     }
 
     // PHASE 1: Fast Summary to Unlock UI Early

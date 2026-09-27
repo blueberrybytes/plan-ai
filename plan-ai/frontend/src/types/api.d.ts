@@ -663,6 +663,47 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/transcripts/recorder-upload/parts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description One slice of a recording sent in pieces. Long meetings from the mobile app
+         *     (uncompressed WAV, 170 MB per hour) could not finish one upload inside the
+         *     request timeout, and every retry sent the whole file again. Slices are
+         *     small, a retry resends only the slice that failed, and sending the same
+         *     slice twice just overwrites it. recorder-upload joins them in order when
+         *     it receives `micUploadId`.
+         */
+        post: operations["UploadRecordingPart"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/transcripts/recorder-upload/parts/{uploadId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** @description Drops the slices of a recording the user discarded before it was joined. */
+        delete: operations["DeleteRecordingParts"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/transcripts/recorder-upload": {
         parameters: {
             query?: never;
@@ -3499,6 +3540,18 @@ export interface components {
             twenty?: components["schemas"]["TwentyNoteRef"];
             /** @description Real capture window reported by the client, when it sent one. */
             recording?: components["schemas"]["RecordingWindow"];
+            /**
+             * @description "in_person": one microphone in a room with several people (mobile). The
+             *     mic channel is diarized and its first speaker is not assumed to be the
+             *     user. "remote": the default desktop case, mic = the user, system = others.
+             * @enum {string}
+             */
+            recordingMode?: "in_person" | "remote";
+            /**
+             * @description Recording session id chosen by the client. A retried upload with the same
+             *     id returns the transcript already created instead of a duplicate.
+             */
+            clientSessionId?: string;
         };
         TranscriptContextSummary: {
             id: string;
@@ -3562,6 +3615,26 @@ export interface components {
             /** Format: double */
             status: number;
         };
+        RecordingPartResponse: {
+            /** Format: double */
+            index: number;
+            /** Format: double */
+            size: number;
+        };
+        ApiResponse_RecordingPartResponse_: {
+            message?: string;
+            data: components["schemas"]["RecordingPartResponse"] | null;
+            /** Format: double */
+            status: number;
+        };
+        "ApiResponse__success-boolean__": {
+            message?: string;
+            data: {
+                success: boolean;
+            } | null;
+            /** Format: double */
+            status: number;
+        };
         ApiResponse_StandaloneTranscriptResponse_: {
             message?: string;
             data: components["schemas"]["StandaloneTranscriptResponse"] | null;
@@ -3620,14 +3693,6 @@ export interface components {
         UpdateSpeakerNamesBody: {
             /** @description Diarization label ("Speaker 0", "User 1") → corrected name. Blank name clears the identification. */
             overrides: components["schemas"]["Record_string.string_"];
-        };
-        "ApiResponse__success-boolean__": {
-            message?: string;
-            data: {
-                success: boolean;
-            } | null;
-            /** Format: double */
-            status: number;
         };
         /** @enum {string} */
         PostMeetingTaskKind: "jira" | "linear" | "trello" | "notion" | "asana" | "googleDrive" | "oneDrive" | "doc" | "slides" | "twenty";
@@ -6438,6 +6503,57 @@ export interface operations {
             };
         };
     };
+    UploadRecordingPart: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    uploadId: string;
+                    index: string;
+                    /** Format: binary */
+                    part: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_RecordingPartResponse_"];
+                };
+            };
+        };
+    };
+    DeleteRecordingParts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uploadId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse__success-boolean__"];
+                };
+            };
+        };
+    };
     CreateTranscriptFromRecording: {
         parameters: {
             query?: never;
@@ -6477,6 +6593,14 @@ export interface operations {
                     aecTelemetry?: string;
                     recordingStartedAt?: string;
                     recordingWallClockSeconds?: string;
+                    /** @description Mic audio already sent in slices to recorder-upload/parts under this id. */
+                    micUploadId?: string;
+                    /** @description How many slices were sent for micUploadId (0 … count-1). */
+                    micPartCount?: string;
+                    /** @description Client recording session id; a retry with the same id is not duplicated. */
+                    clientSessionId?: string;
+                    /** @description "in_person" (one mic, several people in the room) or "remote". */
+                    recordingMode?: string;
                     /** Format: binary */
                     micFile?: string;
                     /** Format: binary */

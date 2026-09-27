@@ -25,7 +25,7 @@ Sign-in and file storage use Google Firebase in both setups. Firebase Authentica
 
 ## Recording without a bot
 
-The recorder is an app on your computer or phone. No bot joins the call and the other participants get no invite. The desktop recorder sends the audio to the backend during the meeting, for live captions. When you stop, the recording is uploaded and transcribed again in full. If you pause, that part is never captured.
+The recorder is an app on your computer or phone. No bot joins the call and the other participants get no invite. The desktop recorder sends the audio to the backend during the meeting, for live captions. When you stop, the recording is uploaded and transcribed again in full.
 
 ## Files are private
 

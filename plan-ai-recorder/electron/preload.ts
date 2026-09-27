@@ -57,6 +57,20 @@ contextBridge.exposeInMainWorld("electron", {
   // Stop native macOS system audio recording and get the buffer
   stopSystemAudio: (): Promise<Uint8Array | null> => ipcRenderer.invoke("stop-system-audio"),
 
+  // Crash-safe copy of the recording's audio (see main.ts)
+  recoveryAudio: {
+    append: (sessionId: string, track: "mic" | "sys", data: Uint8Array): Promise<boolean> =>
+      ipcRenderer.invoke("recovery-audio-append", sessionId, track, data),
+    info: (sessionId: string): Promise<{ micBytes: number; sysBytes: number }> =>
+      ipcRenderer.invoke("recovery-audio-info", sessionId),
+    read: (sessionId: string): Promise<{ mic: Uint8Array | null; sys: Uint8Array | null }> =>
+      ipcRenderer.invoke("recovery-audio-read", sessionId),
+    remove: (sessionId: string): Promise<boolean> =>
+      ipcRenderer.invoke("recovery-audio-delete", sessionId),
+    prune: (keepSessionIds: string[]): Promise<number> =>
+      ipcRenderer.invoke("recovery-audio-prune", keepSessionIds),
+  },
+
   // Save file natively using Electron dialog
   saveFile: (content: string, defaultPath: string): Promise<boolean> => 
     ipcRenderer.invoke("save-file", content, defaultPath),

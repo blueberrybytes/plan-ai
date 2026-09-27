@@ -1,5 +1,6 @@
 import { createPlanAiApi } from "./planAiApi";
 import { loadConfig } from "../utils/recorderConfig";
+import { appendRecoveryAudio } from "../utils/recoveryAudio";
 import * as Sentry from "@sentry/electron/renderer";
 
 // @ts-ignore
@@ -31,11 +32,56 @@ function concatInt16(chunks: Int16Array[], total: number): Int16Array {
   return out;
 }
 
-export type RecorderState = "idle" | "recording" | "stopping";
+/**
+ * Sample ranges [start, end) of a chunk that were NOT captured during a
+ * pause. The chunk has `len` samples at `rate` and ends at `endWallMs`;
+ * sample times are counted back from that end. `spans` are pause intervals
+ * in wall-clock ms (`to` null while the pause is still open).
+ */
+export function keptSampleRanges(
+  len: number,
+  rate: number,
+  endWallMs: number,
+  spans: { from: number; to: number | null }[],
+): [number, number][] {
+  const startWallMs = endWallMs - (len / rate) * 1000;
+  const toIndex = (wallMs: number) =>
+    Math.min(
+      len,
+      Math.max(0, Math.round(len - ((endWallMs - wallMs) / 1000) * rate)),
+    );
+
+  const cuts: [number, number][] = [];
+  for (const span of spans) {
+    const to = span.to ?? Number.POSITIVE_INFINITY;
+    if (to <= startWallMs || span.from >= endWallMs) continue;
+    const a = toIndex(span.from);
+    const b = span.to === null ? len : toIndex(span.to);
+    if (b > a) cuts.push([a, b]);
+  }
+  if (cuts.length === 0) return len > 0 ? [[0, len]] : [];
+
+  cuts.sort((x, y) => x[0] - y[0]);
+  const kept: [number, number][] = [];
+  let pos = 0;
+  for (const [a, b] of cuts) {
+    if (a > pos) kept.push([pos, a]);
+    pos = Math.max(pos, b);
+  }
+  if (pos < len) kept.push([pos, len]);
+  return kept;
+}
+
+export type RecorderState = "idle" | "recording" | "paused" | "stopping";
 
 export interface AudioRecorderOptions {
   /** The initialized API instance from the Auth Provider */
   api: PlanAiApi;
+  /**
+   * Recording session id. When set, every recorded chunk is also copied to
+   * disk so a crash can be recovered with its audio (see recoveryAudio.ts).
+   */
+  recoverySessionId?: string;
   /** Called when a real-time transcript delta or final sentence arrives */
   onTranscript: (source: "mic" | "sys", text: string, isFinal: boolean) => void;
   /** Called when VAD detects speech starting or stopping */
@@ -184,6 +230,33 @@ export class AudioRecorder {
   // correct global delay). When true, the worklet's sys tap is skipped.
   private sysAecTapDirect = false;
 
+  // ── Pause ──────────────────────────────────────────────────────────────────
+  // While paused nothing is streamed, buffered or recorded on either channel.
+  // Wall-clock spans of every pause in this recording (`to` null while open).
+  private pauseSpans: { from: number; to: number | null }[] = [];
+  // The live socket stays open briefly after a pause so finals already in
+  // flight still arrive, then closes (no idle transcription connection, no
+  // cost). Resume opens a new one.
+  private pauseDrainTimer: ReturnType<typeof setTimeout> | null = null;
+  private pauseDrainResolve: ((drained: boolean) => void) | null = null;
+  private static readonly PAUSE_DRAIN_MS = 2500;
+  // macOS system audio reaches the recorder ~2-4 s late (2 s chunk rotation +
+  // decode), so its MediaRecorder cannot pause at the click. The paused
+  // capture is cut out of the chunks instead, and the recorder pauses when
+  // playback runs out of pre-pause audio and resumes with the first
+  // post-resume audio. That keeps the saved sys file aligned with the mic.
+  private static readonly PAUSE_DRAIN_MS_MAC = 6000;
+  private sysRecorderPausePending = false;
+  private sysRecorderPauseTimer: ReturnType<typeof setTimeout> | null = null;
+  private sysRecorderResumePending = false;
+  // One macOS chunk request at a time (see the chunk interval in start()).
+  private sysChunkInFlight = false;
+
+  // MediaRecorder chunk length. Chunks only matter at stop (upload) and for
+  // the crash-safe disk copy, so 5 s is plenty; 1 s slices meant ~72,000 Blob
+  // objects per track after a recording left running for 20 hours.
+  private static readonly RECORDER_TIMESLICE_MS = 5000;
+
   private state: RecorderState = "idle";
   private options: AudioRecorderOptions;
   private lastTypedError: TypedBackendError | null = null;
@@ -197,6 +270,43 @@ export class AudioRecorder {
 
   get currentState(): RecorderState {
     return this.state;
+  }
+
+  get isPaused(): boolean {
+    return this.state === "paused";
+  }
+
+  /** Total paused time (ms) up to `untilMs`, counting an open pause until then. */
+  private pausedMsUntil(untilMs: number): number {
+    let paused = 0;
+    for (const span of this.pauseSpans) {
+      const to = Math.min(span.to ?? untilMs, untilMs);
+      if (to > span.from) paused += to - span.from;
+    }
+    return paused;
+  }
+
+  /**
+   * Recorded time (ms, pauses excluded) from the start of capture to
+   * `wallMs`. Lets the UI stamp live lines on the same clock as the saved
+   * audio.
+   */
+  recordedMsAt(wallMs: number): number {
+    if (!this.recStartWallMs) return 0;
+    return Math.max(
+      0,
+      wallMs - this.recStartWallMs - this.pausedMsUntil(wallMs),
+    );
+  }
+
+  /** Keeps a recorded chunk for the upload and copies it to the crash-safe disk store. */
+  private keepChunk(track: "mic" | "sys", data: Blob): void {
+    if (data.size === 0) return;
+    if (track === "mic") this.micChunks.push(data);
+    else this.sysChunks.push(data);
+    if (this.options.recoverySessionId) {
+      appendRecoveryAudio(this.options.recoverySessionId, track, data);
+    }
   }
 
   /**
@@ -215,9 +325,15 @@ export class AudioRecorder {
    * Retain a copy of a pre-codec PCM chunk for the stop-time echo canceller.
    * Only in speaker mode (headphones have no acoustic echo) and under a memory
    * cap; past the cap we drop the buffers and fall back to the raw mic.
+   * Callers leave out audio captured while paused, so both channels skip the
+   * same stretches and stay aligned.
    */
   private bufferPcmForAec(source: "mic" | "sys", buffer: ArrayBuffer): void {
-    if (this.state !== "recording" || !this.speakerMode || this.aecOverCap)
+    if (
+      (this.state !== "recording" && this.state !== "paused") ||
+      !this.speakerMode ||
+      this.aecOverCap
+    )
       return;
     // Downsample to the 16 kHz processing rate at capture. The resampler writes
     // a fresh owned array, so no extra copy of the worklet's transferred buffer
@@ -304,10 +420,13 @@ export class AudioRecorder {
       return null;
     }
     if (this.aecMicSamples === 0 || this.aecSysSamples === 0) {
+      const nowMs = Date.now();
       this.aecTelemetry = {
         outcome: "skipped",
         reason: `no-buffered-audio (mic=${this.aecMicSamples} sys=${this.aecSysSamples} samples)`,
-        wallSeconds: Math.round((Date.now() - this.recStartWallMs) / 1000),
+        wallSeconds: Math.round(
+          (nowMs - this.recStartWallMs - this.pausedMsUntil(nowMs)) / 1000,
+        ),
       };
       return null;
     }
@@ -318,8 +437,11 @@ export class AudioRecorder {
       v == null ? undefined : Math.round(v * 100) / 100;
     const bufferedSeconds = round2(this.aecMicSamples / sampleRate);
     const sysBufferedSeconds = round2(this.aecSysSamples / sampleRate);
+    // Paused time is excluded from both buffers, so it is excluded here too.
+    const stopWallMs = this.recStopWallMs || Date.now();
     const wallSeconds = round2(
-      ((this.recStopWallMs || Date.now()) - this.recStartWallMs) / 1000,
+      (stopWallMs - this.recStartWallMs - this.pausedMsUntil(stopWallMs)) /
+        1000,
     );
     // Diagnostics shared by every outcome below. sysBuf should ≈ wall; a
     // deficit means the reference timeline is compressed and the canceller is
@@ -479,6 +601,10 @@ export class AudioRecorder {
       };
       this.aecTelemetry = null;
       this.sysAecTapDirect = false;
+      this.pauseSpans = [];
+      this.sysRecorderPausePending = false;
+      this.sysRecorderResumePending = false;
+      this.sysChunkInFlight = false;
 
       // 0. Permission check (macOS only — no-op on Windows)
       if (window.electron.checkMicrophonePermission) {
@@ -584,10 +710,9 @@ export class AudioRecorder {
             mimeType: "audio/webm;codecs=opus",
             audioBitsPerSecond: 32_000, // 32 kbps Opus: voice-grade, ~4x smaller uploads (avoids 'Request aborted' on long meetings). Transcript comes from the live Deepgram stream, not this audio, so quality here only affects archived playback.
           });
-          this.sysMediaRecorder.ondataavailable = (e) => {
-            if (e.data.size > 0) this.sysChunks.push(e.data);
-          };
-          this.sysMediaRecorder.start(1000);
+          this.sysMediaRecorder.ondataavailable = (e) =>
+            this.keepChunk("sys", e.data);
+          this.sysMediaRecorder.start(AudioRecorder.RECORDER_TIMESLICE_MS);
         }
       }
 
@@ -670,6 +795,8 @@ export class AudioRecorder {
           return;
         }
         if (!(event.data instanceof ArrayBuffer)) return;
+        // Paused: the mic audio is dropped here, before anything keeps it.
+        if (this.state !== "recording") return;
         // Buffer pre-codec mic PCM for offline AEC (independent of the WS, so a
         // reconnect gap doesn't punch a hole in the buffered timeline).
         this.bufferPcmForAec("mic", event.data);
@@ -706,17 +833,18 @@ export class AudioRecorder {
           return;
         }
         if (!(event.data instanceof ArrayBuffer)) return;
+        // Paused: on Windows/Linux this input IS the live capture, so it is
+        // dropped. On macOS it is the delayed playback, which holds only
+        // pre-pause audio or silence (paused capture is cut from the chunks),
+        // so it keeps flowing to the socket until the pause drain closes it.
+        const pausedDrain = this.state === "paused" && this.sysAecTapDirect;
+        if (this.state !== "recording" && !pausedDrain) return;
         // Buffer pre-codec system (reference) PCM for offline AEC — but only on
         // the Windows/Linux path where this worklet input IS the live capture.
         // On macOS the reference is appended straight from the decoded chunks
         // (see sysAecTapDirect) to keep playback scheduling out of the loop.
         if (!this.sysAecTapDirect) this.bufferPcmForAec("sys", event.data);
-        if (
-          this.state !== "recording" ||
-          !this.ws ||
-          this.ws.readyState !== WebSocket.OPEN
-        )
-          return;
+        if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
 
         const base64Audio = this.bufferToBase64(event.data);
         if (!base64Audio) return;
@@ -758,17 +886,14 @@ export class AudioRecorder {
         audioBitsPerSecond: 32_000, // 32 kbps Opus: voice-grade, ~4x smaller uploads.
       });
 
-      this.micMediaRecorder.ondataavailable = (e) => {
-        if (e.data.size > 0) {
-          this.micChunks.push(e.data);
-        }
-      };
+      this.micMediaRecorder.ondataavailable = (e) =>
+        this.keepChunk("mic", e.data);
       this.micMediaRecorder.onstart = () =>
         console.log("[AudioRecorder] micMediaRecorder STARTED");
       this.micMediaRecorder.onerror = (err) =>
         console.error("[AudioRecorder] micMediaRecorder ERROR", err);
 
-      this.micMediaRecorder.start(1000);
+      this.micMediaRecorder.start(AudioRecorder.RECORDER_TIMESLICE_MS);
 
       // Connect system audio graph
       this.sysWorkletNode.connect(silentGain);
@@ -788,98 +913,18 @@ export class AudioRecorder {
           mimeType: "audio/webm;codecs=opus",
           audioBitsPerSecond: 32_000, // 32 kbps Opus: voice-grade, ~4x smaller uploads.
         });
-        this.sysMediaRecorder.ondataavailable = (e) => {
-          if (e.data.size > 0) this.sysChunks.push(e.data);
-        };
-        this.sysMediaRecorder.start(1000);
+        this.sysMediaRecorder.ondataavailable = (e) =>
+          this.keepChunk("sys", e.data);
+        this.sysMediaRecorder.start(AudioRecorder.RECORDER_TIMESLICE_MS);
 
         // macOS: poll the native binary's SIGUSR1 chunks every 2 s. The AEC
-        // reference is fed from the DECODED chunks below, not the worklet.
+        // reference is fed from the DECODED chunks, not the worklet.
         this.sysAecTapDirect = true;
         this.sysAudioPlaybackTime = this.audioContext.currentTime;
-        this.sysAudioInterval = setInterval(async () => {
-          if (
-            this.state !== "recording" ||
-            !this.audioContext ||
-            !this.sysWorkletNode ||
-            !this.micWorkletNode
-          )
-            return;
-          try {
-            const chunk = await window.electron.chunkSystemAudio();
-            if (chunk && chunk.byteLength > 0) {
-              const originalSize = chunk.byteLength;
-              const audioBuffer = await this.audioContext.decodeAudioData(
-                chunk.buffer as ArrayBuffer,
-              );
-              const source = this.audioContext.createBufferSource();
-              source.buffer = audioBuffer;
-              source.connect(this.sysWorkletNode);
-
-              if (this.sysAudioPlaybackTime < this.audioContext.currentTime) {
-                // Playback fell behind → a real gap in the scheduled sys audio.
-                // Counted for the AEC diagnostics (each gap used to be silently
-                // DELETED from the reference before the keep-alive fix).
-                this.sysChunkStats.resets += 1;
-                this.sysChunkStats.gapSeconds +=
-                  this.audioContext.currentTime - this.sysAudioPlaybackTime;
-                this.sysAudioPlaybackTime = this.audioContext.currentTime;
-              }
-              source.start(this.sysAudioPlaybackTime);
-              this.sysAudioPlaybackTime += audioBuffer.duration;
-
-              // AEC reference: append the decoded capture audio DIRECTLY.
-              // Chunks are contiguous capture, so concatenation IS the capture
-              // timeline — playback scheduling (and its re-anchor jumps) never
-              // touches the reference the canceller aligns against.
-              if (
-                this.state === "recording" &&
-                this.speakerMode &&
-                !this.aecOverCap
-              ) {
-                let mono = audioBuffer.getChannelData(0);
-                if (audioBuffer.numberOfChannels > 1) {
-                  const ch1 = audioBuffer.getChannelData(1);
-                  const mixed = new Float32Array(mono.length);
-                  for (let i = 0; i < mono.length; i++) {
-                    mixed[i] = (mono[i] + ch1[i]) / 2;
-                  }
-                  mono = mixed;
-                }
-                const int16 = new Int16Array(mono.length);
-                for (let i = 0; i < mono.length; i++) {
-                  const s = Math.max(-1, Math.min(1, mono[i]));
-                  int16[i] = s < 0 ? s * 0x8000 : s * 0x7fff;
-                }
-                this.bufferPcmForAec("sys", int16.buffer);
-              }
-
-              this.sysChunkStats.chunks += 1;
-              this.sysChunkStats.decodedSeconds += audioBuffer.duration;
-              // Periodic pipeline health (~30s at the 2s chunk cadence): buffered
-              // AEC seconds vs wall clock. sysBuf should track wall; a growing
-              // deficit means the reference timeline is compressing again.
-              if (this.sysChunkStats.chunks % 15 === 0) {
-                const wall = (Date.now() - this.recStartWallMs) / 1000;
-                const s = this.sysChunkStats;
-                console.log(
-                  `[AudioRecorder] 📊 sys pipeline: chunks=${s.chunks} decoded=${s.decodedSeconds.toFixed(1)}s ` +
-                    `resets=${s.resets} gaps=${s.gapSeconds.toFixed(1)}s | aecBuf mic=${(
-                      this.aecMicSamples / AudioRecorder.AEC_RATE
-                    ).toFixed(
-                      1,
-                    )}s sys=${(this.aecSysSamples / AudioRecorder.AEC_RATE).toFixed(1)}s ` +
-                    `wall=${wall.toFixed(1)}s`,
-                );
-              }
-            }
-          } catch (err) {
-            console.error(
-              "[AudioRecorder] Failed to decode system audio chunk:",
-              err instanceof Error ? err.message : err,
-            );
-          }
-        }, 2000);
+        this.sysAudioInterval = setInterval(
+          () => void this.pollMacSysChunk(),
+          2000,
+        );
       }
     } catch (err) {
       console.error(
@@ -944,9 +989,327 @@ export class AudioRecorder {
     }
   }
 
+  /**
+   * macOS: rotate the native capture file, decode the finished chunk, cut out
+   * whatever was captured while paused, and schedule the rest into the sys
+   * worklet (live stream + saved file) and the AEC reference.
+   */
+  private async pollMacSysChunk(): Promise<void> {
+    if (
+      (this.state !== "recording" && this.state !== "paused") ||
+      !this.audioContext ||
+      !this.sysWorkletNode ||
+      !this.micWorkletNode
+    )
+      return;
+    // One request at a time. A slow rotation used to overlap the next tick
+    // and the main process lost track of the earlier request.
+    if (this.sysChunkInFlight) return;
+    this.sysChunkInFlight = true;
+    // The chunk ends at this rotation, so its samples are timed back from here.
+    const chunkEndWallMs = Date.now();
+    try {
+      const chunk = await window.electron.chunkSystemAudio();
+      if (
+        (this.state !== "recording" && this.state !== "paused") ||
+        !this.audioContext
+      )
+        return;
+      if (chunk && chunk.byteLength > 0) {
+        const decoded = await this.audioContext.decodeAudioData(
+          chunk.buffer as ArrayBuffer,
+        );
+        const audioBuffer = this.cutPausedAudio(decoded, chunkEndWallMs);
+        if (audioBuffer) this.scheduleMacSysAudio(audioBuffer);
+      }
+      this.settleMacSysRecorderPause(chunkEndWallMs);
+    } catch (err) {
+      console.error(
+        "[AudioRecorder] Failed to decode system audio chunk:",
+        err instanceof Error ? err.message : err,
+      );
+    } finally {
+      this.sysChunkInFlight = false;
+    }
+  }
+
+  /**
+   * Removes the stretches of a decoded macOS chunk that were captured while
+   * paused. The chunk ends at its rotation (`endWallMs`), so sample times are
+   * counted back from its end (the start is fuzzy: binary spin-up, codec
+   * priming). Returns the buffer unchanged when no pause overlaps it, and null
+   * when all of it was captured while paused.
+   */
+  private cutPausedAudio(
+    buf: AudioBuffer,
+    endWallMs: number,
+  ): AudioBuffer | null {
+    if (!this.audioContext || this.pauseSpans.length === 0) return buf;
+    const rate = buf.sampleRate;
+    const kept = keptSampleRanges(buf.length, rate, endWallMs, this.pauseSpans);
+    if (kept.length === 1 && kept[0][0] === 0 && kept[0][1] === buf.length) {
+      return buf;
+    }
+    const keptLen = kept.reduce((n, [a, b]) => n + (b - a), 0);
+    if (keptLen === 0) return null;
+
+    const out = this.audioContext.createBuffer(
+      buf.numberOfChannels,
+      keptLen,
+      rate,
+    );
+    for (let ch = 0; ch < buf.numberOfChannels; ch++) {
+      const src = buf.getChannelData(ch);
+      const dst = out.getChannelData(ch);
+      let offset = 0;
+      for (const [a, b] of kept) {
+        dst.set(src.subarray(a, b), offset);
+        offset += b - a;
+      }
+    }
+    return out;
+  }
+
+  /** Schedules decoded macOS system audio for playback into the sys worklet and the AEC reference. */
+  private scheduleMacSysAudio(audioBuffer: AudioBuffer): void {
+    if (!this.audioContext || !this.sysWorkletNode) return;
+    const ctx = this.audioContext;
+    const source = ctx.createBufferSource();
+    source.buffer = audioBuffer;
+    source.connect(this.sysWorkletNode);
+
+    if (this.sysAudioPlaybackTime < ctx.currentTime) {
+      // Playback fell behind → a real gap in the scheduled sys audio.
+      // Counted for the AEC diagnostics (each gap used to be silently
+      // DELETED from the reference before the keep-alive fix). The gap after
+      // a pause is expected and not counted.
+      if (!this.sysRecorderResumePending) {
+        this.sysChunkStats.resets += 1;
+        this.sysChunkStats.gapSeconds +=
+          ctx.currentTime - this.sysAudioPlaybackTime;
+      }
+      this.sysAudioPlaybackTime = ctx.currentTime;
+    }
+    // First audio after a resume: the saved sys file starts again with it.
+    // Everything scheduled here is non-paused capture (paused stretches were
+    // cut), so this holds even if a new pause began meanwhile.
+    if (this.sysRecorderResumePending) {
+      this.sysRecorderResumePending = false;
+      if (this.sysMediaRecorder?.state === "paused") {
+        this.sysMediaRecorder.resume();
+      }
+    }
+    source.start(this.sysAudioPlaybackTime);
+    this.sysAudioPlaybackTime += audioBuffer.duration;
+
+    // AEC reference: append the decoded capture audio DIRECTLY.
+    // Chunks are contiguous capture, so concatenation IS the capture
+    // timeline — playback scheduling (and its re-anchor jumps) never
+    // touches the reference the canceller aligns against.
+    if (this.speakerMode && !this.aecOverCap) {
+      let mono = audioBuffer.getChannelData(0);
+      if (audioBuffer.numberOfChannels > 1) {
+        const ch1 = audioBuffer.getChannelData(1);
+        const mixed = new Float32Array(mono.length);
+        for (let i = 0; i < mono.length; i++) {
+          mixed[i] = (mono[i] + ch1[i]) / 2;
+        }
+        mono = mixed;
+      }
+      const int16 = new Int16Array(mono.length);
+      for (let i = 0; i < mono.length; i++) {
+        const s = Math.max(-1, Math.min(1, mono[i]));
+        int16[i] = s < 0 ? s * 0x8000 : s * 0x7fff;
+      }
+      this.bufferPcmForAec("sys", int16.buffer);
+    }
+
+    this.sysChunkStats.chunks += 1;
+    this.sysChunkStats.decodedSeconds += audioBuffer.duration;
+    // Periodic pipeline health (~30s at the 2s chunk cadence): buffered
+    // AEC seconds vs recorded time. sysBuf should track it; a growing
+    // deficit means the reference timeline is compressing again.
+    if (this.sysChunkStats.chunks % 15 === 0) {
+      const wall = this.recordedMsAt(Date.now()) / 1000;
+      const s = this.sysChunkStats;
+      console.log(
+        `[AudioRecorder] 📊 sys pipeline: chunks=${s.chunks} decoded=${s.decodedSeconds.toFixed(1)}s ` +
+          `resets=${s.resets} gaps=${s.gapSeconds.toFixed(1)}s | aecBuf mic=${(
+            this.aecMicSamples / AudioRecorder.AEC_RATE
+          ).toFixed(
+            1,
+          )}s sys=${(this.aecSysSamples / AudioRecorder.AEC_RATE).toFixed(1)}s ` +
+          `wall=${wall.toFixed(1)}s`,
+      );
+    }
+  }
+
+  /**
+   * macOS, while paused: the first chunk that ends after the pause began
+   * carries the last pre-pause audio. Once it is scheduled (or the rotation
+   * came back empty), pause the sys recorder when playback runs out of it.
+   */
+  private settleMacSysRecorderPause(chunkEndWallMs: number): void {
+    const openPause = this.pauseSpans[this.pauseSpans.length - 1];
+    if (
+      !this.sysRecorderPausePending ||
+      this.state !== "paused" ||
+      !this.audioContext ||
+      !openPause ||
+      openPause.to !== null ||
+      chunkEndWallMs < openPause.from
+    )
+      return;
+    this.sysRecorderPausePending = false;
+    const delayMs = Math.max(
+      0,
+      (this.sysAudioPlaybackTime - this.audioContext.currentTime) * 1000,
+    );
+    this.sysRecorderPauseTimer = setTimeout(() => {
+      this.sysRecorderPauseTimer = null;
+      if (
+        this.state === "paused" &&
+        this.sysMediaRecorder?.state === "recording"
+      ) {
+        this.sysMediaRecorder.pause();
+      }
+    }, delayMs);
+  }
+
+  /** Detaches and closes the live socket without triggering the reconnect path. */
+  private closeSocketQuietly(): void {
+    if (!this.ws) return;
+    this.ws.onopen = null;
+    this.ws.onmessage = null;
+    this.ws.onerror = null;
+    this.ws.onclose = null;
+    if (
+      this.ws.readyState === WebSocket.OPEN ||
+      this.ws.readyState === WebSocket.CONNECTING
+    ) {
+      this.ws.close();
+    }
+    this.ws = null;
+  }
+
+  private cancelPauseDrain(): void {
+    if (this.pauseDrainTimer) {
+      clearTimeout(this.pauseDrainTimer);
+      this.pauseDrainTimer = null;
+    }
+    this.pauseDrainResolve?.(false);
+    this.pauseDrainResolve = null;
+  }
+
+  /**
+   * Pause: from this moment no audio from either channel is streamed,
+   * buffered or recorded. The mic and the saved files stop at once; the live
+   * socket closes after a short drain so utterances already in flight still
+   * come back. Resolves true once drained (socket closed while still paused),
+   * false if the recording was resumed or stopped first.
+   */
+  pause(): Promise<boolean> {
+    if (this.state !== "recording") return Promise.resolve(false);
+    this.state = "paused";
+    const now = Date.now();
+    this.pauseSpans.push({ from: now, to: null });
+
+    // No reconnect attempts while paused: resume opens a fresh socket.
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
+    this.reconnectAttempts = 0;
+
+    if (this.micMediaRecorder?.state === "recording") {
+      this.micMediaRecorder.pause();
+    }
+    if (this.sysAecTapDirect) {
+      // macOS: the sys recorder pauses once pre-pause playback runs out
+      // (see settleMacSysRecorderPause).
+      this.sysRecorderPausePending = true;
+    } else if (this.sysMediaRecorder?.state === "recording") {
+      this.sysMediaRecorder.pause();
+    }
+    console.log("[AudioRecorder] ⏸ Paused");
+
+    const drainMs = this.sysAecTapDirect
+      ? AudioRecorder.PAUSE_DRAIN_MS_MAC
+      : AudioRecorder.PAUSE_DRAIN_MS;
+    return new Promise((resolve) => {
+      this.pauseDrainResolve = resolve;
+      this.pauseDrainTimer = setTimeout(() => {
+        this.pauseDrainTimer = null;
+        this.pauseDrainResolve = null;
+        if (this.state !== "paused") {
+          resolve(false);
+          return;
+        }
+        this.closeSocketQuietly();
+        resolve(true);
+      }, drainMs);
+    });
+  }
+
+  /** Resume after pause(): recording continues in the same files and a new live socket. */
+  async resume(): Promise<void> {
+    if (this.state !== "paused") return;
+    const openPause = this.pauseSpans[this.pauseSpans.length - 1];
+    if (openPause && openPause.to === null) openPause.to = Date.now();
+    this.state = "recording";
+    this.cancelPauseDrain();
+
+    if (this.micMediaRecorder?.state === "paused") {
+      this.micMediaRecorder.resume();
+    }
+    if (this.sysAecTapDirect) {
+      // Pre-pause audio not scheduled yet, or still playing: the paused
+      // capture is cut from the chunks and post-resume audio follows it
+      // directly, so the recorder does not need to pause at all.
+      this.sysRecorderPausePending = false;
+      if (this.sysRecorderPauseTimer) {
+        clearTimeout(this.sysRecorderPauseTimer);
+        this.sysRecorderPauseTimer = null;
+      }
+      // Already paused: it restarts with the first post-resume audio.
+      if (this.sysMediaRecorder?.state === "paused") {
+        this.sysRecorderResumePending = true;
+      }
+    } else if (this.sysMediaRecorder?.state === "paused") {
+      this.sysMediaRecorder.resume();
+    }
+    console.log("[AudioRecorder] ▶️ Resumed");
+
+    if (
+      !this.ws ||
+      this.ws.readyState === WebSocket.CLOSING ||
+      this.ws.readyState === WebSocket.CLOSED
+    ) {
+      try {
+        await this.initializeWebSocket();
+      } catch (err) {
+        console.error(
+          "[AudioRecorder] Could not reopen the live socket after resume, retrying:",
+          err instanceof Error ? err.message : err,
+        );
+        this.options.onDisconnect?.();
+        this.scheduleReconnect();
+      }
+    }
+  }
+
   async stop(): Promise<{ micBlob?: Blob; sysBlob?: Blob }> {
-    if (this.state !== "recording") return {};
+    if (this.state !== "recording" && this.state !== "paused") return {};
+    const openPause = this.pauseSpans[this.pauseSpans.length - 1];
+    if (openPause && openPause.to === null) openPause.to = Date.now();
     this.state = "stopping";
+    this.cancelPauseDrain();
+    if (this.sysRecorderPauseTimer) {
+      clearTimeout(this.sysRecorderPauseTimer);
+      this.sysRecorderPauseTimer = null;
+    }
+    this.sysRecorderPausePending = false;
+    this.sysRecorderResumePending = false;
     window.removeEventListener("online", this.handleOnline);
     // Buffering effectively ends here (worklets are severed below); stamp it so
     // the AEC diagnostics compare buffered seconds against the true window.
@@ -963,9 +1326,11 @@ export class AudioRecorder {
     if (this.micWorkletNode) this.micWorkletNode.port.onmessage = null;
     if (this.sysWorkletNode) this.sysWorkletNode.port.onmessage = null;
 
-    // Grace period: allow OpenAI's Realtime API 2.5 seconds to flush the final pending
-    // audio buffer transcriptions back to us over the WebSocket!
-    await new Promise((resolve) => setTimeout(resolve, 2500));
+    // Grace period: give the live socket 2.5 s to flush the final pending
+    // transcriptions back to us. Nothing to wait for when it is already
+    // closed (stopped while paused, or offline).
+    const socketOpen = !!this.ws && this.ws.readyState === WebSocket.OPEN;
+    await new Promise((resolve) => setTimeout(resolve, socketOpen ? 2500 : 0));
 
     return new Promise((resolve) => {
       let micBlob: Blob | undefined;
@@ -1019,6 +1384,11 @@ export class AudioRecorder {
   }
 
   private cleanup(): void {
+    this.cancelPauseDrain();
+    if (this.sysRecorderPauseTimer) {
+      clearTimeout(this.sysRecorderPauseTimer);
+      this.sysRecorderPauseTimer = null;
+    }
     if (this.sourceNode) this.sourceNode.disconnect();
     if (this.sysSourceNode) this.sysSourceNode.disconnect();
     if (this.micWorkletNode) this.micWorkletNode.disconnect();
@@ -1102,7 +1472,7 @@ export class AudioRecorder {
     this.speakerMode = enabled;
 
     if (
-      this.state !== "recording" ||
+      (this.state !== "recording" && this.state !== "paused") ||
       !this.audioContext ||
       !this.micWorkletNode
     ) {
@@ -1235,7 +1605,8 @@ export class AudioRecorder {
           err.code = this.lastTypedError.code;
           err.provider = this.lastTypedError.provider;
           this.options.onError(err);
-        } else if (this.state !== "stopping") {
+        } else if (this.state === "recording") {
+          // Not while paused (resume opens a new socket) or stopping.
           this.options.onDisconnect?.();
           this.scheduleReconnect();
         }
@@ -1244,7 +1615,7 @@ export class AudioRecorder {
       this.ws.onclose = () => {
         console.log("WebSocket closed.");
         if (
-          this.state !== "stopping" &&
+          this.state === "recording" &&
           !(this.lastTypedError && this.isFatalError(this.lastTypedError.code))
         ) {
           this.options.onDisconnect?.();
@@ -1322,22 +1693,7 @@ export class AudioRecorder {
 
   async reconnect(): Promise<void> {
     if (this.state !== "recording") return;
-
-    // Cleanup old socket if any
-    if (this.ws) {
-      this.ws.onopen = null;
-      this.ws.onmessage = null;
-      this.ws.onerror = null;
-      this.ws.onclose = null;
-      if (
-        this.ws.readyState === WebSocket.OPEN ||
-        this.ws.readyState === WebSocket.CONNECTING
-      ) {
-        this.ws.close();
-      }
-      this.ws = null;
-    }
-
+    this.closeSocketQuietly();
     await this.initializeWebSocket();
   }
 }

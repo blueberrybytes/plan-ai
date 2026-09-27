@@ -1,0 +1,753 @@
+diff --git a/node_modules/react-native-live-audio-stream/android/src/main/java/com/imxiqi/rnliveaudiostream/RNLiveAudioStreamModule.java b/node_modules/react-native-live-audio-stream/android/src/main/java/com/imxiqi/rnliveaudiostream/RNLiveAudioStreamModule.java
+index 20f454f..f762e75 100644
+--- a/node_modules/react-native-live-audio-stream/android/src/main/java/com/imxiqi/rnliveaudiostream/RNLiveAudioStreamModule.java
++++ b/node_modules/react-native-live-audio-stream/android/src/main/java/com/imxiqi/rnliveaudiostream/RNLiveAudioStreamModule.java
+@@ -6,17 +6,25 @@ import android.media.MediaRecorder.AudioSource;
+ import android.util.Base64;
+ import android.util.Log;
+ 
++import com.facebook.react.bridge.Arguments;
+ import com.facebook.react.bridge.Promise;
+ import com.facebook.react.bridge.ReactApplicationContext;
+ import com.facebook.react.bridge.ReactContextBaseJavaModule;
+ import com.facebook.react.bridge.ReactMethod;
+ import com.facebook.react.bridge.ReadableMap;
++import com.facebook.react.bridge.WritableMap;
+ import com.facebook.react.modules.core.DeviceEventManagerModule;
+ 
+ import java.lang.Math;
+ 
++// Events sent to JS:
++//   data   base64 PCM string
++//   error  { message: string }. Capture is not running after this event.
+ public class RNLiveAudioStreamModule extends ReactContextBaseJavaModule {
+ 
++    private static final String TAG = "RNLiveAudioStream";
++    private static final long THREAD_JOIN_TIMEOUT_MS = 2000;
++
+     private final ReactApplicationContext reactContext;
+     private DeviceEventManagerModule.RCTDeviceEventEmitter eventEmitter;
+ 
+@@ -27,7 +35,12 @@ public class RNLiveAudioStreamModule extends ReactContextBaseJavaModule {
+ 
+     private AudioRecord recorder;
+     private int bufferSize;
+-    private boolean isRecording;
++    private volatile boolean isRecording;
++    // Each start() gets a new session number. A capture thread only acts while
++    // its number is current, so a late thread from an old session cannot read
++    // or stop the recorder of a new one.
++    private volatile int session;
++    private Thread recordingThread;
+ 
+     public RNLiveAudioStreamModule(ReactApplicationContext reactContext) {
+         super(reactContext);
+@@ -41,6 +54,12 @@ public class RNLiveAudioStreamModule extends ReactContextBaseJavaModule {
+ 
+     @ReactMethod
+     public void init(ReadableMap options) {
++        if (isRecording) {
++            // Replacing the recorder under a running capture thread kills the capture.
++            Log.w(TAG, "init ignored while recording");
++            return;
++        }
++
+         sampleRateInHz = 44100;
+         if (options.hasKey("sampleRate")) {
+             sampleRateInHz = options.getInt("sampleRate");
+@@ -65,9 +84,12 @@ public class RNLiveAudioStreamModule extends ReactContextBaseJavaModule {
+             audioSource = options.getInt("audioSource");
+         }
+ 
+-        isRecording = false;
+         eventEmitter = reactContext.getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class);
+ 
++        // Wait for the thread of the last session so it does not stop the new recorder.
++        waitForRecordingThread();
++        releaseRecorder();
++
+         bufferSize = AudioRecord.getMinBufferSize(sampleRateInHz, channelConfig, audioFormat);
+ 
+         if (options.hasKey("bufferSize")) {
+@@ -75,15 +97,58 @@ public class RNLiveAudioStreamModule extends ReactContextBaseJavaModule {
+         }
+ 
+         int recordingBufferSize = bufferSize * 3;
+-        recorder = new AudioRecord(audioSource, sampleRateInHz, channelConfig, audioFormat, recordingBufferSize);
++        try {
++            recorder = new AudioRecord(audioSource, sampleRateInHz, channelConfig, audioFormat, recordingBufferSize);
++        } catch (Exception e) {
++            recorder = null;
++            emitError("Could not create AudioRecord: " + e);
++            return;
++        }
++
++        if (recorder.getState() != AudioRecord.STATE_INITIALIZED) {
++            releaseRecorder();
++            emitError("AudioRecord did not initialize. Check the microphone permission and the audio options.");
++        }
+     }
+ 
+     @ReactMethod
+     public void start() {
++        if (isRecording) {
++            Log.i(TAG, "start ignored, already recording");
++            return;
++        }
++
++        final AudioRecord rec = recorder;
++        if (rec == null || rec.getState() != AudioRecord.STATE_INITIALIZED) {
++            emitError("AudioRecord is not initialized. Call init before start.");
++            return;
++        }
++
++        waitForRecordingThread();
++
++        final int mySession = ++session;
+         isRecording = true;
+-        recorder.startRecording();
+ 
+-        Thread recordingThread = new Thread(new Runnable() {
++        try {
++            rec.startRecording();
++        } catch (Exception e) {
++            isRecording = false;
++            emitError("AudioRecord.startRecording failed: " + e);
++            return;
++        }
++
++        if (rec.getRecordingState() != AudioRecord.RECORDSTATE_RECORDING) {
++            isRecording = false;
++            try {
++                rec.stop();
++            } catch (Exception ignored) {
++                // Nothing to stop.
++            }
++            emitError("AudioRecord did not start recording. The microphone may be in use by another app.");
++            return;
++        }
++
++        recordingThread = new Thread(new Runnable() {
+             public void run() {
+                 try {
+                     int bytesRead;
+@@ -91,27 +156,124 @@ public class RNLiveAudioStreamModule extends ReactContextBaseJavaModule {
+                     String base64Data;
+                     byte[] buffer = new byte[bufferSize];
+ 
+-                    while (isRecording) {
+-                        bytesRead = recorder.read(buffer, 0, buffer.length);
++                    while (isRecording && mySession == session) {
++                        bytesRead = rec.read(buffer, 0, buffer.length);
++
++                        if (bytesRead < 0) {
++                            // AudioRecord error codes are negative. Stop instead of spinning.
++                            if (isRecording && mySession == session) {
++                                isRecording = false;
++                                emitError("AudioRecord.read failed with code " + bytesRead);
++                            }
++                            break;
++                        }
+ 
+                         // skip first 2 buffers to eliminate "click sound"
+                         if (bytesRead > 0 && ++count > 2) {
+                             base64Data = Base64.encodeToString(buffer, Base64.NO_WRAP);
+-                            eventEmitter.emit("data", base64Data);
++                            emitEvent("data", base64Data);
+                         }
+                     }
+-                    recorder.stop();
+                 } catch (Exception e) {
+-                    e.printStackTrace();
++                    Log.e(TAG, "Recording thread failed", e);
++                    if (isRecording && mySession == session) {
++                        isRecording = false;
++                        emitError("Recording thread failed: " + e);
++                    }
++                } finally {
++                    // A newer session owns the recorder, leave it running.
++                    if (mySession == session) {
++                        try {
++                            rec.stop();
++                        } catch (Exception e) {
++                            Log.w(TAG, "AudioRecord.stop failed", e);
++                        }
++                    }
+                 }
+             }
+-        });
++        }, "RNLiveAudioStream");
+ 
+         recordingThread.start();
+     }
+ 
+     @ReactMethod
+     public void stop(Promise promise) {
++        // The capture thread sees this flag after its current read and stops
++        // the recorder. The recorder is kept so start() can be called again.
++        isRecording = false;
++        promise.resolve(null);
++    }
++
++    // Required by NativeEventEmitter on the JS side. Nothing to do here.
++    @ReactMethod
++    public void addListener(String eventName) {
++    }
++
++    @ReactMethod
++    public void removeListeners(double count) {
++    }
++
++    @Override
++    public void invalidate() {
+         isRecording = false;
++        waitForRecordingThread();
++        releaseRecorder();
++        super.invalidate();
++    }
++
++    private void waitForRecordingThread() {
++        Thread thread = recordingThread;
++        if (thread == null || thread == Thread.currentThread() || !thread.isAlive()) {
++            return;
++        }
++        try {
++            thread.join(THREAD_JOIN_TIMEOUT_MS);
++        } catch (InterruptedException e) {
++            Thread.currentThread().interrupt();
++        }
++        if (thread.isAlive()) {
++            Log.w(TAG, "Previous recording thread is still running");
++        }
++    }
++
++    private void releaseRecorder() {
++        if (recorder == null) {
++            return;
++        }
++        try {
++            recorder.release();
++        } catch (Exception e) {
++            Log.w(TAG, "AudioRecord.release failed", e);
++        }
++        recorder = null;
++    }
++
++    private DeviceEventManagerModule.RCTDeviceEventEmitter getEmitter() {
++        if (eventEmitter == null) {
++            try {
++                if (reactContext.hasActiveReactInstance()) {
++                    eventEmitter = reactContext.getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class);
++                }
++            } catch (Exception e) {
++                Log.w(TAG, "Could not get the JS event emitter", e);
++            }
++        }
++        return eventEmitter;
++    }
++
++    private void emitEvent(String name, Object payload) {
++        DeviceEventManagerModule.RCTDeviceEventEmitter emitter = getEmitter();
++        if (emitter == null) {
++            Log.w(TAG, "JS is not ready, dropping " + name + " event");
++            return;
++        }
++        emitter.emit(name, payload);
++    }
++
++    private void emitError(String message) {
++        Log.e(TAG, message);
++        WritableMap payload = Arguments.createMap();
++        payload.putString("message", message);
++        emitEvent("error", payload);
+     }
+ }
+diff --git a/node_modules/react-native-live-audio-stream/index.d.ts b/node_modules/react-native-live-audio-stream/index.d.ts
+index b846438..2c4d0c4 100644
+--- a/node_modules/react-native-live-audio-stream/index.d.ts
++++ b/node_modules/react-native-live-audio-stream/index.d.ts
+@@ -1,9 +1,33 @@
+ declare module "react-native-live-audio-stream" {
++  export interface Subscription {
++    remove(): void
++  }
++
++  export interface InterruptedEvent {
++    /** "began" when the audio session was interrupted (iOS). */
++    reason?: string
++  }
++
++  export type ResumedEvent = Record<string, never>
++
++  export interface ErrorEvent {
++    message: string
++  }
++
++  export type AudioRecordEvent = "data" | "interrupted" | "resumed" | "error"
++
+   export interface IAudioRecord {
+     init: (options: Options) => void
+     start: () => void
+-    stop: () => Promise<string>
+-    on: (event: "data", callback: (data: string) => void) => void
++    stop: () => Promise<void | null | string>
++    /** Base64 encoded PCM chunk. */
++    on(event: "data", callback: (data: string) => void): Subscription
++    /** iOS only. The system stopped capture, for example for a phone call. */
++    on(event: "interrupted", callback: (event: InterruptedEvent) => void): Subscription
++    /** iOS only. Capture is running again after an interruption or a media services reset. */
++    on(event: "resumed", callback: (event: ResumedEvent) => void): Subscription
++    /** Capture failed and is not running. Call start() to try again. */
++    on(event: "error", callback: (event: ErrorEvent) => void): Subscription
+   }
+ 
+   export interface Options {
+@@ -20,7 +44,8 @@ declare module "react-native-live-audio-stream" {
+      * - `6`
+      */
+     audioSource?: number
+-    wavFile: string
++    /** Not used by the native code. */
++    wavFile?: string
+     bufferSize?: number
+   }
+ 
+diff --git a/node_modules/react-native-live-audio-stream/index.js b/node_modules/react-native-live-audio-stream/index.js
+index c5968b2..ef7e5bc 100644
+--- a/node_modules/react-native-live-audio-stream/index.js
++++ b/node_modules/react-native-live-audio-stream/index.js
+@@ -6,18 +6,29 @@ const AudioRecord = {};
+ 
+ AudioRecord.init = options => RNLiveAudioStream.init(options);
+ AudioRecord.start = () => RNLiveAudioStream.start();
++// Both platforms resolve a promise once capture has been told to stop.
+ AudioRecord.stop = () => RNLiveAudioStream.stop();
+ 
++// data: base64 PCM string.
++// interrupted: { reason?: string }. iOS only, the system stopped capture.
++// resumed: {}. iOS only, capture is running again after an interruption.
++// error: { message: string }. Capture is not running after this event.
+ const eventsMap = {
+-  data: 'data'
++  data: 'data',
++  interrupted: 'interrupted',
++  resumed: 'resumed',
++  error: 'error'
+ };
+ 
++// Adds one more listener and returns its subscription. Existing listeners
++// are kept. Call remove() on the subscription to detach it.
+ AudioRecord.on = (event, callback) => {
+-  const nativeEvent = eventsMap[event];
++  const nativeEvent = Object.prototype.hasOwnProperty.call(eventsMap, event)
++    ? eventsMap[event]
++    : undefined;
+   if (!nativeEvent) {
+     throw new Error('Invalid event');
+   }
+-  EventEmitter.removeAllListeners(nativeEvent);
+   return EventEmitter.addListener(nativeEvent, callback);
+ };
+ 
+diff --git a/node_modules/react-native-live-audio-stream/ios/RNLiveAudioStream.m b/node_modules/react-native-live-audio-stream/ios/RNLiveAudioStream.m
+index a6f2317..742c6d6 100644
+--- a/node_modules/react-native-live-audio-stream/ios/RNLiveAudioStream.m
++++ b/node_modules/react-native-live-audio-stream/ios/RNLiveAudioStream.m
+@@ -1,11 +1,63 @@
+ #import "RNLiveAudioStream.h"
+ 
+-@implementation RNLiveAudioStream
++// Events sent to JS:
++//   data         base64 PCM string
++//   interrupted  { reason: "began" }
++//   resumed      {}
++//   error        { message: string }. Capture is not running after this event.
++static NSString *const kEventData = @"data";
++static NSString *const kEventInterrupted = @"interrupted";
++static NSString *const kEventResumed = @"resumed";
++static NSString *const kEventError = @"error";
++
++static void HandleInputBuffer(void *inUserData,
++                              AudioQueueRef inAQ,
++                              AudioQueueBufferRef inBuffer,
++                              const AudioTimeStamp *inStartTime,
++                              UInt32 inNumPackets,
++                              const AudioStreamPacketDescription *inPacketDesc);
++
++@implementation RNLiveAudioStream {
++    // Exported methods and audio session notifications all run on this
++    // serial queue, so the record state is only changed from one thread.
++    dispatch_queue_t _workQueue;
++    // True while the audio queue has been started and not stopped by us or
++    // by the system. mIsRunning means "JS wants to record".
++    BOOL _queueStarted;
++    BOOL _observingSession;
++}
+ 
+ RCT_EXPORT_MODULE();
+ 
+++ (BOOL)requiresMainQueueSetup {
++    return NO;
++}
++
++- (instancetype)init {
++    if ((self = [super init])) {
++        _workQueue = dispatch_queue_create("com.imxiqi.rnliveaudiostream", DISPATCH_QUEUE_SERIAL);
++        _recordState.mSelf = self;
++        [self addSessionObservers];
++    }
++    return self;
++}
++
++- (dispatch_queue_t)methodQueue {
++    return _workQueue;
++}
++
++- (NSArray<NSString *> *)supportedEvents {
++    return @[kEventData, kEventInterrupted, kEventResumed, kEventError];
++}
++
+ RCT_EXPORT_METHOD(init:(NSDictionary *) options) {
+     RCTLogInfo(@"[RNLiveAudioStream] init");
++    if (_recordState.mIsRunning) {
++        // A rebuild after an interruption reuses this format, so it must not
++        // change under a running capture.
++        RCTLogWarn(@"[RNLiveAudioStream] init ignored while recording");
++        return;
++    }
+     _recordState.mDataFormat.mSampleRate        = options[@"sampleRate"] == nil ? 44100 : [options[@"sampleRate"] doubleValue];
+     _recordState.mDataFormat.mBitsPerChannel    = options[@"bitsPerSample"] == nil ? 16 : [options[@"bitsPerSample"] unsignedIntValue];
+     _recordState.mDataFormat.mChannelsPerFrame  = options[@"channels"] == nil ? 1 : [options[@"channels"] unsignedIntValue];
+@@ -21,6 +73,63 @@ @implementation RNLiveAudioStream
+ 
+ RCT_EXPORT_METHOD(start) {
+     RCTLogInfo(@"[RNLiveAudioStream] start");
++    if (_recordState.mIsRunning && _recordState.mQueue != NULL) {
++        if (_queueStarted) {
++            RCTLogInfo(@"[RNLiveAudioStream] start ignored, already running");
++            return;
++        }
++        // The system stopped the queue and did not send an end of interruption.
++        // A new start() from JS is the signal to try again.
++        [self resumeCapture];
++        return;
++    }
++
++    _recordState.mSelf = self;
++    if (_recordState.mDataFormat.mSampleRate <= 0) {
++        [self failWithMessage:@"start was called before init"];
++        return;
++    }
++
++    // Drop any queue left behind by a failed resume before building a new one.
++    [self disposeQueueStoppingFirst:YES];
++
++    NSString *failure = [self configureSession];
++    if (failure != nil) {
++        [self failWithMessage:failure];
++        return;
++    }
++
++    // Set before the queue starts, otherwise the callback drops the first buffers.
++    _recordState.mIsRunning = true;
++
++    failure = [self buildQueue];
++    if (failure != nil) {
++        [self failWithMessage:failure];
++        return;
++    }
++
++    OSStatus status = AudioQueueStart(_recordState.mQueue, NULL);
++    if (status != noErr) {
++        [self failWithMessage:[NSString stringWithFormat:@"AudioQueueStart failed. OSStatus %d", (int) status]];
++        return;
++    }
++    _queueStarted = YES;
++}
++
++RCT_EXPORT_METHOD(stop:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject) {
++    RCTLogInfo(@"[RNLiveAudioStream] stop");
++    // Safe to call twice and when not running.
++    _recordState.mIsRunning = false;
++    _queueStarted = NO;
++    [self disposeQueueStoppingFirst:YES];
++    resolve([NSNull null]);
++}
++
++#pragma mark - Audio session and queue
++
++// Sets the category and mode, then activates the session.
++// Returns an error message, or nil on success.
++- (NSString *)configureSession {
+     AVAudioSession *audioSession = [AVAudioSession sharedInstance];
+     NSError *error = nil;
+     BOOL success;
+@@ -39,65 +148,234 @@ @implementation RNLiveAudioStream
+         success = [audioSession setMode: AVAudioSessionModeVoiceChat error: &error] && success;
+     }
+     if (!success || error != nil) {
+-        RCTLog(@"[RNLiveAudioStream] Problem setting up AVAudioSession category and mode. Error: %@", error);
+-        return;
++        return [NSString stringWithFormat:@"Could not set the audio session category and mode. %@",
++                error.localizedDescription ?: @"Unknown error"];
+     }
+ 
+-    _recordState.mIsRunning = true;
++    error = nil;
++    if (![audioSession setActive:YES error:&error]) {
++        return [NSString stringWithFormat:@"Could not activate the audio session. %@",
++                error.localizedDescription ?: @"Unknown error"];
++    }
++    return nil;
++}
+ 
++// Creates the input queue with the current format and enqueues the buffers.
++// Returns an error message, or nil on success.
++- (NSString *)buildQueue {
+     OSStatus status = AudioQueueNewInput(&_recordState.mDataFormat, HandleInputBuffer, &_recordState, NULL, NULL, 0, &_recordState.mQueue);
+-    if (status != 0) {
+-        RCTLog(@"[RNLiveAudioStream] Record Failed. Cannot initialize AudioQueueNewInput. status: %i", (int) status);
+-        return;
++    if (status != noErr) {
++        _recordState.mQueue = NULL;
++        return [NSString stringWithFormat:@"AudioQueueNewInput failed. OSStatus %d", (int) status];
+     }
+ 
+     for (int i = 0; i < kNumberBuffers; i++) {
+-        AudioQueueAllocateBuffer(_recordState.mQueue, _recordState.bufferByteSize, &_recordState.mBuffers[i]);
+-        AudioQueueEnqueueBuffer(_recordState.mQueue, _recordState.mBuffers[i], 0, NULL);
++        status = AudioQueueAllocateBuffer(_recordState.mQueue, _recordState.bufferByteSize, &_recordState.mBuffers[i]);
++        if (status == noErr) {
++            status = AudioQueueEnqueueBuffer(_recordState.mQueue, _recordState.mBuffers[i], 0, NULL);
++        }
++        if (status != noErr) {
++            [self disposeQueueStoppingFirst:YES];
++            return [NSString stringWithFormat:@"Could not prepare audio queue buffers. OSStatus %d", (int) status];
++        }
+     }
+-    AudioQueueStart(_recordState.mQueue, NULL);
++    return nil;
+ }
+ 
+-RCT_EXPORT_METHOD(stop) {
+-    RCTLogInfo(@"[RNLiveAudioStream] stop");
+-    if (_recordState.mIsRunning) {
+-        _recordState.mIsRunning = false;
+-        AudioQueueStop(_recordState.mQueue, true);
+-        for (int i = 0; i < kNumberBuffers; i++) {
+-            AudioQueueFreeBuffer(_recordState.mQueue, _recordState.mBuffers[i]);
++// Disposes the queue and forgets it. Disposing also frees the buffers, so the
++// buffer pointers are cleared and never used again. After a media services
++// reset the queue is already dead, so it is disposed without a stop call.
++- (void)disposeQueueStoppingFirst:(BOOL)stopFirst {
++    AudioQueueRef queue = _recordState.mQueue;
++    _recordState.mQueue = NULL;
++    for (int i = 0; i < kNumberBuffers; i++) {
++        _recordState.mBuffers[i] = NULL;
++    }
++    if (queue == NULL) {
++        return;
++    }
++    if (stopFirst) {
++        AudioQueueStop(queue, true);
++    }
++    AudioQueueDispose(queue, true);
++}
++
++// Called with mIsRunning true after the system stopped the queue.
++- (void)resumeCapture {
++    NSString *failure = [self configureSession];
++    if (failure == nil) {
++        BOOL restarted = NO;
++        if (_recordState.mQueue != NULL) {
++            OSStatus status = AudioQueueStart(_recordState.mQueue, NULL);
++            restarted = (status == noErr);
++            if (!restarted) {
++                RCTLogWarn(@"[RNLiveAudioStream] restart of the existing queue failed (OSStatus %d), building a new one", (int) status);
++            }
++        }
++        if (!restarted) {
++            [self disposeQueueStoppingFirst:YES];
++            failure = [self buildQueue];
++            if (failure == nil) {
++                OSStatus status = AudioQueueStart(_recordState.mQueue, NULL);
++                if (status != noErr) {
++                    failure = [NSString stringWithFormat:@"AudioQueueStart failed after an interruption. OSStatus %d", (int) status];
++                }
++            }
+         }
+-        AudioQueueDispose(_recordState.mQueue, true);
+     }
++
++    if (failure != nil) {
++        [self failWithMessage:failure];
++        return;
++    }
++    _queueStarted = YES;
++    RCTLogInfo(@"[RNLiveAudioStream] capture resumed");
++    [self emit:kEventResumed body:@{}];
+ }
+ 
+-void HandleInputBuffer(void *inUserData,
+-                       AudioQueueRef inAQ,
+-                       AudioQueueBufferRef inBuffer,
+-                       const AudioTimeStamp *inStartTime,
+-                       UInt32 inNumPackets,
+-                       const AudioStreamPacketDescription *inPacketDesc) {
+-    AQRecordState* pRecordState = (AQRecordState *)inUserData;
++// Leaves the module in the "not recording" state and tells JS why.
++- (void)failWithMessage:(NSString *)message {
++    _recordState.mIsRunning = false;
++    _queueStarted = NO;
++    [self disposeQueueStoppingFirst:YES];
++    RCTLogWarn(@"[RNLiveAudioStream] %@", message);
++    [self emit:kEventError body:@{@"message": message}];
++}
+ 
+-    if (!pRecordState->mIsRunning) {
++- (void)emit:(NSString *)name body:(id)body {
++    if (self.callableJSModules == nil) {
++        RCTLogWarn(@"[RNLiveAudioStream] JS is not ready, dropping %@ event", name);
+         return;
+     }
++    [self sendEventWithName:name body:body];
++}
+ 
+-    short *samples = (short *) inBuffer->mAudioData;
+-    long nsamples = inBuffer->mAudioDataByteSize;
+-    NSData *data = [NSData dataWithBytes:samples length:nsamples];
+-    NSString *str = [data base64EncodedStringWithOptions:0];
+-    [pRecordState->mSelf sendEventWithName:@"data" body:str];
++#pragma mark - Session notifications
+ 
+-    AudioQueueEnqueueBuffer(pRecordState->mQueue, inBuffer, 0, NULL);
++- (void)addSessionObservers {
++    if (_observingSession) {
++        return;
++    }
++    NSNotificationCenter *center = [NSNotificationCenter defaultCenter];
++    AVAudioSession *session = [AVAudioSession sharedInstance];
++    [center addObserver:self
++               selector:@selector(handleInterruption:)
++                   name:AVAudioSessionInterruptionNotification
++                 object:session];
++    [center addObserver:self
++               selector:@selector(handleMediaServicesReset:)
++                   name:AVAudioSessionMediaServicesWereResetNotification
++                 object:session];
++    _observingSession = YES;
+ }
+ 
+-- (NSArray<NSString *> *)supportedEvents {
+-    return @[@"data"];
++- (void)removeSessionObservers {
++    if (!_observingSession) {
++        return;
++    }
++    NSNotificationCenter *center = [NSNotificationCenter defaultCenter];
++    [center removeObserver:self name:AVAudioSessionInterruptionNotification object:nil];
++    [center removeObserver:self name:AVAudioSessionMediaServicesWereResetNotification object:nil];
++    _observingSession = NO;
++}
++
++- (void)handleInterruption:(NSNotification *)notification {
++    NSNumber *typeValue = notification.userInfo[AVAudioSessionInterruptionTypeKey];
++    if (typeValue == nil) {
++        return;
++    }
++    AVAudioSessionInterruptionType type = (AVAudioSessionInterruptionType) [typeValue unsignedIntegerValue];
++
++    dispatch_async(_workQueue, ^{
++        if (!self->_recordState.mIsRunning) {
++            return;
++        }
++        if (type == AVAudioSessionInterruptionTypeBegan) {
++            // The system has stopped the queue. Keep it so it can restart later.
++            RCTLogWarn(@"[RNLiveAudioStream] audio session interruption began");
++            self->_queueStarted = NO;
++            [self emit:kEventInterrupted body:@{@"reason": @"began"}];
++        } else if (type == AVAudioSessionInterruptionTypeEnded) {
++            // Resume even when the system does not set the ShouldResume option.
++            // This is a meeting recorder, stopping for good loses the meeting.
++            RCTLogInfo(@"[RNLiveAudioStream] audio session interruption ended");
++            [self resumeCapture];
++        }
++    });
++}
++
++- (void)handleMediaServicesReset:(NSNotification *)notification {
++    dispatch_async(_workQueue, ^{
++        RCTLogWarn(@"[RNLiveAudioStream] media services were reset");
++        // The old queue belongs to the dead media server. Dispose it without a
++        // stop call and never touch its buffers again.
++        self->_queueStarted = NO;
++        [self disposeQueueStoppingFirst:NO];
++        if (!self->_recordState.mIsRunning) {
++            return;
++        }
++
++        NSString *failure = [self configureSession];
++        if (failure == nil) {
++            failure = [self buildQueue];
++        }
++        if (failure == nil) {
++            OSStatus status = AudioQueueStart(self->_recordState.mQueue, NULL);
++            if (status != noErr) {
++                failure = [NSString stringWithFormat:@"AudioQueueStart failed after a media services reset. OSStatus %d", (int) status];
++            }
++        }
++        if (failure != nil) {
++            [self failWithMessage:failure];
++            return;
++        }
++        self->_queueStarted = YES;
++        [self emit:kEventResumed body:@{}];
++    });
++}
++
++#pragma mark - Teardown
++
++- (void)invalidate {
++    RCTLogInfo(@"[RNLiveAudioStream] invalidate");
++    [self removeSessionObservers];
++    _recordState.mIsRunning = false;
++    _queueStarted = NO;
++    [self disposeQueueStoppingFirst:YES];
++    [super invalidate];
+ }
+ 
+ - (void)dealloc {
+     RCTLogInfo(@"[RNLiveAudioStream] dealloc");
+-    AudioQueueDispose(_recordState.mQueue, true);
++    [self removeSessionObservers];
++    _recordState.mIsRunning = false;
++    [self disposeQueueStoppingFirst:YES];
++    _recordState.mSelf = nil;
+ }
+ 
+ @end
++
++static void HandleInputBuffer(void *inUserData,
++                              AudioQueueRef inAQ,
++                              AudioQueueBufferRef inBuffer,
++                              const AudioTimeStamp *inStartTime,
++                              UInt32 inNumPackets,
++                              const AudioStreamPacketDescription *inPacketDesc) {
++    AQRecordState* pRecordState = (AQRecordState *)inUserData;
++
++    if (!pRecordState->mIsRunning) {
++        return;
++    }
++
++    short *samples = (short *) inBuffer->mAudioData;
++    long nsamples = inBuffer->mAudioDataByteSize;
++    NSData *data = [NSData dataWithBytes:samples length:nsamples];
++    NSString *str = [data base64EncodedStringWithOptions:0];
++    if (pRecordState->mSelf != nil) {
++        [pRecordState->mSelf sendEventWithName:@"data" body:str];
++    }
++
++    // Give the buffer back to the queue that delivered it. After a rebuild
++    // mQueue already points to the new queue.
++    AudioQueueEnqueueBuffer(inAQ, inBuffer, 0, NULL);
++}

@@ -1,5 +1,6 @@
 import { Platform } from "react-native";
 import * as Sentry from '@sentry/react-native';
+import * as LegacyFileSystem from "expo-file-system/legacy";
 import type { components } from '../types/api';
 
 // ── Types sourced from the generated backend swagger ──────────────────────────
@@ -28,6 +29,21 @@ export type CreateStandaloneTranscriptBody = components['schemas']['CreateStanda
 export type SubscriptionStatusResponse = components['schemas']['SubscriptionStatusResponse'];
 export type UpdateSpeakerNamesBody = components['schemas']['UpdateSpeakerNamesBody'];
 
+/**
+ * An API error that keeps the HTTP status, so callers can tell a request
+ * worth retrying (network, 5xx, 429) from one that will never succeed (4xx).
+ * `status` is undefined when the request never got an answer.
+ */
+export class HttpError extends Error {
+  constructor(
+    message: string,
+    public readonly status?: number,
+  ) {
+    super(message);
+    this.name = "HttpError";
+  }
+}
+
 let rawBaseUrl = process.env.EXPO_PUBLIC_PLAN_AI_API_URL ?? "http://localhost:8080";
 if (__DEV__ && Platform.OS === 'android') {
   rawBaseUrl = rawBaseUrl.replace("localhost", "10.0.2.2").replace("127.0.0.1", "10.0.2.2");
@@ -50,7 +66,7 @@ async function handleResponseWithRetry<T>(
   // 403 = role-based permission failure — refreshing the token won't help, return error immediately
   if (res.status === 403) {
     const body = await res.json().catch(() => ({ message: res.statusText }));
-    throw new Error((body as { message?: string }).message ?? `HTTP 403`);
+    throw new HttpError((body as { message?: string }).message ?? `HTTP 403`, 403);
   }
 
   // 401 = token expired/invalid — refresh and retry once
@@ -59,7 +75,10 @@ async function handleResponseWithRetry<T>(
     const refreshedRes = await retryRequest();
     if (!refreshedRes.ok) {
       const body = await refreshedRes.json().catch(() => ({ message: refreshedRes.statusText }));
-      throw new Error((body as { message?: string }).message ?? `HTTP ${refreshedRes.status}`);
+      throw new HttpError(
+        (body as { message?: string }).message ?? `HTTP ${refreshedRes.status}`,
+        refreshedRes.status,
+      );
     }
     const json = await refreshedRes.json() as any;
     return json.data !== undefined ? json.data : json;
@@ -72,14 +91,17 @@ async function handleResponseWithRetry<T>(
     if (data.code === "usage_limit_exceeded") {
       const limitType = data.limitType as string;
       const friendly = limitType === "llm" ? "AI token" : limitType === "recording" ? "recording hour" : "generation";
-      throw new Error(`You've reached your monthly ${friendly} limit. Upgrade your plan or wait until next billing cycle.`);
+      throw new HttpError(
+        `You've reached your monthly ${friendly} limit. Upgrade your plan or wait until next billing cycle.`,
+        429,
+      );
     }
-    throw new Error("Rate limit reached. Please wait a moment before trying again.");
+    throw new HttpError("Rate limit reached. Please wait a moment before trying again.", 429);
   }
 
   if (!res.ok) {
     const body = await res.json().catch(() => ({ message: res.statusText }));
-    throw new Error((body as { message?: string }).message ?? `HTTP ${res.status}`);
+    throw new HttpError((body as { message?: string }).message ?? `HTTP ${res.status}`, res.status);
   }
   const json = await res.json() as any;
   return json.data !== undefined ? json.data : json;
@@ -534,13 +556,35 @@ export const createPlanAiApi = (
       micFile?: Blob;
       sysFile?: Blob;
       location?: { latitude: number; longitude: number; accuracy?: number | null };
+      /** Mic audio already sent in slices with uploadRecordingPart. */
+      micUploadId?: string;
+      micPartCount?: number;
+      /** Recording session id: a retry with the same id is not duplicated. */
+      clientSessionId?: string;
+      recordingMode?: "in_person" | "remote";
+      recordingStartedAt?: string;
+      recordingWallClockSeconds?: number;
+      /** Workspace the meeting was recorded in (defaults to the active one). */
+      workspaceId?: string | null;
+      /** No alert on network errors: the caller keeps the meeting and retries. */
+      silent?: boolean;
     }): Promise<Transcript> {
       const req = async (force: boolean) => {
         const formData = new FormData();
-        
+
         // Append all text payload properties individually or as serialized JSON.
         // The backend `transcriptsController.ts` will parse them.
         formData.append("source", "RECORDING");
+        if (payload.micUploadId) formData.append("micUploadId", payload.micUploadId);
+        if (payload.micPartCount) formData.append("micPartCount", String(payload.micPartCount));
+        if (payload.clientSessionId) formData.append("clientSessionId", payload.clientSessionId);
+        if (payload.recordingMode) formData.append("recordingMode", payload.recordingMode);
+        if (payload.recordingStartedAt) {
+          formData.append("recordingStartedAt", payload.recordingStartedAt);
+        }
+        if (payload.recordingWallClockSeconds) {
+          formData.append("recordingWallClockSeconds", String(payload.recordingWallClockSeconds));
+        }
         if (payload.content) formData.append("content", payload.content);
         if (payload.title) formData.append("title", payload.title);
         if (payload.recordedAt) formData.append("recordedAt", payload.recordedAt);
@@ -587,18 +631,90 @@ export const createPlanAiApi = (
         if (!token) throw new Error("No auth token available");
 
         const headers: Record<string, string> = { Authorization: `Bearer ${token}` };
-        const wsId = getWorkspaceId();
+        const wsId = payload.workspaceId || getWorkspaceId();
         if (wsId) headers["X-Workspace-Id"] = wsId;
 
+        // Audio sent in slices makes this request small; a whole file inline
+        // still gets the long timeout.
+        const timeoutMs = payload.micFile || payload.sysFile ? 300000 : 120000;
         return safeFetch(`${BASE_URL}/api/transcripts/recorder-upload`, {
           method: "POST",
           headers,
           body: formData,
-        }, false, 300000);
+        }, payload.silent ?? false, timeoutMs);
       };
 
-      const res = await req(false);
+      let res: Response;
+      try {
+        res = await req(false);
+      } catch (err) {
+        throw new HttpError(err instanceof Error ? err.message : String(err));
+      }
       return handleResponseWithRetry<Transcript>(res, () => req(true));
+    },
+
+    /**
+     * Sends one slice of a recording (see recordingUploader.ts). Uses the
+     * native uploader, which reads the slice from disk instead of JS memory
+     * and on iOS keeps going while the app is in the background.
+     */
+    async uploadRecordingPart(args: {
+      uploadId: string;
+      index: number;
+      fileUri: string;
+      workspaceId?: string | null;
+    }): Promise<void> {
+      const send = async (force: boolean) => {
+        const token = await getToken(force);
+        if (!token) throw new HttpError("No auth token available", 401);
+        const headers: Record<string, string> = { Authorization: `Bearer ${token}` };
+        const wsId = args.workspaceId || getWorkspaceId();
+        if (wsId) headers["X-Workspace-Id"] = wsId;
+        return LegacyFileSystem.uploadAsync(
+          `${BASE_URL}/api/transcripts/recorder-upload/parts`,
+          args.fileUri,
+          {
+            httpMethod: "POST",
+            uploadType: LegacyFileSystem.FileSystemUploadType.MULTIPART,
+            fieldName: "part",
+            mimeType: "application/octet-stream",
+            parameters: { uploadId: args.uploadId, index: String(args.index) },
+            headers,
+            sessionType: LegacyFileSystem.FileSystemSessionType.BACKGROUND,
+          },
+        );
+      };
+      let result: LegacyFileSystem.FileSystemUploadResult;
+      try {
+        result = await send(false);
+        if (result.status === 401) result = await send(true);
+      } catch (err) {
+        if (err instanceof HttpError) throw err;
+        throw new HttpError(err instanceof Error ? err.message : String(err));
+      }
+      if (result.status < 200 || result.status >= 300) {
+        let message = `HTTP ${result.status}`;
+        try {
+          message = (JSON.parse(result.body) as { message?: string }).message ?? message;
+        } catch {
+          // body was not JSON
+        }
+        throw new HttpError(message, result.status);
+      }
+    },
+
+    /** Drops the slices of a recording the user discarded. Best effort. */
+    async deleteRecordingParts(uploadId: string, workspaceId?: string | null): Promise<void> {
+      const token = await getToken(false);
+      if (!token) return;
+      const headers: Record<string, string> = { Authorization: `Bearer ${token}` };
+      const wsId = workspaceId || getWorkspaceId();
+      if (wsId) headers["X-Workspace-Id"] = wsId;
+      await safeFetch(
+        `${BASE_URL}/api/transcripts/recorder-upload/parts/${encodeURIComponent(uploadId)}`,
+        { method: "DELETE", headers },
+        true,
+      ).catch(() => undefined);
     },
 
     async getTranscript(id: string): Promise<Transcript> {

@@ -29,6 +29,8 @@ export interface TranscriptGenerationJobPayload {
   agenticInvestigation?: boolean;
   createDoc?: boolean;
   createSlides?: boolean;
+  /** "Save transcript only" with audio and no live text: transcribe, skip every AI step. */
+  transcribeOnly?: boolean;
 }
 
 export const transcriptGenerationQueue = new Queue<TranscriptGenerationJobPayload>(

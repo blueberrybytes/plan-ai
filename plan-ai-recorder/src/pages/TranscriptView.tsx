@@ -29,6 +29,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 import type { Transcript, Task } from "../services/planAiApi";
 import ReactMarkdown from "react-markdown";
+import { parseSpeakerBlocks } from "../utils/speakerBlocks";
 import PostMeetingTasksPanel from "../components/PostMeetingTasksPanel";
 import SyncBadges from "../components/SyncBadges";
 import SpeakerInsightsTab, {
@@ -300,58 +301,56 @@ const RenderTranscriptContent = ({
     );
   }
 
-  // Fallback for transcripts without DB utterances (like Discard AI or old recordings)
+  // Fallback for transcripts without DB utterances (text-only saves, crash
+  // recoveries, old recordings): one block per "Speaker: text" line.
   const rawText = transcript.transcript || "No transcript content available.";
-  const parts = rawText.split("\n\n");
+  const blocks = parseSpeakerBlocks(rawText);
 
-  if (parts.length > 0) {
-    const hasLabels = parts.some((p) => /^([\w\s]+):\s*([\s\S]*)/i.test(p));
-
-    if (hasLabels) {
-      return (
-        <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-          {parts.map((block, i) => {
-            const match = block.match(/^([\w\s]+):\s*([\s\S]*)/i);
-            if (match) {
-              const speaker = match[1].trim();
-              const text = match[2];
-              const { isMe, node } = renderSpeaker(speaker);
-              return (
-                <Box key={i} sx={{ display: "flex", flexDirection: "column" }}>
-                  <Typography
-                    variant="subtitle2"
-                    color={isMe ? "primary.main" : "secondary.main"}
-                    fontWeight="bold"
-                  >
-                    {node}
-                  </Typography>
-                  <Typography
-                    variant="body1"
-                    sx={{ lineHeight: 1.6, color: "text.primary" }}
-                  >
-                    {text}
-                  </Typography>
-                </Box>
-              );
-            }
-            // Generic paragraph if no speaker match
+  if (blocks) {
+    return (
+      <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+        {blocks.map((block, i) => {
+          if (block.speaker) {
+            const { isMe, node } = renderSpeaker(block.speaker);
             return (
-              <Typography
-                key={i}
-                variant="body1"
-                sx={{
-                  whiteSpace: "pre-wrap",
-                  lineHeight: 1.6,
-                  color: "text.primary",
-                }}
-              >
-                {block}
-              </Typography>
+              <Box key={i} sx={{ display: "flex", flexDirection: "column" }}>
+                <Typography
+                  variant="subtitle2"
+                  color={isMe ? "primary.main" : "secondary.main"}
+                  fontWeight="bold"
+                >
+                  {node}
+                </Typography>
+                <Typography
+                  variant="body1"
+                  sx={{
+                    whiteSpace: "pre-wrap",
+                    lineHeight: 1.6,
+                    color: "text.primary",
+                  }}
+                >
+                  {block.text}
+                </Typography>
+              </Box>
             );
-          })}
-        </Box>
-      );
-    }
+          }
+          // Generic paragraph before the first speaker label
+          return (
+            <Typography
+              key={i}
+              variant="body1"
+              sx={{
+                whiteSpace: "pre-wrap",
+                lineHeight: 1.6,
+                color: "text.primary",
+              }}
+            >
+              {block.text}
+            </Typography>
+          );
+        })}
+      </Box>
+    );
   }
 
   return (

@@ -236,6 +236,15 @@ app.use((err: unknown, req: express.Request, res: express.Response, next: expres
     return;
   }
 
+  // Multer errors carry no HTTP status, so a file over the limit used to come
+  // back as a 500 and clients retried it forever.
+  if (err instanceof multer.MulterError) {
+    const status = err.code === "LIMIT_FILE_SIZE" ? 413 : 400;
+    console.warn(`[upload] ${status} ${err.code} for ${req.path}`);
+    res.status(status).json({ code: err.code, message: err.message });
+    return;
+  }
+
   // SubscriptionRequiredError carries status=402 + a structured payload.
   if (err instanceof Error && err.name === "SubscriptionRequiredError") {
     const subErr = err as Error & { status: number; code: string; reason: string };
@@ -376,6 +385,10 @@ const startServer = async () => {
   server.timeout = 300000;
   server.keepAliveTimeout = 300000;
   server.headersTimeout = 301000;
+  // Whole-request limit. Node's default is 5 minutes, which cut long meeting
+  // uploads on slow connections even while bytes were still arriving. Idle
+  // sockets are still closed after 5 minutes by `server.timeout` above.
+  server.requestTimeout = 60 * 60 * 1000;
 
   // Bind WebSocket server after the HTTP server starts listening
   setupAudioStream(server);

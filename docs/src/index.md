@@ -34,7 +34,7 @@ features:
     link: /security/overview
     icon: 🔗
   - title: No Bots in Your Calls
-    details: Native recorders for macOS, Windows, iOS and Android. No bot joins the call, and a pause means that part is never captured.
+    details: Native recorders for macOS, Windows, iOS and Android. No bot joins the call and nobody else sees the recorder. Works with Zoom, Meet, Teams and in-person meetings.
     icon: 🎙️
   - title: Your Own AI Keys
     details: On the cloud version, bring your own OpenRouter and Deepgram keys. The AI runs under your accounts and your agreements with those providers.
@@ -46,6 +46,13 @@ features:
 ---
 
 <br><br>
+
+<div style="max-width: 960px; margin: 0 auto; padding: 1rem 0 2rem;">
+  <h2 style="font-size: 2.5rem; font-weight: 700; margin-bottom: 1rem; letter-spacing: -0.02em; text-align: center;">Where does your meeting go?</h2>
+  <video controls preload="metadata" playsinline poster="/videos/ep01-poster.jpg" style="width: 100%; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.25);">
+    <source src="/videos/ep01-where-does-your-meeting-go.mp4" type="video/mp4" />
+  </video>
+</div>
 
 <div style="text-align: center; max-width: 1000px; margin: 0 auto; padding: 2rem 0;">
   <h2 style="font-size: 2.5rem; font-weight: 700; margin-bottom: 1rem; letter-spacing: -0.02em;">Sneak Peek</h2>

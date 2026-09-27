@@ -951,6 +951,8 @@ const models: TsoaRoute.Models = {
             "postMeetingTasks": {"ref":"PostMeetingTasksRecord"},
             "twenty": {"ref":"TwentyNoteRef"},
             "recording": {"ref":"RecordingWindow"},
+            "recordingMode": {"dataType":"union","subSchemas":[{"dataType":"enum","enums":["in_person"]},{"dataType":"enum","enums":["remote"]}]},
+            "clientSessionId": {"dataType":"string"},
         },
         "additionalProperties": false,
     },
@@ -1007,6 +1009,25 @@ const models: TsoaRoute.Models = {
     "ApiResponse_StandaloneTranscriptListResponse_": {
         "dataType": "refAlias",
         "type": {"dataType":"nestedObjectLiteral","nestedProperties":{"message":{"dataType":"string"},"data":{"dataType":"union","subSchemas":[{"ref":"StandaloneTranscriptListResponse"},{"dataType":"enum","enums":[null]}],"required":true},"status":{"dataType":"double","required":true}},"validators":{}},
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "RecordingPartResponse": {
+        "dataType": "refObject",
+        "properties": {
+            "index": {"dataType":"double","required":true},
+            "size": {"dataType":"double","required":true},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "ApiResponse_RecordingPartResponse_": {
+        "dataType": "refAlias",
+        "type": {"dataType":"nestedObjectLiteral","nestedProperties":{"message":{"dataType":"string"},"data":{"dataType":"union","subSchemas":[{"ref":"RecordingPartResponse"},{"dataType":"enum","enums":[null]}],"required":true},"status":{"dataType":"double","required":true}},"validators":{}},
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "ApiResponse__success-boolean__": {
+        "dataType": "refAlias",
+        "type": {"dataType":"nestedObjectLiteral","nestedProperties":{"message":{"dataType":"string"},"data":{"dataType":"union","subSchemas":[{"dataType":"nestedObjectLiteral","nestedProperties":{"success":{"dataType":"boolean","required":true}}},{"dataType":"enum","enums":[null]}],"required":true},"status":{"dataType":"double","required":true}},"validators":{}},
     },
     // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
     "ApiResponse_StandaloneTranscriptResponse_": {
@@ -1078,11 +1099,6 @@ const models: TsoaRoute.Models = {
             "overrides": {"ref":"Record_string.string_","required":true},
         },
         "additionalProperties": false,
-    },
-    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
-    "ApiResponse__success-boolean__": {
-        "dataType": "refAlias",
-        "type": {"dataType":"nestedObjectLiteral","nestedProperties":{"message":{"dataType":"string"},"data":{"dataType":"union","subSchemas":[{"dataType":"nestedObjectLiteral","nestedProperties":{"success":{"dataType":"boolean","required":true}}},{"dataType":"enum","enums":[null]}],"required":true},"status":{"dataType":"double","required":true}},"validators":{}},
     },
     // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
     "PostMeetingTaskKind": {
@@ -4198,6 +4214,78 @@ export function RegisterRoutes(app: Router,opts?:{multer?:ReturnType<typeof mult
             }
         });
         // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+        const argsTranscriptsController_uploadRecordingPart: Record<string, TsoaRoute.ParameterSchema> = {
+                request: {"in":"request","name":"request","required":true,"dataType":"object"},
+                uploadId: {"in":"formData","name":"uploadId","required":true,"dataType":"string"},
+                index: {"in":"formData","name":"index","required":true,"dataType":"string"},
+                part: {"in":"formData","name":"part","required":true,"dataType":"file"},
+        };
+        app.post('/api/transcripts/recorder-upload/parts',
+            authenticateMiddleware([{"ClientLevel":[]}]),
+            upload.fields([
+                {
+                    name: "part",
+                    maxCount: 1
+                }
+            ]),
+            ...(fetchMiddlewares<RequestHandler>(TranscriptsController)),
+            ...(fetchMiddlewares<RequestHandler>(TranscriptsController.prototype.uploadRecordingPart)),
+
+            async function TranscriptsController_uploadRecordingPart(request: ExRequest, response: ExResponse, next: any) {
+
+            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+
+            let validatedArgs: any[] = [];
+            try {
+                validatedArgs = templateService.getValidatedArgs({ args: argsTranscriptsController_uploadRecordingPart, request, response });
+
+                const controller = new TranscriptsController();
+
+              await templateService.apiHandler({
+                methodName: 'uploadRecordingPart',
+                controller,
+                response,
+                next,
+                validatedArgs,
+                successStatus: undefined,
+              });
+            } catch (err) {
+                return next(err);
+            }
+        });
+        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+        const argsTranscriptsController_deleteRecordingParts: Record<string, TsoaRoute.ParameterSchema> = {
+                request: {"in":"request","name":"request","required":true,"dataType":"object"},
+                uploadId: {"in":"path","name":"uploadId","required":true,"dataType":"string"},
+        };
+        app.delete('/api/transcripts/recorder-upload/parts/:uploadId',
+            authenticateMiddleware([{"ClientLevel":[]}]),
+            ...(fetchMiddlewares<RequestHandler>(TranscriptsController)),
+            ...(fetchMiddlewares<RequestHandler>(TranscriptsController.prototype.deleteRecordingParts)),
+
+            async function TranscriptsController_deleteRecordingParts(request: ExRequest, response: ExResponse, next: any) {
+
+            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+
+            let validatedArgs: any[] = [];
+            try {
+                validatedArgs = templateService.getValidatedArgs({ args: argsTranscriptsController_deleteRecordingParts, request, response });
+
+                const controller = new TranscriptsController();
+
+              await templateService.apiHandler({
+                methodName: 'deleteRecordingParts',
+                controller,
+                response,
+                next,
+                validatedArgs,
+                successStatus: undefined,
+              });
+            } catch (err) {
+                return next(err);
+            }
+        });
+        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
         const argsTranscriptsController_createTranscriptFromRecording: Record<string, TsoaRoute.ParameterSchema> = {
                 request: {"in":"request","name":"request","required":true,"dataType":"object"},
                 source: {"in":"formData","name":"source","dataType":"string"},
@@ -4229,6 +4317,10 @@ export function RegisterRoutes(app: Router,opts?:{multer?:ReturnType<typeof mult
                 aecTelemetry: {"in":"formData","name":"aecTelemetry","dataType":"string"},
                 recordingStartedAt: {"in":"formData","name":"recordingStartedAt","dataType":"string"},
                 recordingWallClockSeconds: {"in":"formData","name":"recordingWallClockSeconds","dataType":"string"},
+                micUploadId: {"in":"formData","name":"micUploadId","dataType":"string"},
+                micPartCount: {"in":"formData","name":"micPartCount","dataType":"string"},
+                clientSessionId: {"in":"formData","name":"clientSessionId","dataType":"string"},
+                recordingMode: {"in":"formData","name":"recordingMode","dataType":"string"},
                 micFile: {"in":"formData","name":"micFile","dataType":"file"},
                 sysFile: {"in":"formData","name":"sysFile","dataType":"file"},
         };

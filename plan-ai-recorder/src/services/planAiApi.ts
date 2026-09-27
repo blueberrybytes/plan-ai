@@ -399,6 +399,12 @@ export const createPlanAiApi = (
          */
         recordingStartedAt?: string;
         recordingWallClockSeconds?: number;
+        /**
+         * Recording session id. A retry with the same id (the first upload
+         * reached the server but the answer was lost) returns the meeting
+         * already saved instead of creating it twice.
+         */
+        clientSessionId?: string;
         skipAi?: boolean;
         /** Twenty company chosen for THIS meeting (destination of the CRM note). */
         twentyCompanyId?: string;
@@ -457,6 +463,9 @@ export const createPlanAiApi = (
         if (payload.recordingStartedAt) {
           formData.append("recordingStartedAt", payload.recordingStartedAt);
         }
+        if (payload.clientSessionId) {
+          formData.append("clientSessionId", payload.clientSessionId);
+        }
         if (payload.recordingWallClockSeconds) {
           formData.append(
             "recordingWallClockSeconds",
@@ -497,6 +506,14 @@ export const createPlanAiApi = (
         const wsId = getWorkspaceId();
         if (wsId) headers["X-Workspace-Id"] = wsId;
 
+        // 5 minutes, plus 1 s per 125 KB of audio (1 Mbps upload), capped at
+        // 1 hour. A fixed 5 minutes aborted long meetings on slow connections.
+        const audioBytes =
+          (payload.micFile?.size ?? 0) + (payload.sysFile?.size ?? 0);
+        const timeoutMs = Math.min(
+          60 * 60_000,
+          300_000 + Math.ceil(audioBytes / 125_000) * 1000,
+        );
         return safeFetch(
           `${BASE_URL}/api/transcripts/recorder-upload`,
           {
@@ -505,8 +522,8 @@ export const createPlanAiApi = (
             body: formData,
           },
           false,
-          300000,
-        ); // 5 minute timeout for large audio file uploads
+          timeoutMs,
+        );
       };
 
       const res = await req(false);

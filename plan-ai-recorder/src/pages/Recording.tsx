@@ -24,6 +24,8 @@ import {
 } from "@mui/material";
 import {
   Stop as StopIcon,
+  Pause as PauseIcon,
+  PlayArrow as ResumeIcon,
   CheckCircle as DoneIcon,
   ArrowBack as BackIcon,
   Send as SendIcon,
@@ -45,7 +47,13 @@ import {
 import {
   persistUnsavedTranscript,
   clearUnsavedTranscript,
+  startUnsavedMeeting,
+  type UnsavedSession,
 } from "../utils/unsavedTranscript";
+import {
+  newRecordingSessionId,
+  deleteRecoveryAudio,
+} from "../utils/recoveryAudio";
 import ReactMarkdown from "react-markdown";
 import {
   DEEPGRAM_LANGUAGES,
@@ -196,8 +204,29 @@ const Waveform: React.FC<{ active: boolean }> = ({ active }) => (
   </Stack>
 );
 
-// Crash recovery lives in ../utils/unsavedTranscript — written continuously
+// Crash recovery lives in ../utils/unsavedTranscript (text, one record per
+// recording) and ../utils/recoveryAudio (audio on disk). Both are written
 // while recording, cleared only after a confirmed save, recovered from Home.
+
+// ── Automatic pause for a recording left running ────────────────────────────
+// A recorder left on after the meeting kept capturing for hours (field
+// report 2026-09-27: ~20 h, then it crashed). Two checks pause it on its own,
+// each after a visible warning the user can dismiss:
+//  - silence: nobody spoke on either channel for 15 minutes;
+//  - long run: 3 hours without the user touching the recording (covers music
+//    or noise that never goes silent).
+// Pausing loses nothing and costs nothing; the user resumes with one click.
+const SILENCE_WARN_MS = 14 * 60_000;
+const SILENCE_PAUSE_MS = 15 * 60_000;
+const LONG_RUN_WARN_MS = 3 * 60 * 60_000;
+const LONG_RUN_GRACE_MS = 10 * 60_000;
+// Level-meter RMS that counts as someone speaking. Speech sits around
+// 0.01-0.2; a quiet room stays well below. Counting noise as speech only
+// delays the pause, while missing speech would pause a live meeting, so the
+// threshold leans low. Transcript text also counts as activity.
+const SPEECH_RMS = 0.015;
+
+type AutoPauseReason = "silence" | "long";
 
 // ── Acoustic-echo dedup ─────────────────────────────────────────────────────
 // When the user is on a speaker (no headphones), the remote audio (Others)
@@ -438,6 +467,16 @@ const Recording: React.FC = () => {
   const [phase, setPhase] = useState<Phase>("recording");
   const [isWsConnected, setIsWsConnected] = useState(true);
   const [isStopping, setIsStopping] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
+  // Why the recording paused itself (null when the user paused it).
+  const [autoPausedBy, setAutoPausedBy] = useState<AutoPauseReason | null>(
+    null,
+  );
+  // Warning shown before an automatic pause, with the moment it will happen.
+  const [autoPauseWarning, setAutoPauseWarning] = useState<{
+    reason: AutoPauseReason;
+    at: number;
+  } | null>(null);
   const [isMicSpeaking, setIsMicSpeaking] = useState(false);
   const [isSysSpeaking, setIsSysSpeaking] = useState(false);
   const [language, setLanguage] = useState(config?.language || "");
@@ -569,6 +608,17 @@ const Recording: React.FC = () => {
 
   const recorderRef = useRef<AudioRecorder | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // Crash-recovery session: the text record and the on-disk audio share it.
+  const recoverySessionRef = useRef<UnsavedSession>({
+    sessionId: newRecordingSessionId(),
+    startedAt: Date.now(),
+    language: config?.language || undefined,
+  });
+  const pausedRef = useRef(false);
+  // Last sign of speech on either channel, and last time the user confirmed
+  // the recording (start, resume, dismissing a warning). Drive the auto-pause.
+  const lastActivityRef = useRef(Date.now());
+  const lastConfirmedRef = useRef(Date.now());
   // Real wall-clock instant capture began — NOT derived from `elapsed` (which
   // only ticks once the timer interval starts and drifts under tab throttling).
   // Sent with the upload so the backend can tell whether two teammates'
@@ -591,9 +641,18 @@ const Recording: React.FC = () => {
   // "Others" (meeting audio), the header says so, and timestamps are relative to
   // the recording start (derived from the elapsed counter).
   const buildLiveTranscriptText = useCallback((): string => {
-    const startEpoch = Date.now() - elapsed * 1000;
+    const startEpoch =
+      recordingStartedAtRef.current?.getTime() ?? Date.now() - elapsed * 1000;
+    // Recorded time, pauses excluded: the same clock as the saved audio.
+    const recorder = recorderRef.current;
     const stamp = (tsMs: number) =>
-      formatTime(Math.max(0, Math.round((tsMs - startEpoch) / 1000)));
+      formatTime(
+        Math.round(
+          (recorder
+            ? recorder.recordedMsAt(tsMs)
+            : Math.max(0, tsMs - startEpoch)) / 1000,
+        ),
+      );
 
     const header = [
       `Live transcript — ${new Date(startEpoch).toLocaleString()}`,
@@ -746,6 +805,7 @@ const Recording: React.FC = () => {
       ) {
         return;
       }
+      lastActivityRef.current = Date.now();
 
       if (isFinal) {
         const normalized = normalizeForCompare(cleanText);
@@ -893,7 +953,7 @@ const Recording: React.FC = () => {
     const text = blocks
       .map((b) => `${b.source === "mic" ? "User" : "Others"}: ${b.text}`)
       .join("\n");
-    persistUnsavedTranscript(text);
+    persistUnsavedTranscript(text, recoverySessionRef.current);
   }, [blocks]);
 
   // ── Close guard: warn before closing the window while a meeting is unsaved ─
@@ -949,7 +1009,7 @@ const Recording: React.FC = () => {
         // Retain the transcript so the error screen can recover it (retry /
         // text-only save / copy) and so it survives a crash via localStorage.
         lastPayloadRef.current = fullPayload;
-        persistUnsavedTranscript(fullPayload);
+        persistUnsavedTranscript(fullPayload, recoverySessionRef.current);
 
         let targetProjectId = selectedProjectId;
 
@@ -1003,6 +1063,7 @@ const Recording: React.FC = () => {
           recordingWallClockSeconds: startedAt
             ? Math.round((Date.now() - startedAt.getTime()) / 1000)
             : undefined,
+          clientSessionId: recoverySessionRef.current.sessionId,
           projectId: targetProjectId,
           // Selected ASR language ("" = auto) — persisted so the backend's batch
           // re-diarization uses it instead of "multi" (which has no Catalan).
@@ -1037,8 +1098,9 @@ const Recording: React.FC = () => {
           aecTelemetry: aecTelemetry ?? undefined,
         });
 
-        // Saved successfully — clear the local recovery copy.
-        clearUnsavedTranscript();
+        // Saved successfully — clear the local recovery copy (text and audio).
+        clearUnsavedTranscript(recoverySessionRef.current.sessionId);
+        deleteRecoveryAudio(recoverySessionRef.current.sessionId);
 
         // Navigate back to the home/dashboard immediately to allow async processing
         navigate(`/`);
@@ -1247,9 +1309,17 @@ const Recording: React.FC = () => {
     if (!token) return;
 
     recordingStartedAtRef.current = new Date();
+    recoverySessionRef.current = {
+      ...recoverySessionRef.current,
+      startedAt: recordingStartedAtRef.current.getTime(),
+    };
+    // Recoverable from this moment, even if no text ever arrives (a live
+    // transcription failure must not also cost the audio).
+    startUnsavedMeeting(recoverySessionRef.current);
 
     const recorder = new AudioRecorder({
       api,
+      recoverySessionId: recoverySessionRef.current.sessionId,
       onTranscript: handleTranscript,
       onSpeechEvent: (source, eventType) => {
         const isSpeaking = eventType === "speech_started";
@@ -1296,9 +1366,9 @@ const Recording: React.FC = () => {
       });
     }, 1000);
 
-    // Elapsed timer
+    // Elapsed timer (recorded time: it stands still while paused)
     timerRef.current = setInterval(() => {
-      setElapsed((t) => t + 1);
+      if (!pausedRef.current) setElapsed((t) => t + 1);
     }, 1000);
 
     return () => {
@@ -1310,12 +1380,140 @@ const Recording: React.FC = () => {
 
   const stopRecording = async () => {
     setIsStopping(true);
+    setAutoPauseWarning(null);
     if (timerRef.current) clearInterval(timerRef.current);
     const result = await recorderRef.current?.stop();
     if (result) setBlobs(result);
     setAecTelemetry(recorderRef.current?.getAecTelemetry() ?? null);
     setIsStopping(false);
   };
+
+  // Interim text that never finalized because the live socket closed on
+  // pause. Committed so the live transcript (and the crash-recovery copy)
+  // keeps it; a mic interim is skipped while its final still waits in the
+  // echo grace queue, which paints it.
+  const micDeltaRef = useRef("");
+  const sysDeltaRef = useRef("");
+  useEffect(() => {
+    micDeltaRef.current = micDelta;
+  }, [micDelta]);
+  useEffect(() => {
+    sysDeltaRef.current = sysDelta;
+  }, [sysDelta]);
+  const commitInterimText = useCallback(() => {
+    const now = Date.now();
+    const mic = micDeltaRef.current.trim();
+    if (mic && pendingMicRef.current.length === 0) {
+      appendBlock("mic", mic, now);
+      setMicDelta("");
+    }
+    const sys = sysDeltaRef.current.trim();
+    if (sys) {
+      appendBlock("sys", sys, now);
+      setSysDelta("");
+    }
+  }, [appendBlock]);
+
+  const pauseRecording = useCallback(
+    (reason: AutoPauseReason | null = null) => {
+      const recorder = recorderRef.current;
+      if (!recorder || recorder.currentState !== "recording") return;
+      pausedRef.current = true;
+      setIsPaused(true);
+      setAutoPausedBy(reason);
+      setAutoPauseWarning(null);
+      setIsMicSpeaking(false);
+      setIsSysSpeaking(false);
+      void recorder.pause().then((drained) => {
+        if (drained) commitInterimText();
+      });
+      if (reason) {
+        // The window may be hidden behind the meeting app.
+        try {
+          new Notification("Recording paused", {
+            body:
+              reason === "silence"
+                ? "Nobody has spoken for 15 minutes. Open Plan AI to resume or stop."
+                : "The recording has run for over 3 hours without a check. Open Plan AI to resume or stop.",
+          });
+        } catch {
+          /* notifications unavailable */
+        }
+      }
+    },
+    [commitInterimText],
+  );
+
+  const resumeRecording = useCallback(() => {
+    const recorder = recorderRef.current;
+    if (!recorder || recorder.currentState !== "paused") return;
+    pausedRef.current = false;
+    setIsPaused(false);
+    setAutoPausedBy(null);
+    const now = Date.now();
+    lastActivityRef.current = now;
+    lastConfirmedRef.current = now;
+    void recorder.resume();
+  }, []);
+
+  const keepRecording = useCallback(() => {
+    const now = Date.now();
+    lastActivityRef.current = now;
+    lastConfirmedRef.current = now;
+    setAutoPauseWarning(null);
+  }, []);
+
+  // Speech on either channel (level meter) counts as activity.
+  useEffect(() => {
+    const onLevel = (e: Event) => {
+      const detail = (e as CustomEvent<{ rmsMic?: number; rmsSys?: number }>)
+        .detail;
+      if (
+        (detail?.rmsMic ?? 0) >= SPEECH_RMS ||
+        (detail?.rmsSys ?? 0) >= SPEECH_RMS
+      ) {
+        lastActivityRef.current = Date.now();
+      }
+    };
+    window.addEventListener("plan-ai-audio-level", onLevel);
+    return () => window.removeEventListener("plan-ai-audio-level", onLevel);
+  }, []);
+
+  // Automatic pause checks (see SILENCE_* / LONG_RUN_* above).
+  useEffect(() => {
+    if (phase !== "recording") return;
+    const iv = setInterval(() => {
+      if (pausedRef.current || recorderRef.current?.currentState !== "recording")
+        return;
+      const now = Date.now();
+      const silentFor = now - lastActivityRef.current;
+      const unconfirmedFor = now - lastConfirmedRef.current;
+
+      if (silentFor >= SILENCE_PAUSE_MS) {
+        pauseRecording("silence");
+        return;
+      }
+      if (unconfirmedFor >= LONG_RUN_WARN_MS + LONG_RUN_GRACE_MS) {
+        pauseRecording("long");
+        return;
+      }
+      if (silentFor >= SILENCE_WARN_MS) {
+        setAutoPauseWarning({
+          reason: "silence",
+          at: lastActivityRef.current + SILENCE_PAUSE_MS,
+        });
+      } else if (unconfirmedFor >= LONG_RUN_WARN_MS) {
+        setAutoPauseWarning({
+          reason: "long",
+          at: lastConfirmedRef.current + LONG_RUN_WARN_MS + LONG_RUN_GRACE_MS,
+        });
+      } else {
+        // Speech came back during a silence warning.
+        setAutoPauseWarning(null);
+      }
+    }, 5000);
+    return () => clearInterval(iv);
+  }, [phase, pauseRecording]);
 
   const handleLanguageChange = (newLang: string) => {
     setLanguage(newLang);
@@ -1717,7 +1915,8 @@ const Recording: React.FC = () => {
               if (!confirmed) return;
               // Intentional discard — drop the crash-recovery copy too, or the
               // user would be prompted to "recover" a meeting they just threw away.
-              clearUnsavedTranscript();
+              clearUnsavedTranscript(recoverySessionRef.current.sessionId);
+              deleteRecoveryAudio(recoverySessionRef.current.sessionId);
               navigate("/");
             }}
             sx={{
@@ -1910,7 +2109,9 @@ const Recording: React.FC = () => {
         }}
       >
         <Stack direction="row" spacing={1.5} alignItems="center">
-          {isMicSpeaking || isSysSpeaking ? (
+          {isPaused ? (
+            <PauseIcon fontSize="small" sx={{ color: "warning.main" }} />
+          ) : isMicSpeaking || isSysSpeaking ? (
             <Waveform active={true} />
           ) : (
             <Box
@@ -1928,7 +2129,11 @@ const Recording: React.FC = () => {
             />
           )}
           <Typography variant="subtitle2" fontWeight={700}>
-            {isMicSpeaking || isSysSpeaking ? "Speaking..." : "Listening..."}
+            {isPaused
+              ? "Paused"
+              : isMicSpeaking || isSysSpeaking
+                ? "Speaking..."
+                : "Listening..."}
           </Typography>
           <Chip label={formatTime(elapsed)} size="small" variant="outlined" />
         </Stack>
@@ -1992,6 +2197,29 @@ const Recording: React.FC = () => {
             </IconButton>
           </Tooltip>
 
+          <Tooltip
+            title={
+              isPaused
+                ? "Continue recording"
+                : "Pause: nothing is recorded or transcribed until you resume"
+            }
+          >
+            <span>
+              <Button
+                variant={isPaused ? "contained" : "outlined"}
+                color={isPaused ? "primary" : "inherit"}
+                startIcon={isPaused ? <ResumeIcon /> : <PauseIcon />}
+                onClick={() =>
+                  isPaused ? resumeRecording() : pauseRecording()
+                }
+                size="small"
+                disabled={isStopping}
+              >
+                {isPaused ? "Resume" : "Pause"}
+              </Button>
+            </span>
+          </Tooltip>
+
           <Button
             variant="contained"
             color="error"
@@ -2011,7 +2239,47 @@ const Recording: React.FC = () => {
         </Stack>
       </Stack>
 
-      {!isWsConnected && (
+      {isPaused && (
+        <Alert
+          severity="info"
+          sx={{ m: 2 }}
+          action={
+            <Button color="inherit" size="small" onClick={resumeRecording}>
+              RESUME
+            </Button>
+          }
+        >
+          {autoPausedBy === "silence"
+            ? "Paused automatically: nobody spoke for 15 minutes. Nothing is being recorded. Resume if the meeting is still going, or Stop & Save."
+            : autoPausedBy === "long"
+              ? "Paused automatically after more than 3 hours without a check. Nothing is being recorded. Resume if the meeting is still going, or Stop & Save."
+              : "Paused. Nothing is being recorded or transcribed until you resume."}
+        </Alert>
+      )}
+
+      {!isPaused && autoPauseWarning && (
+        <Alert
+          severity="warning"
+          sx={{ m: 2 }}
+          action={
+            <Button color="inherit" size="small" onClick={keepRecording}>
+              KEEP RECORDING
+            </Button>
+          }
+        >
+          {autoPauseWarning.reason === "silence"
+            ? "Nobody has spoken for 14 minutes."
+            : "This recording has run for 3 hours."}{" "}
+          It will pause automatically at{" "}
+          {new Date(autoPauseWarning.at).toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+          })}{" "}
+          unless you keep it going.
+        </Alert>
+      )}
+
+      {!isWsConnected && !isPaused && (
         <Alert
           severity="error"
           sx={{ m: 2 }}
@@ -2051,7 +2319,7 @@ const Recording: React.FC = () => {
           borderBottom: "1px solid rgba(255,255,255,0.06)",
         }}
       >
-        <Waveform active />
+        <Waveform active={!isPaused} />
       </Box>
 
       {/* Split layout: Transcript (Left), Live Assistant (Right) */}

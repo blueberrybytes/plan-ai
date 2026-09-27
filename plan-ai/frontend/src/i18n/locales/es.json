@@ -528,7 +528,7 @@
       "items": {
         "transcript": {
           "title": "Grabación Sin Bots",
-          "description": "Grabadoras nativas para macOS, Windows, iOS y Android. Ningún bot entra en la llamada. Puedes pausar cuando quieras y esa parte no se graba. Funciona con Zoom, Meet y reuniones presenciales."
+          "description": "Grabadoras nativas para macOS, Windows, iOS y Android. Ningún bot entra en la llamada y nadie más ve la grabadora. Funciona con Zoom, Meet, Teams y reuniones presenciales."
         },
         "tasks": {
           "title": "Tickets Reales en Jira y Linear",

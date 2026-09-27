@@ -2,6 +2,7 @@
 import React from "react";
 import { Box, Typography } from "@mui/material";
 import type { SpeakerInsight } from "./SpeakerInsightsTab";
+import { parseSpeakerBlocks } from "./speakerBlocks";
 
 const formatTimestamp = (seconds?: number | null) => {
   if (seconds == null) return "";
@@ -88,51 +89,47 @@ const TranscriptBody = ({ transcript }: { transcript: any }) => {
     );
   }
 
-  // Fallback for transcripts without structured utterances.
-  const rawText = transcript?.transcript || "No transcript content available.";
-  const parts = rawText.split("\n\n");
+  // Fallback for transcripts without structured utterances (text-only saves,
+  // recorder crash recoveries): one block per "Speaker: text" line.
+  const rawText: string = transcript?.transcript || "No transcript content available.";
+  const blocks = parseSpeakerBlocks(rawText);
 
-  if (parts.length > 0) {
-    // Detect a "Speaker Name: Text" shape in the flat transcript.
-    const hasLabels = parts.some((p: string) => /^([\w\s]+):\s*([\s\S]*)/i.test(p));
-
-    if (hasLabels) {
-      return (
-        <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-          {parts.map((block: string, i: number) => {
-            const match = block.match(/^([\w\s]+):\s*([\s\S]*)/i);
-            if (match) {
-              const speaker = match[1].trim();
-              const text = match[2];
-              const { isMe, node } = renderSpeaker(speaker);
-              return (
-                <Box key={i} sx={{ display: "flex", flexDirection: "column" }}>
-                  <Typography
-                    variant="subtitle2"
-                    color={isMe ? "primary.main" : "secondary.main"}
-                    fontWeight="bold"
-                  >
-                    {node}
-                  </Typography>
-                  <Typography variant="body1" sx={{ lineHeight: 1.6, color: "text.primary" }}>
-                    {text}
-                  </Typography>
-                </Box>
-              );
-            }
+  if (blocks) {
+    return (
+      <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+        {blocks.map((block, i) => {
+          if (block.speaker) {
+            const { isMe, node } = renderSpeaker(block.speaker);
             return (
-              <Typography
-                key={i}
-                variant="body1"
-                sx={{ whiteSpace: "pre-wrap", lineHeight: 1.6, color: "text.primary" }}
-              >
-                {block}
-              </Typography>
+              <Box key={i} sx={{ display: "flex", flexDirection: "column" }}>
+                <Typography
+                  variant="subtitle2"
+                  color={isMe ? "primary.main" : "secondary.main"}
+                  fontWeight="bold"
+                >
+                  {node}
+                </Typography>
+                <Typography
+                  variant="body1"
+                  sx={{ whiteSpace: "pre-wrap", lineHeight: 1.6, color: "text.primary" }}
+                >
+                  {block.text}
+                </Typography>
+              </Box>
             );
-          })}
-        </Box>
-      );
-    }
+          }
+          return (
+            <Typography
+              key={i}
+              variant="body1"
+              sx={{ whiteSpace: "pre-wrap", lineHeight: 1.6, color: "text.primary" }}
+            >
+              {block.text}
+            </Typography>
+          );
+        })}
+      </Box>
+    );
   }
 
   return (

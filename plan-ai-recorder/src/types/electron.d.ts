@@ -49,6 +49,18 @@ declare global {
       chunkSystemAudio: () => Promise<Uint8Array | null>;
       /** Stop native macOS system audio recording and retrieve the final chunk */
       stopSystemAudio: () => Promise<Uint8Array | null>;
+      /**
+       * Crash-safe copy of the recording's audio, one folder per recording
+       * session in userData. Optional: an older main process may not have it.
+       */
+      recoveryAudio?: {
+        append: (sessionId: string, track: "mic" | "sys", data: Uint8Array) => Promise<boolean>;
+        info: (sessionId: string) => Promise<{ micBytes: number; sysBytes: number }>;
+        read: (sessionId: string) => Promise<{ mic: Uint8Array | null; sys: Uint8Array | null }>;
+        remove: (sessionId: string) => Promise<boolean>;
+        /** Deletes every session folder not listed. Returns how many were removed. */
+        prune: (keepSessionIds: string[]) => Promise<number>;
+      };
       /** Save a string content to file natively bypassing browser restrictions */
       saveFile: (content: string, defaultPath: string) => Promise<boolean>;
       /** Register listener for Mac App Store update notifications */

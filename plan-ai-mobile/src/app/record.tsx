@@ -28,36 +28,60 @@ import {
   ProgressBar,
 } from "react-native-paper";
 import Markdown from "react-native-markdown-display";
-import { useRouter, useFocusEffect } from "expo-router";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useRouter, useFocusEffect, useNavigation } from "expo-router";
+import { usePreventRemove } from "@react-navigation/native";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { TwentyCompanyPicker } from "@/components/TwentyCompanyPicker";
 import {
   requestRecordingPermissionsAsync,
   setAudioModeAsync,
 } from "expo-audio";
-import { File, Paths, Directory } from "expo-file-system";
-import notifee from "@notifee/react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Project, Context, TwentyCompanyItem } from "@/services/planAiApi";
 import * as Location from "expo-location";
 import * as Sentry from "@sentry/react-native";
 import { SubscriptionBanner } from "@/components/SubscriptionBanner";
 import {
+  recordedMsOf,
   recordingService,
   useRecordingSession,
+  useRecordingVolume,
   type RecordingApi,
 } from "@/services/recordingService";
+import { saveAndUpload } from "@/services/recordingUploader";
+import { loadLastLanguage, saveLastLanguage } from "@/utils/recordingPrefs";
 
-// Using global object so it survives React Native Fast Refresh (HMR) without dropping native locks
-const g = global as any;
+const formatDuration = (ms: number): string => {
+  const total = Math.max(0, Math.floor(ms / 1000));
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const s = total % 60;
+  const mm = String(m).padStart(2, "0");
+  const ss = String(s).padStart(2, "0");
+  return h > 0 ? `${h}:${mm}:${ss}` : `${mm}:${ss}`;
+};
 
-// Register the Notifee daemon globally so Android allows long-form background execution
-notifee.registerForegroundService(() => {
-  return new Promise((resolve) => {
-    g.__resolveForegroundService = resolve;
-  });
-});
+/** Recorded time, pauses excluded. Ticks on its own so the screen does not. */
+const ElapsedTime = ({
+  recordedMsBefore,
+  segmentStartedAt,
+  style,
+}: {
+  recordedMsBefore: number;
+  segmentStartedAt: number | null;
+  style?: any;
+}) => {
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    if (!segmentStartedAt) return;
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, [segmentStartedAt]);
+  const ms =
+    recordedMsBefore + (segmentStartedAt ? Math.max(0, now - segmentStartedAt) : 0);
+  return <Text style={style}>{formatDuration(ms)}</Text>;
+};
 
 type Phase =
   | "setup"
@@ -129,12 +153,12 @@ const PulsingRecordButton = ({
 const WaveformBox = ({
   isRecording,
   theme,
-  audioLevel = 0,
 }: {
   isRecording: boolean;
   theme: any;
-  audioLevel?: number;
 }) => {
+  // Read here, not in the screen: the level changes several times a second.
+  const audioLevel = useRecordingVolume();
   const anims = useRef(
     Array.from({ length: 15 }).map(() => new Animated.Value(4)),
   ).current;
@@ -189,6 +213,102 @@ const WaveformBox = ({
     </View>
   );
 };
+
+/** One live line: "[Speaker] text" as a bubble, plain text otherwise. */
+const TranscriptLine = ({
+  block,
+  theme,
+  interim = false,
+}: {
+  block: string;
+  theme: any;
+  interim?: boolean;
+}) => {
+  const match = block.match(/^\[(.*?)\]\s*(.*)/);
+  if (!match) {
+    return (
+      <Text
+        variant="bodyLarge"
+        style={
+          interim
+            ? { opacity: 0.5, marginTop: 8, fontStyle: "italic", lineHeight: 28 }
+            : { lineHeight: 28 }
+        }
+      >
+        {block}
+      </Text>
+    );
+  }
+  const speaker = match[1];
+  const text = match[2];
+  const isMe =
+    speaker.toLowerCase().includes("user") || speaker === "Me" || speaker === "Mic";
+  const speakerLabel =
+    isMe && speaker.toLowerCase().includes("user") ? speaker.replace(/User/i, "Me") : speaker;
+  return (
+    <Surface
+      style={[
+        styles.chatBubble,
+        {
+          backgroundColor: isMe ? theme.colors.primaryContainer : theme.colors.surfaceVariant,
+          alignSelf: isMe ? "flex-end" : "flex-start",
+          borderBottomRightRadius: isMe ? 4 : 16,
+          borderBottomLeftRadius: isMe ? 16 : 4,
+          ...(interim ? { opacity: 0.6 } : {}),
+        },
+      ]}
+      elevation={0}
+    >
+      <Text
+        variant="labelMedium"
+        style={{
+          color: isMe ? theme.colors.primary : theme.colors.secondary,
+          fontWeight: "bold",
+          marginBottom: 4,
+        }}
+      >
+        {speakerLabel}
+      </Text>
+      <Text style={{ color: theme.colors.onSurface, lineHeight: 22 }}>{text}</Text>
+    </Surface>
+  );
+};
+
+// Finished lines only re-render when a line is added; the interim line
+// changes several times a second and is drawn on its own.
+const FinalLines = memo(function FinalLines({
+  transcript,
+  theme,
+}: {
+  transcript: string;
+  theme: any;
+}) {
+  return (
+    <>
+      {transcript
+        .split("\n")
+        .filter(Boolean)
+        .map((block, i) => (
+          <TranscriptLine key={i} block={block} theme={theme} />
+        ))}
+    </>
+  );
+});
+
+const TranscriptLines = ({
+  transcript,
+  interim,
+  theme,
+}: {
+  transcript: string;
+  interim: string;
+  theme: any;
+}) => (
+  <View style={{ gap: 12 }}>
+    <FinalLines transcript={transcript} theme={theme} />
+    {interim ? <TranscriptLine block={interim} theme={theme} interim /> : null}
+  </View>
+);
 
 const LANGUAGE_OPTIONS = [
   { code: "", name: "Auto-Detect Lang" },
@@ -253,24 +373,36 @@ export default function RecordScreen() {
   // Live recording state lives in the recordingService singleton (outside the
   // React tree) so it survives navigation/backgrounding. This screen is just a
   // view over it and re-attaches when it remounts.
+  const session = useRecordingSession();
   const {
     isRecording,
+    isPaused,
+    isStarting,
     isSpeaking,
     transcript,
     interim,
-    currentVolume,
     isWsConnected,
     isConnectingWs,
     wsUnrecoverable,
-    audioBackupPath,
-  } = useRecordingSession();
+    stoppedSessionId,
+    captureProblem,
+    lowStorage,
+    autoPauseWarning,
+    autoPausedBy,
+    recordedMsBefore,
+    segmentStartedAt,
+  } = session;
   const [meetingLocation, setMeetingLocation] = useState<{
     latitude: number;
     longitude: number;
     accuracy: number | null;
   } | null>(null);
 
-  const [language, setLanguage] = useState("");
+  // The session's language when one is open, else the last one chosen.
+  const [language, setLanguage] = useState(() => {
+    const s = recordingService.getSnapshot();
+    return s.isRecording || s.stoppedSessionId ? s.language : loadLastLanguage();
+  });
   const [languageMenuVisible, setLanguageMenuVisible] = useState(false);
   const [languageSearchQuery, setLanguageSearchQuery] = useState("");
 
@@ -280,7 +412,8 @@ export default function RecordScreen() {
 
   const theme = useTheme();
   const router = useRouter();
-  const { api } = useAuth();
+  const navigation = useNavigation();
+  const { api, activeWorkspaceId, user } = useAuth();
   const insets = useSafeAreaInsets();
   const scrollViewRef = useRef<ScrollView>(null);
 
@@ -309,10 +442,13 @@ export default function RecordScreen() {
   // Context Selection States
   const [title, setTitle] = useState("");
   const [isGeneratingTitle, setIsGeneratingTitle] = useState(false);
+  // Restored from the open session when the screen remounts mid-meeting.
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(
-    null,
+    () => recordingService.getSnapshot().projectId,
   );
-  const [selectedContextIds, setSelectedContextIds] = useState<string[]>([]);
+  const [selectedContextIds, setSelectedContextIds] = useState<string[]>(
+    () => recordingService.getSnapshot().contextIds,
+  );
   const [syncToJira, setSyncToJira] = useState(false);
   const [syncToLinear, setSyncToLinear] = useState(false);
   const [syncToTrello, setSyncToTrello] = useState(false);
@@ -509,8 +645,12 @@ export default function RecordScreen() {
   // recordingService regardless — there is intentionally NO unmount cleanup that
   // stops recording, which is what previously killed it on screen close.
   useEffect(() => {
-    if (recordingService.getSnapshot().isRecording) {
+    const s = recordingService.getSnapshot();
+    if (s.isRecording) {
       setPhase("recording");
+    } else if (s.stoppedSessionId) {
+      // Stopped but not saved yet: back to the save screen, not a new setup.
+      setPhase("save_options");
     }
   }, []);
 
@@ -598,11 +738,15 @@ export default function RecordScreen() {
   const handleLanguageChange = (newLang: string) => {
     setLanguage(newLang);
     setLanguageMenuVisible(false);
+    saveLastLanguage(newLang);
     recordingService.changeLanguage(newLang);
   };
 
   const startRecording = async () => {
     console.log("🎙️ startRecording pressed");
+    // A second tap while the first start is still running used to start two
+    // native captures.
+    if (recordingService.isMeetingActive()) return;
     try {
       const permission = await requestRecordingPermissionsAsync();
       if (!permission.granted) {
@@ -636,143 +780,109 @@ export default function RecordScreen() {
       })();
 
       setPhase("recording");
+      saveLastLanguage(language);
 
-      // The session (native audio + websocket + foreground service + WAV
-      // backup) is owned by recordingService so it survives navigation,
-      // backgrounding, and screen close.
+      // The session (microphone, websocket, foreground service and the
+      // session folder on disk) is owned by recordingService so it survives
+      // navigation, backgrounding, and screen close.
       await recordingService.start({
         language,
         contextIds: selectedContextIds,
         projectId: selectedProjectId,
+        workspaceId: activeWorkspaceId || null,
+        ownerUid: user?.uid ?? null,
         api: api as unknown as RecordingApi,
       });
     } catch (err) {
       console.error("Failed to start recording setup", err);
+      Sentry.captureException(err, { tags: { source: "recording_start" } });
+      setPhase("setup");
+      Alert.alert(
+        "Could not start recording",
+        err instanceof Error ? err.message : "Something went wrong starting the microphone.",
+      );
     }
   };
 
-  const stopAudioStream = async (): Promise<boolean> => {
-    return recordingService.stop();
-  };
-
   const handleStopRecordingBtn = async () => {
-    const hasData = await stopAudioStream();
-    if (hasData) {
+    const { sessionId } = await recordingService.stop();
+    if (sessionId) {
       setPhase("save_options");
     } else {
+      Alert.alert(
+        "Nothing was recorded",
+        "No audio reached the phone during this recording, so there is nothing to save.",
+      );
       router.back();
     }
   };
 
   const saveMeeting = async (skipAi: boolean = false) => {
+    const sessionId = recordingService.getSnapshot().stoppedSessionId;
+    if (!sessionId) {
+      router.replace("/(drawer)");
+      return;
+    }
     setPhase("saving");
-    try {
-      console.log("📤 Preparing upload. audioBackupPath is:", audioBackupPath);
-      const micFileObj = audioBackupPath
-        ? {
-            uri: audioBackupPath.startsWith("file://")
-              ? audioBackupPath
-              : `file://${audioBackupPath}`,
-            name: "emergency_backup.wav",
-            type: "audio/wav",
-          }
-        : undefined;
-      console.log(
-        "📦 File Object being sent to FormData:",
-        JSON.stringify(micFileObj),
-      );
+    // The choices go into the session on disk BEFORE the upload starts, so a
+    // crash or a dead network mid-upload loses nothing: the dashboard picks
+    // it up and retries.
+    const upload = saveAndUpload(api, sessionId, {
+      title: title || getDefaultMeetingTitle(),
+      projectId: selectedProjectId || undefined,
+      contextIds: selectedContextIds.length > 0 ? selectedContextIds : undefined,
+      // ASR language ("" = auto): the batch pass uses it instead of "multi",
+      // which returns nothing for Catalan.
+      language: language || undefined,
+      skipAi,
+      syncToJira,
+      syncToLinear,
+      syncToTrello,
+      syncToNotion,
+      syncToAsana,
+      // Checked-but-no-company must still reach the backend so it records a
+      // visible SKIPPED reason rather than the client dropping it silently.
+      syncToTwenty,
+      twentyCompanyId: twentyCompany?.id,
+      exportToGoogleDrive,
+      exportToOneDrive,
+      createDoc,
+      createSlides,
+      taskStrategy,
+      taskCount,
+      location: meetingLocation ?? undefined,
+      chatHistory: chatHistory.length > 0 ? chatHistory : undefined,
+    }).catch((err) => {
+      Sentry.captureException(err, { tags: { source: "recording_save" } });
+      return "queued" as const;
+    });
+    // From here the session belongs to the uploader, not to this screen.
+    recordingService.finishSaved();
 
-      await api.saveRecording({
-        content: transcript,
-        title: title || getDefaultMeetingTitle(),
-        recordedAt: new Date().toISOString(),
-        projectId: selectedProjectId || undefined,
-        // Selected ASR language ("" = auto) — persisted so the backend's batch
-        // re-diarization uses it instead of "multi" (which has no Catalan).
-        language: language || undefined,
-        contextIds:
-          selectedContextIds.length > 0 ? selectedContextIds : undefined,
-        syncToJira,
-        syncToLinear,
-        syncToTrello,
-        syncToNotion,
-        syncToAsana,
-        // Checked-but-no-company must still reach the backend so it records a
-        // visible SKIPPED reason rather than the client dropping it silently.
-        syncToTwenty,
-        twentyCompanyId: twentyCompany?.id,
-        exportToGoogleDrive,
-        exportToOneDrive,
-        createDoc,
-        createSlides,
-        taskStrategy,
-        taskCount,
-        skipAi,
-        micFile: micFileObj as unknown as File,
-        location: meetingLocation ?? undefined,
-      });
+    // Short meetings finish in seconds. A long one keeps uploading in the
+    // background with a progress bar on the home screen, instead of holding
+    // the user on this screen for minutes.
+    const outcome = await Promise.race([
+      upload,
+      new Promise<"background">((resolve) => setTimeout(() => resolve("background"), 15_000)),
+    ]);
+
+    if (outcome === "uploaded") {
       setPhase("done");
       setTimeout(() => {
         router.replace("/(drawer)");
       }, 1500);
-    } catch (e: unknown) {
-      console.error("Network save failed, falling back to local storage...", e);
-
-      try {
-        const syncDir = new Directory(Paths.document, "pending_sync");
-        if (!syncDir.exists) {
-          syncDir.create();
-        }
-
-        const uuid = `sync_${Date.now()}_${Math.floor(Math.random() * 10000)}`;
-        const jsonFile = new File(syncDir, `${uuid}.json`);
-
-        let newAudioPath = null;
-        if (audioBackupPath) {
-          const backupFile = new File(audioBackupPath);
-          const syncAudioFile = new File(syncDir, `${uuid}.wav`);
-          backupFile.copy(syncAudioFile);
-          newAudioPath = syncAudioFile.uri;
-        }
-
-        const payload = {
-          id: uuid,
-          title: title || getDefaultMeetingTitle(),
-          transcript,
-          projectId: selectedProjectId || undefined,
-          contextIds: selectedContextIds,
-          syncToJira,
-          syncToLinear,
-          syncToTrello,
-          syncToNotion,
-          syncToAsana,
-          syncToTwenty,
-        twentyCompanyId: twentyCompany?.id,
-          exportToGoogleDrive,
-          exportToOneDrive,
-          createDoc,
-          createSlides,
-          taskStrategy,
-          taskCount,
-          skipAi,
-          audioUri: newAudioPath,
-          timestamp: Date.now(),
-          location: meetingLocation ?? undefined,
-        };
-
-        jsonFile.write(JSON.stringify(payload));
-
-        Alert.alert(
-          "Saved Offline",
-          "The network connection dropped. Your meeting has been securely saved to the device and will automatically sync when internet is restored.",
-        );
-        router.replace("/(drawer)");
-      } catch (offlineErr) {
-        console.error("Fatal offline storage failure", offlineErr);
-        alert("Failed to save meeting both online and offline.");
-        setPhase("save_options");
-      }
+      return;
     }
+    if (outcome !== "background") {
+      Alert.alert(
+        outcome === "queued" ? "Saved on this phone" : "Upload stopped",
+        outcome === "queued"
+          ? "The upload did not finish. The meeting is safe on this phone and uploads on its own when the connection is back."
+          : "The server refused the upload. The meeting is safe on this phone; you can retry or export it from the home screen.",
+      );
+    }
+    router.replace("/(drawer)");
   };
 
   const toggleContext = (id: string) => {
@@ -781,27 +891,64 @@ export default function RecordScreen() {
     );
   };
 
+  // Set right before leaving the save screen on purpose, so the back guard
+  // below lets the navigation through instead of asking again.
+  const [leaving, setLeaving] = useState(false);
+  useEffect(() => {
+    if (leaving) router.back();
+  }, [leaving, router]);
+
+  const confirmDiscard = () =>
+    Alert.alert(
+      "Delete this meeting?",
+      "The audio and the text will be deleted from this phone and cannot be recovered.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: () => {
+            void recordingService.discard();
+            setLeaving(true);
+          },
+        },
+      ],
+    );
+
   const handleCloseTap = () => {
-    if (isRecording || transcript.length > 0 || audioBackupPath) {
+    // Leaving while the start is still running would leave a meeting
+    // recording with no screen showing it.
+    if (recordingService.getSnapshot().isStarting) return;
+    if (phase === "save_options") {
+      // Stopped but not saved: leaving keeps it on the phone, and the home
+      // screen offers to upload it.
       Alert.alert(
-        "Discard Recording?",
-        "Are you sure you want to leave? All your recorded audio and generated text will be permanently lost.",
+        "Leave without saving?",
+        "The meeting stays on this phone. You can upload it later from the home screen.",
         [
-          { text: "Cancel", style: "cancel" },
+          { text: "Stay", style: "cancel" },
           {
-            text: "Discard",
-            style: "destructive",
+            text: "Keep for later",
             onPress: () => {
-              recordingService.discard();
-              router.back();
+              recordingService.finishSaved();
+              setLeaving(true);
             },
           },
+          { text: "Delete", style: "destructive", onPress: confirmDiscard },
         ],
       );
+      return;
+    }
+    if (isRecording || transcript.length > 0) {
+      confirmDiscard();
     } else {
       router.back();
     }
   };
+
+  // Back gesture or Android back button on the save screen: same choice as
+  // the close button, instead of leaving the meeting with no way to save it.
+  usePreventRemove(phase === "save_options" && !leaving, () => handleCloseTap());
 
   if (phase === "saving" || phase === "done") {
     return (
@@ -1353,7 +1500,111 @@ export default function RecordScreen() {
         </View>
       </View>
 
-      {isRecording && !isWsConnected && (
+      {isRecording && isPaused && (
+        <View
+          style={{
+            backgroundColor: theme.colors.secondaryContainer,
+            paddingHorizontal: 16,
+            paddingVertical: 10,
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 12,
+          }}
+        >
+          <Text
+            variant="bodySmall"
+            style={{ flex: 1, color: theme.colors.onSecondaryContainer }}
+          >
+            {autoPausedBy === "silence"
+              ? "Paused automatically: nobody spoke for 15 minutes. Nothing is being recorded."
+              : autoPausedBy === "long"
+                ? "Paused automatically after 3 hours without a check. Nothing is being recorded."
+                : autoPausedBy === "storage"
+                  ? "Paused: the phone is almost out of space. Free some space, then resume or stop."
+                  : "Paused. Nothing is being recorded or transcribed until you resume."}
+          </Text>
+          <Button mode="contained" compact onPress={() => recordingService.resume()}>
+            Resume
+          </Button>
+        </View>
+      )}
+
+      {isRecording && !isPaused && autoPauseWarning && (
+        <View
+          style={{
+            backgroundColor: theme.colors.tertiaryContainer,
+            paddingHorizontal: 16,
+            paddingVertical: 10,
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 12,
+          }}
+        >
+          <Text
+            variant="bodySmall"
+            style={{ flex: 1, color: theme.colors.onTertiaryContainer }}
+          >
+            {autoPauseWarning.reason === "silence"
+              ? "Nobody has spoken for 14 minutes."
+              : "This recording has run for 3 hours."}{" "}
+            It will pause at{" "}
+            {new Date(autoPauseWarning.at).toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+            })}{" "}
+            unless you keep it going.
+          </Text>
+          <Button
+            mode="contained"
+            compact
+            onPress={() => recordingService.confirmStillRecording()}
+          >
+            Keep recording
+          </Button>
+        </View>
+      )}
+
+      {isRecording && !isPaused && captureProblem && (
+        <View
+          style={{
+            backgroundColor: theme.colors.errorContainer,
+            paddingHorizontal: 16,
+            paddingVertical: 10,
+          }}
+        >
+          <Text
+            variant="labelMedium"
+            style={{ color: theme.colors.onErrorContainer, fontWeight: "bold" }}
+          >
+            {captureProblem.kind === "interrupted"
+              ? "Recording interrupted"
+              : captureProblem.kind === "stalled"
+                ? "No audio from the microphone"
+                : "Microphone problem"}
+          </Text>
+          <Text variant="bodySmall" style={{ color: theme.colors.onErrorContainer }}>
+            {captureProblem.message ??
+              "The app is trying to restart the microphone. Everything recorded so far is safe."}
+          </Text>
+        </View>
+      )}
+
+      {isRecording && lowStorage && (
+        <View
+          style={{
+            backgroundColor: theme.colors.tertiaryContainer,
+            paddingHorizontal: 16,
+            paddingVertical: 8,
+          }}
+        >
+          <Text variant="bodySmall" style={{ color: theme.colors.onTertiaryContainer }}>
+            Less than 500 MB free. The recording uses about 173 MB per hour and pauses on its
+            own if the phone runs out of space.
+          </Text>
+        </View>
+      )}
+
+      {isRecording && !isPaused && !isWsConnected && (
         <View
           style={{
             backgroundColor: theme.colors.errorContainer,
@@ -1510,142 +1761,7 @@ export default function RecordScreen() {
               </View>
             )}
 
-            <View style={{ gap: 12 }}>
-              {transcript
-                .split("\n")
-                .filter(Boolean)
-                .map((block, i) => {
-                  const match = block.match(/^\[(.*?)\]\s*(.*)/);
-                  if (match) {
-                    const speaker = match[1];
-                    const text = match[2];
-                    const isMe =
-                      speaker.toLowerCase().includes("user") ||
-                      speaker === "Me" ||
-                      speaker === "Mic";
-                    const speakerLabel =
-                      isMe && speaker.toLowerCase().includes("user")
-                        ? speaker.replace(/User/i, "Me")
-                        : speaker;
-                    return (
-                      <Surface
-                        key={i}
-                        style={[
-                          styles.chatBubble,
-                          {
-                            backgroundColor: isMe
-                              ? theme.colors.primaryContainer
-                              : theme.colors.surfaceVariant,
-                            alignSelf: isMe ? "flex-end" : "flex-start",
-                            borderBottomRightRadius: isMe ? 4 : 16,
-                            borderBottomLeftRadius: isMe ? 16 : 4,
-                          },
-                        ]}
-                        elevation={0}
-                      >
-                        <Text
-                          variant="labelMedium"
-                          style={{
-                            color: isMe
-                              ? theme.colors.primary
-                              : theme.colors.secondary,
-                            fontWeight: "bold",
-                            marginBottom: 4,
-                          }}
-                        >
-                          {speakerLabel}
-                        </Text>
-                        <Text
-                          style={{
-                            color: theme.colors.onSurface,
-                            lineHeight: 22,
-                          }}
-                        >
-                          {text}
-                        </Text>
-                      </Surface>
-                    );
-                  }
-                  return (
-                    <Text
-                      key={i}
-                      variant="bodyLarge"
-                      style={{ lineHeight: 28 }}
-                    >
-                      {block}
-                    </Text>
-                  );
-                })}
-
-              {interim
-                ? (() => {
-                    const match = interim.match(/^\[(.*?)\]\s*(.*)/);
-                    if (match) {
-                      const speaker = match[1];
-                      const text = match[2];
-                      const isMe =
-                        speaker.toLowerCase().includes("user") ||
-                        speaker === "Me" ||
-                        speaker === "Mic";
-                      const speakerLabel =
-                        isMe && speaker.toLowerCase().includes("user")
-                          ? speaker.replace(/User/i, "Me")
-                          : speaker;
-                      return (
-                        <Surface
-                          style={[
-                            styles.chatBubble,
-                            {
-                              backgroundColor: isMe
-                                ? theme.colors.primaryContainer
-                                : theme.colors.surfaceVariant,
-                              alignSelf: isMe ? "flex-end" : "flex-start",
-                              borderBottomRightRadius: isMe ? 4 : 16,
-                              borderBottomLeftRadius: isMe ? 16 : 4,
-                              opacity: 0.6,
-                            },
-                          ]}
-                          elevation={0}
-                        >
-                          <Text
-                            variant="labelMedium"
-                            style={{
-                              color: isMe
-                                ? theme.colors.primary
-                                : theme.colors.secondary,
-                              fontWeight: "bold",
-                              marginBottom: 4,
-                            }}
-                          >
-                            {speakerLabel}
-                          </Text>
-                          <Text
-                            style={{
-                              color: theme.colors.onSurface,
-                              lineHeight: 22,
-                            }}
-                          >
-                            {text}
-                          </Text>
-                        </Surface>
-                      );
-                    }
-                    return (
-                      <Text
-                        variant="bodyLarge"
-                        style={{
-                          opacity: 0.5,
-                          marginTop: 8,
-                          fontStyle: "italic",
-                          lineHeight: 28,
-                        }}
-                      >
-                        {interim}
-                      </Text>
-                    );
-                  })()
-                : null}
-            </View>
+            <TranscriptLines transcript={transcript} interim={interim} theme={theme} />
           </ScrollView>
         </View>
 
@@ -1843,24 +1959,42 @@ export default function RecordScreen() {
             </Text>
           </View>
 
-          <WaveformBox
-            isRecording={isRecording}
-            theme={theme}
-            audioLevel={currentVolume}
-          />
+          <WaveformBox isRecording={isRecording && !isPaused} theme={theme} />
 
-          <Text variant="labelLarge" style={{ opacity: 0.6, marginTop: 8 }}>
-            {isRecording
-              ? isSpeaking
-                ? "Speaking..."
-                : "Listening..."
-              : transcript
-                ? "Recording stopped"
-                : "Idle"}
-          </Text>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: 8 }}>
+            <Text variant="labelLarge" style={{ opacity: 0.6 }}>
+              {isRecording
+                ? isPaused
+                  ? "Paused"
+                  : isSpeaking
+                    ? "Speaking..."
+                    : "Listening..."
+                : transcript
+                  ? "Recording stopped"
+                  : "Idle"}
+            </Text>
+            {isRecording && (
+              <ElapsedTime
+                recordedMsBefore={recordedMsBefore}
+                segmentStartedAt={segmentStartedAt}
+                style={{ opacity: 0.6, fontVariant: ["tabular-nums"] }}
+              />
+            )}
+          </View>
         </View>
 
         <View style={styles.footerControls}>
+          {isRecording && (
+            <IconButton
+              icon={isPaused ? "play" : "pause"}
+              mode="contained-tonal"
+              size={28}
+              accessibilityLabel={isPaused ? "Resume recording" : "Pause recording"}
+              onPress={() =>
+                isPaused ? recordingService.resume() : recordingService.pause()
+              }
+            />
+          )}
           <IconButton
             icon={isRecording ? "stop" : "record"}
             iconColor={theme.colors.onError}
@@ -1869,6 +2003,7 @@ export default function RecordScreen() {
             }
             mode="contained"
             size={36}
+            disabled={isStarting}
             onPress={isRecording ? handleStopRecordingBtn : startRecording}
           />
         </View>

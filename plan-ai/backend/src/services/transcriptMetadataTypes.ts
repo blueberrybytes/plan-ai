@@ -90,6 +90,17 @@ export interface TranscriptMetadata {
   twenty?: TwentyNoteRef;
   /** Real capture window reported by the client, when it sent one. */
   recording?: RecordingWindow;
+  /**
+   * "in_person": one microphone in a room with several people (mobile). The
+   * mic channel is diarized and its first speaker is not assumed to be the
+   * user. "remote": the default desktop case, mic = the user, system = others.
+   */
+  recordingMode?: "in_person" | "remote";
+  /**
+   * Recording session id chosen by the client. A retried upload with the same
+   * id returns the transcript already created instead of a duplicate.
+   */
+  clientSessionId?: string;
 }
 
 /**

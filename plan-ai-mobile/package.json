@@ -7,6 +7,7 @@
     "node": "22.23.1"
   },
   "scripts": {
+    "postinstall": "patch-package",
     "start": "expo start",
     "start:local": "dotenv -e .env.local -- expo start",
     "start:prod": "dotenv -e .env.production -- expo start",
@@ -95,6 +96,7 @@
     "dotenv-cli": "^11.0.0",
     "eslint": "^9.0.0",
     "eslint-config-expo": "~55.0.1",
+    "patch-package": "^8.0.1",
     "typescript": "~5.9.2"
   },
   "private": true

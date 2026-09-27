@@ -17,6 +17,7 @@ import * as path from "path";
 import { join } from "path";
 import { fileURLToPath } from "url";
 import { readFileSync, existsSync, unlinkSync, copyFileSync, chmodSync, writeFileSync } from "fs";
+import { promises as fsPromises } from "fs";
 import { createServer, IncomingMessage, ServerResponse } from "http";
 import { spawn, ChildProcess, execFile } from "child_process";
 import { autoUpdater } from "electron-updater";
@@ -812,14 +813,16 @@ ipcMain.handle("start-system-audio", async () => {
     bundledBinaryPath = path.join(process.resourcesPath, "bin", "AudioCapture");
   }
 
-  systemAudioProcess = spawn(bundledBinaryPath, [basePath], {
+  const proc = spawn(bundledBinaryPath, [basePath], {
     stdio: ["ignore", "pipe", "pipe"],
   });
+  systemAudioProcess = proc;
 
   console.log(`[IPC main] Spawning: ${bundledBinaryPath}`);
   systemAudioProcess.on("error", (err) => {
     Sentry.captureException(err, { extra: { context: "AudioCapture spawn" } });
     console.error(`[AudioCapture NEW] process SPAWN ERROR:`, err);
+    if (systemAudioProcess === proc) systemAudioProcess = null;
   });
   systemAudioProcess.stdout?.on("data", (d) => {
     const out = d.toString().trim();
@@ -866,6 +869,10 @@ ipcMain.handle("start-system-audio", async () => {
   });
   systemAudioProcess.on("close", (code) => {
     console.log(`[AudioCapture NEW] process exited with code ${code}`);
+    // A dead process must not stay registered: every later chunk request
+    // would signal nothing and wait out its 3 s timeout, for the rest of the
+    // recording.
+    if (systemAudioProcess === proc) systemAudioProcess = null;
     if (currentChunkPromiseResolve) {
       currentChunkPromiseResolve(null);
       currentChunkPromiseResolve = null;
@@ -877,6 +884,10 @@ ipcMain.handle("start-system-audio", async () => {
 
 ipcMain.handle("chunk-system-audio", async () => {
   if (!systemAudioProcess) return null;
+  // One rotation at a time. A second request used to overwrite the pending
+  // resolver, so the first promise never settled (one leaked request per
+  // overlap) and its chunk went to the wrong caller.
+  if (currentChunkPromiseResolve) return null;
 
   console.log("[IPC main] Requesting contiguous chunk (SIGUSR1)...");
 
@@ -893,6 +904,115 @@ ipcMain.handle("chunk-system-audio", async () => {
       }
     }, 3000);
   });
+});
+
+// ─── Crash-safe copy of the recording's audio ────────────────────────────────
+// The renderer keeps the recording in memory until it uploads it, so a crash
+// used to leave only the live transcript text to recover. Each MediaRecorder
+// chunk is also appended here, one folder per recording session, and deleted
+// once the backend confirms the save (or the user discards the recovery).
+const RECOVERY_SESSION_ID = /^[a-zA-Z0-9-]{8,64}$/;
+const RECOVERY_TRACKS = new Set(["mic", "sys"]);
+const recoveryAppendChains = new Map<string, Promise<void>>();
+
+function recoveryRoot(): string {
+  return path.join(app.getPath("userData"), "recording-recovery");
+}
+
+function recoveryDir(sessionId: string): string | null {
+  return RECOVERY_SESSION_ID.test(sessionId) ? path.join(recoveryRoot(), sessionId) : null;
+}
+
+function recoveryFile(sessionId: string, track: string): string | null {
+  const dir = recoveryDir(sessionId);
+  if (!dir || !RECOVERY_TRACKS.has(track)) return null;
+  return path.join(dir, `${track}.webm`);
+}
+
+async function fileSize(file: string): Promise<number> {
+  try {
+    return (await fsPromises.stat(file)).size;
+  } catch {
+    return 0;
+  }
+}
+
+ipcMain.handle(
+  "recovery-audio-append",
+  async (_event, sessionId: string, track: string, data: Uint8Array) => {
+    const file = recoveryFile(sessionId, track);
+    if (!file || !(data instanceof Uint8Array)) return false;
+    // Appends for one file run in order: IPC handlers run concurrently and a
+    // reordered chunk would corrupt the WebM stream.
+    const previous = recoveryAppendChains.get(file) ?? Promise.resolve();
+    const next = previous.then(async () => {
+      await fsPromises.mkdir(path.dirname(file), { recursive: true });
+      await fsPromises.appendFile(file, Buffer.from(data));
+    });
+    const settled = next.catch((err) => {
+      console.error(`[recovery] append failed for ${file}:`, err);
+    });
+    recoveryAppendChains.set(file, settled);
+    void settled.then(() => {
+      if (recoveryAppendChains.get(file) === settled) recoveryAppendChains.delete(file);
+    });
+    try {
+      await next;
+      return true;
+    } catch {
+      return false;
+    }
+  },
+);
+
+ipcMain.handle("recovery-audio-info", async (_event, sessionId: string) => {
+  const mic = recoveryFile(sessionId, "mic");
+  const sys = recoveryFile(sessionId, "sys");
+  if (!mic || !sys) return { micBytes: 0, sysBytes: 0 };
+  return { micBytes: await fileSize(mic), sysBytes: await fileSize(sys) };
+});
+
+ipcMain.handle("recovery-audio-read", async (_event, sessionId: string) => {
+  const read = async (track: string): Promise<Uint8Array | null> => {
+    const file = recoveryFile(sessionId, track);
+    if (!file) return null;
+    try {
+      return new Uint8Array(await fsPromises.readFile(file));
+    } catch {
+      return null;
+    }
+  };
+  return { mic: await read("mic"), sys: await read("sys") };
+});
+
+ipcMain.handle("recovery-audio-delete", async (_event, sessionId: string) => {
+  const dir = recoveryDir(sessionId);
+  if (!dir) return false;
+  await fsPromises.rm(dir, { recursive: true, force: true }).catch(() => undefined);
+  return true;
+});
+
+// Deletes every session folder except the ones still listed as recoverable
+// (orphans from saves whose cleanup failed, or recoveries the user discarded).
+ipcMain.handle("recovery-audio-prune", async (_event, keepSessionIds: string[]) => {
+  const keep = new Set(Array.isArray(keepSessionIds) ? keepSessionIds : []);
+  let entries: string[] = [];
+  try {
+    entries = await fsPromises.readdir(recoveryRoot());
+  } catch {
+    return 0;
+  }
+  let removed = 0;
+  for (const name of entries) {
+    if (keep.has(name) || !RECOVERY_SESSION_ID.test(name)) continue;
+    await fsPromises
+      .rm(path.join(recoveryRoot(), name), { recursive: true, force: true })
+      .then(() => {
+        removed += 1;
+      })
+      .catch(() => undefined);
+  }
+  return removed;
 });
 
 ipcMain.handle("stop-system-audio", async () => {

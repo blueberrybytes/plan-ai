@@ -46,10 +46,30 @@ import {
   type RecordingConfig,
 } from "../utils/recorderConfig";
 import {
-  loadUnsavedTranscript,
+  loadUnsavedMeetings,
   clearUnsavedTranscript,
   type UnsavedTranscript,
 } from "../utils/unsavedTranscript";
+import {
+  recoveryAudioInfo,
+  readRecoveryAudio,
+  deleteRecoveryAudio,
+  pruneRecoveryAudio,
+} from "../utils/recoveryAudio";
+
+/** A meeting that never reached the backend, with the size of its saved audio. */
+interface RecoverableMeeting extends UnsavedTranscript {
+  micBytes: number;
+  sysBytes: number;
+}
+
+// About 12 s of 32 kbps Opus across both tracks: less than that is not a meeting.
+const MIN_RECOVERABLE_AUDIO_BYTES = 100_000;
+// The backend rejects files over 500 MB (multer limit). Past this, the
+// meeting is recovered as text rather than failing the whole upload.
+const MAX_RECOVERABLE_FILE_BYTES = 480_000_000;
+
+const meetingKey = (m: UnsavedTranscript) => m.sessionId ?? "legacy";
 import { DEEPGRAM_LANGUAGES, AUTO_LANGUAGE_OPTION } from "../utils/deepgramLanguages";
 import { PrivacyConsentDialog } from "../components/PrivacyConsentDialog";
 import WorkspaceSwitcher from "../components/WorkspaceSwitcher";
@@ -157,50 +177,102 @@ const Home: React.FC = () => {
     api.listProjects().then(setProjects).catch(console.error);
   }, [api]);
 
-  // ── Crash recovery: meeting transcript that never reached the backend ──
-  // Written continuously while recording (see Recording.tsx); only cleared
-  // after a confirmed save. If it survives to the next launch, the meeting
-  // was lost mid-flow (app closed at the config screen, crash, failed upload)
-  // and we offer to save it as a text-only recording.
-  const [unsavedMeeting, setUnsavedMeeting] = useState<UnsavedTranscript | null>(null);
-  const [recovering, setRecovering] = useState(false);
+  // ── Crash recovery: meetings that never reached the backend ──
+  // Each recording registers itself at start and saves its transcript and
+  // audio as it goes (see Recording.tsx); both are cleared only after a
+  // confirmed save. Whatever survives to the next launch was lost mid-flow
+  // (crash, app closed at the config screen, failed upload) and is offered
+  // here, with its audio when there is any, so the backend transcribes both
+  // channels again instead of keeping only the live text.
+  const [unsavedMeetings, setUnsavedMeetings] = useState<RecoverableMeeting[]>([]);
+  const [recoveringKey, setRecoveringKey] = useState<string | null>(null);
 
   useEffect(() => {
-    const pending = loadUnsavedTranscript();
-    // Ignore trivial fragments — a couple of words isn't a lost meeting.
-    if (pending && pending.content.trim().length > 40) {
-      setUnsavedMeeting(pending);
-    }
+    let cancelled = false;
+    void (async () => {
+      const records = loadUnsavedMeetings();
+      const meetings: RecoverableMeeting[] = await Promise.all(
+        records.map(async (r) => ({
+          ...r,
+          ...(r.sessionId
+            ? await recoveryAudioInfo(r.sessionId)
+            : { micBytes: 0, sysBytes: 0 }),
+        })),
+      );
+      // Ignore trivial fragments: a couple of words or seconds isn't a meeting.
+      const worthRecovering = meetings.filter(
+        (m) =>
+          m.content.trim().length > 40 ||
+          m.micBytes + m.sysBytes >= MIN_RECOVERABLE_AUDIO_BYTES,
+      );
+      for (const m of meetings) {
+        if (worthRecovering.includes(m)) continue;
+        clearUnsavedTranscript(m.sessionId);
+        if (m.sessionId) deleteRecoveryAudio(m.sessionId);
+      }
+      // Audio folders with no record left (saved meetings whose cleanup failed).
+      pruneRecoveryAudio(
+        worthRecovering.map((m) => m.sessionId).filter((id): id is string => !!id),
+      );
+      if (!cancelled) setUnsavedMeetings(worthRecovering);
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-  const handleRecoverMeeting = useCallback(async () => {
-    if (!unsavedMeeting || !api) return;
-    setRecovering(true);
-    try {
-      const recordedAt = unsavedMeeting.savedAt
-        ? new Date(unsavedMeeting.savedAt).toISOString()
-        : new Date().toISOString();
-      await api.saveRecording({
-        content: unsavedMeeting.content,
-        title: `Recovered Meeting (${new Date(unsavedMeeting.savedAt || Date.now()).toLocaleString()})`,
-        recordedAt,
-        // Text-only: the audio blobs died with the crashed session.
-        // skipAi left off so the normal pipeline still generates tasks/summary.
-      });
-      clearUnsavedTranscript();
-      setUnsavedMeeting(null);
-      void fetchData(true);
-    } catch (err) {
-      console.error("[Home] Failed to recover unsaved meeting", err);
-      setError(err instanceof Error ? err.message : "Failed to recover the unsaved meeting.");
-    } finally {
-      setRecovering(false);
-    }
-  }, [unsavedMeeting, api, fetchData]);
+  const handleRecoverMeeting = useCallback(
+    async (meeting: RecoverableMeeting) => {
+      if (!api) return;
+      setRecoveringKey(meetingKey(meeting));
+      try {
+        const audioFits =
+          meeting.micBytes <= MAX_RECOVERABLE_FILE_BYTES &&
+          meeting.sysBytes <= MAX_RECOVERABLE_FILE_BYTES;
+        const audio =
+          meeting.sessionId && audioFits && meeting.micBytes + meeting.sysBytes > 0
+            ? await readRecoveryAudio(meeting.sessionId)
+            : {};
+        const startedAt = meeting.startedAt ?? meeting.savedAt;
+        await api.saveRecording({
+          content: meeting.content.trim() ? meeting.content : undefined,
+          title: `Recovered Meeting (${new Date(startedAt || Date.now()).toLocaleString()})`,
+          recordedAt: new Date(meeting.savedAt || Date.now()).toISOString(),
+          recordingStartedAt: meeting.startedAt
+            ? new Date(meeting.startedAt).toISOString()
+            : undefined,
+          // The batch transcription must use the recording's language (the
+          // "multi" fallback returns nothing for Catalan).
+          language: meeting.language || undefined,
+          // Same id as the original save: if that one reached the server
+          // before the crash, this returns it instead of a duplicate.
+          clientSessionId: meeting.sessionId,
+          micFile: audio.micBlob,
+          sysFile: audio.sysBlob,
+          // skipAi left off so the normal pipeline still generates tasks/summary.
+        });
+        clearUnsavedTranscript(meeting.sessionId);
+        if (meeting.sessionId) deleteRecoveryAudio(meeting.sessionId);
+        setUnsavedMeetings((prev) => prev.filter((m) => m !== meeting));
+        void fetchData(true);
+      } catch (err) {
+        console.error("[Home] Failed to recover unsaved meeting", err);
+        setError(err instanceof Error ? err.message : "Failed to recover the unsaved meeting.");
+      } finally {
+        setRecoveringKey(null);
+      }
+    },
+    [api, fetchData],
+  );
 
-  const handleDiscardMeeting = useCallback(() => {
-    clearUnsavedTranscript();
-    setUnsavedMeeting(null);
+  const handleDiscardMeeting = useCallback((meeting: RecoverableMeeting) => {
+    const confirmed = window.confirm(
+      "Discard this meeting permanently?\n\nIts transcript and audio will be deleted from this computer and cannot be recovered.",
+    );
+    if (!confirmed) return;
+    clearUnsavedTranscript(meeting.sessionId);
+    if (meeting.sessionId) deleteRecoveryAudio(meeting.sessionId);
+    setUnsavedMeetings((prev) => prev.filter((m) => m !== meeting));
   }, []);
 
   useEffect(() => {
@@ -438,39 +510,51 @@ const Home: React.FC = () => {
         }}
       />
 
-      {unsavedMeeting && (
-        <Alert
-          severity="warning"
-          sx={{ borderRadius: 0, flexShrink: 0 }}
-          action={
-            <Stack direction="row" spacing={1} alignItems="center">
-              <Button
-                color="inherit"
-                size="small"
-                variant="outlined"
-                disabled={recovering}
-                onClick={() => void handleRecoverMeeting()}
-              >
-                {recovering ? "Recovering…" : "Recover"}
-              </Button>
-              <Button
-                color="inherit"
-                size="small"
-                disabled={recovering}
-                onClick={handleDiscardMeeting}
-              >
-                Discard
-              </Button>
-            </Stack>
-          }
-        >
-          A meeting from{" "}
-          {unsavedMeeting.savedAt
-            ? new Date(unsavedMeeting.savedAt).toLocaleString()
-            : "a previous session"}{" "}
-          was never saved. Recover it as a text-only recording?
-        </Alert>
-      )}
+      {unsavedMeetings.map((meeting) => {
+        const key = meetingKey(meeting);
+        const startedAt = meeting.startedAt ?? meeting.savedAt;
+        const hasAudio =
+          meeting.micBytes + meeting.sysBytes > 0 &&
+          meeting.micBytes <= MAX_RECOVERABLE_FILE_BYTES &&
+          meeting.sysBytes <= MAX_RECOVERABLE_FILE_BYTES;
+        return (
+          <Alert
+            key={key}
+            severity="warning"
+            sx={{ borderRadius: 0, flexShrink: 0 }}
+            action={
+              <Stack direction="row" spacing={1} alignItems="center">
+                <Button
+                  color="inherit"
+                  size="small"
+                  variant="outlined"
+                  disabled={recoveringKey !== null}
+                  onClick={() => void handleRecoverMeeting(meeting)}
+                >
+                  {recoveringKey === key ? "Recovering…" : "Recover"}
+                </Button>
+                <Button
+                  color="inherit"
+                  size="small"
+                  disabled={recoveringKey !== null}
+                  onClick={() => handleDiscardMeeting(meeting)}
+                >
+                  Discard
+                </Button>
+              </Stack>
+            }
+          >
+            A meeting from{" "}
+            {startedAt ? new Date(startedAt).toLocaleString() : "a previous session"} was
+            never saved.{" "}
+            {hasAudio
+              ? `Its audio was kept on this computer (${Math.round(
+                  (meeting.micBytes + meeting.sysBytes) / 1_000_000,
+                )} MB), so both sides of the conversation will be transcribed again.`
+              : "Only its live transcript was kept. It will be saved as text."}
+          </Alert>
+        );
+      })}
 
       <Box
         sx={{

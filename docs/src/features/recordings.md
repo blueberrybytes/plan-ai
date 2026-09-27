@@ -8,7 +8,7 @@ Unlike generic AI meeting tools that require inviting a bot to your calendar eve
 
 1.  **Privacy:** Clients and external stakeholders do not see a bot join the call. The recording happens invisibly.
 2.  **Universal Compatibility:** Because it captures audio at the operating system level, it works with Zoom, Google Meet, Microsoft Teams, Discord, or even a local video file you are watching.
-3.  **Local Control:** You can instantly pause the recording from your menu bar if a highly sensitive topic is brought up. That part is never captured.
+3.  **Local Control:** Recording starts and stops on your machine, when you decide. Nothing joins the call on anyone else's behalf.
 
 ## Installation
 

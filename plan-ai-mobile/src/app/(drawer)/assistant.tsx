@@ -8,6 +8,7 @@ import {
   Pressable,
   Animated,
   AppState,
+  Alert,
 } from "react-native";
 import {
   Text,
@@ -27,11 +28,12 @@ import { planAiApi } from "../../context/AuthContext";
 import type { Project } from "../../services/planAiApi";
 import { ScreenHeader } from "../../components/ScreenHeader";
 import * as Clipboard from "expo-clipboard";
-import LiveAudioStream from "react-native-live-audio-stream";
 import {
   setAudioModeAsync,
   requestRecordingPermissionsAsync,
 } from "expo-audio";
+import { audioCapture } from "../../services/audioCapture";
+import { recordingService } from "../../services/recordingService";
 
 export default function AssistantScreen() {
   const theme = useTheme();
@@ -100,7 +102,6 @@ export default function AssistantScreen() {
   // Real-time dictation states
   const wsRef = useRef<WebSocket | null>(null);
   const [dictationInterim, setDictationInterim] = useState("");
-  const g = global as any;
 
   // Calm, native-driven pulse for the "Listening" dot (built-in Animated — no
   // reanimated dep). Reset to 1 and stopped on cleanup so a stale faded dot
@@ -121,25 +122,18 @@ export default function AssistantScreen() {
     return () => loop.stop();
   }, [isDictating, pulse]);
 
-  useEffect(() => {
-    LiveAudioStream.on("data", (data: string) => {
-      if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-        wsRef.current.send(
-          JSON.stringify({
-            type: "input_audio",
-            source: "mic",
-            audio: data,
-          }),
-        );
-      }
-    });
-  }, []);
+  // Microphone audio comes through audioCapture, which the meeting recorder
+  // shares. Calling LiveAudioStream here directly used to disconnect the next
+  // meeting from the microphone (audit 2026-09-27).
+  const unsubscribeAudioRef = useRef<(() => void) | null>(null);
 
   const stopDictation = (abort = false) => {
     if (!isDictating) return;
     setIsDictating(false);
     try {
-      LiveAudioStream.stop();
+      unsubscribeAudioRef.current?.();
+      unsubscribeAudioRef.current = null;
+      audioCapture.release("dictation");
       if (wsRef.current) {
         const ws = wsRef.current;
         if (ws.readyState === WebSocket.OPEN) {
@@ -156,7 +150,7 @@ export default function AssistantScreen() {
             }
           }, 1000);
         }
-        // IMMEDIATELY nullify wsRef so LiveAudioStream.on("data") stops sending new audio
+        // IMMEDIATELY nullify wsRef so the audio subscription stops sending new audio
         wsRef.current = null;
       }
       setDictationInterim("");
@@ -178,13 +172,29 @@ export default function AssistantScreen() {
     const sub = AppState.addEventListener("change", (next) => {
       if (next === "background") stopDictationRef.current(true);
     });
-    return () => sub.remove();
+    // A meeting that starts takes the microphone; dictation just ends.
+    const unsubscribeEvents = audioCapture.onEvent((e) => {
+      if (e.type === "preempted" && e.owner === "dictation") stopDictationRef.current(true);
+    });
+    return () => {
+      sub.remove();
+      unsubscribeEvents();
+      // Leaving the screen must not leave the microphone on.
+      stopDictationRef.current(true);
+    };
   }, []);
 
   const handleDictate = async () => {
     if (isDictating) {
       stopDictation(false);
     } else {
+      if (recordingService.isMeetingActive()) {
+        Alert.alert(
+          "A meeting is being recorded",
+          "Dictation is off until the meeting stops, so it cannot take the microphone from the recording.",
+        );
+        return;
+      }
       try {
         const perm = await requestRecordingPermissionsAsync();
         if (!perm.granted) return alert("Microphone permission required.");
@@ -224,19 +234,21 @@ export default function AssistantScreen() {
           setDictationInterim("");
         };
 
-        if (!g.__isAssistantAudioInitialized) {
-          LiveAudioStream.init({
-            sampleRate: 24000,
-            channels: 1,
-            bitsPerSample: 16,
-            audioSource: 1, // MIC
-            bufferSize: 4096,
-            wavFile: "assistant_dictation.wav",
-          });
-          g.__isAssistantAudioInitialized = true;
+        if (!audioCapture.acquire("dictation")) {
+          ws.close();
+          wsRef.current = null;
+          Alert.alert(
+            "A meeting is being recorded",
+            "Dictation is off until the meeting stops, so it cannot take the microphone from the recording.",
+          );
+          return;
         }
-
-        LiveAudioStream.start();
+        unsubscribeAudioRef.current = audioCapture.onData((data) => {
+          const socket = wsRef.current;
+          if (socket && socket.readyState === WebSocket.OPEN) {
+            socket.send(JSON.stringify({ type: "input_audio", source: "mic", audio: data }));
+          }
+        });
         setIsDictating(true);
       } catch (e) {
         console.error("Recording start fail", e);

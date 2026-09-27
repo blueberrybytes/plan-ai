@@ -27,7 +27,7 @@
     "docker:private": "cd plan-ai/backend && docker compose --profile private up -d",
     "db:migrate": "cd plan-ai/backend && yarn prisma:migrate",
     "db:seed": "cd plan-ai/backend && yarn prisma:seed",
-    "install:all": "yarn && (cd plan-ai/backend && yarn) && (cd plan-ai/frontend && yarn) && (cd plan-ai-recorder && yarn) && (cd plan-ai-mobile && yarn) && (cd docs && yarn) && (cd plan-ai/voice-ai && uv sync)",
+    "install:all": "yarn && (cd plan-ai/backend && yarn) && (cd plan-ai/frontend && yarn) && (cd plan-ai-recorder && yarn) && (cd plan-ai-mobile && yarn) && (cd docs && yarn) && (cd video && yarn) && (cd plan-ai/voice-ai && uv sync)",
     "dev:voice": "cd plan-ai/voice-ai && uv run uvicorn main:app --reload --port 8001",
     "dev:recorder": "cd plan-ai-recorder && yarn dev",
     "package:recorder": "cd plan-ai-recorder && yarn package",
@@ -49,7 +49,9 @@
     "coverage": "yarn --cwd plan-ai/backend test:coverage && yarn --cwd plan-ai/frontend test:coverage",
     "register-protocol": "/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -r -domain local -domain system -domain user",
     "studio": "cd plan-ai/backend && npx prisma studio",
-    "push-tag": "bash -c 'git tag $1 && git push origin $1' --"
+    "push-tag": "bash -c 'git tag $1 && git push origin $1' --",
+    "video:studio": "cd video && yarn studio",
+    "video:render": "cd video && yarn render:ep01"
   },
   "keywords": [
     "plan-ai",

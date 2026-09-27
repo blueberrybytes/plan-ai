@@ -103,6 +103,65 @@ export const readableUrl = async (
   return path ? signedUrlForPath(path, ttlMs) : ref;
 };
 
+/**
+ * Where one part of a recording uploaded in pieces is kept until
+ * recorder-upload joins them. Parts live under the uploader's own prefix, so a
+ * client can only ever join its own parts. The top-level prefix is separate
+ * from finished recordings so a bucket lifecycle rule can delete parts of
+ * uploads that were never finished (matchesPrefix "recording-uploads/").
+ */
+export const recordingPartsPrefix = (userId: string, uploadId: string): string =>
+  `recording-uploads/${userId}/${uploadId}/`;
+
+export const recordingPartPath = (userId: string, uploadId: string, index: number): string =>
+  `${recordingPartsPrefix(userId, uploadId)}part-${String(index).padStart(6, "0")}`;
+
+/** Object paths under a prefix, in name order. */
+export const listPaths = async (prefix: string): Promise<string[]> => {
+  const bucket = await getBucket();
+  const [files] = await bucket.getFiles({ prefix });
+  return files.map((f) => f.name).sort();
+};
+
+/**
+ * Joins objects, in the given order, into one private object and returns its
+ * gs:// URI. GCS composes at most 32 sources per call, so longer lists are
+ * joined in rounds through temporary objects that are deleted afterwards.
+ */
+export const composePaths = async (
+  sources: string[],
+  destination: string,
+  contentType: string,
+): Promise<string> => {
+  if (sources.length === 0) throw new Error("Nothing to compose");
+  const bucket = await getBucket();
+  const MAX_SOURCES = 32;
+  const temporary: string[] = [];
+  let level = sources;
+  let round = 0;
+  while (level.length > MAX_SOURCES) {
+    const next: string[] = [];
+    for (let i = 0; i < level.length; i += MAX_SOURCES) {
+      const target = `${destination}.part-${round}-${i / MAX_SOURCES}`;
+      await bucket.combine(level.slice(i, i + MAX_SOURCES), target);
+      temporary.push(target);
+      next.push(target);
+    }
+    level = next;
+    round += 1;
+  }
+  await bucket.combine(level, destination);
+  await bucket.file(destination).setMetadata({ contentType });
+  await Promise.all(temporary.map((p) => bucket.file(p).delete({ ignoreNotFound: true })));
+  return storageUri(destination);
+};
+
+/** Deletes every object under a prefix. */
+export const deletePrefix = async (prefix: string): Promise<void> => {
+  const bucket = await getBucket();
+  await bucket.deleteFiles({ prefix, force: true });
+};
+
 export const downloadPath = async (storagePath: string): Promise<Buffer> => {
   const bucket = await getBucket();
   const [data] = await bucket.file(storagePath).download();

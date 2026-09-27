@@ -23,31 +23,17 @@ import { ScreenHeader } from "../../components/ScreenHeader";
 import { WorkspaceSelector } from "../../components/WorkspaceSelector";
 import { useRouter, useFocusEffect, useNavigation, Href } from "expo-router";
 import { Transcript } from "../../services/planAiApi";
-import { Directory, Paths, File } from "expo-file-system";
+import { refreshOutbox, useOutbox } from "../../services/recordingUploader";
+import { useRecordingSession } from "../../services/recordingService";
+import { LocalRecordingCard } from "../../components/LocalRecordingCard";
 
-export interface PendingSyncItem {
-  id: string;
-  title: string;
-  audioUri?: string;
-  transcript?: string;
-  summary?: string;
-  sentiment?: string;
-  durationSeconds?: number;
-  speakerCount?: number;
-  timestamp: number;
-}
-
-export type FeedItem =
-  | (Transcript & { isLocalPending?: boolean })
-  | (PendingSyncItem & { isLocalPending: true });
+export type FeedItem = Transcript;
 
 export default function DashboardScreen() {
   const [transcripts, setTranscripts] = useState<Transcript[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [workspaceMenuVisible, setWorkspaceMenuVisible] = useState(false);
-  const [pendingSyncs, setPendingSyncs] = useState<PendingSyncItem[]>([]);
-  const [syncingIds, setSyncingIds] = useState<string[]>([]);
   const [retryingIds, setRetryingIds] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -57,6 +43,15 @@ export default function DashboardScreen() {
   const router = useRouter();
   const navigation = useNavigation();
   const { api, activeWorkspaceId, user } = useAuth();
+
+  // Meetings on this phone that are not on the server yet (see
+  // recordingUploader.ts). The one being recorded or on the save screen is
+  // left out: it is still in use.
+  const outbox = useOutbox();
+  const session = useRecordingSession();
+  const localRecordings = outbox.sessions.filter(
+    (m) => m.sessionId !== session.sessionId && m.sessionId !== session.stoppedSessionId,
+  );
 
   useEffect(() => {
     const handler = setTimeout(() => {
@@ -85,29 +80,9 @@ export default function DashboardScreen() {
       setTranscripts(data || []);
     } catch (e) {
       console.error("Failed to fetch transcripts", e);
-    }
-
-    // Check for offline files
-    try {
-      const syncDir = new Directory(Paths.document, "pending_sync");
-      if (syncDir.exists) {
-        const files = syncDir.list();
-        const items = [];
-        for (const f of files) {
-          if (f.name && f.name.endsWith(".json")) {
-            try {
-              const text = await (f as File).text();
-              items.push(JSON.parse(text));
-            } catch (jsonErr) {
-              console.error("Corrupted offline file:", f.name);
-            }
-          }
-        }
-        setPendingSyncs(items.sort((a, b) => b.timestamp - a.timestamp));
-      }
-    } catch (e) {
-      console.error("Failed to check offline sync", e);
     } finally {
+      // Meetings still on the phone show even when the server is unreachable.
+      refreshOutbox();
       setIsLoading(false);
       setIsRefreshing(false);
     }
@@ -143,50 +118,6 @@ export default function DashboardScreen() {
       if (interval) clearInterval(interval);
     };
   }, [hasPending, debouncedSearch, fetchTranscripts]);
-
-  // Aggressive Auto-Sync Offline Pings
-  useEffect(() => {
-    if (pendingSyncs.length === 0) return;
-    const syncInterval = setInterval(() => {
-      pendingSyncs.forEach(async (item) => {
-        if (syncingIds.includes(item.id)) return;
-
-        setSyncingIds((prev) => [...prev, item.id]);
-        console.log(`[AutoSync] Attempting to push offline record: ${item.id}`);
-        try {
-          const payload: Record<string, any> = { ...item };
-          if (item.audioUri) {
-            payload.micFile = {
-              uri: item.audioUri,
-              name: "emergency_backup.wav",
-              type: "audio/wav",
-            };
-          }
-
-          await api.saveRecording(payload);
-
-          console.log(`[AutoSync] SUCCESS: ${item.id}. Purging local cache.`);
-          // Delete the native files
-          try {
-            new File(Paths.document, `pending_sync/${item.id}.json`).delete();
-            if (item.audioUri) {
-              new File(item.audioUri).delete();
-            }
-          } catch (e) {}
-
-          setPendingSyncs((prev) => prev.filter((p) => p.id !== item.id));
-          fetchTranscripts(); // Reload online data
-        } catch (e) {
-          console.log(
-            `[AutoSync] Network still down for ${item.id}. Will retry later.`,
-          );
-        } finally {
-          setSyncingIds((prev) => prev.filter((id) => id !== item.id));
-        }
-      });
-    }, 10000); // 10s auto-sync interval
-    return () => clearInterval(syncInterval);
-  }, [pendingSyncs, syncingIds, api, fetchTranscripts]);
 
   const onRefresh = () => {
     setIsRefreshing(true);
@@ -230,59 +161,6 @@ export default function DashboardScreen() {
   );
 
   const renderItem = ({ item }: { item: FeedItem }) => {
-    // Determine if this is a local pending item mapped into the UI
-    if (item.isLocalPending) {
-      const isSyncing = syncingIds.includes(item.id);
-      return (
-        <Card
-          style={[
-            styles.card,
-            {
-              backgroundColor: "#fff9e6",
-              borderColor: "#f59e0b",
-              borderWidth: 1,
-            },
-          ]}
-          mode="elevated"
-          elevation={1}
-        >
-          <Card.Title
-            title={item.title || "Offline Meeting"}
-            subtitle={`Saved to Device • Pending Sync`}
-            titleStyle={{ color: theme.colors.onSurface, fontWeight: "bold" }}
-            subtitleStyle={{ color: "#d97706" }}
-            left={(props) => (
-              <Avatar.Icon
-                {...props}
-                icon="cloud-off-outline"
-                style={{ backgroundColor: "#fcd34d" }}
-                color="#92400e"
-              />
-            )}
-            right={(props) =>
-              isSyncing ? (
-                <ActivityIndicator
-                  size="small"
-                  color="#d97706"
-                  style={{ marginRight: 16 }}
-                />
-              ) : null
-            }
-          />
-          <Card.Content>
-            <Text
-              variant="bodyMedium"
-              style={{ color: "#92400e", marginTop: 8 }}
-            >
-              {isSyncing
-                ? "Attempting to push audio and transcript to AI..."
-                : "Waiting for network connection to securely upload this meeting."}
-            </Text>
-          </Card.Content>
-        </Card>
-      );
-    }
-
     const dateSource = item.recordedAt || item.createdAt;
     const formattedDate = dateSource
       ? new Date(dateSource).toLocaleDateString(undefined, {
@@ -592,7 +470,7 @@ export default function DashboardScreen() {
       ) : (
         <View style={{ flex: 1 }}>
           {(transcripts.length > 0 ||
-            pendingSyncs.length > 0 ||
+            localRecordings.length > 0 ||
             searchQuery.length > 0) && (
             <View style={{ paddingHorizontal: 16, marginBottom: 12 }}>
               <Searchbar
@@ -609,25 +487,27 @@ export default function DashboardScreen() {
             </View>
           )}
           <FlatList
-            data={[
-              ...pendingSyncs
-                .map((p) => ({ ...p, isLocalPending: true as const }))
-                .filter((t) => {
-                  if (!searchQuery) return true;
-                  const q = searchQuery.toLowerCase();
-                  return (
-                    t.title?.toLowerCase().includes(q) ||
-                    t.summary?.toLowerCase().includes(q) ||
-                    t.sentiment?.toLowerCase().includes(q) ||
-                    t.transcript?.toLowerCase().includes(q)
-                  );
-                }),
-              ...transcripts,
-            ]}
+            data={transcripts}
+            ListHeaderComponent={
+              localRecordings.length > 0 ? (
+                <View>
+                  {localRecordings.map((m) => (
+                    <LocalRecordingCard
+                      key={m.sessionId}
+                      manifest={m}
+                      api={api}
+                      progress={
+                        outbox.active?.sessionId === m.sessionId ? outbox.active.progress : null
+                      }
+                    />
+                  ))}
+                </View>
+              ) : null
+            }
             keyExtractor={(item) => item.id}
             renderItem={renderItem}
             contentContainerStyle={
-              transcripts.length === 0 && pendingSyncs.length === 0
+              transcripts.length === 0 && localRecordings.length === 0
                 ? styles.emptyListContent
                 : [styles.listContent, { paddingBottom: 100 + insets.bottom }]
             }

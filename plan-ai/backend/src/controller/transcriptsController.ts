@@ -32,7 +32,26 @@ import {
   type PainPointResponse,
 } from "./projectsModelController";
 import { transcriptGenerationQueue } from "../queue/transcriptGenerationQueue";
-import { uploadPrivateFile } from "../firebase/privateStorage";
+import {
+  uploadPrivateFile,
+  recordingPartPath,
+  recordingPartsPrefix,
+  listPaths,
+  composePaths,
+  deletePrefix,
+} from "../firebase/privateStorage";
+
+// Ids chosen by clients for recording sessions and piecewise uploads. Short
+// and path-safe, since they become part of storage paths.
+const CLIENT_ID_PATTERN = /^[a-zA-Z0-9-]{8,64}$/;
+// A part is a slice of one recording. The mobile app sends 8 MB slices.
+const MAX_RECORDING_PART_BYTES = 32 * 1024 * 1024;
+const MAX_RECORDING_PARTS = 5000;
+
+export interface RecordingPartResponse {
+  index: number;
+  size: number;
+}
 import { DocDocumentResponse } from "./docController";
 import { TranscriptMetadata, type PostMeetingTaskKind } from "../services/transcriptMetadataTypes";
 import { logger } from "../utils/logger";
@@ -328,6 +347,57 @@ export class TranscriptsController extends BaseWorkspaceController {
     return `Use the following context when analyzing the transcript:\n${sections.join("\n")}`;
   }
 
+  /**
+   * One slice of a recording sent in pieces. Long meetings from the mobile app
+   * (uncompressed WAV, 170 MB per hour) could not finish one upload inside the
+   * request timeout, and every retry sent the whole file again. Slices are
+   * small, a retry resends only the slice that failed, and sending the same
+   * slice twice just overwrites it. recorder-upload joins them in order when
+   * it receives `micUploadId`.
+   */
+  @Post("recorder-upload/parts")
+  @Security("ClientLevel")
+  public async uploadRecordingPart(
+    @Request() request: AuthenticatedRequest,
+    @FormField() uploadId: string,
+    @FormField() index: string,
+    @UploadedFile("part") part: Express.Multer.File,
+  ): Promise<ApiResponse<RecordingPartResponse>> {
+    const { user } = await this.getAuthorizedWorkspaceAccess(request);
+    const partIndex = Number.parseInt(index, 10);
+    if (!CLIENT_ID_PATTERN.test(uploadId)) {
+      throw { status: 400, message: "Invalid uploadId." };
+    }
+    if (!Number.isInteger(partIndex) || partIndex < 0 || partIndex >= MAX_RECORDING_PARTS) {
+      throw { status: 400, message: "Invalid part index." };
+    }
+    if (!part || part.size === 0) throw { status: 400, message: "Empty part." };
+    if (part.size > MAX_RECORDING_PART_BYTES) {
+      throw { status: 413, message: "Part too large." };
+    }
+    await uploadPrivateFile(
+      recordingPartPath(user.id, uploadId, partIndex),
+      part.buffer,
+      "application/octet-stream",
+    );
+    return { status: 200, data: { index: partIndex, size: part.size } };
+  }
+
+  /** Drops the slices of a recording the user discarded before it was joined. */
+  @Delete("recorder-upload/parts/{uploadId}")
+  @Security("ClientLevel")
+  public async deleteRecordingParts(
+    @Request() request: AuthenticatedRequest,
+    @Path() uploadId: string,
+  ): Promise<ApiResponse<{ success: boolean }>> {
+    const { user } = await this.getAuthorizedWorkspaceAccess(request);
+    if (!CLIENT_ID_PATTERN.test(uploadId)) {
+      throw { status: 400, message: "Invalid uploadId." };
+    }
+    await deletePrefix(recordingPartsPrefix(user.id, uploadId));
+    return { status: 200, data: { success: true } };
+  }
+
   @Post("recorder-upload")
   @Security("ClientLevel")
   public async createTranscriptFromRecording(
@@ -361,10 +431,66 @@ export class TranscriptsController extends BaseWorkspaceController {
     @FormField() aecTelemetry?: string,
     @FormField() recordingStartedAt?: string,
     @FormField() recordingWallClockSeconds?: string,
+    /** Mic audio already sent in slices to recorder-upload/parts under this id. */
+    @FormField() micUploadId?: string,
+    /** How many slices were sent for micUploadId (0 … count-1). */
+    @FormField() micPartCount?: string,
+    /** Client recording session id; a retry with the same id is not duplicated. */
+    @FormField() clientSessionId?: string,
+    /** "in_person" (one mic, several people in the room) or "remote". */
+    @FormField() recordingMode?: string,
     @UploadedFile("micFile") micFile?: Express.Multer.File,
     @UploadedFile("sysFile") sysFile?: Express.Multer.File,
   ): Promise<ApiResponse<StandaloneTranscriptResponse>> {
+    // A retried upload (the client timed out after the server had already
+    // saved it) returns the transcript created the first time. Checked before
+    // the subscription and usage checks, and across workspaces: a meeting the
+    // server already holds must never be refused or saved twice.
+    const sessionId =
+      clientSessionId && CLIENT_ID_PATTERN.test(clientSessionId) ? clientSessionId : undefined;
+    if (sessionId) {
+      const { user: caller } = await this.getAuthorizedWorkspaceAccess(request);
+      const existing = await prisma.transcript.findFirst({
+        where: {
+          userId: caller.id,
+          metadata: { path: ["clientSessionId"], equals: sessionId },
+        },
+      });
+      if (existing) {
+        logger.info(
+          `[recorder-upload] session ${sessionId} already saved as ${existing.id}, returning it`,
+        );
+        if (micUploadId && CLIENT_ID_PATTERN.test(micUploadId)) {
+          void deletePrefix(recordingPartsPrefix(caller.id, micUploadId)).catch(() => undefined);
+        }
+        // Saved but never queued (the queue failed on the first try): queue it
+        // now. The job id is the transcript id, so a job that already exists
+        // is not added twice.
+        const meta = (existing.metadata as Prisma.JsonObject | null) ?? {};
+        if (meta.processingStatus === "PENDING") {
+          const options = (meta.generationOptions as Prisma.JsonObject | undefined) ?? {};
+          await transcriptGenerationQueue.add(
+            "generate-transcript",
+            {
+              ...(options as object),
+              transcriptId: existing.id,
+              workspaceId: existing.workspaceId,
+              projectId: existing.projectId || undefined,
+              userId: caller.id,
+              content: existing.transcript === "Processing..." ? "" : (existing.transcript ?? ""),
+              source: existing.source,
+              ...(meta.transcribeOnly === true ? { transcribeOnly: true } : {}),
+            },
+            { jobId: existing.id },
+          );
+        }
+        return { status: 200, data: this.mapTranscriptResponse(existing) };
+      }
+    }
+
     const { user, workspaceId } = await this.getPaidLlmAccess(request);
+    const mode =
+      recordingMode === "in_person" || recordingMode === "remote" ? recordingMode : undefined;
 
     console.log(`[Upload Debug] POST /api/transcripts/recorder-upload hit by user ${user.id}`);
     console.log(
@@ -490,6 +616,50 @@ export class TranscriptsController extends BaseWorkspaceController {
       }
     }
 
+    let partsPrefixToDelete: string | undefined;
+    // Mic sent in slices: check every slice arrived, then join them in order.
+    // The client builds slice 0 as a WAV header with the real sizes, so the
+    // joined object is a valid WAV file.
+    if (!micFile && micUploadId) {
+      if (!CLIENT_ID_PATTERN.test(micUploadId)) {
+        throw { status: 400, message: "Invalid micUploadId." };
+      }
+      const expected = Number.parseInt(micPartCount ?? "", 10);
+      if (!Number.isInteger(expected) || expected <= 0 || expected > MAX_RECORDING_PARTS) {
+        throw { status: 400, message: "Invalid micPartCount." };
+      }
+      const prefix = recordingPartsPrefix(user.id, micUploadId);
+      const stored = new Set(await listPaths(prefix));
+      const parts = Array.from({ length: expected }, (_, i) =>
+        recordingPartPath(user.id, micUploadId, i),
+      );
+      const missing = parts.flatMap((p, i) => (stored.has(p) ? [] : [i]));
+      if (missing.length > 0) {
+        throw {
+          status: 409,
+          message: `Recording upload incomplete: missing parts ${missing.slice(0, 20).join(", ")}${
+            missing.length > 20 ? "…" : ""
+          }`,
+        };
+      }
+      const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
+      rawMicUrl = await composePaths(
+        parts,
+        `transcripts/${user.id}/${uniqueSuffix}-mic.wav`,
+        "audio/wav",
+      );
+      // Deleted once the transcript row exists (below): if creating it fails,
+      // the client retries with the same parts instead of sending them again.
+      partsPrefixToDelete = prefix;
+    }
+
+    // "Save transcript only" with audio but no live text (the live socket never
+    // connected, or the save came from a recovered session) used to be stored
+    // as "Processing..." and marked done, so the audio was never transcribed.
+    // It now goes through transcription alone, without the AI steps.
+    const hasAudio = !!(rawMicUrl || rawSysUrl);
+    const transcribeOnly = skipAi === "true" && hasAudio && !content?.trim();
+
     const contextPrompt = await this.buildContextPrompt(user.id, contextIdsArray);
 
     const generationOptions = {
@@ -524,32 +694,54 @@ export class TranscriptsController extends BaseWorkspaceController {
         source: source ?? TranscriptSource.RECORDING,
         language: null,
         summary: null,
-        transcript: content ?? "Processing...",
+        transcript: content?.trim() ? content : hasAudio ? "Processing..." : (content ?? ""),
         recordedAt: recordedAt ? new Date(recordedAt) : null,
         rawMicUrl,
         rawSysUrl,
         contextIds: contextIdsArray,
         metadata: {
-          processingStatus: skipAi === "true" ? "DONE" : "PENDING",
+          processingStatus: skipAi === "true" && !transcribeOnly ? "DONE" : "PENDING",
           ...(locationObj ? { location: locationObj } : {}),
           ...(recordingLanguage ? { recordingLanguage } : {}),
           ...(recorderAec ? { recorderAec } : {}),
           ...(recordingWindow ? { recording: recordingWindow } : {}),
+          ...(mode ? { recordingMode: mode } : {}),
+          ...(sessionId ? { clientSessionId: sessionId } : {}),
+          ...(transcribeOnly ? { transcribeOnly: true } : {}),
           generationOptions,
         } as Prisma.JsonObject,
       },
     });
 
-    if (skipAi !== "true") {
-      await transcriptGenerationQueue.add("generate-transcript", {
-        transcriptId: transcript.id,
-        workspaceId,
-        projectId: projectId || undefined,
-        userId: user.id,
-        content: content ?? "",
-        source: source ?? TranscriptSource.RECORDING,
-        ...generationOptions,
-      });
+    if (partsPrefixToDelete) {
+      const prefix = partsPrefixToDelete;
+      void deletePrefix(prefix).catch((err) =>
+        logger.warn(`[recorder-upload] could not delete parts under ${prefix}`, err),
+      );
+    }
+
+    if (skipAi !== "true" || transcribeOnly) {
+      try {
+        await transcriptGenerationQueue.add(
+          "generate-transcript",
+          {
+            transcriptId: transcript.id,
+            workspaceId,
+            projectId: projectId || undefined,
+            userId: user.id,
+            content: content ?? "",
+            source: source ?? TranscriptSource.RECORDING,
+            ...generationOptions,
+            ...(transcribeOnly ? { transcribeOnly: true } : {}),
+          },
+          { jobId: transcript.id },
+        );
+      } catch (err) {
+        // Without a job the row would sit in PENDING forever. The client's
+        // retry (same clientSessionId) finds it and queues it again.
+        logger.error(`[recorder-upload] could not queue transcript ${transcript.id}`, err);
+        throw { status: 503, message: "Could not queue the transcript. Please retry." };
+      }
     } else if (generationOptions.syncToTwenty) {
       // "Save transcript only" skips the AI worker entirely — but a CRM note
       // needs no AI, and the user ticked the box. Without this the checkbox
@@ -562,21 +754,27 @@ export class TranscriptsController extends BaseWorkspaceController {
     }
 
     if (chatHistoryArray.length > 0) {
-      await prisma.chatThread.create({
-        data: {
-          transcriptId: transcript.id,
-          title: "Live Recording Assistant",
-          userId: user.id,
-          workspaceId,
-          messages: {
-            create: chatHistoryArray.map((msg: { role: string; content: string }) => ({
-              role: msg.role === "user" ? "USER" : "ASSISTANT",
-              content: msg.content,
-              createdAt: new Date(),
-            })),
+      // The meeting is saved and queued at this point; losing the live chat
+      // must not turn the upload into an error the client would retry.
+      try {
+        await prisma.chatThread.create({
+          data: {
+            transcriptId: transcript.id,
+            title: "Live Recording Assistant",
+            userId: user.id,
+            workspaceId,
+            messages: {
+              create: chatHistoryArray.map((msg: { role: string; content: string }) => ({
+                role: msg.role === "user" ? "USER" : "ASSISTANT",
+                content: msg.content,
+                createdAt: new Date(),
+              })),
+            },
           },
-        },
-      });
+        });
+      } catch (err) {
+        logger.error(`[recorder-upload] could not save the live chat of ${transcript.id}`, err);
+      }
     }
 
     // Reuse map function from standard POST

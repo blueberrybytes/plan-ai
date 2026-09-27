@@ -534,7 +534,7 @@
       "items": {
         "transcript": {
           "title": "Bot-Free Recording",
-          "description": "Native recorders for macOS, Windows, iOS and Android. No bot joins the call. Pause at any moment and that part is never recorded. Works with Zoom, Meet and in-person meetings."
+          "description": "Native recorders for macOS, Windows, iOS and Android. No bot joins the call and nobody else sees the recorder. Works with Zoom, Meet, Teams and in-person meetings."
         },
         "tasks": {
           "title": "Real Jira & Linear Tickets",
