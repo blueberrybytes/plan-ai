@@ -138,12 +138,13 @@ const AppRoutes: React.FC = () => {
     }
   }, [user, activeWorkspaceId, loadSubscription]);
 
+  // Workspaces first: the user record is what opens the gate, and the screen
+  // behind it calls the API straight away. With no active workspace yet those
+  // calls went out without X-Workspace-Id and failed until a reload.
   const refetchAll = React.useCallback(async () => {
-    await Promise.all([
-      refetchDbUser(),
-      refetchWorkspaces(),
-      loadSubscription(),
-    ]);
+    await refetchWorkspaces();
+    await refetchDbUser();
+    await loadSubscription();
   }, [refetchDbUser, refetchWorkspaces, loadSubscription]);
 
   const activeWorkspace = workspaces.find((w) => w.id === activeWorkspaceId);

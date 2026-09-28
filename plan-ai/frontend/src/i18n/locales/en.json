@@ -1560,5 +1560,11 @@
     "sent": "Notes sent. Recipients: {{count}}.",
     "partlySent": "Notes sent to {{count}}. Not sent to: {{failed}}.",
     "failed": "The notes could not be sent."
+  },
+  "calendarInvite": {
+    "title": "Calendar invite",
+    "callLink": "Call link",
+    "invited": "Invited ({{count}}):",
+    "nobody": "nobody else"
   }
 }

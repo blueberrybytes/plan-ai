@@ -37,6 +37,7 @@ const GOOGLE_CALENDAR_SCOPES = [
 const OUTLOOK_CALENDAR_SCOPES = ["Calendars.Read", "User.Read", "offline_access"];
 
 const GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token";
+const GOOGLE_REVOKE_URL = "https://oauth2.googleapis.com/revoke";
 const GOOGLE_EVENTS_URL = "https://www.googleapis.com/calendar/v3/calendars/primary/events";
 const GRAPH_CALENDAR_VIEW_URL = "https://graph.microsoft.com/v1.0/me/calendarView";
 const GRAPH_ME_URL = "https://graph.microsoft.com/v1.0/me";
@@ -283,6 +284,35 @@ class CalendarService {
       return parsed;
     } catch {
       return null;
+    }
+  }
+
+  // ── Disconnect ──────────────────────────────────────────────────────────────
+
+  /**
+   * Withdraws Plan AI's access at Google before the stored tokens are
+   * deleted, so disconnecting also removes the app from the user's Google
+   * account. Best effort: a failure is logged and the disconnect goes on.
+   * Microsoft has no per-app revoke for delegated tokens; the user removes
+   * the app at myapps.microsoft.com.
+   */
+  public async revokeGoogleAccess(userId: string): Promise<void> {
+    const integration = await prisma.userIntegration.findFirst({
+      where: { userId, provider: "GOOGLE_CALENDAR" },
+      select: { accessToken: true, refreshToken: true },
+    });
+    if (!integration) return;
+    try {
+      // Revoking the refresh token also ends every access token issued from it.
+      const token =
+        decryptSecret(integration.refreshToken) || decryptSecret(integration.accessToken);
+      if (!token) return;
+      await axios.post(GOOGLE_REVOKE_URL, new URLSearchParams({ token }), {
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        timeout: HTTP_TIMEOUT_MS,
+      });
+    } catch (error) {
+      logger.warn("[Calendar] Could not revoke the Google token", describeHttpError(error));
     }
   }
 

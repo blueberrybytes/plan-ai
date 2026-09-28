@@ -54,53 +54,109 @@
 
 <body>
   <h1>Privacy Policy</h1>
-  <p>Last updated: May 6, 2026</p>
+  <p>Last updated: September 28, 2026</p>
 
   <h2>1. Introduction</h2>
   <p>
-    This Privacy Policy explains how data is handled when you use the Plan AI software, developed by 
+    This Privacy Policy explains how data is handled when you use Plan AI, developed by
     <strong>BLUEBERRYBYTES SERVICES - FZCO</strong>, a company registered in Dubai, United Arab Emirates.
+    It covers the hosted service at plan-ai.blueberrybytes.com with its desktop and mobile apps, and
+    installs of Plan AI on your own servers.
   </p>
   <p>
-    Plan AI is a platform distributed under the PolyForm Noncommercial License 1.0.0. It operates on a 
-    "Bring Your Own Key" (BYOK) architecture, meaning you connect your own infrastructure and third-party 
-    API providers (such as Groq, OpenAI, or Anthropic) to power the application.
-  </p>
-
-  <h2>2. Information We Do Not Collect</h2>
-  <p>
-    Because you are running the software using your own API keys, <strong>BLUEBERRYBYTES SERVICES - FZCO does not collect, process, or store your meeting transcripts, generated tasks, or user data.</strong> 
-    All data processing happens either locally on your deployment or is sent directly to the third-party providers you configure.
+    Each workspace can use its own AI provider keys ("Bring Your Own Key") or a managed plan that uses ours.
   </p>
 
-  <h2>3. Third-Party AI Processing</h2>
+  <h2>2. Data We Store</h2>
   <p>
-    When you upload audio or desktop screen recordings, the Plan AI software securely transmits your data 
-    directly to your configured third-party AI transcription and language models (e.g., Groq API). 
+    <strong>Hosted service.</strong> To run the service we store your account (name and email address), your
+    workspaces and their settings, meeting audio, transcripts, summaries, tasks and documents, and the access
+    tokens of the integrations you connect. The application and its database run on Railway. Sign-in and file
+    storage use Google Firebase (Google Cloud). Audio and files are private: they can only be opened through
+    links that expire.
   </p>
   <p>
-    We encourage you to review the privacy policies of the third-party API providers you choose to use with Plan AI, as they govern how your data is processed and whether it is retained for their own model training. 
-    BLUEBERRYBYTES SERVICES - FZCO has no control over these third-party providers.
+    You can delete a meeting's audio, delete a whole meeting, or set your workspace to delete meeting audio
+    automatically after a number of days.
+  </p>
+  <p>
+    <strong>Your own servers.</strong> If you install Plan AI on your own infrastructure, this data stays in
+    your deployment and BLUEBERRYBYTES SERVICES - FZCO has no access to it.
+  </p>
+
+  <h2>3. AI Processing</h2>
+  <p>
+    To transcribe and analyse a meeting, its audio and text are sent to the speech-to-text and language model
+    providers used by your workspace (such as Deepgram and OpenRouter). With your own keys, this happens under
+    your account with those providers. On a managed plan, it happens under ours. Installs on your own servers
+    can run these models locally.
+  </p>
+  <p>
+    Please review the privacy policies of these providers, as they govern how they process your data.
   </p>
 
   <h2>4. Connected Integrations</h2>
   <p>
-    If you connect optional integrations (such as Jira, Linear, or GitHub), Plan AI interacts directly with their APIs using the credentials you provide. 
-    Integration tokens and data synced from these services are stored within your own deployment's database. BLUEBERRYBYTES SERVICES - FZCO does not have access to these tokens or synced data.
+    When you connect an integration (such as Jira, Linear, Trello, Asana, Notion, GitHub, Google Drive,
+    OneDrive, Google Calendar or Outlook Calendar), Plan AI stores its access tokens in the database of the
+    deployment you use and uses them only for the actions you ask for, such as creating tickets, exporting
+    documents or finding the meeting you are recording. You can disconnect any integration from the
+    Integrations page.
   </p>
 
-  <h2>5. Data Security</h2>
+  <h2>5. Google User Data</h2>
+  <p>If you connect a Google account, Plan AI asks only for these permissions:</p>
+  <ul>
+    <li>
+      <strong>Google Calendar, read-only events</strong> (<code>calendar.events.readonly</code>). Plan AI reads
+      the events of your primary calendar that overlap the 15 minutes before and after the current time: title,
+      start and end time, the attendees' names and email addresses, and the video call link. It uses them to show
+      the meeting happening now, to name the recording, to help identify the speakers, and to let you email the
+      notes to the attendees when you choose to. The event details of a meeting you record are saved with that
+      meeting. Other events are not stored. Plan AI never creates, changes or deletes calendar events.
+    </li>
+    <li>
+      <strong>Google Drive, only the files Plan AI creates or you open with it</strong>
+      (<code>drive.file</code>), to export meeting documents to your Drive when you ask.
+    </li>
+    <li>
+      <strong>Your Google account email address</strong> (<code>userinfo.email</code>), to show which account
+      is connected.
+    </li>
+  </ul>
   <p>
-    You are responsible for securing your own deployment of Plan AI, including your database, servers, and the API keys you provide to the application. 
-    We recommend using secure connection protocols (HTTPS), enforcing strict access controls, and keeping your API keys confidential.
+    <strong>Sharing.</strong> The title and attendees of a recorded meeting are included in the text sent to
+    your workspace's language model provider to write the notes. When you send the notes by email, the attendee
+    addresses you choose are passed to our email provider (Resend) to deliver them. Google user data is not sold,
+    not used for advertising, and not used by Plan AI to develop, improve or train AI models. Our staff do not
+    read it unless you ask us to for support, it is needed for security, or the law requires it.
   </p>
-
-  <h2>6. Changes to This Privacy Policy</h2>
   <p>
-    We may update this privacy policy from time to time to reflect changes in the open-source project or our business practices.
+    <strong>Retention and deletion.</strong> Tokens are kept until you disconnect. Disconnecting Google Calendar
+    deletes the stored tokens and revokes Plan AI's access at Google. You can also remove the access at
+    <a href="https://myaccount.google.com/permissions">myaccount.google.com/permissions</a>. The saved event
+    details are deleted with the meeting they belong to.
+  </p>
+  <p>
+    <strong>Limited Use.</strong> Plan AI's use and transfer to any other app of information received from
+    Google APIs will adhere to the
+    <a href="https://developers.google.com/terms/api-services-user-data-policy">Google API Services User Data Policy</a>,
+    including the Limited Use requirements.
   </p>
 
-  <h2>7. Contact Us</h2>
+  <h2>6. Data Security</h2>
+  <p>
+    Data travels over HTTPS. Audio and files are private and served through links that expire.
+    If you run Plan AI on your own servers, you are responsible for securing them, including your database and
+    the API keys you provide to the application.
+  </p>
+
+  <h2>7. Changes to This Privacy Policy</h2>
+  <p>
+    We may update this privacy policy from time to time. The date at the top shows the last change.
+  </p>
+
+  <h2>8. Contact Us</h2>
   <p>
     If you have any questions about this privacy policy, please contact us at projects@blueberrybytes.com.
   </p>

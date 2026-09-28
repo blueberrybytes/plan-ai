@@ -41,6 +41,7 @@ import SpeakerInsightsTab, {
 } from "../components/transcript/SpeakerInsightsTab";
 import TranscriptBody from "../components/transcript/TranscriptBody";
 import SendNotesDialog from "../components/transcript/SendNotesDialog";
+import CalendarInviteInfo from "../components/transcript/CalendarInviteInfo";
 import { useTranslation } from "react-i18next";
 import { exportMarkdownToDocx } from "../utils/docxExport";
 import { jsPDF } from "jspdf";
@@ -514,6 +515,7 @@ const RecordingDetail: React.FC = () => {
                   {transcript.data.metadata.sentimentExplanation}
                 </Typography>
               )}
+              <CalendarInviteInfo metadata={transcript.data?.metadata} />
             </Box>
           </Stack>
 

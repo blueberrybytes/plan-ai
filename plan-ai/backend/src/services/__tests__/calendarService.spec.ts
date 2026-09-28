@@ -12,6 +12,7 @@ import type { UserIntegration } from "@prisma/client";
 const { db, http } = vi.hoisted(() => ({
   db: {
     userIntegration: {
+      findFirst: vi.fn(),
       findMany: vi.fn(),
       updateMany: vi.fn(),
       upsert: vi.fn(),
@@ -193,6 +194,25 @@ describe("OAuth state", () => {
   it("drops a redirect path that leaves the web app", () => {
     const token = calendarService.createStateToken({ ...input, redirectPath: "//evil.example" });
     expect(calendarService.parseStateToken(token, "GOOGLE_CALENDAR")?.redirectPath).toBeUndefined();
+  });
+});
+
+describe("revokeGoogleAccess", () => {
+  it("revokes the refresh token at Google", async () => {
+    db.userIntegration.findFirst.mockResolvedValue({
+      accessToken: encryptSecret("g-access"),
+      refreshToken: encryptSecret("g-refresh"),
+    });
+    http.post.mockResolvedValue({ data: {} });
+    await calendarService.revokeGoogleAccess("user-1");
+    expect(http.post.mock.calls[0][0]).toBe("https://oauth2.googleapis.com/revoke");
+    expect((http.post.mock.calls[0][1] as URLSearchParams).get("token")).toBe("g-refresh");
+  });
+
+  it("never blocks the disconnect when Google fails", async () => {
+    db.userIntegration.findFirst.mockResolvedValue({ accessToken: "a", refreshToken: null });
+    http.post.mockRejectedValue(httpError(400, { error: "invalid_token" }));
+    await expect(calendarService.revokeGoogleAccess("user-1")).resolves.toBeUndefined();
   });
 });
 

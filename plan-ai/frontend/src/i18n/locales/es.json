@@ -1554,5 +1554,11 @@
     "sent": "Notas enviadas. Destinatarios: {{count}}.",
     "partlySent": "Notas enviadas a {{count}}. No se pudo enviar a: {{failed}}.",
     "failed": "No se pudieron enviar las notas."
+  },
+  "calendarInvite": {
+    "title": "Invitación del calendario",
+    "callLink": "Enlace de la llamada",
+    "invited": "Invitados ({{count}}):",
+    "nobody": "nadie más"
   }
 }

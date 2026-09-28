@@ -10,6 +10,7 @@ import type {
   JiraIntegrationMetadata,
   AsanaIntegrationMetadata,
 } from "../services/integrationMetadataTypes";
+import { calendarService } from "../services/calendarService";
 
 interface IntegrationSummaryResponse {
   id: string;
@@ -114,8 +115,11 @@ export class IntegrationController extends BaseWorkspaceController {
         return { status: 404, data: null, message: "Integration not found" };
       }
     } else {
-      // User-level integrations (GitHub, Google Drive) — user can disconnect their own
+      // User-level integrations (GitHub, calendars) — user can disconnect their own
       const { user, workspaceId } = await this.getAuthorizedWorkspaceAccess(request);
+      if (providerEnum === "GOOGLE_CALENDAR") {
+        await calendarService.revokeGoogleAccess(user.id);
+      }
       const success = await integrationService.deleteIntegrationForContext(
         workspaceId,
         user.id,

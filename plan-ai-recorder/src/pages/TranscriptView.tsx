@@ -38,6 +38,7 @@ import RecordingAudioPlayer, {
 } from "../components/RecordingAudioPlayer";
 import PostMeetingTasksPanel from "../components/PostMeetingTasksPanel";
 import SendNotesDialog from "../components/SendNotesDialog";
+import CalendarInviteInfo from "../components/CalendarInviteInfo";
 import SyncBadges from "../components/SyncBadges";
 import SpeakerInsightsTab, {
   type SpeakerInsight,
@@ -760,6 +761,8 @@ const TranscriptView: React.FC = () => {
                 {transcript.metadata.sentimentExplanation}
               </Typography>
             )}
+
+            <CalendarInviteInfo metadata={transcript.metadata} />
 
             {transcript.metadata?.processingStatus === "PENDING" ? (
               <Box

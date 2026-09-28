@@ -513,6 +513,39 @@ const Home: React.FC = () => {
   const [currentMeeting, setCurrentMeeting] = useState<CalendarEvent | null>(
     null,
   );
+  // Calendars are connected in the web app. Without one, Home says where.
+  const [hasCalendar, setHasCalendar] = useState<boolean | null>(null);
+  useEffect(() => {
+    if (!api) return;
+    let cancelled = false;
+    api
+      .listIntegrations()
+      .then((list) => {
+        if (cancelled) return;
+        setHasCalendar(
+          list.some(
+            (i) =>
+              (i.provider === "GOOGLE_CALENDAR" ||
+                i.provider === "OUTLOOK_CALENDAR") &&
+              i.status === "CONNECTED",
+          ),
+        );
+      })
+      .catch(() => {
+        /* unknown: show nothing */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [api]);
+  const openCalendarSettings = () => {
+    const webUrl =
+      import.meta.env.VITE_PLAN_AI_WEB_URL ||
+      "https://plan-ai.blueberrybytes.com";
+    void window.electron.openExternalUrl(
+      `${webUrl}/integrations/google-calendar`,
+    );
+  };
   useEffect(() => {
     if (!api) return;
     let cancelled = false;
@@ -544,9 +577,19 @@ const Home: React.FC = () => {
     };
     void check();
     const timer = setInterval(() => void check(), 3 * 60_000);
+    // Coming back to the window checks again (at most every 30 s): a meeting
+    // added a moment ago should not take 3 minutes to show up.
+    let lastFocusCheck = Date.now();
+    const onFocus = () => {
+      if (Date.now() - lastFocusCheck < 30_000) return;
+      lastFocusCheck = Date.now();
+      void check();
+    };
+    window.addEventListener("focus", onFocus);
     return () => {
       cancelled = true;
       clearInterval(timer);
+      window.removeEventListener("focus", onFocus);
     };
   }, [api]);
 
@@ -595,7 +638,24 @@ const Home: React.FC = () => {
       />
 
       {currentMeeting && (
-        <Alert severity="info" sx={{ borderRadius: 0, flexShrink: 0 }}>
+        <Alert
+          severity="info"
+          sx={{ borderRadius: 0, flexShrink: 0 }}
+          action={
+            <Button
+              color="inherit"
+              size="small"
+              startIcon={<MicIcon />}
+              onClick={handleStartRecording}
+              disabled={
+                window.electron.platform === "darwin" &&
+                (!hasScreenPermission || !hasMicPermission)
+              }
+            >
+              Record it
+            </Button>
+          }
+        >
           Happening now: <strong>{currentMeeting.title}</strong>
           {currentMeeting.attendees.length > 0
             ? `, ${currentMeeting.attendees.length} invited`
@@ -1389,6 +1449,29 @@ const Home: React.FC = () => {
             >
               Start Recording
             </Button>
+            {hasCalendar === false && (
+              <Typography
+                variant="caption"
+                color="text.secondary"
+                sx={{ textAlign: "center" }}
+              >
+                Connect Google Calendar or Outlook to name recordings after
+                your meetings and their attendees.{" "}
+                <Button
+                  size="small"
+                  onClick={openCalendarSettings}
+                  sx={{
+                    textTransform: "none",
+                    fontSize: "0.75rem",
+                    p: 0,
+                    minWidth: 0,
+                    verticalAlign: "baseline",
+                  }}
+                >
+                  Connect a calendar
+                </Button>
+              </Typography>
+            )}
           </Box>
         </Box>
       </Box>

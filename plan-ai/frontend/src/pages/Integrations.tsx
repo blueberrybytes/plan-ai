@@ -1304,7 +1304,9 @@ const Integrations: React.FC = () => {
                 config.tabValue !== "google" &&
                 config.tabValue !== "notion" &&
                 config.tabValue !== "microsoft" &&
-                config.tabValue !== "asana" && (
+                config.tabValue !== "asana" &&
+                config.tabValue !== "google-calendar" &&
+                config.tabValue !== "outlook-calendar" && (
                   <Button variant="contained" color="primary" disabled>
                     {config.connectCtaKey ? t(config.connectCtaKey) : undefined}
                   </Button>
@@ -1374,8 +1376,10 @@ const Integrations: React.FC = () => {
                 case "trello":
                   iconEl = <img src={trelloSvg} alt="Trello" width={16} height={16} />;
                   break;
+                // Material icons take the chip's text colour, white in dark mode,
+                // which vanishes on the white circle. They get their own colour.
                 case "twenty":
-                  iconEl = <HubOutlinedIcon sx={{ fontSize: 16 }} />;
+                  iconEl = <HubOutlinedIcon sx={{ fontSize: 16, color: "#1f2937" }} />;
                   break;
                 case "google":
                   iconEl = <img src={googleDriveSvg} alt="Google Drive" width={16} height={16} />;
@@ -1387,10 +1391,10 @@ const Integrations: React.FC = () => {
                   iconEl = <img src={asanaSvg} alt="Asana" width={16} height={16} />;
                   break;
                 case "google-calendar":
-                  iconEl = <CalendarMonthOutlinedIcon sx={{ fontSize: 16 }} />;
+                  iconEl = <CalendarMonthOutlinedIcon sx={{ fontSize: 16, color: "#1a73e8" }} />;
                   break;
                 case "outlook-calendar":
-                  iconEl = <EventOutlinedIcon sx={{ fontSize: 16 }} />;
+                  iconEl = <EventOutlinedIcon sx={{ fontSize: 16, color: "#0078d4" }} />;
                   break;
               }
 
