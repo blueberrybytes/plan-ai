@@ -2,6 +2,7 @@ import { IntegrationProvider, IntegrationStatus, Prisma, type Transcript } from 
 import prisma from "../prisma/prismaClient";
 import { logger } from "../utils/logger";
 import EnvUtils from "../utils/EnvUtils";
+import { decryptSecret, encryptSecret } from "../utils/secretCrypto";
 import type { TwentyIntegrationMetadata } from "./integrationMetadataTypes";
 import type { TranscriptMetadata, TwentyNoteRef, SpeakerInsight } from "./transcriptMetadataTypes";
 import type {
@@ -246,7 +247,7 @@ class TwentyIntegrationService {
     const metadata = (integration.metadata ?? null) as TwentyIntegrationMetadata | null;
     if (!metadata?.baseUrl) return null;
 
-    return { apiKey: integration.accessToken, baseUrl: metadata.baseUrl, metadata };
+    return { apiKey: decryptSecret(integration.accessToken), baseUrl: metadata.baseUrl, metadata };
   }
 
   private async fetchTwenty<T>(
@@ -357,13 +358,13 @@ class TwentyIntegrationService {
         workspaceId,
         provider: IntegrationProvider.TWENTY,
         status: IntegrationStatus.CONNECTED,
-        accessToken: apiKey,
+        accessToken: encryptSecret(apiKey),
         accountName: new URL(baseUrl).host,
         metadata: metadata as unknown as Prisma.InputJsonObject,
       },
       update: {
         status: IntegrationStatus.CONNECTED,
-        accessToken: apiKey,
+        accessToken: encryptSecret(apiKey),
         accountName: new URL(baseUrl).host,
         metadata: metadata as unknown as Prisma.InputJsonObject,
       },

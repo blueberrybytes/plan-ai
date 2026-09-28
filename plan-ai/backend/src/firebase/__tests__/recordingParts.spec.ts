@@ -8,6 +8,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
  */
 
 const store = vi.hoisted(() => new Map<string, Buffer>());
+const created = vi.hoisted(() => new Map<string, number>());
 const calls = vi.hoisted(() => ({ combine: [] as { sources: string[]; destination: string }[] }));
 
 vi.mock("../firebaseAdmin", () => ({
@@ -17,6 +18,7 @@ vi.mock("../firebaseAdmin", () => ({
         file: (path: string) => ({
           save: async (data: Buffer) => {
             store.set(path, Buffer.from(data));
+            created.set(path, Date.now());
           },
           setMetadata: async () => undefined,
           delete: async () => {
@@ -29,7 +31,15 @@ vi.mock("../firebaseAdmin", () => ({
           store.set(destination, Buffer.concat(sources.map((s) => store.get(s)!)));
         },
         getFiles: async ({ prefix }: { prefix: string }) => [
-          [...store.keys()].filter((k) => k.startsWith(prefix)).map((name) => ({ name })),
+          [...store.keys()]
+            .filter((k) => k.startsWith(prefix))
+            .map((name) => ({
+              name,
+              metadata: { timeCreated: new Date(created.get(name) ?? Date.now()).toISOString() },
+              delete: async () => {
+                store.delete(name);
+              },
+            })),
         ],
         deleteFiles: async ({ prefix }: { prefix: string }) => {
           for (const k of [...store.keys()]) if (k.startsWith(prefix)) store.delete(k);
@@ -41,6 +51,7 @@ vi.mock("../firebaseAdmin", () => ({
 
 import {
   composePaths,
+  deleteOlderThan,
   deletePrefix,
   listPaths,
   recordingPartPath,
@@ -51,6 +62,7 @@ import {
 beforeEach(() => {
   process.env.FIREBASE_STORAGE_BUCKET = "plan-ai.appspot.com";
   store.clear();
+  created.clear();
   calls.combine = [];
 });
 afterEach(() => {
@@ -62,7 +74,11 @@ const savePartsOf = async (count: number) => {
   for (let i = 0; i < count; i++) {
     const part = Buffer.from(`part-${i};`);
     expected.push(part);
-    await uploadPrivateFile(recordingPartPath("u1", "m-abc12345", i), part, "application/octet-stream");
+    await uploadPrivateFile(
+      recordingPartPath("u1", "m-abc12345", i),
+      part,
+      "application/octet-stream",
+    );
   }
   return Buffer.concat(expected);
 };
@@ -72,7 +88,9 @@ describe("recording parts", () => {
     expect(recordingPartPath("u1", "m-abc12345", 7)).toBe(
       "recording-uploads/u1/m-abc12345/part-000007",
     );
-    expect(recordingPartPath("u1", "m-abc12345", 7).startsWith(recordingPartsPrefix("u1", "m-abc12345"))).toBe(true);
+    expect(
+      recordingPartPath("u1", "m-abc12345", 7).startsWith(recordingPartsPrefix("u1", "m-abc12345")),
+    ).toBe(true);
   });
 
   it("joins a few parts in one call", async () => {
@@ -103,5 +121,16 @@ describe("recording parts", () => {
     await deletePrefix(recordingPartsPrefix("u1", "m-abc12345"));
     expect(await listPaths(recordingPartsPrefix("u1", "m-abc12345"))).toEqual([]);
     expect(await listPaths(recordingPartsPrefix("u1", "m-other999"))).toHaveLength(1);
+  });
+
+  it("cleans up only slices older than the limit", async () => {
+    await savePartsOf(2);
+    const oldPath = recordingPartPath("u2", "m-abandoned1", 0);
+    await uploadPrivateFile(oldPath, Buffer.from("old"), "x");
+    created.set(oldPath, Date.now() - 8 * 24 * 60 * 60 * 1000);
+    const removed = await deleteOlderThan("recording-uploads/", 7 * 24 * 60 * 60 * 1000);
+    expect(removed).toBe(1);
+    expect(store.has(oldPath)).toBe(false);
+    expect(await listPaths(recordingPartsPrefix("u1", "m-abc12345"))).toHaveLength(2);
   });
 });

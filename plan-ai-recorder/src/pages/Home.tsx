@@ -39,6 +39,7 @@ import type { Transcript, Project } from "../services/planAiApi";
 import type { DesktopSource } from "../types/electron";
 import { AudioLevelMonitor } from "../components/AudioLevelMonitor";
 import {
+  type CalendarEvent,
   saveConfig,
   loadConfig,
   saveLanguagePreference,
@@ -73,6 +74,35 @@ const meetingKey = (m: UnsavedTranscript) => m.sessionId ?? "legacy";
 import { DEEPGRAM_LANGUAGES, AUTO_LANGUAGE_OPTION } from "../utils/deepgramLanguages";
 import { PrivacyConsentDialog } from "../components/PrivacyConsentDialog";
 import WorkspaceSwitcher from "../components/WorkspaceSwitcher";
+
+// Meetings already announced with a notification. Home remounts after every
+// recording, so this lives outside it, and in sessionStorage so a reload of
+// the window does not announce the same meeting again.
+const NOTIFIED_KEY = "planai_notified_meetings";
+const notifiedMeetings = new Set<string>(
+  (() => {
+    try {
+      const stored = JSON.parse(sessionStorage.getItem(NOTIFIED_KEY) ?? "[]");
+      return Array.isArray(stored)
+        ? stored.filter((k) => typeof k === "string")
+        : [];
+    } catch {
+      return [];
+    }
+  })(),
+);
+const wasNotified = (key: string): boolean => notifiedMeetings.has(key);
+const markNotified = (key: string): void => {
+  notifiedMeetings.add(key);
+  try {
+    sessionStorage.setItem(
+      NOTIFIED_KEY,
+      JSON.stringify([...notifiedMeetings].slice(-50)),
+    );
+  } catch {
+    /* storage unavailable: the in-memory set still works */
+  }
+};
 
 const Home: React.FC = () => {
   const { user, dbUser, token, signOut, api, activeWorkspaceId } = useAuth();
@@ -236,7 +266,9 @@ const Home: React.FC = () => {
         const startedAt = meeting.startedAt ?? meeting.savedAt;
         await api.saveRecording({
           content: meeting.content.trim() ? meeting.content : undefined,
-          title: `Recovered Meeting (${new Date(startedAt || Date.now()).toLocaleString()})`,
+          title:
+            meeting.calendarEvent?.title ??
+            `Recovered Meeting (${new Date(startedAt || Date.now()).toLocaleString()})`,
           recordedAt: new Date(meeting.savedAt || Date.now()).toISOString(),
           recordingStartedAt: meeting.startedAt
             ? new Date(meeting.startedAt).toISOString()
@@ -247,6 +279,8 @@ const Home: React.FC = () => {
           // Same id as the original save: if that one reached the server
           // before the crash, this returns it instead of a duplicate.
           clientSessionId: meeting.sessionId,
+          calendarEvent: meeting.calendarEvent,
+          bookmarks: meeting.bookmarks?.length ? meeting.bookmarks : undefined,
           micFile: audio.micBlob,
           sysFile: audio.sysBlob,
           // skipAi left off so the normal pipeline still generates tasks/summary.
@@ -472,6 +506,50 @@ const Home: React.FC = () => {
     console.log("[Home] systemSourceId state:", systemSourceId);
   }, [systemSourceId]);
 
+  // ── Calendar: the meeting happening now ────────────────────────────────
+  // With a calendar connected (web app, Integrations), the recording is named
+  // after the invite and its attendees help name the speakers. Checked every
+  // 3 minutes while Home is open; costs nothing when no calendar is connected.
+  const [currentMeeting, setCurrentMeeting] = useState<CalendarEvent | null>(
+    null,
+  );
+  useEffect(() => {
+    if (!api) return;
+    let cancelled = false;
+    const check = async () => {
+      const event = await api.getCurrentMeeting();
+      if (cancelled) return;
+      setCurrentMeeting(event);
+      if (!event) return;
+      // One notification per meeting, from 1 minute before it starts to 5
+      // minutes after: the window may be behind the call app.
+      const startMs = Date.parse(event.start);
+      const now = Date.now();
+      const key = `${event.title}|${event.start}`;
+      if (
+        startMs - now < 60_000 &&
+        now - startMs < 5 * 60_000 &&
+        !wasNotified(key)
+      ) {
+        markNotified(key);
+        try {
+          const n = new Notification(`${event.title} is starting`, {
+            body: "Open Plan AI to record it.",
+          });
+          n.onclick = () => window.focus();
+        } catch {
+          /* notifications unavailable */
+        }
+      }
+    };
+    void check();
+    const timer = setInterval(() => void check(), 3 * 60_000);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+    };
+  }, [api]);
+
   const handleStartRecording = () => {
     // Echo cancellation is ON automatically; it only turns off if the user
     // flipped it to headphones mode in a prior recording (persisted choice).
@@ -483,6 +561,12 @@ const Home: React.FC = () => {
       micDeviceId,
       speakerMode,
       projectIds: selectedProjectId ? [selectedProjectId] : undefined,
+      // Checked up to 3 minutes ago: a meeting that has ended since is left
+      // out, and the recording screen asks the calendar again.
+      calendarEvent:
+        currentMeeting && Date.parse(currentMeeting.end) > Date.now()
+          ? currentMeeting
+          : undefined,
     };
     saveConfig(config);
     // Re-assert the language on Start, so the preference repairs itself if it
@@ -509,6 +593,17 @@ const Home: React.FC = () => {
           flexShrink: 0,
         }}
       />
+
+      {currentMeeting && (
+        <Alert severity="info" sx={{ borderRadius: 0, flexShrink: 0 }}>
+          Happening now: <strong>{currentMeeting.title}</strong>
+          {currentMeeting.attendees.length > 0
+            ? `, ${currentMeeting.attendees.length} invited`
+            : ""}
+          . A recording started now is named after it, and the invite helps name
+          the speakers.
+        </Alert>
+      )}
 
       {unsavedMeetings.map((meeting) => {
         const key = meetingKey(meeting);

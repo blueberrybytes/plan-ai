@@ -5,6 +5,8 @@ import type { WorkspaceIntegration } from "@prisma/client";
 import EnvUtils from "../utils/EnvUtils";
 import { logger } from "../utils/logger";
 import prisma from "../prisma/prismaClient";
+import { encryptSecret } from "../utils/secretCrypto";
+import { encryptTokens, withDecryptedTokens } from "../utils/integrationSecrets";
 import type { JiraMyselfResponse, JiraSearchResponse, JiraBoardResponse } from "./jiraTypes";
 import type { JiraIntegrationMetadata } from "./integrationMetadataTypes";
 import type { TaskMetadata } from "./taskMetadataTypes";
@@ -169,6 +171,8 @@ class JiraIntegrationService {
     workspaceId: string,
     integration: WorkspaceIntegration,
   ): Promise<WorkspaceIntegration> {
+    // Callers get plain tokens back whatever they pass in.
+    integration = withDecryptedTokens(integration);
     const meta = integration.metadata as unknown as JiraIntegrationMetadata;
     const isBasic = meta?.authType === "BASIC";
     if (isBasic || !integration.refreshToken) {
@@ -211,14 +215,14 @@ class JiraIntegrationService {
 
       const updated = await prisma.workspaceIntegration.update({
         where: { id: integration.id },
-        data: {
+        data: encryptTokens({
           accessToken: parsed.access_token,
           refreshToken: parsed.refresh_token, // Atlassian may issue a new refresh token
           expiresAt,
-        },
+        }),
       });
 
-      return updated;
+      return withDecryptedTokens(updated);
     } catch (error) {
       logger.error("Error refreshing Jira token", error);
       await prisma.workspaceIntegration.update({
@@ -293,8 +297,8 @@ class JiraIntegrationService {
       },
       update: {
         status: IntegrationStatus.CONNECTED,
-        accessToken: params.accessToken,
-        refreshToken: params.refreshToken ?? null,
+        accessToken: encryptSecret(params.accessToken),
+        refreshToken: encryptSecret(params.refreshToken ?? null),
         expiresAt,
         scope: params.scope ?? null,
         accountId: params.resource.id,
@@ -305,8 +309,8 @@ class JiraIntegrationService {
         workspaceId: params.workspaceId,
         provider: IntegrationProvider.JIRA,
         status: IntegrationStatus.CONNECTED,
-        accessToken: params.accessToken,
-        refreshToken: params.refreshToken ?? null,
+        accessToken: encryptSecret(params.accessToken),
+        refreshToken: encryptSecret(params.refreshToken ?? null),
         expiresAt,
         scope: params.scope ?? null,
         accountId: params.resource.id,
@@ -315,7 +319,7 @@ class JiraIntegrationService {
       },
     });
 
-    return integration;
+    return withDecryptedTokens(integration);
   }
 
   public async verifyManualCredentials(
@@ -358,7 +362,7 @@ class JiraIntegrationService {
       },
       update: {
         status: IntegrationStatus.CONNECTED,
-        accessToken: basicAuth,
+        accessToken: encryptSecret(basicAuth),
         refreshToken: null,
         expiresAt: null,
         scope: "read:jira-work write:jira-work",
@@ -376,7 +380,7 @@ class JiraIntegrationService {
         workspaceId,
         provider: IntegrationProvider.JIRA,
         status: IntegrationStatus.CONNECTED,
-        accessToken: basicAuth,
+        accessToken: encryptSecret(basicAuth),
         refreshToken: null,
         expiresAt: null,
         scope: "read:jira-work write:jira-work",
@@ -392,17 +396,19 @@ class JiraIntegrationService {
       },
     });
 
-    return integration;
+    return withDecryptedTokens(integration);
   }
 
   public async getJiraSummary(
     workspaceId: string,
   ): Promise<{ totalIssues: string | null; totalProjects: number | null; latestBoards: string[] }> {
-    let integration = await prisma.workspaceIntegration.findUnique({
-      where: {
-        workspaceId_provider: { workspaceId, provider: IntegrationProvider.JIRA },
-      },
-    });
+    let integration = withDecryptedTokens(
+      await prisma.workspaceIntegration.findUnique({
+        where: {
+          workspaceId_provider: { workspaceId, provider: IntegrationProvider.JIRA },
+        },
+      }),
+    );
 
     if (!integration || integration.status !== IntegrationStatus.CONNECTED) {
       throw new Error("Jira is not connected");
@@ -525,9 +531,11 @@ class JiraIntegrationService {
   public async listJiraProjects(
     workspaceId: string,
   ): Promise<{ id: string; name: string; key: string }[]> {
-    let integration = await prisma.workspaceIntegration.findUnique({
-      where: { workspaceId_provider: { workspaceId, provider: IntegrationProvider.JIRA } },
-    });
+    let integration = withDecryptedTokens(
+      await prisma.workspaceIntegration.findUnique({
+        where: { workspaceId_provider: { workspaceId, provider: IntegrationProvider.JIRA } },
+      }),
+    );
 
     if (!integration || integration.status !== IntegrationStatus.CONNECTED) {
       throw new Error("Jira is not connected");
@@ -682,11 +690,13 @@ class JiraIntegrationService {
     taskId: string,
     projectId: string,
   ): Promise<{ issueId: string; issueKey: string; url: string }> {
-    let integration = await prisma.workspaceIntegration.findUnique({
-      where: {
-        workspaceId_provider: { workspaceId, provider: IntegrationProvider.JIRA },
-      },
-    });
+    let integration = withDecryptedTokens(
+      await prisma.workspaceIntegration.findUnique({
+        where: {
+          workspaceId_provider: { workspaceId, provider: IntegrationProvider.JIRA },
+        },
+      }),
+    );
 
     if (!integration || !integration.accessToken) {
       throw new Error("Jira integration not found or unauthorized");

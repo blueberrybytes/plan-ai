@@ -6,7 +6,11 @@ import type { createPlanAiApi } from "../services/planAiApi";
 import {
   WAV_HEADER_BYTES,
   audioBytes,
-  sessionAudioFile,
+  audioMimeTypeOf,
+  importTitleOf,
+  isImported,
+  sampleRateOf,
+  sessionAudioFileOf,
   type RecordingManifest,
 } from "../services/recordingSessions";
 import {
@@ -25,9 +29,15 @@ const formatWhen = (ms: number) =>
     minute: "2-digit",
   });
 
-// 24 kHz, 16-bit mono PCM.
-const minutesOfAudio = (bytes: number) =>
-  Math.max(0, Math.round((bytes - WAV_HEADER_BYTES) / 48000 / 60));
+// 16-bit mono PCM: two bytes per sample.
+const minutesOfAudio = (bytes: number, sampleRate: number) =>
+  Math.max(0, Math.round((bytes - WAV_HEADER_BYTES) / (sampleRate * 2) / 60));
+
+// An imported file is compressed, so its length cannot be read from its size.
+const megabytes = (bytes: number) => {
+  const mb = bytes / 1024 / 1024;
+  return mb >= 10 ? String(Math.round(mb)) : mb.toFixed(1);
+};
 
 /**
  * A meeting that is on this phone and not on the server yet: waiting to
@@ -44,20 +54,26 @@ export function LocalRecordingCard({
   api: Api;
 }) {
   const id = manifest.sessionId;
-  const bytes = audioBytes(id);
-  const minutes = minutesOfAudio(bytes);
+  const imported = isImported(manifest);
+  const bytes = audioBytes(id, manifest);
+  const hasAudio = imported ? bytes > 0 : bytes > WAV_HEADER_BYTES;
+  const amount = imported
+    ? `${megabytes(bytes)} MB file`
+    : `${minutesOfAudio(bytes, sampleRateOf(manifest))} min of audio`;
   const uploading = progress !== null;
   const interrupted = manifest.status !== "pending_upload";
 
   const title = interrupted
-    ? `Unsaved recording, ${formatWhen(manifest.startedAt)}`
+    ? imported
+      ? `Imported file, ${manifest.importedFileName}`
+      : `Unsaved recording, ${formatWhen(manifest.startedAt)}`
     : manifest.upload?.title || "Meeting";
 
   let subtitle: string;
   if (uploading) {
     subtitle = "Uploading…";
   } else if (interrupted) {
-    subtitle = `${minutes} min of audio on this phone`;
+    subtitle = `${amount} on this phone`;
   } else if (manifest.permanentError) {
     subtitle = "Upload stopped";
   } else if (manifest.nextAttemptAt && manifest.nextAttemptAt > Date.now()) {
@@ -69,13 +85,13 @@ export function LocalRecordingCard({
   }
 
   const exportAudio = async () => {
-    if (bytes <= WAV_HEADER_BYTES) {
+    if (!hasAudio) {
       Alert.alert("No audio", "This meeting has no audio on the phone, only text.");
       return;
     }
     try {
-      await Sharing.shareAsync(sessionAudioFile(id).uri, {
-        mimeType: "audio/wav",
+      await Sharing.shareAsync(sessionAudioFileOf(id, manifest).uri, {
+        mimeType: audioMimeTypeOf(manifest),
         dialogTitle: "Export meeting audio",
       });
     } catch (err) {
@@ -95,7 +111,10 @@ export function LocalRecordingCard({
 
   const uploadInterrupted = () => {
     void saveAndUpload(api, id, {
-      title: `Recovered meeting (${formatWhen(manifest.startedAt)})`,
+      title:
+        imported && manifest.importedFileName
+          ? importTitleOf(manifest.importedFileName)
+          : `Recovered meeting (${formatWhen(manifest.startedAt)})`,
       projectId: manifest.projectId ?? undefined,
       contextIds: manifest.contextIds.length > 0 ? manifest.contextIds : undefined,
       language: manifest.language || undefined,
@@ -143,7 +162,9 @@ export function LocalRecordingCard({
           <Text variant="bodyMedium" style={{ color: "#92400e", marginTop: 4 }}>
             {manifest.origin === "legacy_backup"
               ? "Audio found from an older version of the app. It may already be saved; check your meetings before uploading it."
-              : "The app closed before this meeting was saved. Upload it to get the transcript, summary and tasks."}
+              : imported
+                ? "This file was imported but not uploaded yet. Upload it to get the transcript, summary and tasks."
+                : "The app closed before this meeting was saved. Upload it to get the transcript, summary and tasks."}
           </Text>
         )}
         {!interrupted && manifest.permanentError && manifest.lastError && (

@@ -39,10 +39,17 @@ export const transcriptGenerationWorker = new Worker<TranscriptGenerationJobPayl
           `[worker:transcript] Skipping job ${job.id} — workspace ${job.data.workspaceId} subscription ${sub.reason ?? "missing"}`,
         );
         try {
+          // Keep what is already there (clientSessionId for retries,
+          // bookmarks, the calendar invite, generation options).
+          const current = await prisma.transcript.findUnique({
+            where: { id: job.data.transcriptId },
+            select: { metadata: true },
+          });
           await prisma.transcript.update({
             where: { id: job.data.transcriptId },
             data: {
               metadata: {
+                ...((current?.metadata as Prisma.JsonObject | null) ?? {}),
                 processingStatus: "FAILED",
                 processingError: "Subscription required. Re-subscribe to retry this transcript.",
                 failureReason: "subscription_required",

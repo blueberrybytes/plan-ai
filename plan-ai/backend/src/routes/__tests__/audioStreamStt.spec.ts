@@ -23,7 +23,19 @@ vi.mock("../../prisma/prismaClient", () => ({
   default: {
     user: { findUnique: async () => ({ id: "user_1" }) },
     workspace: { findUnique: async () => mocks.workspace },
-    workspaceMember: { findFirst: async () => null },
+    workspaceMember: {
+      findFirst: async () => null,
+      // user_1 belongs to ws_1 only.
+      findUnique: async ({
+        where,
+      }: {
+        where: { workspaceId_userId: { workspaceId: string; userId: string } };
+      }) =>
+        where.workspaceId_userId.workspaceId === "ws_1" &&
+        where.workspaceId_userId.userId === "user_1"
+          ? { id: "m1" }
+          : null,
+    },
     context: { findMany: async () => [] },
   },
 }));
@@ -163,6 +175,15 @@ describe("recorder audio stream with Deepgram (default)", () => {
     const err = await waitFor((m) => m.type === "error");
     expect(err).toMatchObject({ code: "MISSING_API_KEY", provider: "DEEPGRAM" });
     expect(mocks.whisperConn).toBeNull();
+    ws.close();
+  });
+
+  it("refuses a workspace the user does not belong to, before touching its key", async () => {
+    mocks.workspace = { id: "ws_other", deepgramKey: "a".repeat(40), isCourtesy: false };
+    const { ws, waitFor } = connect("token=t&workspaceId=ws_other&language=es");
+    const err = await waitFor((m) => m.type === "error");
+    expect(String(err.message)).toContain("not a workspace member");
+    expect(mocks.createDeepgram).not.toHaveBeenCalled();
     ws.close();
   });
 

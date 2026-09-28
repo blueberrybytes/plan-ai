@@ -3,6 +3,7 @@ import { Prisma } from "@prisma/client";
 import prisma from "../prisma/prismaClient";
 import { AuthenticatedRequest } from "../middleware/authMiddleware";
 import type { ApiResponse } from "./controllerTypes";
+import { encryptSecret, isEncryptedSecret } from "../utils/secretCrypto";
 
 export interface CustomThemePayload {
   primaryColor?: string;
@@ -86,12 +87,20 @@ export class OnboardingController extends Controller {
         throw new Error("workspaceName and brandTheme are required for new workspace creators");
       }
 
+      if (
+        isEncryptedSecret(body.openRouterKey?.trim()) ||
+        isEncryptedSecret(body.deepgramKey?.trim())
+      ) {
+        this.setStatus(400);
+        throw new Error("That does not look like an API key.");
+      }
+
       // Create Workspace
       const workspace = await prisma.workspace.create({
         data: {
           name: body.workspaceName,
-          openRouterKey: body.openRouterKey || null,
-          deepgramKey: body.deepgramKey || null,
+          openRouterKey: encryptSecret(body.openRouterKey || null),
+          deepgramKey: encryptSecret(body.deepgramKey || null),
           members: {
             create: { userId: user.id, role: "OWNER" },
           },

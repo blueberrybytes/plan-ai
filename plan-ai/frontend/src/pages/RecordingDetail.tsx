@@ -25,6 +25,7 @@ import {
   Group as GroupIcon,
   Place as LocationIcon,
   Refresh as RefreshIcon,
+  ForwardToInbox as SendNotesIcon,
 } from "@mui/icons-material";
 import { useParams, useNavigate } from "react-router-dom";
 import { useGetTranscriptQuery, useReprocessTranscriptMutation } from "../store/apis/transcriptApi";
@@ -39,6 +40,8 @@ import SpeakerInsightsTab, {
   type SpeakerInsight,
 } from "../components/transcript/SpeakerInsightsTab";
 import TranscriptBody from "../components/transcript/TranscriptBody";
+import SendNotesDialog from "../components/transcript/SendNotesDialog";
+import { useTranslation } from "react-i18next";
 import { exportMarkdownToDocx } from "../utils/docxExport";
 import { jsPDF } from "jspdf";
 
@@ -204,6 +207,8 @@ const RecordingDetail: React.FC = () => {
   const [copying, setCopying] = useState(false);
   const [tabValue, setTabValue] = useState("summary");
   const [exportAnchor, setExportAnchor] = useState<null | HTMLElement>(null);
+  const [sendNotesOpen, setSendNotesOpen] = useState(false);
+  const { t } = useTranslation();
 
   // When a transcript has no AI summary (e.g. standalone / pasted text),
   // default to the "transcript" tab instead of showing an empty summary.
@@ -530,6 +535,26 @@ const RecordingDetail: React.FC = () => {
               <MenuItem onClick={handleExportMarkdown}>Export to Markdown</MenuItem>
               <MenuItem onClick={handleExportDocx}>Export to Word (.docx)</MenuItem>
             </Menu>
+            <Button
+              variant="outlined"
+              startIcon={<SendNotesIcon />}
+              onClick={() => setSendNotesOpen(true)}
+              disabled={
+                !transcript.data?.summary &&
+                !(transcript.data?.metadata as { keyPoints?: unknown[] } | undefined)?.keyPoints
+                  ?.length
+              }
+            >
+              {t("sendNotes.button")}
+            </Button>
+            {recordingId && (
+              <SendNotesDialog
+                open={sendNotesOpen}
+                onClose={() => setSendNotesOpen(false)}
+                transcriptId={recordingId}
+                metadata={transcript.data?.metadata}
+              />
+            )}
           </Stack>
         </Stack>
 

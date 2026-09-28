@@ -110,8 +110,10 @@ export const readableUrl = async (
  * from finished recordings so a bucket lifecycle rule can delete parts of
  * uploads that were never finished (matchesPrefix "recording-uploads/").
  */
+export const RECORDING_PARTS_ROOT = "recording-uploads/";
+
 export const recordingPartsPrefix = (userId: string, uploadId: string): string =>
-  `recording-uploads/${userId}/${uploadId}/`;
+  `${RECORDING_PARTS_ROOT}${userId}/${uploadId}/`;
 
 export const recordingPartPath = (userId: string, uploadId: string, index: number): string =>
   `${recordingPartsPrefix(userId, uploadId)}part-${String(index).padStart(6, "0")}`;
@@ -137,23 +139,55 @@ export const composePaths = async (
   const bucket = await getBucket();
   const MAX_SOURCES = 32;
   const temporary: string[] = [];
-  let level = sources;
-  let round = 0;
-  while (level.length > MAX_SOURCES) {
-    const next: string[] = [];
-    for (let i = 0; i < level.length; i += MAX_SOURCES) {
-      const target = `${destination}.part-${round}-${i / MAX_SOURCES}`;
-      await bucket.combine(level.slice(i, i + MAX_SOURCES), target);
-      temporary.push(target);
-      next.push(target);
+  try {
+    let level = sources;
+    let round = 0;
+    while (level.length > MAX_SOURCES) {
+      const next: string[] = [];
+      for (let i = 0; i < level.length; i += MAX_SOURCES) {
+        const target = `${destination}.part-${round}-${i / MAX_SOURCES}`;
+        temporary.push(target);
+        await bucket.combine(level.slice(i, i + MAX_SOURCES), target);
+        next.push(target);
+      }
+      level = next;
+      round += 1;
     }
-    level = next;
-    round += 1;
+    await bucket.combine(level, destination);
+    await bucket.file(destination).setMetadata({ contentType });
+    return storageUri(destination);
+  } finally {
+    // Also on failure: they live outside recording-uploads/, where the daily
+    // sweep would never find them.
+    await Promise.allSettled(temporary.map((p) => bucket.file(p).delete({ ignoreNotFound: true })));
   }
-  await bucket.combine(level, destination);
-  await bucket.file(destination).setMetadata({ contentType });
-  await Promise.all(temporary.map((p) => bucket.file(p).delete({ ignoreNotFound: true })));
-  return storageUri(destination);
+};
+
+/** Deletes objects under a prefix created more than `maxAgeMs` ago. Returns how many. */
+export const deleteOlderThan = async (prefix: string, maxAgeMs: number): Promise<number> => {
+  const bucket = await getBucket();
+  const [files] = await bucket.getFiles({ prefix });
+  const cutoff = Date.now() - maxAgeMs;
+  const stale = files.filter((f) => {
+    const created = Date.parse(String(f.metadata?.timeCreated ?? ""));
+    return Number.isFinite(created) && created < cutoff;
+  });
+  // One object that cannot be deleted must not stop the rest.
+  const results = await Promise.allSettled(stale.map((f) => f.delete({ ignoreNotFound: true })));
+  return results.filter((r) => r.status === "fulfilled").length;
+};
+
+/**
+ * Deletes the object a stored reference points to (gs:// URI, old public URL
+ * or signed URL). References outside our bucket are left alone. Returns
+ * whether the reference was ours.
+ */
+export const deleteStoredObject = async (ref: string): Promise<boolean> => {
+  const path = objectPathOf(ref);
+  if (!path) return false;
+  const bucket = await getBucket();
+  await bucket.file(path).delete({ ignoreNotFound: true });
+  return true;
 };
 
 /** Deletes every object under a prefix. */

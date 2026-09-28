@@ -17,6 +17,15 @@ import type { ApiResponse } from "./controllerTypes";
 import { linearIntegrationService } from "../services/linearIntegrationService";
 import EnvUtils from "../utils/EnvUtils";
 import prisma from "../prisma/prismaClient";
+import { encryptSecret } from "../utils/secretCrypto";
+import { createOAuthState, readOAuthState, safeRedirectPath } from "../utils/oauthState";
+
+const OAUTH_STATE_PURPOSE = "linear";
+
+// Key for signing the OAuth state. The state used to be plain JSON, so anyone
+// could put another workspace's id in it and link their own Linear there.
+const oauthStateSecret = () =>
+  process.env.OAUTH_STATE_SECRET || EnvUtils.get("LINEAR_CLIENT_SECRET", "");
 
 interface LinearManualConnectRequest {
   apiKey: string;
@@ -81,8 +90,12 @@ export class LinearController extends BaseWorkspaceController {
       throw new Error("Unauthorized.");
     }
 
-    const stateObj = { uid: request.user.uid, workspaceId, redirectPath };
-    const state = encodeURIComponent(JSON.stringify(stateObj));
+    // Signed and short-lived: the callback trusts the workspaceId inside it.
+    const state = createOAuthState(
+      OAUTH_STATE_PURPOSE,
+      { uid: request.user.uid, workspaceId, redirectPath: safeRedirectPath(redirectPath) },
+      oauthStateSecret(),
+    );
     const url = linearIntegrationService.getAuthUrl(state);
 
     return {
@@ -116,10 +129,25 @@ export class LinearController extends BaseWorkspaceController {
     }
 
     try {
-      const stateObj = JSON.parse(decodeURIComponent(state));
+      const stateObj = readOAuthState<{
+        uid?: string;
+        workspaceId?: string;
+        redirectPath?: string;
+      }>(OAUTH_STATE_PURPOSE, state, oauthStateSecret());
+      if (!stateObj) {
+        if (res) {
+          const targetUrl = new URL("/integrations", baseUrl);
+          targetUrl.searchParams.set("provider", "linear");
+          targetUrl.searchParams.set("status", "error");
+          targetUrl.searchParams.set("message", "InvalidState");
+          return res.redirect(targetUrl.toString());
+        }
+        throw new Error("Invalid or expired OAuth state");
+      }
       const firebaseUid = stateObj.uid;
       const workspaceId = stateObj.workspaceId;
-      const redirectPath = stateObj.redirectPath || "/integrations?provider=linear";
+      const redirectPath =
+        safeRedirectPath(stateObj.redirectPath) ?? "/integrations?provider=linear";
 
       if (!workspaceId) {
         if (res) {
@@ -164,8 +192,8 @@ export class LinearController extends BaseWorkspaceController {
         },
         update: {
           status: "CONNECTED",
-          accessToken: tokens.accessToken,
-          refreshToken: tokens.refreshToken ?? null,
+          accessToken: encryptSecret(tokens.accessToken),
+          refreshToken: encryptSecret(tokens.refreshToken ?? null),
           expiresAt,
           accountId: tokens.accountId,
           accountName: tokens.accountName,
@@ -175,8 +203,8 @@ export class LinearController extends BaseWorkspaceController {
           workspaceId,
           provider: "LINEAR",
           status: "CONNECTED",
-          accessToken: tokens.accessToken,
-          refreshToken: tokens.refreshToken ?? null,
+          accessToken: encryptSecret(tokens.accessToken),
+          refreshToken: encryptSecret(tokens.refreshToken ?? null),
           expiresAt,
           accountId: tokens.accountId,
           accountName: tokens.accountName,

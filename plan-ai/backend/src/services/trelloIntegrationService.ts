@@ -1,6 +1,7 @@
 import { IntegrationProvider, IntegrationStatus, Prisma } from "@prisma/client";
 import prisma from "../prisma/prismaClient";
 import { logger } from "../utils/logger";
+import { decryptSecret, encryptSecret } from "../utils/secretCrypto";
 import type { TrelloManualConnectRequest, TrelloSummaryResponse } from "./trelloTypes";
 import type { TrelloIntegrationMetadata } from "./integrationMetadataTypes";
 
@@ -61,7 +62,8 @@ class TrelloIntegrationService {
           workspaceId,
           provider: IntegrationProvider.TRELLO,
           status: IntegrationStatus.CONNECTED,
-          accessToken: `${apiKey}:${token}`, // Store them bound together to avoid adding a new column
+          // Store them bound together to avoid adding a new column
+          accessToken: encryptSecret(`${apiKey}:${token}`),
           accountId: viewer.id,
           accountName: viewer.fullName,
           metadata: {
@@ -70,7 +72,7 @@ class TrelloIntegrationService {
         },
         update: {
           status: IntegrationStatus.CONNECTED,
-          accessToken: `${apiKey}:${token}`,
+          accessToken: encryptSecret(`${apiKey}:${token}`),
           accountId: viewer.id,
           accountName: viewer.fullName,
           metadata: {
@@ -119,7 +121,7 @@ class TrelloIntegrationService {
           workspaceId,
           provider: IntegrationProvider.TRELLO,
           status: IntegrationStatus.CONNECTED,
-          accessToken: `${apiKey}:${token}`,
+          accessToken: encryptSecret(`${apiKey}:${token}`),
           accountId: viewer.id,
           accountName: viewer.fullName,
           metadata: {
@@ -128,7 +130,7 @@ class TrelloIntegrationService {
         },
         update: {
           status: IntegrationStatus.CONNECTED,
-          accessToken: `${apiKey}:${token}`,
+          accessToken: encryptSecret(`${apiKey}:${token}`),
           accountId: viewer.id,
           accountName: viewer.fullName,
           metadata: {
@@ -143,8 +145,9 @@ class TrelloIntegrationService {
     }
   }
 
+  /** Takes the stored accessToken (encrypted or not) and returns the key and token. */
   private getCredentials(accessToken: string): { apiKey: string; token: string } {
-    const [apiKey, token] = accessToken.split(":");
+    const [apiKey, token] = decryptSecret(accessToken).split(":");
     return { apiKey, token };
   }
 

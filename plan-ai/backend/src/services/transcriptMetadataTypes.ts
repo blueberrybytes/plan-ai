@@ -1,3 +1,4 @@
+import type { MeetingCalendarEvent, RecordingBookmark } from "./meetingNotes";
 export type PostMeetingTaskKind =
   | "jira"
   | "linear"
@@ -101,6 +102,20 @@ export interface TranscriptMetadata {
    * id returns the transcript already created instead of a duplicate.
    */
   clientSessionId?: string;
+  /** Moments the person recording marked during the meeting. */
+  bookmarks?: RecordingBookmark[];
+  /** The calendar event the recording belongs to (title, attendees). */
+  calendarEvent?: MeetingCalendarEvent;
+  /**
+   * How much later the mic file runs than the system audio file, in ms, so
+   * the player can play both in step. Absent when it could not be measured.
+   */
+  micSysOffsetMs?: number;
+  /** When the audio files were deleted (retention rule or by hand). */
+  audioDeletedAt?: string;
+  audioDeletedReason?: "retention" | "user";
+  /** Each time the notes were emailed to people in the meeting. */
+  notesEmails?: { sentAt: string; sentBy: string; count: number }[];
 }
 
 /**

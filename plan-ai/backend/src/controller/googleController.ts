@@ -8,6 +8,14 @@ import {
   GoogleSummaryResponse,
 } from "../services/googleIntegrationService";
 import EnvUtils from "../utils/EnvUtils";
+import { createOAuthState, readOAuthState, safeRedirectPath } from "../utils/oauthState";
+
+const OAUTH_STATE_PURPOSE = "google-drive";
+
+// Key for signing the OAuth state. A dedicated OAUTH_STATE_SECRET is better;
+// the OAuth client secret is the fallback so no new setting is required.
+const oauthStateSecret = (): string =>
+  process.env.OAUTH_STATE_SECRET || EnvUtils.get("GOOGLE_CLIENT_SECRET", "");
 
 @Route("api/google")
 @Tags("Integrations")
@@ -26,8 +34,12 @@ export class GoogleController extends BaseWorkspaceController {
       throw new Error("Unauthorized.");
     }
 
-    const stateObj = { uid: request.user.uid, workspaceId, redirectPath };
-    const state = Buffer.from(JSON.stringify(stateObj)).toString("base64");
+    // Signed and short-lived: the callback trusts the workspaceId inside it.
+    const state = createOAuthState(
+      OAUTH_STATE_PURPOSE,
+      { uid: request.user.uid, workspaceId, redirectPath: safeRedirectPath(redirectPath) },
+      oauthStateSecret(),
+    );
 
     const backendUrl = EnvUtils.get("BACKEND_URL", "http://localhost:8080");
     const redirectUri = googleIntegrationService.buildRedirectUri(backendUrl);
@@ -74,8 +86,20 @@ export class GoogleController extends BaseWorkspaceController {
     }
 
     try {
-      const stateJson = Buffer.from(state, "base64").toString("utf-8");
-      const stateObj = JSON.parse(stateJson);
+      const stateObj = readOAuthState<{ workspaceId?: string; redirectPath?: string }>(
+        OAUTH_STATE_PURPOSE,
+        state,
+        oauthStateSecret(),
+      );
+      if (!stateObj) {
+        if (res) {
+          return res.redirect(
+            googleIntegrationService.buildFrontendRedirectUrl("error", "InvalidState"),
+          );
+        }
+        throw new Error("Invalid or expired OAuth state");
+      }
+      const stateJson = JSON.stringify(stateObj);
       const workspaceId = stateObj.workspaceId;
 
       if (!workspaceId) {

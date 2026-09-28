@@ -8,6 +8,14 @@ import {
   NotionSummaryResponse,
 } from "../services/notionIntegrationService";
 import EnvUtils from "../utils/EnvUtils";
+import { createOAuthState, readOAuthState, safeRedirectPath } from "../utils/oauthState";
+
+const OAUTH_STATE_PURPOSE = "notion";
+
+// Key for signing the OAuth state. The state used to be plain JSON, so anyone
+// could put another workspace's id in it and link their own Notion there.
+const oauthStateSecret = () =>
+  process.env.OAUTH_STATE_SECRET || EnvUtils.get("NOTION_CLIENT_SECRET", "");
 
 interface NotionDatabaseItem {
   id: string;
@@ -36,8 +44,12 @@ export class NotionController extends BaseWorkspaceController {
       throw new Error("Unauthorized.");
     }
 
-    const stateObj = { uid: request.user.uid, workspaceId, redirectPath };
-    const state = encodeURIComponent(JSON.stringify(stateObj));
+    // Signed and short-lived: the callback trusts the workspaceId inside it.
+    const state = createOAuthState(
+      OAUTH_STATE_PURPOSE,
+      { uid: request.user.uid, workspaceId, redirectPath: safeRedirectPath(redirectPath) },
+      oauthStateSecret(),
+    );
 
     // We get the server's base URL and configure the Notion redirect URI correctly
     const backendUrl = EnvUtils.get("BACKEND_URL", "http://localhost:8080");
@@ -74,7 +86,19 @@ export class NotionController extends BaseWorkspaceController {
     }
 
     try {
-      const stateObj = JSON.parse(decodeURIComponent(state));
+      const stateObj = readOAuthState<{ workspaceId?: string }>(
+        OAUTH_STATE_PURPOSE,
+        state,
+        oauthStateSecret(),
+      );
+      if (!stateObj) {
+        if (res) {
+          return res.redirect(
+            notionIntegrationService.buildFrontendRedirectUrl("error", "InvalidState"),
+          );
+        }
+        throw new Error("Invalid or expired OAuth state");
+      }
       const workspaceId = stateObj.workspaceId;
 
       if (!workspaceId) {

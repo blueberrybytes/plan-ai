@@ -8,10 +8,12 @@ import {
   WAV_HEADER_BYTES,
   audioBytes,
   deleteSession,
+  isImported,
   readManifest,
   sessionsOf,
   readTranscript,
-  sessionAudioFile,
+  sampleRateOf,
+  sessionAudioFileOf,
   updateManifest,
   wavHeader,
   type RecordingManifest,
@@ -24,7 +26,9 @@ type Api = ReturnType<typeof createPlanAiApi>;
  * Uploads saved recordings (the outbox in recordingSessions.ts).
  *
  * The audio goes up in 8 MB slices: slice 0 is a WAV header with the real
- * sizes, the rest are the PCM bytes read straight from the file. A dropped
+ * sizes, the rest are the PCM bytes read straight from the file. An imported
+ * file (m4a, mp3...) is cut as it is, from byte 0, and the server is told its
+ * original name so it keeps the format. A dropped
  * connection costs one slice, not the whole meeting, and there is no single
  * request long enough to hit a timeout. The backend joins the slices when the
  * final recorder-upload call arrives with the same session id; a repeated
@@ -125,22 +129,39 @@ const withTimeout = <T>(promise: Promise<T>, ms: number): Promise<T> =>
 // Sessions whose final upload call succeeded in this app run.
 const uploadedIds = new Set<string>();
 
+/**
+ * Slices of a session's audio. A recording sends a rebuilt WAV header, then
+ * the PCM after the 44-byte header on disk. An imported file is sent as it is.
+ */
+const partCountOf = (
+  m: RecordingManifest,
+  fileSize: number,
+  partBytes: number,
+) =>
+  isImported(m)
+    ? Math.ceil(fileSize / partBytes)
+    : 1 + Math.ceil((fileSize - WAV_HEADER_BYTES) / partBytes);
+
 /** Writes one slice to a temp file for the native uploader. */
 function writePartFile(
-  sessionId: string,
+  m: RecordingManifest,
   index: number,
   fileSize: number,
   partBytes: number,
 ) {
+  const sessionId = m.sessionId;
+  const imported = isImported(m);
   const tmp = new File(Paths.cache, `upload-${sessionId}-${index}.bin`);
   if (tmp.exists) tmp.delete();
-  if (index === 0) {
-    tmp.write(wavHeader(fileSize - WAV_HEADER_BYTES));
+  if (index === 0 && !imported) {
+    tmp.write(wavHeader(fileSize - WAV_HEADER_BYTES, sampleRateOf(m)));
     return tmp;
   }
-  const start = WAV_HEADER_BYTES + (index - 1) * partBytes;
+  const start = imported
+    ? index * partBytes
+    : WAV_HEADER_BYTES + (index - 1) * partBytes;
   const length = Math.min(partBytes, fileSize - start);
-  const handle = sessionAudioFile(sessionId).open();
+  const handle = sessionAudioFileOf(sessionId, m).open();
   try {
     handle.offset = start;
     tmp.write(handle.readBytes(length));
@@ -154,13 +175,14 @@ async function uploadOne(api: Api, sessionId: string): Promise<void> {
   let m = readManifest(sessionId);
   if (!m || !m.upload) throw new Error("Nothing to upload for this session");
   const request: UploadRequest = m.upload;
-  const fileSize = audioBytes(sessionId);
-  const hasAudio = fileSize > WAV_HEADER_BYTES;
+  const imported = isImported(m);
+  const fileSize = audioBytes(sessionId, m);
+  const hasAudio = imported ? fileSize > 0 : fileSize > WAV_HEADER_BYTES;
 
   let partCount = 0;
   if (hasAudio) {
     const partBytes = m.partBytes ?? PART_BYTES;
-    partCount = 1 + Math.ceil((fileSize - WAV_HEADER_BYTES) / partBytes);
+    partCount = partCountOf(m, fileSize, partBytes);
     if (m.partBytes !== partBytes) {
       m = updateManifest(sessionId, { partBytes, uploadedParts: [] }) ?? m;
     }
@@ -168,7 +190,7 @@ async function uploadOne(api: Api, sessionId: string): Promise<void> {
     for (let i = 0; i < partCount; i++) {
       if (done.has(i)) continue;
       assertOwner(m);
-      const tmp = writePartFile(sessionId, i, fileSize, partBytes);
+      const tmp = writePartFile(m, i, fileSize, partBytes);
       try {
         await withTimeout(
           api.uploadRecordingPart({
@@ -195,6 +217,7 @@ async function uploadOne(api: Api, sessionId: string): Promise<void> {
   }
 
   const transcript = readTranscript(sessionId);
+  const calendarEvent = request.calendarEvent ?? m.calendarEvent;
   const send = (
     projectId: string | undefined,
     contextIds: string[] | undefined,
@@ -203,10 +226,14 @@ async function uploadOne(api: Api, sessionId: string): Promise<void> {
       content: transcript || undefined,
       title: request.title,
       recordedAt: new Date(m!.startedAt).toISOString(),
-      recordingStartedAt: new Date(m!.startedAt).toISOString(),
-      recordingWallClockSeconds: m!.stoppedAt
-        ? Math.max(1, Math.round((m!.stoppedAt - m!.startedAt) / 1000))
-        : undefined,
+      // An imported file has no capture window: startedAt is the import time.
+      recordingStartedAt: imported
+        ? undefined
+        : new Date(m!.startedAt).toISOString(),
+      recordingWallClockSeconds:
+        !imported && m!.stoppedAt
+          ? Math.max(1, Math.round((m!.stoppedAt - m!.startedAt) / 1000))
+          : undefined,
       projectId,
       contextIds: contextIds && contextIds.length > 0 ? contextIds : undefined,
       // The batch pass must use the recording's language: the "multi"
@@ -230,6 +257,12 @@ async function uploadOne(api: Api, sessionId: string): Promise<void> {
       chatHistory: request.chatHistory,
       micUploadId: hasAudio ? sessionId : undefined,
       micPartCount: hasAudio ? partCount : undefined,
+      // Imported audio keeps its format on the server (m4a, mp3...). The
+      // stored name ("imported.m4a") always has an accepted extension; the
+      // original name may have none when the type came from the picker.
+      micFileName: hasAudio && imported ? m!.audioFileName : undefined,
+      bookmarks: m!.bookmarks?.length ? m!.bookmarks : undefined,
+      calendarEvent,
       clientSessionId: sessionId,
       recordingMode: "in_person",
       workspaceId: m!.workspaceId,

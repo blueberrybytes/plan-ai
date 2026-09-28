@@ -27,6 +27,8 @@ import { pricingSyncWorker } from "./workers/pricingSyncWorker";
 import { pricingSyncQueue } from "./queue/pricingSyncQueue";
 import { weeklyDigestWorker } from "./workers/weeklyDigestWorker";
 import { weeklyDigestQueue } from "./queue/weeklyDigestQueue";
+import { storageCleanupWorker } from "./workers/storageCleanupWorker";
+import { storageCleanupQueue } from "./queue/storageCleanupQueue";
 import { transcriptGenerationWorker } from "./workers/transcriptGenerationWorker";
 import { transcriptGenerationQueue } from "./queue/transcriptGenerationQueue";
 import { taskRefinementWorker } from "./workers/taskRefinementWorker";
@@ -201,6 +203,7 @@ createBullBoard({
     new BullMQAdapter(taskRefinementQueue),
     new BullMQAdapter(contextDocumentQueue),
     new BullMQAdapter(weeklyDigestQueue),
+    new BullMQAdapter(storageCleanupQueue),
   ],
   serverAdapter: serverAdapter,
 });
@@ -370,6 +373,19 @@ const startServer = async () => {
     logger.error("Failed to schedule weekly digest job", error);
   }
 
+  try {
+    // Daily at 03:00: slices of recording uploads that never finished.
+    // Fixed jobId so restarts reuse the schedule instead of stacking one.
+    const cleanupJob = await storageCleanupQueue.add(
+      "recording-parts-cleanup",
+      {},
+      { repeat: { pattern: "0 3 * * *" }, jobId: "recording-parts-cleanup-cron" },
+    );
+    logger.info(`Scheduled recording parts cleanup job: ${cleanupJob.id}`);
+  } catch (error) {
+    logger.error("Failed to schedule recording parts cleanup job", error);
+  }
+
   // Initialize in-memory pricing cache (OpenRouter prices; not needed self-hosted)
   if (!selfHostedLlm) await pricingCacheService.init();
 
@@ -431,6 +447,7 @@ const closeServer = async (cb?: () => void) => {
   await taskRefinementWorker.close();
   await contextDocumentWorker.close();
   await weeklyDigestWorker.close();
+  await storageCleanupWorker.close();
   pricingCacheService.close();
 
   if (server) {

@@ -53,7 +53,5 @@ export function parseSpeakerBlocks(raw: string): SpeakerBlock[] | null {
   }
 
   if (!labelled) return null;
-  return blocks
-    .map((b) => ({ ...b, text: b.text.trim() }))
-    .filter((b) => b.text.length > 0);
+  return blocks.map((b) => ({ ...b, text: b.text.trim() })).filter((b) => b.text.length > 0);
 }

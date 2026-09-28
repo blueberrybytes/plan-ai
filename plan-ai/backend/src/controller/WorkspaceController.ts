@@ -12,6 +12,8 @@ import { AuthenticatedRequest } from "../middleware/authMiddleware";
 import { sendWorkspaceInvitationEmail } from "../services/emailService";
 import { validateOpenRouterKey, validateDeepgramKey } from "../services/keyValidationService";
 import { setUserRole } from "../firebase/firebaseAdmin";
+import { encryptWorkspaceKeys } from "../utils/workspaceSecrets";
+import { isEncryptedSecret } from "../utils/secretCrypto";
 
 const prisma = new PrismaClient();
 
@@ -29,6 +31,8 @@ export interface WorkspaceResponse {
   isCourtesy?: boolean;
   /** Workspace-wide default brand theme for AI-generated docs & slides. Null = none. */
   defaultThemeId?: string | null;
+  /** Days meeting audio is kept before it is deleted. Null keeps it forever. */
+  audioRetentionDays?: number | null;
 }
 
 export interface UpdateWorkspaceSettingsRequest {
@@ -37,9 +41,15 @@ export interface UpdateWorkspaceSettingsRequest {
   /** OpenAI key (BYOK) for embeddings/RAG. Pass null to clear; omit to leave unchanged. */
   openaiKey?: string | null;
   monthlyTokenLimit?: number;
-  isCourtesy?: boolean;
+  // No isCourtesy here. A courtesy workspace runs on the platform's own AI
+  // keys, so only the platform turns it on (in the database), never an owner.
   /** Workspace-wide default brand theme. Pass null to clear; omit to leave unchanged. */
   defaultThemeId?: string | null;
+  /**
+   * Days to keep meeting audio (1 to 3650). Null keeps it forever; omit to
+   * leave unchanged. Transcripts, summaries and tasks are never deleted.
+   */
+  audioRetentionDays?: number | null;
 }
 
 export interface InviteMemberRequest {
@@ -128,6 +138,7 @@ export class WorkspaceController extends BaseWorkspaceController {
       openaiKey:
         m.role === "OWNER" ? (m.workspace.openaiKey ? "••••••••••••••••" : undefined) : undefined,
       defaultThemeId: m.workspace.defaultThemeId,
+      audioRetentionDays: m.workspace.audioRetentionDays,
     }));
   }
 
@@ -514,6 +525,17 @@ export class WorkspaceController extends BaseWorkspaceController {
       throw { status: 403, message: "Only workspace owners can update settings." };
     }
 
+    // A value that looks like one of our encrypted secrets would be stored
+    // as it is and then fail to decrypt on every read of this workspace.
+    if (
+      [body.openRouterKey, body.deepgramKey, body.openaiKey].some((k) =>
+        isEncryptedSecret(k?.trim()),
+      )
+    ) {
+      this.setStatus(400);
+      throw { status: 400, message: "That does not look like an API key." };
+    }
+
     const updateData: Prisma.WorkspaceUpdateInput = {};
     if (body.openRouterKey !== undefined && body.openRouterKey !== "••••••••••••••••") {
       updateData.openRouterKey = body.openRouterKey;
@@ -549,7 +571,14 @@ export class WorkspaceController extends BaseWorkspaceController {
     }
 
     if (body.monthlyTokenLimit !== undefined) updateData.monthlyTokenLimit = body.monthlyTokenLimit;
-    if (body.isCourtesy !== undefined) updateData.isCourtesy = body.isCourtesy;
+    if (body.audioRetentionDays !== undefined) {
+      const days = body.audioRetentionDays;
+      if (days !== null && (!Number.isInteger(days) || days < 1 || days > 3650)) {
+        this.setStatus(400);
+        throw { status: 400, message: "Audio retention must be between 1 and 3650 days." };
+      }
+      updateData.audioRetentionDays = days;
+    }
     if (body.defaultThemeId !== undefined) {
       // Validate the theme belongs to this workspace (null clears it).
       if (body.defaultThemeId) {
@@ -567,9 +596,10 @@ export class WorkspaceController extends BaseWorkspaceController {
         : { disconnect: true };
     }
 
+    // Validation above needs the plain keys; only the stored copy is encrypted.
     await prisma.workspace.update({
       where: { id: workspaceId },
-      data: updateData,
+      data: encryptWorkspaceKeys(updateData),
     });
 
     return { success: true, message: "Workspace settings updated." };

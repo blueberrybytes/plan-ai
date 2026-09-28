@@ -7,11 +7,15 @@ type ApiResponseStandaloneTranscriptListResponse =
 type ApiResponseStandaloneTranscriptResponse =
   components["schemas"]["ApiResponse_StandaloneTranscriptResponse_"];
 type UpdateSpeakerNamesBody = components["schemas"]["UpdateSpeakerNamesBody"];
+type ApiResponseTranscriptAudio = components["schemas"]["ApiResponse_TranscriptAudioResponse_"];
+export type SendMeetingNotesRequest = components["schemas"]["SendMeetingNotesRequest"];
+export type ApiResponseSendMeetingNotes =
+  components["schemas"]["ApiResponse_SendMeetingNotesResponse_"];
 
 export const transcriptApi = createApi({
   reducerPath: "transcriptApi",
   baseQuery: baseQueryWithReauth,
-  tagTypes: ["Transcript"],
+  tagTypes: ["Transcript", "TranscriptAudio"],
   endpoints: (builder) => ({
     listGlobalTranscripts: builder.query<
       ApiResponseStandaloneTranscriptListResponse,
@@ -73,6 +77,35 @@ export const transcriptApi = createApi({
       }),
       invalidatesTags: (_result, _error, { id }) => [{ type: "Transcript", id }],
     }),
+    // Short-lived links to the meeting audio, signed for 12 h. The player asks
+    // again after an hour and when a link stops working.
+    getTranscriptAudio: builder.query<ApiResponseTranscriptAudio, string>({
+      query: (id: string) => `/api/transcripts/${id}/audio`,
+      providesTags: (_result, _error, id: string) => [{ type: "TranscriptAudio", id }],
+      keepUnusedDataFor: 60 * 60,
+    }),
+    // Emails the notes to the people the user picked. Replies go to the user.
+    sendMeetingNotes: builder.mutation<
+      ApiResponseSendMeetingNotes,
+      { id: string } & SendMeetingNotesRequest
+    >({
+      query: ({ id, ...body }) => ({
+        url: `/api/transcripts/${id}/send-notes`,
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: (_result, _error, { id }) => [{ type: "Transcript", id }],
+    }),
+    deleteTranscriptAudio: builder.mutation<{ success: boolean }, string>({
+      query: (id: string) => ({
+        url: `/api/transcripts/${id}/audio`,
+        method: "DELETE",
+      }),
+      invalidatesTags: (_result, _error, id: string) => [
+        { type: "TranscriptAudio", id },
+        { type: "Transcript", id },
+      ],
+    }),
     reprocessTranscript: builder.mutation<ApiResponseStandaloneTranscriptResponse, string>({
       query: (id: string) => ({
         url: `/api/transcripts/${id}/reprocess`,
@@ -92,4 +125,7 @@ export const {
   useUpdateTranscriptSpeakersMutation,
   useRetryPostMeetingTaskMutation,
   useReprocessTranscriptMutation,
+  useGetTranscriptAudioQuery,
+  useDeleteTranscriptAudioMutation,
+  useSendMeetingNotesMutation,
 } = transcriptApi;

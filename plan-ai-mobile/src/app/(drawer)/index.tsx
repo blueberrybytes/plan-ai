@@ -6,7 +6,11 @@ import {
   FlatList,
   RefreshControl,
   TouchableOpacity,
+  Alert,
 } from "react-native";
+import * as DocumentPicker from "expo-document-picker";
+import { File } from "expo-file-system";
+import { getAuth } from "@react-native-firebase/auth";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   Text,
@@ -23,11 +27,22 @@ import { ScreenHeader } from "../../components/ScreenHeader";
 import { WorkspaceSelector } from "../../components/WorkspaceSelector";
 import { useRouter, useFocusEffect, useNavigation, Href } from "expo-router";
 import { Transcript } from "../../services/planAiApi";
-import { refreshOutbox, useOutbox } from "../../services/recordingUploader";
+import { refreshOutbox, saveAndUpload, useOutbox } from "../../services/recordingUploader";
 import { useRecordingSession } from "../../services/recordingService";
+import {
+  createImportedSession,
+  importExtension,
+  importTitleOf,
+  newSessionId,
+} from "../../services/recordingSessions";
+import { loadLastLanguage } from "../../utils/recordingPrefs";
 import { LocalRecordingCard } from "../../components/LocalRecordingCard";
 
 export type FeedItem = Transcript;
+
+// Larger files take too long to slice and upload from a phone (256 slices of
+// 8 MB at 2 GB), so they are refused up front.
+const MAX_IMPORT_BYTES = 2 * 1024 * 1024 * 1024;
 
 export default function DashboardScreen() {
   const [transcripts, setTranscripts] = useState<Transcript[]>([]);
@@ -124,6 +139,117 @@ export default function DashboardScreen() {
     fetchTranscripts();
   };
 
+  // An audio file from the phone (a voice memo, a call recorded elsewhere)
+  // goes through the same outbox as a recording: it is kept on the phone
+  // until the server confirms it, and shows as a card while it uploads.
+  const [isImporting, setIsImporting] = useState(false);
+  const importAudio = async () => {
+    if (isImporting) return;
+    let asset: DocumentPicker.DocumentPickerAsset | undefined;
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: "audio/*",
+        copyToCacheDirectory: true,
+        multiple: false,
+      });
+      if (result.canceled) return;
+      asset = result.assets[0];
+    } catch (err) {
+      Alert.alert("Could not open the file", err instanceof Error ? err.message : String(err));
+      return;
+    }
+    if (!asset) return;
+    const picked = asset;
+    // The picker left a copy in the cache. Drop it when the file is refused.
+    const dropCopy = () => {
+      try {
+        const f = new File(picked.uri);
+        if (f.exists) f.delete();
+      } catch {
+        // cache file, the OS clears it anyway
+      }
+    };
+    let size = picked.size ?? 0;
+    if (!size) {
+      try {
+        size = new File(picked.uri).size;
+      } catch {
+        size = 0;
+      }
+    }
+    if (size > MAX_IMPORT_BYTES) {
+      dropCopy();
+      Alert.alert(
+        "File too large",
+        `This file is ${(size / 1024 / 1024 / 1024).toFixed(1)} GB. Import a file under 2 GB.`,
+      );
+      return;
+    }
+    if (size <= 0) {
+      dropCopy();
+      Alert.alert("Empty file", "This file has no audio in it.");
+      return;
+    }
+    const extension = importExtension(picked.name, picked.mimeType);
+    if (!extension) {
+      dropCopy();
+      Alert.alert(
+        "Format not supported",
+        "Import an m4a, mp3, wav, aac, ogg, opus, webm, flac or caf file.",
+      );
+      return;
+    }
+
+    setIsImporting(true);
+    const language = loadLastLanguage();
+    const sessionId = newSessionId();
+    try {
+      await createImportedSession({
+        sessionId,
+        sourceUri: picked.uri,
+        fileName: picked.name,
+        extension,
+        startedAt: Date.now(),
+        language,
+        workspaceId: activeWorkspaceId || null,
+        ownerUid: getAuth().currentUser?.uid ?? undefined,
+      });
+      refreshOutbox();
+    } catch (err) {
+      dropCopy();
+      setIsImporting(false);
+      Alert.alert(
+        "Could not import the file",
+        err instanceof Error ? err.message : "The file could not be saved on this phone.",
+      );
+      return;
+    }
+    setIsImporting(false);
+
+    // The card shows the progress. The upload can take minutes for a long
+    // file, so nothing waits on it here.
+    saveAndUpload(api, sessionId, {
+      title: importTitleOf(picked.name),
+      skipAi: false,
+      createDoc: true,
+      language: language || undefined,
+    })
+      .then((outcome) => {
+        if (outcome === "uploaded") {
+          fetchTranscripts();
+        } else if (outcome === "failed") {
+          Alert.alert(
+            "Upload stopped",
+            "The server refused the file. It stays on this phone; you can retry or delete it from the list.",
+          );
+        }
+      })
+      .catch((err) => {
+        console.warn("[import] could not start the upload", err);
+        refreshOutbox();
+      });
+  };
+
   const renderEmptyState = () => (
     <View style={styles.emptyStateContainer}>
       <Avatar.Icon
@@ -157,6 +283,15 @@ export default function DashboardScreen() {
         Tap the microphone button to start recording and transcribing your first
         meeting with Plan AI.
       </Text>
+      <Button
+        mode="text"
+        icon="file-music-outline"
+        onPress={importAudio}
+        loading={isImporting}
+        disabled={isImporting}
+      >
+        Or import an audio file
+      </Button>
     </View>
   );
 
@@ -509,7 +644,7 @@ export default function DashboardScreen() {
             contentContainerStyle={
               transcripts.length === 0 && localRecordings.length === 0
                 ? styles.emptyListContent
-                : [styles.listContent, { paddingBottom: 100 + insets.bottom }]
+                : [styles.listContent, { paddingBottom: 160 + insets.bottom }]
             }
             ListEmptyComponent={renderEmptyState}
             refreshControl={
@@ -523,6 +658,18 @@ export default function DashboardScreen() {
         </View>
       )}
 
+      <FAB
+        icon={isImporting ? "timer-sand" : "file-music-outline"}
+        size="small"
+        accessibilityLabel="Import audio"
+        disabled={isImporting}
+        style={[
+          styles.importFab,
+          { backgroundColor: theme.colors.secondaryContainer, bottom: 92 + insets.bottom },
+        ]}
+        color={theme.colors.onSecondaryContainer}
+        onPress={importAudio}
+      />
       <FAB
         icon="microphone"
         style={[
@@ -564,6 +711,13 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 20,
     borderRadius: 16,
+  },
+  // Centred above the 56 pt microphone button.
+  importFab: {
+    position: "absolute",
+    margin: 16,
+    right: 8,
+    borderRadius: 12,
   },
   emptyStateContainer: {
     flex: 1,

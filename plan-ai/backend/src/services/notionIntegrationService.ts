@@ -9,6 +9,8 @@ import type {
 } from "@notionhq/client/build/src/api-endpoints";
 import type { Transcript, Task } from "@prisma/client";
 import { logger } from "../utils/logger";
+import { encryptSecret } from "../utils/secretCrypto";
+import { withDecryptedTokens } from "../utils/integrationSecrets";
 
 export interface NotionSummaryResponse {
   totalPages: number;
@@ -129,14 +131,14 @@ class NotionIntegrationService {
         workspaceId,
         provider: IntegrationProvider.NOTION,
         status: IntegrationStatus.CONNECTED,
-        accessToken,
+        accessToken: encryptSecret(accessToken),
         accountId: botId,
         accountName: workspaceName,
         metadata: metadata as unknown as Prisma.InputJsonObject,
       },
       update: {
         status: IntegrationStatus.CONNECTED,
-        accessToken,
+        accessToken: encryptSecret(accessToken),
         accountId: botId,
         accountName: workspaceName,
         metadata: metadata as unknown as Prisma.InputJsonObject,
@@ -145,9 +147,11 @@ class NotionIntegrationService {
   }
 
   public async getNotionSummary(workspaceId: string): Promise<NotionSummaryResponse> {
-    const integration = await prisma.workspaceIntegration.findUnique({
-      where: { workspaceId_provider: { workspaceId, provider: IntegrationProvider.NOTION } },
-    });
+    const integration = withDecryptedTokens(
+      await prisma.workspaceIntegration.findUnique({
+        where: { workspaceId_provider: { workspaceId, provider: IntegrationProvider.NOTION } },
+      }),
+    );
 
     if (!integration || integration.status !== IntegrationStatus.CONNECTED) {
       throw new Error("Notion is not connected");
@@ -189,9 +193,11 @@ class NotionIntegrationService {
   }
 
   public async getDatabases(workspaceId: string) {
-    const integration = await prisma.workspaceIntegration.findUnique({
-      where: { workspaceId_provider: { workspaceId, provider: IntegrationProvider.NOTION } },
-    });
+    const integration = withDecryptedTokens(
+      await prisma.workspaceIntegration.findUnique({
+        where: { workspaceId_provider: { workspaceId, provider: IntegrationProvider.NOTION } },
+      }),
+    );
 
     if (!integration || integration.status !== IntegrationStatus.CONNECTED) {
       throw new Error("Notion is not connected");
@@ -250,9 +256,11 @@ class NotionIntegrationService {
     taskId: string,
     databaseId?: string,
   ): Promise<{ pageId: string; url: string }> {
-    const integration = await prisma.workspaceIntegration.findUnique({
-      where: { workspaceId_provider: { workspaceId, provider: IntegrationProvider.NOTION } },
-    });
+    const integration = withDecryptedTokens(
+      await prisma.workspaceIntegration.findUnique({
+        where: { workspaceId_provider: { workspaceId, provider: IntegrationProvider.NOTION } },
+      }),
+    );
 
     if (!integration || integration.status !== IntegrationStatus.CONNECTED) {
       throw new Error("Notion is not connected");
@@ -437,9 +445,11 @@ class NotionIntegrationService {
     transcript: Transcript,
     tasks: Task[],
   ): Promise<{ pageId: string; url: string }> {
-    const integration = await prisma.workspaceIntegration.findUnique({
-      where: { workspaceId_provider: { workspaceId, provider: IntegrationProvider.NOTION } },
-    });
+    const integration = withDecryptedTokens(
+      await prisma.workspaceIntegration.findUnique({
+        where: { workspaceId_provider: { workspaceId, provider: IntegrationProvider.NOTION } },
+      }),
+    );
 
     if (!integration || integration.status !== IntegrationStatus.CONNECTED) {
       throw new Error("Notion is not connected");

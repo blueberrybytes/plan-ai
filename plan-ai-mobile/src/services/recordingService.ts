@@ -9,7 +9,9 @@ import notifee, {
 } from "@notifee/react-native";
 import * as Sentry from "@sentry/react-native";
 import { audioCapture, type CaptureEvent } from "./audioCapture";
+import { Resampler24To16 } from "../utils/resample";
 import {
+  SAVED_SAMPLE_RATE,
   WAV_HEADER_BYTES,
   appendAudio,
   appendTranscriptLine,
@@ -18,6 +20,8 @@ import {
   deleteSession,
   newSessionId,
   updateManifest,
+  type MeetingCalendarEvent,
+  type RecordingBookmark,
 } from "./recordingSessions";
 
 // Using the global object so the foreground-service handle survives React
@@ -52,6 +56,8 @@ export interface StartRecordingOptions {
   workspaceId: string | null;
   /** Firebase uid of the user recording (see RecordingManifest.ownerUid). */
   ownerUid: string | null;
+  /** Calendar event this meeting belongs to, kept in the manifest for the upload. */
+  calendarEvent?: MeetingCalendarEvent;
   api: RecordingApi;
 }
 
@@ -84,6 +90,8 @@ export interface RecordingSnapshot {
   lowStorage: boolean;
   autoPauseWarning: null | { reason: "silence" | "long"; at: number };
   autoPausedBy: AutoPauseReason | null;
+  /** Moments marked in this session, also kept in its manifest. */
+  bookmarks: RecordingBookmark[];
 }
 
 const INITIAL_SNAPSHOT: RecordingSnapshot = {
@@ -108,6 +116,7 @@ const INITIAL_SNAPSHOT: RecordingSnapshot = {
   lowStorage: false,
   autoPauseWarning: null,
   autoPausedBy: null,
+  bookmarks: [],
 };
 
 /** Recorded time of a snapshot, pauses excluded. */
@@ -133,7 +142,7 @@ const LONG_RUN_GRACE_MS = 10 * 60_000;
 // Mean absolute amplitude / 6000 above which a chunk counts as speech.
 const SPEECH_LEVEL = 0.05;
 // Free space: refuse to start below 300 MB, warn below 500 MB, pause below
-// 100 MB. The WAV grows by 173 MB per hour.
+// 100 MB. The WAV grows by 115 MB per hour (16 kHz, 16 bit, mono).
 const MIN_START_FREE_BYTES = 300 * 1024 * 1024;
 const LOW_FREE_BYTES = 500 * 1024 * 1024;
 const CRITICAL_FREE_BYTES = 100 * 1024 * 1024;
@@ -237,6 +246,11 @@ class RecordingService {
   // discard, manual reconnect). A connection that resolves for an older
   // generation is closed instead of attached, so two sockets never coexist.
   private wsGeneration = 0;
+  private resampler = new Resampler24To16();
+  // 16 kHz samples written to this session's WAV. Bookmarks use it: it is the
+  // position in the saved audio even when the mic stopped delivering (a phone
+  // call, a stall, a failed write) while the clock kept running.
+  private savedSamples = 0;
   private connectingGeneration: number | null = null;
 
   constructor() {
@@ -287,39 +301,49 @@ class RecordingService {
       this.set({ captureProblem: null });
     }
 
+    // One decode per chunk, shared by the file and the level meter.
+    let pcm: Int16Array | null = null;
     try {
-      appendAudio(s.sessionId, data);
-      this.diskWriteFailures = 0;
-    } catch (e) {
-      this.diskWriteFailures++;
-      if (this.diskWriteFailures === 1) {
-        console.warn("WAV append failed", e);
-        Sentry.captureException(e, { tags: { source: "recording_disk_write" } });
-      }
-      // Several failures in a row: the disk is full. Pause instead of
-      // carrying on with a recording that is not being kept.
-      if (this.diskWriteFailures >= 10) {
-        this.set({
-          captureProblem: { kind: "error", message: "The phone could not save the audio. Free some space." },
-        });
-        this.pause("storage");
-        return;
-      }
+      const bytes = new Uint8Array(Buffer.from(data, "base64"));
+      pcm = new Int16Array(bytes.buffer, 0, bytes.length >> 1);
+    } catch {
+      // a malformed chunk is skipped for the file and the meter
     }
 
-    // Coarse level for the waveform and the silence check.
-    if (this.chunkCount % 2 === 0) {
+    if (pcm) {
       try {
-        const pcm = Buffer.from(data, "base64");
-        let sum = 0;
-        for (let i = 0; i + 1 < pcm.length; i += 2) {
-          sum += Math.abs(pcm.readInt16LE(i));
+        // Saved at 16 kHz (resample.ts); the live stream stays at 24 kHz.
+        const saved = this.resampler.process(pcm);
+        appendAudio(
+          s.sessionId,
+          Buffer.from(saved.buffer, saved.byteOffset, saved.byteLength).toString("base64"),
+        );
+        this.savedSamples += saved.length;
+        this.diskWriteFailures = 0;
+      } catch (e) {
+        this.diskWriteFailures++;
+        if (this.diskWriteFailures === 1) {
+          console.warn("WAV append failed", e);
+          Sentry.captureException(e, { tags: { source: "recording_disk_write" } });
         }
-        const level = Math.min(1, sum / (pcm.length / 2) / 6000);
+        // Several failures in a row: the disk is full. Pause instead of
+        // carrying on with a recording that is not being kept.
+        if (this.diskWriteFailures >= 10) {
+          this.set({
+            captureProblem: { kind: "error", message: "The phone could not save the audio. Free some space." },
+          });
+          this.pause("storage");
+          return;
+        }
+      }
+
+      // Coarse level for the waveform and the silence check.
+      if (this.chunkCount % 2 === 0 && pcm.length > 0) {
+        let sum = 0;
+        for (let i = 0; i < pcm.length; i++) sum += Math.abs(pcm[i]);
+        const level = Math.min(1, sum / pcm.length / 6000);
         setVolume(level);
         if (level >= SPEECH_LEVEL) this.lastActivityAt = now;
-      } catch {
-        // a malformed chunk only costs one level update
       }
     }
 
@@ -642,7 +666,7 @@ class RecordingService {
       }
       const low = free !== null && free < LOW_FREE_BYTES;
       if (low !== s.lowStorage) this.set({ lowStorage: low });
-      if (audioBytes(s.sessionId) > MAX_AUDIO_BYTES) this.pause("storage");
+      if (audioBytes(s.sessionId, null) > MAX_AUDIO_BYTES) this.pause("storage");
     }
   };
 
@@ -723,7 +747,7 @@ class RecordingService {
       const free = freeBytes();
       if (free !== null && free < MIN_START_FREE_BYTES) {
         throw new Error(
-          `Only ${Math.round(free / 1024 / 1024)} MB free on this phone. A meeting needs about 173 MB per hour. Free some space and try again.`,
+          `Only ${Math.round(free / 1024 / 1024)} MB free on this phone. A meeting needs about 115 MB per hour. Free some space and try again.`,
         );
       }
 
@@ -748,7 +772,11 @@ class RecordingService {
         contextIds: opts.contextIds,
         workspaceId: opts.workspaceId,
         ownerUid: opts.ownerUid ?? undefined,
+        sampleRate: SAVED_SAMPLE_RATE,
+        ...(opts.calendarEvent ? { calendarEvent: opts.calendarEvent } : {}),
       });
+      this.resampler = new Resampler24To16();
+      this.savedSamples = 0;
 
       this.chunkCount = 0;
       this.diskWriteFailures = 0;
@@ -858,6 +886,34 @@ class RecordingService {
     }
   }
 
+  /**
+   * Marks the current moment of the recording. The time is counted from the
+   * samples written so far, so it is the position in the saved audio. Returns the
+   * bookmark's index for setBookmarkNote, or null when nothing is recording.
+   */
+  addBookmark(): number | null {
+    const s = this.snapshot;
+    if (!s.isRecording || s.isPaused || !s.sessionId) return null;
+    const atSeconds = Math.round((this.savedSamples / SAVED_SAMPLE_RATE) * 10) / 10;
+    const bookmarks = [...s.bookmarks, { atSeconds }];
+    this.set({ bookmarks });
+    safeUpdateManifest(s.sessionId, { bookmarks });
+    return bookmarks.length - 1;
+  }
+
+  /** Adds a note to a bookmark. Works while paused and on the save screen too. */
+  setBookmarkNote(index: number, note: string): void {
+    const s = this.snapshot;
+    const id = s.sessionId ?? s.stoppedSessionId;
+    const text = note.replace(/\s+/g, " ").trim().slice(0, 500);
+    if (!id || !s.bookmarks[index]) return;
+    const bookmarks = s.bookmarks.map((b, i) =>
+      i === index ? (text ? { ...b, note: text } : { atSeconds: b.atSeconds }) : b,
+    );
+    this.set({ bookmarks });
+    safeUpdateManifest(id, { bookmarks });
+  }
+
   /** The user is still there: resets the automatic-pause clocks. */
   confirmStillRecording(): void {
     const now = Date.now();
@@ -885,7 +941,7 @@ class RecordingService {
     setVolume(0);
     await this.stopForegroundService();
 
-    const hasAudio = audioBytes(id) > WAV_HEADER_BYTES;
+    const hasAudio = audioBytes(id, null) > WAV_HEADER_BYTES;
     const hasText = this.snapshot.transcript.trim().length > 0;
     const keep = hasAudio || hasText;
     if (keep) {

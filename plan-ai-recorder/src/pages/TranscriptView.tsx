@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import ReactJson from "react-json-view";
 import {
   Box,
@@ -24,13 +24,20 @@ import {
   Psychology as PsychologyIcon,
   ExpandLess as ExpandLessIcon,
   ExpandMore as ExpandMoreIcon,
+  ForwardToInbox as SendNotesIcon,
 } from "@mui/icons-material";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 import type { Transcript, Task } from "../services/planAiApi";
 import ReactMarkdown from "react-markdown";
 import { parseSpeakerBlocks } from "../utils/speakerBlocks";
+import RecordingAudioPlayer, {
+  channelOfUtterance,
+  formatClock,
+  type RecordingAudioPlayerHandle,
+} from "../components/RecordingAudioPlayer";
 import PostMeetingTasksPanel from "../components/PostMeetingTasksPanel";
+import SendNotesDialog from "../components/SendNotesDialog";
 import SyncBadges from "../components/SyncBadges";
 import SpeakerInsightsTab, {
   type SpeakerInsight,
@@ -228,7 +235,60 @@ const RenderTranscriptContent = ({
 }: {
   transcript: Transcript;
 }) => {
-  type Utterance = { speaker: string; transcript: string; start: number; end: number };
+  const playerRef = useRef<RecordingAudioPlayerHandle>(null);
+  const meta = (transcript.metadata ?? {}) as {
+    bookmarks?: { atSeconds: number; note?: string }[];
+    audioDeletedReason?: string;
+  };
+  const bookmarks = meta.bookmarks ?? [];
+  return (
+    <>
+      {/* Player and marked moments above the text. */}
+      <RecordingAudioPlayer
+        ref={playerRef}
+        transcriptId={transcript.id}
+        durationHint={transcript.durationSeconds}
+        deletedReason={meta.audioDeletedReason}
+      />
+      {bookmarks.length > 0 && (
+        <Box sx={{ mb: 2 }}>
+          <Typography variant="subtitle2" sx={{ mb: 1 }}>
+            Marked moments
+          </Typography>
+          <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
+            {bookmarks.map((b, i) => (
+              <Chip
+                key={i}
+                size="small"
+                variant="outlined"
+                label={`${formatClock(b.atSeconds)} · ${b.note || "Marked"}`}
+                onClick={() => playerRef.current?.seek(b.atSeconds, "mic")}
+              />
+            ))}
+          </Box>
+        </Box>
+      )}
+      <TranscriptLines transcript={transcript} playerRef={playerRef} />
+    </>
+  );
+};
+
+/** The transcript itself; a timestamp click plays that moment. */
+const TranscriptLines = ({
+  transcript,
+  playerRef,
+}: {
+  transcript: Transcript;
+  playerRef: React.RefObject<RecordingAudioPlayerHandle | null>;
+}) => {
+  type Utterance = {
+    speaker: string;
+    transcript: string;
+    start: number;
+    end: number;
+    channel?: string;
+    words?: { globalSpeaker?: string }[];
+  };
   const utterances = transcript.utterances as Utterance[] | null | undefined;
   const principalSpeaker = transcript?.metadata?.principalSpeaker as string | undefined;
 
@@ -286,7 +346,23 @@ const RenderTranscriptContent = ({
                 color={isMe ? "primary.main" : "secondary.main"}
                 fontWeight="bold"
               >
-                {formatTimestamp(u.start)} {node}
+                <Box
+                  component="button"
+                  type="button"
+                  title={`Play from ${formatClock(u.start ?? 0)}`}
+                  onClick={() =>
+                    playerRef.current?.seek(u.start ?? 0, channelOfUtterance(u))
+                  }
+                  sx={{
+                    all: "unset",
+                    cursor: "pointer",
+                    fontVariantNumeric: "tabular-nums",
+                    "&:hover": { textDecoration: "underline" },
+                  }}
+                >
+                  {formatTimestamp(u.start)}
+                </Box>{" "}
+                {node}
               </Typography>
               <Typography
                 variant="body1"
@@ -382,6 +458,7 @@ const TranscriptView: React.FC = () => {
   const { api } = useAuth();
 
   const [transcript, setTranscript] = useState<Transcript | null>(null);
+  const [sendNotesOpen, setSendNotesOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [tabValue, setTabValue] = useState("summary");
@@ -564,8 +641,29 @@ const TranscriptView: React.FC = () => {
               <DownloadIcon fontSize="small" />
             </IconButton>
           </Tooltip>
+          <Tooltip title="Send the notes by email">
+            <span>
+              <IconButton
+                size="small"
+                onClick={() => setSendNotesOpen(true)}
+                disabled={!transcript?.summary}
+              >
+                <SendNotesIcon fontSize="small" />
+              </IconButton>
+            </span>
+          </Tooltip>
         </Stack>
       </Stack>
+
+      {id && (
+        <SendNotesDialog
+          open={sendNotesOpen}
+          onClose={() => setSendNotesOpen(false)}
+          onSent={() => void fetchTranscript(true)}
+          transcriptId={id}
+          metadata={transcript?.metadata}
+        />
+      )}
 
       {/* Content */}
       <Box

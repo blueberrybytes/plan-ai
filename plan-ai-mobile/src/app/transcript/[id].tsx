@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   View,
   StyleSheet,
@@ -11,7 +11,7 @@ import {
   Linking,
 } from "react-native";
 import JSONTree from "react-native-json-tree";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import {
   Text,
   IconButton,
@@ -34,8 +34,14 @@ import { TwentyPushCard } from "../../components/TwentyPushCard";
 import SpeakerInsightsTab, {
   type SpeakerInsight,
 } from "../../components/SpeakerInsightsTab";
-import { Transcript } from "@/services/planAiApi";
+import { HttpError, Transcript, type TranscriptAudio } from "@/services/planAiApi";
 import type { components } from "@/types/api";
+import {
+  MeetingAudioBar,
+  formatClock,
+  useMeetingPlayback,
+  type AudioChannel,
+} from "../../components/MeetingAudioPlayer";
 
 type TwentyRef = { noteId?: string; url?: string; role?: "CANONICAL" | "SECONDARY" };
 
@@ -49,6 +55,30 @@ const formatTimestamp = (seconds?: number | null) => {
   return `[${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}]`;
 };
 
+type Utterance = {
+  speaker: string;
+  transcript: string;
+  start: number;
+  end: number;
+  /** File the times belong to. Absent on transcripts made before it was stored. */
+  channel?: AudioChannel;
+  words?: { globalSpeaker?: string }[];
+};
+
+/** Which file an utterance's times refer to. Older rows: "Others" is the system audio. */
+const channelOf = (u: Utterance): AudioChannel => {
+  if (u.channel === "mic" || u.channel === "sys") return u.channel;
+  const labels = [u.words?.[0]?.globalSpeaker, u.speaker];
+  return labels.some((l) => typeof l === "string" && l.startsWith("Others")) ? "sys" : "mic";
+};
+
+const formatDay = (iso: string) => {
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime())
+    ? iso
+    : d.toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
+};
+
 export default function TranscriptViewScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
@@ -60,6 +90,32 @@ export default function TranscriptViewScreen() {
   const [activeTab, setActiveTab] = useState("summary");
   const [isRetrying, setIsRetrying] = useState(false);
   const [menuVisible, setMenuVisible] = useState(false);
+
+  // Links to the meeting's audio (valid 12 h). Null when there is none or the
+  // request failed: the screen then simply has no player.
+  const [audio, setAudio] = useState<TranscriptAudio | null>(null);
+  const [isDeletingAudio, setIsDeletingAudio] = useState(false);
+  const playback = useMeetingPlayback(audio);
+
+  useEffect(() => {
+    if (!id) return;
+    let cancelled = false;
+    api
+      .getTranscriptAudio(id)
+      .then((a) => {
+        if (!cancelled) setAudio(a);
+      })
+      .catch((e) => {
+        console.warn("Could not load the meeting audio", e);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [id, api]);
+
+  // Stop playing when another screen opens on top of this one.
+  const pausePlayback = playback.pause;
+  useFocusEffect(useCallback(() => () => pausePlayback(), [pausePlayback]));
 
   const refetchTranscript = React.useCallback(() => {
     if (!id) return;
@@ -156,6 +212,41 @@ export default function TranscriptViewScreen() {
     } catch (error: any) {
       Alert.alert("Error", "Could not save file: " + error.message);
     }
+  };
+
+  const deleteAudio = async () => {
+    if (!transcript) return;
+    playback.pause();
+    setIsDeletingAudio(true);
+    try {
+      await api.deleteTranscriptAudio(transcript.id);
+      setAudio({ audioDeletedAt: new Date().toISOString() });
+      refetchTranscript();
+    } catch (err) {
+      const status = err instanceof HttpError ? err.status : undefined;
+      Alert.alert(
+        "Audio not deleted",
+        status === 403
+          ? "Only the person who recorded this meeting or a workspace owner can delete its audio."
+          : status === 409
+            ? "The meeting is still being processed. Try again when it finishes."
+            : "Could not delete the audio. Check the connection and try again.",
+      );
+    } finally {
+      setIsDeletingAudio(false);
+    }
+  };
+
+  const confirmDeleteAudio = () => {
+    setMenuVisible(false);
+    Alert.alert(
+      "Delete the audio?",
+      "The audio files are deleted for good. The transcript, summary, speakers and tasks stay.",
+      [
+        { text: "Cancel", style: "cancel" },
+        { text: "Delete audio", style: "destructive", onPress: () => void deleteAudio() },
+      ],
+    );
   };
 
   const processingStatus = transcript?.metadata?.processingStatus;
@@ -309,12 +400,6 @@ export default function TranscriptViewScreen() {
   };
 
   const renderUtterancesTab = () => {
-    type Utterance = {
-      speaker: string;
-      transcript: string;
-      start: number;
-      end: number;
-    };
     const utterances = transcript?.utterances as Utterance[] | null | undefined;
     const principalSpeaker = transcript?.metadata?.principalSpeaker as
       | string
@@ -374,7 +459,19 @@ export default function TranscriptViewScreen() {
                     marginBottom: 4,
                   }}
                 >
-                  {formatTimestamp(u.start)} {speakerLabel}
+                  {playback.available && u.start != null ? (
+                    <Text
+                      accessibilityRole="button"
+                      accessibilityLabel={`Play from ${formatClock(u.start)}`}
+                      onPress={() => playback.playFrom(u.start, channelOf(u))}
+                      style={{ textDecorationLine: "underline" }}
+                    >
+                      {formatTimestamp(u.start)}
+                    </Text>
+                  ) : (
+                    formatTimestamp(u.start)
+                  )}{" "}
+                  {speakerLabel}
                 </Text>
                 <Text style={{ color: theme.colors.onSurface, lineHeight: 22 }}>
                   {u.transcript}
@@ -880,6 +977,14 @@ export default function TranscriptViewScreen() {
             title="Save as File"
             leadingIcon="download"
           />
+          {playback.available && (
+            <Menu.Item
+              onPress={confirmDeleteAudio}
+              title="Delete audio"
+              leadingIcon="delete-outline"
+              disabled={isDeletingAudio}
+            />
+          )}
         </Menu>
       </View>
 
@@ -947,6 +1052,47 @@ export default function TranscriptViewScreen() {
                     </Chip>
                   );
                 })}
+              </View>
+            );
+          })()}
+          {(() => {
+            const meta = transcript?.metadata as TranscriptMetadata | null | undefined;
+            const deletedAt = meta?.audioDeletedAt ?? audio?.audioDeletedAt;
+            const bookmarks = meta?.bookmarks ?? [];
+            if (!playback.available && !deletedAt && bookmarks.length === 0) return null;
+            return (
+              <View style={styles.audioContainer}>
+                {playback.available && <MeetingAudioBar playback={playback} />}
+                {!playback.available && deletedAt && (
+                  <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
+                    {meta?.audioDeletedReason === "retention"
+                      ? `The audio of this meeting was deleted on ${formatDay(deletedAt)} by the workspace's audio retention rule. The transcript stays.`
+                      : `The audio of this meeting was deleted on ${formatDay(deletedAt)}. The transcript stays.`}
+                  </Text>
+                )}
+                {bookmarks.length > 0 && (
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={{ gap: 6 }}
+                  >
+                    {bookmarks.map((b, i) => (
+                      <Chip
+                        key={`${b.atSeconds}-${i}`}
+                        icon="bookmark-outline"
+                        compact
+                        mode="outlined"
+                        onPress={
+                          playback.available ? () => playback.playFrom(b.atSeconds, "mic") : undefined
+                        }
+                      >
+                        {b.note
+                          ? `${formatClock(b.atSeconds)} · ${b.note.length > 40 ? `${b.note.slice(0, 39)}…` : b.note}`
+                          : formatClock(b.atSeconds)}
+                      </Chip>
+                    ))}
+                  </ScrollView>
+                )}
               </View>
             );
           })()}
@@ -1120,6 +1266,11 @@ const styles = StyleSheet.create({
   },
   segmentContainer: {
     padding: 16,
+  },
+  audioContainer: {
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    gap: 8,
   },
   badgesContainer: {
     flexDirection: "row",

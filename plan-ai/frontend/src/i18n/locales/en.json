@@ -393,7 +393,8 @@
     "genericNotConnected": "{{provider}} is not connected yet.",
     "statusAlert": {
       "success": "Integration completed successfully.",
-      "error": "Failed to complete integration. Please try again."
+      "error": "Failed to complete integration. Please try again.",
+      "missingScope": "Plan AI did not get access to your calendar. Connect again and allow access to your calendar events."
     },
     "loading": "Loading integrations…",
     "buttons": {
@@ -459,6 +460,20 @@
         "description": "Connect your Microsoft OneDrive to generate and export documents.",
         "connectCta": "Connect OneDrive",
         "notConnected": "Microsoft OneDrive is not connected yet."
+      },
+      "googleCalendar": {
+        "label": "Google Calendar",
+        "description": "Plan AI reads the meeting title and attendees to name the recording and the speakers. It never writes to your calendar.",
+        "connectCta": "Connect Google Calendar",
+        "notConnected": "Google Calendar is not connected yet.",
+        "connectFailed": "Could not start the Google Calendar connection."
+      },
+      "outlookCalendar": {
+        "label": "Outlook Calendar",
+        "description": "Plan AI reads the meeting title and attendees to name the recording and the speakers. It never writes to your calendar.",
+        "connectCta": "Connect Outlook Calendar",
+        "notConnected": "Outlook Calendar is not connected yet.",
+        "connectFailed": "Could not start the Outlook Calendar connection."
       },
       "asana": {
         "label": "Asana",
@@ -1394,7 +1409,15 @@
     "close": "Close",
     "sendInvite": "Send Invite",
     "inviting": "Inviting...",
-    "success": "User invited successfully!"
+    "success": "User invited successfully!",
+    "audioRetention": {
+      "title": "Meeting audio",
+      "description": "Keep the audio of each meeting for a limited time. After that it is deleted; the transcript, summary and tasks stay.",
+      "label": "Delete audio after",
+      "forever": "Keep forever",
+      "days": "{{count}} days",
+      "year": "1 year"
+    }
   },
   "onboarding": {
     "welcome": "Welcome to Plan AI!",
@@ -1502,5 +1525,40 @@
     "generatedAssets": "Generated from the meeting",
     "document": "Document",
     "slides": "Slides"
+  },
+  "recordingPlayer": {
+    "title": "Recording",
+    "play": "Play",
+    "pause": "Pause",
+    "jumpTo": "Play from {{time}}",
+    "deletedOn": "The audio of this meeting was deleted on {{date}}. The transcript stays.",
+    "deletedByRetention": "The audio of this meeting was deleted on {{date}} by the workspace retention rule. The transcript stays.",
+    "deleteAudio": "Delete audio",
+    "deleteConfirmTitle": "Delete the audio of this meeting?",
+    "deleteConfirmBody": "The audio files are deleted for good. The transcript, summary, speakers and tasks stay. Reprocessing will then work from the text only.",
+    "cancel": "Cancel",
+    "confirmDelete": "Delete",
+    "deleted": "Audio deleted",
+    "deleteFailed": "Could not delete the audio",
+    "loadFailed": "Could not load the audio",
+    "bookmarks": "Marked moments",
+    "noNote": "Marked"
+  },
+  "sendNotes": {
+    "button": "Send notes",
+    "title": "Send the notes by email",
+    "description": "Each person gets the summary, the key points and the action items in their own email. Replies go to you.",
+    "alreadySent": "Last sent on {{date}}. Recipients: {{count}}.",
+    "noInvite": "This meeting has no calendar invite. Add the addresses below.",
+    "addLabel": "Add an email address",
+    "add": "Add",
+    "invalidEmail": "That is not a valid email address.",
+    "messageLabel": "Message above the notes (optional)",
+    "tooMany": "At most {{max}} people per send.",
+    "cancel": "Cancel",
+    "send": "Send ({{count}})",
+    "sent": "Notes sent. Recipients: {{count}}.",
+    "partlySent": "Notes sent to {{count}}. Not sent to: {{failed}}.",
+    "failed": "The notes could not be sent."
   }
 }

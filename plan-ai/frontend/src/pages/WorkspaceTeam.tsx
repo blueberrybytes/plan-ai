@@ -51,7 +51,15 @@ import { selectUserDb } from "../store/slices/auth/authSelector";
 import { setActiveWorkspaceId, setToastMessage } from "../store/slices/app/appSlice";
 import { useGetSubscriptionQuery } from "../store/apis/billingApi";
 import { format } from "date-fns";
-import { Dialog, DialogTitle, DialogContent, DialogActions, TextField, Link } from "@mui/material";
+import {
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+  Link,
+  MenuItem,
+} from "@mui/material";
 import { components } from "../types/api";
 
 type WorkspaceMemberResponse = components["schemas"]["WorkspaceMemberResponse"];
@@ -153,8 +161,11 @@ const WorkspaceSettingsSection: React.FC<{ activeWorkspace: WorkspaceResponse }>
 }) => {
   const [updateSettings, { isLoading }] = useUpdateWorkspaceSettingsMutation();
   const dispatch = useDispatch();
+  const { t } = useTranslation();
 
   const [openRouterKey, setOpenRouterKey] = useState("");
+  // Days to keep meeting audio; null keeps it forever.
+  const [audioRetentionDays, setAudioRetentionDays] = useState<number | null>(null);
   const [deepgramKey, setDeepgramKey] = useState("");
   const [tokenLimit, setTokenLimit] = useState("");
   const [defaultThemeId, setDefaultThemeId] = useState<string | null>(null);
@@ -165,6 +176,7 @@ const WorkspaceSettingsSection: React.FC<{ activeWorkspace: WorkspaceResponse }>
       setDeepgramKey(activeWorkspace.deepgramKey || "");
       setTokenLimit(activeWorkspace.monthlyTokenLimit?.toString() || "200000");
       setDefaultThemeId(activeWorkspace.defaultThemeId ?? null);
+      setAudioRetentionDays(activeWorkspace.audioRetentionDays ?? null);
     }
   }, [activeWorkspace]);
 
@@ -177,6 +189,7 @@ const WorkspaceSettingsSection: React.FC<{ activeWorkspace: WorkspaceResponse }>
       const payload: UpdateWorkspaceSettingsRequest = {
         monthlyTokenLimit: parseInt(tokenLimit, 10) || 200000,
         defaultThemeId,
+        audioRetentionDays,
       };
       if (!activeWorkspace.isCourtesy) {
         payload.openRouterKey = openRouterKey;
@@ -294,9 +307,41 @@ const WorkspaceSettingsSection: React.FC<{ activeWorkspace: WorkspaceResponse }>
           />
         </Box>
 
-        <Button variant="contained" onClick={handleSave} disabled={isLoading}>
-          {isLoading ? "Saving..." : "Save Settings"}
-        </Button>
+        <Typography variant="subtitle2" gutterBottom sx={{ mt: 1 }}>
+          {t("workspaceTeam.audioRetention.title")}
+        </Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+          {t("workspaceTeam.audioRetention.description")}
+        </Typography>
+        <TextField
+          select
+          size="small"
+          label={t("workspaceTeam.audioRetention.label")}
+          value={audioRetentionDays === null ? "forever" : String(audioRetentionDays)}
+          onChange={(e) =>
+            setAudioRetentionDays(e.target.value === "forever" ? null : Number(e.target.value))
+          }
+          sx={{ mb: 3, minWidth: 240 }}
+        >
+          <MenuItem value="forever">{t("workspaceTeam.audioRetention.forever")}</MenuItem>
+          {[7, 30, 90, 180].map((days) => (
+            <MenuItem key={days} value={String(days)}>
+              {t("workspaceTeam.audioRetention.days", { count: days })}
+            </MenuItem>
+          ))}
+          <MenuItem value="365">{t("workspaceTeam.audioRetention.year")}</MenuItem>
+          {audioRetentionDays !== null && ![7, 30, 90, 180, 365].includes(audioRetentionDays) && (
+            <MenuItem value={String(audioRetentionDays)}>
+              {t("workspaceTeam.audioRetention.days", { count: audioRetentionDays })}
+            </MenuItem>
+          )}
+        </TextField>
+
+        <Box>
+          <Button variant="contained" onClick={handleSave} disabled={isLoading}>
+            {isLoading ? "Saving..." : "Save Settings"}
+          </Button>
+        </Box>
       </Paper>
 
       <Paper

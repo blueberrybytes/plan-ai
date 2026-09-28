@@ -3,6 +3,8 @@ import EnvUtils from "./EnvUtils";
 import { AI_MODEL_LIMITS } from "../services/aiContextRouter";
 import prisma from "../prisma/prismaClient";
 import { logger } from "./logger";
+import { withDecryptedWorkspaceKeys } from "./workspaceSecrets";
+import { SecretCryptoError } from "./secretCrypto";
 import {
   getEmbeddingsProvider,
   getLlmProvider,
@@ -128,10 +130,12 @@ async function resolveWorkspaceApiKey(workspaceId: string): Promise<string> {
   let isCourtesy = false;
 
   try {
-    const workspace = await prisma.workspace.findUnique({
-      where: { id: workspaceId },
-      select: { openRouterKey: true, isCourtesy: true },
-    });
+    const workspace = withDecryptedWorkspaceKeys(
+      await prisma.workspace.findUnique({
+        where: { id: workspaceId },
+        select: { openRouterKey: true, isCourtesy: true },
+      }),
+    );
 
     if (workspace?.isCourtesy) {
       isCourtesy = true;
@@ -142,6 +146,9 @@ async function resolveWorkspaceApiKey(workspaceId: string): Promise<string> {
       apiKey = workspace.openRouterKey.trim();
     }
   } catch (error) {
+    // A key that exists but cannot be read must fail, not quietly move the
+    // cost to the platform's keys.
+    if (error instanceof SecretCryptoError) throw error;
     logger.error(`[resolveWorkspaceApiKey] Failed to fetch workspace ${workspaceId}`, error);
   }
 
@@ -179,10 +186,12 @@ export async function resolveWorkspaceOpenAIKey(
   let isCourtesy = false;
 
   try {
-    const workspace = await prisma.workspace.findUnique({
-      where: { id: workspaceId },
-      select: { openaiKey: true, isCourtesy: true },
-    });
+    const workspace = withDecryptedWorkspaceKeys(
+      await prisma.workspace.findUnique({
+        where: { id: workspaceId },
+        select: { openaiKey: true, isCourtesy: true },
+      }),
+    );
     if (workspace?.isCourtesy) isCourtesy = true;
     // Only accept valid-looking OpenAI keys (sk-…), not an OpenRouter key.
     if (
@@ -193,6 +202,9 @@ export async function resolveWorkspaceOpenAIKey(
       return { apiKey: workspace.openaiKey.trim(), usedFallback: false };
     }
   } catch (error) {
+    // A key that exists but cannot be read must fail, not quietly move the
+    // cost to the platform's keys.
+    if (error instanceof SecretCryptoError) throw error;
     logger.error(`[resolveWorkspaceOpenAIKey] Failed to fetch workspace ${workspaceId}`, error);
   }
 
@@ -259,10 +271,12 @@ export async function resolveWorkspaceEmbeddingConfig(
 
   let isCourtesy = false;
   try {
-    const workspace = await prisma.workspace.findUnique({
-      where: { id: workspaceId },
-      select: { openRouterKey: true, openaiKey: true, isCourtesy: true },
-    });
+    const workspace = withDecryptedWorkspaceKeys(
+      await prisma.workspace.findUnique({
+        where: { id: workspaceId },
+        select: { openRouterKey: true, openaiKey: true, isCourtesy: true },
+      }),
+    );
     if (workspace?.isCourtesy) isCourtesy = true;
 
     const orKey = workspace?.openRouterKey?.trim();
@@ -275,6 +289,9 @@ export async function resolveWorkspaceEmbeddingConfig(
       return { apiKey: oaiKey, model: OAI_MODEL, usedFallback: false };
     }
   } catch (error) {
+    // A key that exists but cannot be read must fail, not quietly move the
+    // cost to the platform's keys.
+    if (error instanceof SecretCryptoError) throw error;
     logger.error(
       `[resolveWorkspaceEmbeddingConfig] Failed to fetch workspace ${workspaceId}`,
       error,

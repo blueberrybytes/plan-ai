@@ -1,8 +1,14 @@
 import { renderWorkspaceInvitationEmail } from "./workspaceInvitation";
 import { renderTelegramLeadEmail } from "./telegramLead";
 import { renderWeeklyDigestEmail } from "./weeklyDigest";
+import { renderMeetingNotesEmail } from "./meetingNotes";
 
-export { renderWorkspaceInvitationEmail, renderTelegramLeadEmail, renderWeeklyDigestEmail };
+export {
+  renderWorkspaceInvitationEmail,
+  renderTelegramLeadEmail,
+  renderWeeklyDigestEmail,
+  renderMeetingNotesEmail,
+};
 
 export function getAllEmailTemplates() {
   const now = new Date();
@@ -23,6 +29,25 @@ export function getAllEmailTemplates() {
         brief: "Quiero una app para que mis camareros tomen comandas y vayan directas a cocina.",
         transcriptId: "clx0000000000",
         viaVoice: true,
+      }),
+    },
+    {
+      id: "meeting_notes",
+      name: "Meeting Notes",
+      html: renderMeetingNotesEmail({
+        senderName: "Xavier Mas",
+        senderEmail: "xavier@example.com",
+        title: "Kickoff Uriach, Impact Platform",
+        recordedAt: day(1),
+        summary:
+          "We agreed the scope of phase 1. The CRM integration moves before October because the sales team needs it for the campaign.",
+        keyPoints: ["Phase 1 scope approved", "CRM integration moves before October"],
+        tasks: [
+          { title: "Send the SMT integration proposal", dueDate: "2026-10-02" },
+          { title: "Prepare the test environment" },
+        ],
+        message: "Hi all, here are the notes from today. Tell me if I missed anything.",
+        meetingUrl: null,
       }),
     },
     {

@@ -68,6 +68,9 @@ model Workspace {
   // when neither an explicit theme nor the project's theme is set — covers
   // standalone recordings (recorder/mobile) that have no project.
   defaultThemeId    String?
+  // Days to keep meeting audio after it is recorded. Past that a daily job
+  // deletes the audio files and keeps the transcript. Null keeps audio forever.
+  audioRetentionDays Int?
 
   // Stripe billing
   stripeCustomerId        String?             @unique
@@ -874,6 +877,8 @@ enum IntegrationProvider {
   ONEDRIVE
   ASANA
   TWENTY
+  GOOGLE_CALENDAR
+  OUTLOOK_CALENDAR
 }
 
 enum IntegrationStatus {

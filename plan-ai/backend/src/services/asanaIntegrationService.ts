@@ -5,6 +5,8 @@ import type { WorkspaceIntegration } from "@prisma/client";
 import EnvUtils from "../utils/EnvUtils";
 import { logger } from "../utils/logger";
 import prisma from "../prisma/prismaClient";
+import { encryptSecret } from "../utils/secretCrypto";
+import { encryptTokens, withDecryptedTokens } from "../utils/integrationSecrets";
 import type { AsanaIntegrationMetadata } from "./integrationMetadataTypes";
 import type { TaskMetadata } from "./taskMetadataTypes";
 
@@ -167,6 +169,8 @@ class AsanaIntegrationService {
     workspaceId: string,
     integration: WorkspaceIntegration,
   ): Promise<WorkspaceIntegration> {
+    // Callers get plain tokens back whatever they pass in.
+    integration = withDecryptedTokens(integration);
     const meta = integration.metadata as unknown as AsanaIntegrationMetadata;
     const isPat = meta?.authType === "PAT";
     if (isPat || !integration.refreshToken) {
@@ -210,14 +214,14 @@ class AsanaIntegrationService {
 
       const updated = await prisma.workspaceIntegration.update({
         where: { id: integration.id },
-        data: {
+        data: encryptTokens({
           accessToken: parsed.access_token,
           refreshToken: parsed.refresh_token ?? integration.refreshToken,
           expiresAt,
-        },
+        }),
       });
 
-      return updated;
+      return withDecryptedTokens(updated);
     } catch (error) {
       logger.error("Error refreshing Asana token", error);
       await prisma.workspaceIntegration.update({
@@ -277,8 +281,8 @@ class AsanaIntegrationService {
       },
       update: {
         status: IntegrationStatus.CONNECTED,
-        accessToken: params.accessToken,
-        refreshToken: params.refreshToken ?? null,
+        accessToken: encryptSecret(params.accessToken),
+        refreshToken: encryptSecret(params.refreshToken ?? null),
         expiresAt,
         accountId: params.asanaUser.gid,
         accountName: params.asanaUser.name,
@@ -288,8 +292,8 @@ class AsanaIntegrationService {
         workspaceId: params.workspaceId,
         provider: IntegrationProvider.ASANA,
         status: IntegrationStatus.CONNECTED,
-        accessToken: params.accessToken,
-        refreshToken: params.refreshToken ?? null,
+        accessToken: encryptSecret(params.accessToken),
+        refreshToken: encryptSecret(params.refreshToken ?? null),
         expiresAt,
         accountId: params.asanaUser.gid,
         accountName: params.asanaUser.name,
@@ -297,7 +301,7 @@ class AsanaIntegrationService {
       },
     });
 
-    return integration;
+    return withDecryptedTokens(integration);
   }
 
   public async verifyManualCredentials(
@@ -342,7 +346,7 @@ class AsanaIntegrationService {
       },
       update: {
         status: IntegrationStatus.CONNECTED,
-        accessToken: personalAccessToken.trim(),
+        accessToken: encryptSecret(personalAccessToken.trim()),
         refreshToken: null,
         expiresAt: null,
         accountId: user.gid,
@@ -353,7 +357,7 @@ class AsanaIntegrationService {
         workspaceId,
         provider: IntegrationProvider.ASANA,
         status: IntegrationStatus.CONNECTED,
-        accessToken: personalAccessToken.trim(),
+        accessToken: encryptSecret(personalAccessToken.trim()),
         refreshToken: null,
         expiresAt: null,
         accountId: user.gid,
@@ -362,17 +366,19 @@ class AsanaIntegrationService {
       },
     });
 
-    return integration;
+    return withDecryptedTokens(integration);
   }
 
   public async getAsanaSummary(
     workspaceId: string,
   ): Promise<{ totalTasks: number | null; totalProjects: number | null }> {
-    let integration = await prisma.workspaceIntegration.findUnique({
-      where: {
-        workspaceId_provider: { workspaceId, provider: IntegrationProvider.ASANA },
-      },
-    });
+    let integration = withDecryptedTokens(
+      await prisma.workspaceIntegration.findUnique({
+        where: {
+          workspaceId_provider: { workspaceId, provider: IntegrationProvider.ASANA },
+        },
+      }),
+    );
 
     if (!integration || integration.status !== IntegrationStatus.CONNECTED) {
       throw new Error("Asana is not connected");
@@ -424,9 +430,11 @@ class AsanaIntegrationService {
   }
 
   public async listAsanaProjects(workspaceId: string): Promise<{ gid: string; name: string }[]> {
-    let integration = await prisma.workspaceIntegration.findUnique({
-      where: { workspaceId_provider: { workspaceId, provider: IntegrationProvider.ASANA } },
-    });
+    let integration = withDecryptedTokens(
+      await prisma.workspaceIntegration.findUnique({
+        where: { workspaceId_provider: { workspaceId, provider: IntegrationProvider.ASANA } },
+      }),
+    );
 
     if (!integration || integration.status !== IntegrationStatus.CONNECTED) {
       throw new Error("Asana is not connected");
@@ -485,11 +493,13 @@ class AsanaIntegrationService {
     taskId: string,
     projectGid: string,
   ): Promise<{ taskGid: string; url: string }> {
-    let integration = await prisma.workspaceIntegration.findUnique({
-      where: {
-        workspaceId_provider: { workspaceId, provider: IntegrationProvider.ASANA },
-      },
-    });
+    let integration = withDecryptedTokens(
+      await prisma.workspaceIntegration.findUnique({
+        where: {
+          workspaceId_provider: { workspaceId, provider: IntegrationProvider.ASANA },
+        },
+      }),
+    );
 
     if (!integration || !integration.accessToken) {
       throw new Error("Asana integration not found or unauthorized");

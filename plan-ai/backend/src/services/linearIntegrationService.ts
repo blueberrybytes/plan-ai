@@ -5,6 +5,8 @@ import prisma from "../prisma/prismaClient";
 import { LinearClient } from "@linear/sdk";
 import { logger } from "../utils/logger";
 import EnvUtils from "../utils/EnvUtils";
+import { encryptSecret } from "../utils/secretCrypto";
+import { encryptTokens, withDecryptedTokens } from "../utils/integrationSecrets";
 import type { LinearSummaryResponse, LinearManualConnectRequest } from "./linearTypes";
 import type { LinearIntegrationMetadata } from "./integrationMetadataTypes";
 import type { TaskMetadata } from "./taskMetadataTypes";
@@ -108,6 +110,8 @@ class LinearIntegrationService {
     workspaceId: string,
     integration: WorkspaceIntegration,
   ): Promise<WorkspaceIntegration> {
+    // Callers get plain tokens back whatever they pass in.
+    integration = withDecryptedTokens(integration);
     const meta = integration.metadata as unknown as LinearIntegrationMetadata;
     const isApiKey = meta?.authType === "API_KEY";
     if (isApiKey || !integration.refreshToken) {
@@ -215,14 +219,14 @@ class LinearIntegrationService {
     // usable for 30 minutes via Linear's replay grace, so the next sync heals.
     const updated = await prisma.workspaceIntegration.update({
       where: { id: integration.id },
-      data: {
+      data: encryptTokens({
         accessToken: parsed.access_token,
         refreshToken: parsed.refresh_token ?? integration.refreshToken,
         expiresAt,
-      },
+      }),
     });
 
-    return updated;
+    return withDecryptedTokens(updated);
   }
 
   public async verifyManualCredentials(workspaceId: string, payload: LinearManualConnectRequest) {
@@ -251,7 +255,7 @@ class LinearIntegrationService {
           workspaceId,
           provider: IntegrationProvider.LINEAR,
           status: IntegrationStatus.CONNECTED,
-          accessToken: apiKey,
+          accessToken: encryptSecret(apiKey),
           accountId: viewer.id,
           accountName: viewer.name,
           metadata: {
@@ -261,7 +265,7 @@ class LinearIntegrationService {
         },
         update: {
           status: IntegrationStatus.CONNECTED,
-          accessToken: apiKey,
+          accessToken: encryptSecret(apiKey),
           accountId: viewer.id,
           accountName: viewer.name,
           metadata: {
@@ -278,14 +282,16 @@ class LinearIntegrationService {
   }
 
   public async getLinearSummary(workspaceId: string): Promise<LinearSummaryResponse> {
-    let integration = await prisma.workspaceIntegration.findUnique({
-      where: {
-        workspaceId_provider: {
-          workspaceId,
-          provider: IntegrationProvider.LINEAR,
+    let integration = withDecryptedTokens(
+      await prisma.workspaceIntegration.findUnique({
+        where: {
+          workspaceId_provider: {
+            workspaceId,
+            provider: IntegrationProvider.LINEAR,
+          },
         },
-      },
-    });
+      }),
+    );
 
     if (!integration || integration.status !== IntegrationStatus.CONNECTED) {
       throw new Error("Linear is not connected");
@@ -321,9 +327,11 @@ class LinearIntegrationService {
   }
 
   public async listLinearTeams(workspaceId: string): Promise<{ id: string; name: string }[]> {
-    let integration = await prisma.workspaceIntegration.findUnique({
-      where: { workspaceId_provider: { workspaceId, provider: IntegrationProvider.LINEAR } },
-    });
+    let integration = withDecryptedTokens(
+      await prisma.workspaceIntegration.findUnique({
+        where: { workspaceId_provider: { workspaceId, provider: IntegrationProvider.LINEAR } },
+      }),
+    );
     if (!integration || integration.status !== IntegrationStatus.CONNECTED) {
       throw new Error("Linear is not connected");
     }
@@ -334,9 +342,11 @@ class LinearIntegrationService {
   }
 
   public async setDefaultLinearTeam(workspaceId: string, teamId: string): Promise<void> {
-    let integration = await prisma.workspaceIntegration.findUnique({
-      where: { workspaceId_provider: { workspaceId, provider: IntegrationProvider.LINEAR } },
-    });
+    let integration = withDecryptedTokens(
+      await prisma.workspaceIntegration.findUnique({
+        where: { workspaceId_provider: { workspaceId, provider: IntegrationProvider.LINEAR } },
+      }),
+    );
     if (!integration) throw new Error("Linear integration not found");
 
     integration = await this.refreshTokenIfExpired(workspaceId, integration);
@@ -362,9 +372,11 @@ class LinearIntegrationService {
   }
 
   public async ensurePlanAiLabel(workspaceId: string): Promise<string | undefined> {
-    let integration = await prisma.workspaceIntegration.findUnique({
-      where: { workspaceId_provider: { workspaceId, provider: IntegrationProvider.LINEAR } },
-    });
+    let integration = withDecryptedTokens(
+      await prisma.workspaceIntegration.findUnique({
+        where: { workspaceId_provider: { workspaceId, provider: IntegrationProvider.LINEAR } },
+      }),
+    );
     if (!integration || integration.status !== IntegrationStatus.CONNECTED) return undefined;
 
     integration = await this.refreshTokenIfExpired(workspaceId, integration);
@@ -402,11 +414,13 @@ class LinearIntegrationService {
     taskId: string,
     teamId: string,
   ): Promise<{ issueId: string; identifier: string; url: string }> {
-    let integration = await prisma.workspaceIntegration.findUnique({
-      where: {
-        workspaceId_provider: { workspaceId, provider: IntegrationProvider.LINEAR },
-      },
-    });
+    let integration = withDecryptedTokens(
+      await prisma.workspaceIntegration.findUnique({
+        where: {
+          workspaceId_provider: { workspaceId, provider: IntegrationProvider.LINEAR },
+        },
+      }),
+    );
 
     if (!integration || integration.status !== IntegrationStatus.CONNECTED) {
       throw new Error("Linear integration not found or unauthorized");

@@ -1,3 +1,5 @@
+import type { components } from "../types/api";
+
 export interface RecordingConfig {
   systemSourceId: string | null;
   language?: string;
@@ -15,7 +17,12 @@ export interface RecordingConfig {
   contextIds?: string[];
   /** User-facing project IDs. Backend resolves to internal contextIds. */
   projectIds?: string[];
+  /** The calendar event happening when the recording started, if any. */
+  calendarEvent?: CalendarEvent;
 }
+
+/** A meeting from the user's connected calendar (see /api/calendar/current-meeting). */
+export type CalendarEvent = components["schemas"]["CurrentMeeting"];
 
 const CONFIG_KEY = "recorder-config";
 const LANGUAGE_KEY = "planai_language";

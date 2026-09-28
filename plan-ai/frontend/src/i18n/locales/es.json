@@ -393,7 +393,8 @@
     "genericNotConnected": "{{provider}} todavía no está conectado.",
     "statusAlert": {
       "success": "La integración se completó correctamente.",
-      "error": "No se pudo completar la integración. Inténtalo de nuevo."
+      "error": "No se pudo completar la integración. Inténtalo de nuevo.",
+      "missingScope": "Plan AI no ha recibido acceso a tu calendario. Vuelve a conectarlo y permite el acceso a los eventos del calendario."
     },
     "loading": "Cargando integraciones…",
     "buttons": {
@@ -453,6 +454,20 @@
         "description": "Conecta tu Microsoft OneDrive para generar y exportar documentos.",
         "connectCta": "Conectar OneDrive",
         "notConnected": "Microsoft OneDrive aún no está conectado."
+      },
+      "googleCalendar": {
+        "label": "Google Calendar",
+        "description": "Plan AI lee el título de la reunión y los asistentes para poner nombre a la grabación y a los hablantes. Nunca escribe en tu calendario.",
+        "connectCta": "Conectar Google Calendar",
+        "notConnected": "Google Calendar aún no está conectado.",
+        "connectFailed": "No se ha podido iniciar la conexión con Google Calendar."
+      },
+      "outlookCalendar": {
+        "label": "Outlook Calendar",
+        "description": "Plan AI lee el título de la reunión y los asistentes para poner nombre a la grabación y a los hablantes. Nunca escribe en tu calendario.",
+        "connectCta": "Conectar Outlook Calendar",
+        "notConnected": "Outlook Calendar aún no está conectado.",
+        "connectFailed": "No se ha podido iniciar la conexión con Outlook Calendar."
       },
       "asana": {
         "label": "Asana",
@@ -1388,7 +1403,15 @@
     "close": "Cerrar",
     "sendInvite": "Enviar Invitación",
     "inviting": "Invitando...",
-    "success": "¡Usuario invitado con éxito!"
+    "success": "¡Usuario invitado con éxito!",
+    "audioRetention": {
+      "title": "Audio de las reuniones",
+      "description": "Guarda el audio de cada reunión durante un tiempo. Después se borra; la transcripción, el resumen y las tareas se quedan.",
+      "label": "Borrar el audio pasados",
+      "forever": "Guardar siempre",
+      "days": "{{count}} días",
+      "year": "1 año"
+    }
   },
   "onboarding": {
     "welcome": "¡Bienvenido a Plan AI!",
@@ -1496,5 +1519,40 @@
     "generatedAssets": "Generado a partir de la reunión",
     "document": "Documento",
     "slides": "Presentación"
+  },
+  "recordingPlayer": {
+    "title": "Grabación",
+    "play": "Reproducir",
+    "pause": "Pausar",
+    "jumpTo": "Reproducir desde {{time}}",
+    "deletedOn": "El audio de esta reunión se borró el {{date}}. La transcripción se mantiene.",
+    "deletedByRetention": "El audio de esta reunión se borró el {{date}} por la regla de retención del workspace. La transcripción se mantiene.",
+    "deleteAudio": "Borrar audio",
+    "deleteConfirmTitle": "¿Borrar el audio de esta reunión?",
+    "deleteConfirmBody": "Los archivos de audio se borran para siempre. La transcripción, el resumen, los hablantes y las tareas se quedan. Si la vuelves a procesar, se hará solo con el texto.",
+    "cancel": "Cancelar",
+    "confirmDelete": "Borrar",
+    "deleted": "Audio borrado",
+    "deleteFailed": "No se pudo borrar el audio",
+    "loadFailed": "No se pudo cargar el audio",
+    "bookmarks": "Momentos marcados",
+    "noNote": "Marcado"
+  },
+  "sendNotes": {
+    "button": "Enviar notas",
+    "title": "Enviar las notas por correo",
+    "description": "Cada persona recibe el resumen, los puntos clave y las tareas en su propio correo. Las respuestas te llegan a ti.",
+    "alreadySent": "Último envío el {{date}}. Destinatarios: {{count}}.",
+    "noInvite": "Esta reunión no tiene invitación de calendario. Añade las direcciones abajo.",
+    "addLabel": "Añadir un correo",
+    "add": "Añadir",
+    "invalidEmail": "Ese correo no es válido.",
+    "messageLabel": "Mensaje encima de las notas (opcional)",
+    "tooMany": "Como mucho {{max}} personas por envío.",
+    "cancel": "Cancelar",
+    "send": "Enviar ({{count}})",
+    "sent": "Notas enviadas. Destinatarios: {{count}}.",
+    "partlySent": "Notas enviadas a {{count}}. No se pudo enviar a: {{failed}}.",
+    "failed": "No se pudieron enviar las notas."
   }
 }

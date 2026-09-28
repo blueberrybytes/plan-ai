@@ -100,6 +100,51 @@ export async function sendTelegramLeadEmail(input: TelegramLeadEmailInput): Prom
  * (`runWeeklyDigest`) can count it as failed and log which user it was —
  * the batch keeps going regardless.
  */
+/** Meeting notes a user sends to the people in the meeting. Throws on failure. */
+export async function sendMeetingNotesEmail(input: {
+  to: string;
+  replyTo: string;
+  senderName: string;
+  subject: string;
+  html: string;
+}): Promise<void> {
+  if (!RESEND_API_KEY) {
+    throw new Error("RESEND_API_KEY not set");
+  }
+  // "Ana López via Plan AI <noreply@...>": the reader sees who sent it, and
+  // the address stays ours. Characters that could break the header go.
+  const address = /<([^>]+)>/.exec(FROM_EMAIL)?.[1] ?? FROM_EMAIL;
+  const name = input.senderName
+    .replace(/["<>\r\n\\]/g, "")
+    .slice(0, 80)
+    .trim();
+  const from = name ? `"${name} via Plan AI" <${address}>` : FROM_EMAIL;
+
+  const response = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${RESEND_API_KEY}`,
+    },
+    body: JSON.stringify({
+      from,
+      to: [input.to],
+      reply_to: input.replyTo,
+      subject: input.subject.replace(/[\r\n]+/g, " ").slice(0, 200),
+      html: input.html,
+    }),
+    signal: AbortSignal.timeout(15000),
+  });
+
+  if (!response.ok) {
+    const body = await response.text();
+    throw new Error(`Meeting notes email failed ${response.status}: ${body}`);
+  }
+}
+
+/** True when this server can send email. */
+export const emailConfigured = (): boolean => !!RESEND_API_KEY;
+
 export async function sendWeeklyDigestEmail(
   to: string,
   input: WeeklyDigestEmailInput,

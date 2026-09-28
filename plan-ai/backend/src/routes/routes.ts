@@ -60,6 +60,8 @@ import { ContextController } from './../controller/contextController';
 // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
 import { ChatController } from './../controller/chatController';
 // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+import { CalendarController } from './../controller/calendarController';
+// WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
 import { BrandThemeController } from './../controller/brandThemeController';
 // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
 import { BillingController } from './../controller/billingController';
@@ -936,6 +938,28 @@ const models: TsoaRoute.Models = {
         "additionalProperties": false,
     },
     // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "RecordingBookmark": {
+        "dataType": "refObject",
+        "properties": {
+            "atSeconds": {"dataType":"double","required":true},
+            "note": {"dataType":"string"},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "MeetingCalendarEvent": {
+        "dataType": "refObject",
+        "properties": {
+            "title": {"dataType":"string","required":true},
+            "start": {"dataType":"string"},
+            "end": {"dataType":"string"},
+            "attendees": {"dataType":"array","array":{"dataType":"nestedObjectLiteral","nestedProperties":{"email":{"dataType":"string","required":true},"name":{"dataType":"string"}}},"required":true},
+            "meetingUrl": {"dataType":"string"},
+            "provider": {"dataType":"string"},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
     "TranscriptMetadata": {
         "dataType": "refObject",
         "properties": {
@@ -953,6 +977,12 @@ const models: TsoaRoute.Models = {
             "recording": {"ref":"RecordingWindow"},
             "recordingMode": {"dataType":"union","subSchemas":[{"dataType":"enum","enums":["in_person"]},{"dataType":"enum","enums":["remote"]}]},
             "clientSessionId": {"dataType":"string"},
+            "bookmarks": {"dataType":"array","array":{"dataType":"refObject","ref":"RecordingBookmark"}},
+            "calendarEvent": {"ref":"MeetingCalendarEvent"},
+            "micSysOffsetMs": {"dataType":"double"},
+            "audioDeletedAt": {"dataType":"string"},
+            "audioDeletedReason": {"dataType":"union","subSchemas":[{"dataType":"enum","enums":["retention"]},{"dataType":"enum","enums":["user"]}]},
+            "notesEmails": {"dataType":"array","array":{"dataType":"nestedObjectLiteral","nestedProperties":{"count":{"dataType":"double","required":true},"sentBy":{"dataType":"string","required":true},"sentAt":{"dataType":"string","required":true}}}},
         },
         "additionalProperties": false,
     },
@@ -1077,6 +1107,46 @@ const models: TsoaRoute.Models = {
             "createSlides": {"dataType":"boolean"},
         },
         "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "SendMeetingNotesResponse": {
+        "dataType": "refObject",
+        "properties": {
+            "sent": {"dataType":"array","array":{"dataType":"string"},"required":true},
+            "failed": {"dataType":"array","array":{"dataType":"string"},"required":true},
+            "invalid": {"dataType":"array","array":{"dataType":"string"},"required":true},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "ApiResponse_SendMeetingNotesResponse_": {
+        "dataType": "refAlias",
+        "type": {"dataType":"nestedObjectLiteral","nestedProperties":{"message":{"dataType":"string"},"data":{"dataType":"union","subSchemas":[{"ref":"SendMeetingNotesResponse"},{"dataType":"enum","enums":[null]}],"required":true},"status":{"dataType":"double","required":true}},"validators":{}},
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "SendMeetingNotesRequest": {
+        "dataType": "refObject",
+        "properties": {
+            "recipients": {"dataType":"array","array":{"dataType":"string"},"required":true},
+            "message": {"dataType":"string"},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "TranscriptAudioResponse": {
+        "dataType": "refObject",
+        "properties": {
+            "micUrl": {"dataType":"string"},
+            "sysUrl": {"dataType":"string"},
+            "micSysOffsetSeconds": {"dataType":"double"},
+            "audioDeletedAt": {"dataType":"string"},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "ApiResponse_TranscriptAudioResponse_": {
+        "dataType": "refAlias",
+        "type": {"dataType":"nestedObjectLiteral","nestedProperties":{"message":{"dataType":"string"},"data":{"dataType":"union","subSchemas":[{"ref":"TranscriptAudioResponse"},{"dataType":"enum","enums":[null]}],"required":true},"status":{"dataType":"double","required":true}},"validators":{}},
     },
     // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
     "UpdateStandaloneTranscriptBody": {
@@ -1650,7 +1720,7 @@ const models: TsoaRoute.Models = {
     // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
     "_36_Enums.IntegrationProvider": {
         "dataType": "refAlias",
-        "type": {"dataType":"union","subSchemas":[{"dataType":"enum","enums":["JIRA"]},{"dataType":"enum","enums":["LINEAR"]},{"dataType":"enum","enums":["GITHUB"]},{"dataType":"enum","enums":["GOOGLE_DRIVE"]},{"dataType":"enum","enums":["TRELLO"]},{"dataType":"enum","enums":["NOTION"]},{"dataType":"enum","enums":["ONEDRIVE"]},{"dataType":"enum","enums":["ASANA"]},{"dataType":"enum","enums":["TWENTY"]}],"validators":{}},
+        "type": {"dataType":"union","subSchemas":[{"dataType":"enum","enums":["JIRA"]},{"dataType":"enum","enums":["LINEAR"]},{"dataType":"enum","enums":["GITHUB"]},{"dataType":"enum","enums":["GOOGLE_DRIVE"]},{"dataType":"enum","enums":["TRELLO"]},{"dataType":"enum","enums":["NOTION"]},{"dataType":"enum","enums":["ONEDRIVE"]},{"dataType":"enum","enums":["ASANA"]},{"dataType":"enum","enums":["TWENTY"]},{"dataType":"enum","enums":["GOOGLE_CALENDAR"]},{"dataType":"enum","enums":["OUTLOOK_CALENDAR"]}],"validators":{}},
     },
     // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
     "IntegrationProvider": {
@@ -1995,9 +2065,75 @@ const models: TsoaRoute.Models = {
         "properties": {
             "liveTranscript": {"dataType":"string","required":true},
             "previousSummary": {"dataType":"string"},
+            "newTranscript": {"dataType":"string"},
             "contextIds": {"dataType":"array","array":{"dataType":"string"}},
             "projectIds": {"dataType":"array","array":{"dataType":"string"}},
             "modelKey": {"dataType":"string"},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "CurrentMeetingAttendee": {
+        "dataType": "refObject",
+        "properties": {
+            "name": {"dataType":"string"},
+            "email": {"dataType":"string","required":true},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "CalendarProvider": {
+        "dataType": "refAlias",
+        "type": {"dataType":"union","subSchemas":[{"dataType":"enum","enums":["GOOGLE_CALENDAR"]},{"dataType":"enum","enums":["OUTLOOK_CALENDAR"]}],"validators":{}},
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "CurrentMeeting": {
+        "dataType": "refObject",
+        "properties": {
+            "title": {"dataType":"string","required":true},
+            "start": {"dataType":"datetime","required":true},
+            "end": {"dataType":"datetime","required":true},
+            "attendees": {"dataType":"array","array":{"dataType":"refObject","ref":"CurrentMeetingAttendee"},"required":true},
+            "meetingUrl": {"dataType":"string"},
+            "provider": {"ref":"CalendarProvider","required":true},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "CurrentMeetingResponse": {
+        "dataType": "refObject",
+        "properties": {
+            "event": {"dataType":"union","subSchemas":[{"ref":"CurrentMeeting"},{"dataType":"enum","enums":[null]}],"required":true},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "ApiResponse_CurrentMeetingResponse_": {
+        "dataType": "refAlias",
+        "type": {"dataType":"nestedObjectLiteral","nestedProperties":{"message":{"dataType":"string"},"data":{"dataType":"union","subSchemas":[{"ref":"CurrentMeetingResponse"},{"dataType":"enum","enums":[null]}],"required":true},"status":{"dataType":"double","required":true}},"validators":{}},
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "CalendarConnectResult": {
+        "dataType": "refObject",
+        "properties": {
+            "connected": {"dataType":"boolean","required":true},
+            "errorReason": {"dataType":"string"},
+            "redirectPath": {"dataType":"string"},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "ApiResponse_CalendarConnectResult_": {
+        "dataType": "refAlias",
+        "type": {"dataType":"nestedObjectLiteral","nestedProperties":{"message":{"dataType":"string"},"data":{"dataType":"union","subSchemas":[{"ref":"CalendarConnectResult"},{"dataType":"enum","enums":[null]}],"required":true},"status":{"dataType":"double","required":true}},"validators":{}},
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "CalendarConnectRequest": {
+        "dataType": "refObject",
+        "properties": {
+            "code": {"dataType":"string"},
+            "state": {"dataType":"string"},
+            "error": {"dataType":"string"},
         },
         "additionalProperties": false,
     },
@@ -2368,6 +2504,7 @@ const models: TsoaRoute.Models = {
             "openaiKey": {"dataType":"string"},
             "isCourtesy": {"dataType":"boolean"},
             "defaultThemeId": {"dataType":"union","subSchemas":[{"dataType":"string"},{"dataType":"enum","enums":[null]}]},
+            "audioRetentionDays": {"dataType":"union","subSchemas":[{"dataType":"double"},{"dataType":"enum","enums":[null]}]},
         },
         "additionalProperties": false,
     },
@@ -2444,8 +2581,8 @@ const models: TsoaRoute.Models = {
             "deepgramKey": {"dataType":"union","subSchemas":[{"dataType":"string"},{"dataType":"enum","enums":[null]}]},
             "openaiKey": {"dataType":"union","subSchemas":[{"dataType":"string"},{"dataType":"enum","enums":[null]}]},
             "monthlyTokenLimit": {"dataType":"double"},
-            "isCourtesy": {"dataType":"boolean"},
             "defaultThemeId": {"dataType":"union","subSchemas":[{"dataType":"string"},{"dataType":"enum","enums":[null]}]},
+            "audioRetentionDays": {"dataType":"union","subSchemas":[{"dataType":"double"},{"dataType":"enum","enums":[null]}]},
         },
         "additionalProperties": false,
     },
@@ -4321,6 +4458,9 @@ export function RegisterRoutes(app: Router,opts?:{multer?:ReturnType<typeof mult
                 micPartCount: {"in":"formData","name":"micPartCount","dataType":"string"},
                 clientSessionId: {"in":"formData","name":"clientSessionId","dataType":"string"},
                 recordingMode: {"in":"formData","name":"recordingMode","dataType":"string"},
+                bookmarks: {"in":"formData","name":"bookmarks","dataType":"string"},
+                calendarEvent: {"in":"formData","name":"calendarEvent","dataType":"string"},
+                micFileName: {"in":"formData","name":"micFileName","dataType":"string"},
                 micFile: {"in":"formData","name":"micFile","dataType":"file"},
                 sysFile: {"in":"formData","name":"sysFile","dataType":"file"},
         };
@@ -4383,6 +4523,103 @@ export function RegisterRoutes(app: Router,opts?:{multer?:ReturnType<typeof mult
 
               await templateService.apiHandler({
                 methodName: 'createTranscript',
+                controller,
+                response,
+                next,
+                validatedArgs,
+                successStatus: undefined,
+              });
+            } catch (err) {
+                return next(err);
+            }
+        });
+        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+        const argsTranscriptsController_sendMeetingNotes: Record<string, TsoaRoute.ParameterSchema> = {
+                request: {"in":"request","name":"request","required":true,"dataType":"object"},
+                id: {"in":"path","name":"id","required":true,"dataType":"string"},
+                body: {"in":"body","name":"body","required":true,"ref":"SendMeetingNotesRequest"},
+        };
+        app.post('/api/transcripts/:id/send-notes',
+            authenticateMiddleware([{"ClientLevel":[]}]),
+            ...(fetchMiddlewares<RequestHandler>(TranscriptsController)),
+            ...(fetchMiddlewares<RequestHandler>(TranscriptsController.prototype.sendMeetingNotes)),
+
+            async function TranscriptsController_sendMeetingNotes(request: ExRequest, response: ExResponse, next: any) {
+
+            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+
+            let validatedArgs: any[] = [];
+            try {
+                validatedArgs = templateService.getValidatedArgs({ args: argsTranscriptsController_sendMeetingNotes, request, response });
+
+                const controller = new TranscriptsController();
+
+              await templateService.apiHandler({
+                methodName: 'sendMeetingNotes',
+                controller,
+                response,
+                next,
+                validatedArgs,
+                successStatus: undefined,
+              });
+            } catch (err) {
+                return next(err);
+            }
+        });
+        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+        const argsTranscriptsController_getTranscriptAudio: Record<string, TsoaRoute.ParameterSchema> = {
+                request: {"in":"request","name":"request","required":true,"dataType":"object"},
+                id: {"in":"path","name":"id","required":true,"dataType":"string"},
+        };
+        app.get('/api/transcripts/:id/audio',
+            authenticateMiddleware([{"ClientLevel":[]}]),
+            ...(fetchMiddlewares<RequestHandler>(TranscriptsController)),
+            ...(fetchMiddlewares<RequestHandler>(TranscriptsController.prototype.getTranscriptAudio)),
+
+            async function TranscriptsController_getTranscriptAudio(request: ExRequest, response: ExResponse, next: any) {
+
+            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+
+            let validatedArgs: any[] = [];
+            try {
+                validatedArgs = templateService.getValidatedArgs({ args: argsTranscriptsController_getTranscriptAudio, request, response });
+
+                const controller = new TranscriptsController();
+
+              await templateService.apiHandler({
+                methodName: 'getTranscriptAudio',
+                controller,
+                response,
+                next,
+                validatedArgs,
+                successStatus: undefined,
+              });
+            } catch (err) {
+                return next(err);
+            }
+        });
+        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+        const argsTranscriptsController_deleteTranscriptAudio: Record<string, TsoaRoute.ParameterSchema> = {
+                request: {"in":"request","name":"request","required":true,"dataType":"object"},
+                id: {"in":"path","name":"id","required":true,"dataType":"string"},
+        };
+        app.delete('/api/transcripts/:id/audio',
+            authenticateMiddleware([{"ClientLevel":[]}]),
+            ...(fetchMiddlewares<RequestHandler>(TranscriptsController)),
+            ...(fetchMiddlewares<RequestHandler>(TranscriptsController.prototype.deleteTranscriptAudio)),
+
+            async function TranscriptsController_deleteTranscriptAudio(request: ExRequest, response: ExResponse, next: any) {
+
+            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+
+            let validatedArgs: any[] = [];
+            try {
+                validatedArgs = templateService.getValidatedArgs({ args: argsTranscriptsController_deleteTranscriptAudio, request, response });
+
+                const controller = new TranscriptsController();
+
+              await templateService.apiHandler({
+                methodName: 'deleteTranscriptAudio',
                 controller,
                 response,
                 next,
@@ -7401,6 +7638,167 @@ export function RegisterRoutes(app: Router,opts?:{multer?:ReturnType<typeof mult
 
               await templateService.apiHandler({
                 methodName: 'generateLiveSummary',
+                controller,
+                response,
+                next,
+                validatedArgs,
+                successStatus: undefined,
+              });
+            } catch (err) {
+                return next(err);
+            }
+        });
+        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+        const argsCalendarController_getCurrentMeeting: Record<string, TsoaRoute.ParameterSchema> = {
+                request: {"in":"request","name":"request","required":true,"dataType":"object"},
+        };
+        app.get('/api/calendar/current-meeting',
+            authenticateMiddleware([{"ClientLevel":[]}]),
+            ...(fetchMiddlewares<RequestHandler>(CalendarController)),
+            ...(fetchMiddlewares<RequestHandler>(CalendarController.prototype.getCurrentMeeting)),
+
+            async function CalendarController_getCurrentMeeting(request: ExRequest, response: ExResponse, next: any) {
+
+            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+
+            let validatedArgs: any[] = [];
+            try {
+                validatedArgs = templateService.getValidatedArgs({ args: argsCalendarController_getCurrentMeeting, request, response });
+
+                const controller = new CalendarController();
+
+              await templateService.apiHandler({
+                methodName: 'getCurrentMeeting',
+                controller,
+                response,
+                next,
+                validatedArgs,
+                successStatus: undefined,
+              });
+            } catch (err) {
+                return next(err);
+            }
+        });
+        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+        const argsCalendarController_getGoogleCalendarAuthUrl: Record<string, TsoaRoute.ParameterSchema> = {
+                request: {"in":"request","name":"request","required":true,"dataType":"object"},
+                redirectPath: {"in":"query","name":"redirectPath","dataType":"string"},
+                appOrigin: {"in":"query","name":"appOrigin","dataType":"string"},
+        };
+        app.get('/api/calendar/google/auth-url',
+            authenticateMiddleware([{"ClientLevel":[]}]),
+            ...(fetchMiddlewares<RequestHandler>(CalendarController)),
+            ...(fetchMiddlewares<RequestHandler>(CalendarController.prototype.getGoogleCalendarAuthUrl)),
+
+            async function CalendarController_getGoogleCalendarAuthUrl(request: ExRequest, response: ExResponse, next: any) {
+
+            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+
+            let validatedArgs: any[] = [];
+            try {
+                validatedArgs = templateService.getValidatedArgs({ args: argsCalendarController_getGoogleCalendarAuthUrl, request, response });
+
+                const controller = new CalendarController();
+
+              await templateService.apiHandler({
+                methodName: 'getGoogleCalendarAuthUrl',
+                controller,
+                response,
+                next,
+                validatedArgs,
+                successStatus: 200,
+              });
+            } catch (err) {
+                return next(err);
+            }
+        });
+        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+        const argsCalendarController_connectGoogleCalendar: Record<string, TsoaRoute.ParameterSchema> = {
+                request: {"in":"request","name":"request","required":true,"dataType":"object"},
+                body: {"in":"body","name":"body","required":true,"ref":"CalendarConnectRequest"},
+        };
+        app.post('/api/calendar/google/connect',
+            authenticateMiddleware([{"ClientLevel":[]}]),
+            ...(fetchMiddlewares<RequestHandler>(CalendarController)),
+            ...(fetchMiddlewares<RequestHandler>(CalendarController.prototype.connectGoogleCalendar)),
+
+            async function CalendarController_connectGoogleCalendar(request: ExRequest, response: ExResponse, next: any) {
+
+            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+
+            let validatedArgs: any[] = [];
+            try {
+                validatedArgs = templateService.getValidatedArgs({ args: argsCalendarController_connectGoogleCalendar, request, response });
+
+                const controller = new CalendarController();
+
+              await templateService.apiHandler({
+                methodName: 'connectGoogleCalendar',
+                controller,
+                response,
+                next,
+                validatedArgs,
+                successStatus: undefined,
+              });
+            } catch (err) {
+                return next(err);
+            }
+        });
+        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+        const argsCalendarController_getOutlookCalendarAuthUrl: Record<string, TsoaRoute.ParameterSchema> = {
+                request: {"in":"request","name":"request","required":true,"dataType":"object"},
+                redirectPath: {"in":"query","name":"redirectPath","dataType":"string"},
+                appOrigin: {"in":"query","name":"appOrigin","dataType":"string"},
+        };
+        app.get('/api/calendar/outlook/auth-url',
+            authenticateMiddleware([{"ClientLevel":[]}]),
+            ...(fetchMiddlewares<RequestHandler>(CalendarController)),
+            ...(fetchMiddlewares<RequestHandler>(CalendarController.prototype.getOutlookCalendarAuthUrl)),
+
+            async function CalendarController_getOutlookCalendarAuthUrl(request: ExRequest, response: ExResponse, next: any) {
+
+            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+
+            let validatedArgs: any[] = [];
+            try {
+                validatedArgs = templateService.getValidatedArgs({ args: argsCalendarController_getOutlookCalendarAuthUrl, request, response });
+
+                const controller = new CalendarController();
+
+              await templateService.apiHandler({
+                methodName: 'getOutlookCalendarAuthUrl',
+                controller,
+                response,
+                next,
+                validatedArgs,
+                successStatus: 200,
+              });
+            } catch (err) {
+                return next(err);
+            }
+        });
+        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+        const argsCalendarController_connectOutlookCalendar: Record<string, TsoaRoute.ParameterSchema> = {
+                request: {"in":"request","name":"request","required":true,"dataType":"object"},
+                body: {"in":"body","name":"body","required":true,"ref":"CalendarConnectRequest"},
+        };
+        app.post('/api/calendar/outlook/connect',
+            authenticateMiddleware([{"ClientLevel":[]}]),
+            ...(fetchMiddlewares<RequestHandler>(CalendarController)),
+            ...(fetchMiddlewares<RequestHandler>(CalendarController.prototype.connectOutlookCalendar)),
+
+            async function CalendarController_connectOutlookCalendar(request: ExRequest, response: ExResponse, next: any) {
+
+            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+
+            let validatedArgs: any[] = [];
+            try {
+                validatedArgs = templateService.getValidatedArgs({ args: argsCalendarController_connectOutlookCalendar, request, response });
+
+                const controller = new CalendarController();
+
+              await templateService.apiHandler({
+                methodName: 'connectOutlookCalendar',
                 controller,
                 response,
                 next,

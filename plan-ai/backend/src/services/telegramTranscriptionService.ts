@@ -5,6 +5,7 @@ import { transcodeToWav16kMono } from "../utils/audioPcm";
 import { PrismaClient } from "@prisma/client";
 import { logger } from "../utils/logger";
 import { getFileUrl } from "./telegramService";
+import { decryptSecret } from "../utils/secretCrypto";
 
 const prisma = new PrismaClient();
 
@@ -38,7 +39,7 @@ const resolveDeepgramKey = async (workspaceId: string): Promise<string | null> =
   });
   // BYOK first (the sales workspace pays for its own leads), env as fallback so
   // a misconfigured workspace degrades instead of going dark.
-  return workspace?.deepgramKey || process.env.DEEPGRAM_API_KEY || null;
+  return decryptSecret(workspace?.deepgramKey) || process.env.DEEPGRAM_API_KEY || null;
 };
 
 /**

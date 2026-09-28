@@ -8,10 +8,22 @@ import type {
 import prisma from "../prisma/prismaClient";
 
 /**
- * Providers managed at the Workspace level (ticketing tools).
- * OWNER/ADMIN connects once, all members can use them.
+ * Providers managed at the Workspace level (stored in WorkspaceIntegration).
+ * OWNER/ADMIN connects once, all members can use them. This must match where
+ * each integration service stores its tokens: Drive, OneDrive, Notion and
+ * Twenty were missing, so disconnecting them looked in the user table, found
+ * nothing and left the connection in place.
  */
-const WORKSPACE_PROVIDERS: Set<string> = new Set(["JIRA", "LINEAR", "TRELLO", "ASANA"]);
+const WORKSPACE_PROVIDERS: Set<string> = new Set([
+  "JIRA",
+  "LINEAR",
+  "TRELLO",
+  "ASANA",
+  "GOOGLE_DRIVE",
+  "ONEDRIVE",
+  "NOTION",
+  "TWENTY",
+]);
 
 /**
  * Providers managed at the User level (personal tokens).
@@ -41,8 +53,11 @@ export type UserIntegrationSummary = IntegrationSummary;
 class IntegrationService {
   /**
    * Returns a unified list of all integrations visible to a user in a workspace.
-   * - Workspace-level: Jira, Linear, Trello (shared by all members)
-   * - User-level: GitHub, Google Drive (personal)
+   * - Workspace-level: Jira, Linear, Trello, Asana, Drive, OneDrive, Notion, Twenty
+   * - User-level: GitHub, Google Calendar, Outlook Calendar (personal)
+   *
+   * Drive moved to the workspace table. Old user rows for it are not listed:
+   * they would show as connected and could not be disconnected.
    */
   public async listIntegrationsForContext(
     workspaceId: string,
@@ -56,7 +71,7 @@ class IntegrationService {
     const userIntegrations = await prisma.userIntegration.findMany({
       where: {
         userId,
-        provider: { in: ["GITHUB", "GOOGLE_DRIVE"] },
+        provider: { in: ["GITHUB", "GOOGLE_CALENDAR", "OUTLOOK_CALENDAR"] },
       },
       orderBy: { createdAt: "desc" },
     });

@@ -31,6 +31,7 @@ import { WhisperRequestError } from "./stt/whisperClient";
 import { collectContextKeyterms } from "./stt/keyterms";
 import { identifyOtherSpeakers, loadWorkspaceVoices } from "./voiceIdentityService";
 import { dropEchoUtterances, estimateMicSysOffsetMs } from "../utils/echoDedup";
+import { attendeeNames, meetingNotesForAi } from "./meetingNotes";
 import { cancelEcho } from "../utils/echoCancel";
 import { decodeUrlToMonoPcm, encodeWavPcm16 } from "../utils/audioPcm";
 import { generateText, stepCountIs, Output, type ToolSet } from "ai";
@@ -428,6 +429,12 @@ export interface Utterance {
   words: DeepgramWord[];
   start: number;
   end: number;
+  /**
+   * Which recorded file this came from: the microphone or the system audio.
+   * `start`/`end` are seconds in that file, which the player needs to seek
+   * the right track. Absent on transcripts made before this was stored.
+   */
+  channel?: "mic" | "sys";
 }
 
 export class ProjectTranscriptService {
@@ -450,6 +457,8 @@ export class ProjectTranscriptService {
      * failure must never be silent: it makes the final transcript fall back to
      * the live text and silently drop everything the live WS missed). */
     diagnostics: string[];
+    /** How much later the mic file runs than the system file (ms), when measured. */
+    micSysOffsetMs: number | null;
   }> {
     const sttProvider = getSttProvider();
     // Built on first use: Deepgram's SDK throws without a key, and a
@@ -525,6 +534,7 @@ export class ProjectTranscriptService {
           }
           return channel.utterances.map((u) => ({
             speaker: `${speakerPrefix} ${u.speaker}`,
+            channel: speakerPrefix === "User" ? ("mic" as const) : ("sys" as const),
             transcript: u.transcript,
             start: u.start,
             end: u.end,
@@ -557,6 +567,7 @@ export class ProjectTranscriptService {
         );
         return dgUtterances.map((u) => ({
           speaker: `${speakerPrefix} ${u.speaker}`,
+          channel: speakerPrefix === "User" ? ("mic" as const) : ("sys" as const),
           transcript: u.transcript,
           start: u.start,
           end: u.end,
@@ -572,6 +583,7 @@ export class ProjectTranscriptService {
 
     let micUtterances: Utterance[] = [];
     let sysUtterances: Utterance[] = [];
+    let micSysOffsetMs: number | null = null;
 
     console.log(`[Diarization] mic=${!!micUrl} sys=${!!sysUrl}`);
 
@@ -623,6 +635,7 @@ export class ProjectTranscriptService {
       // Estimate the mic↔sys clock offset first (the two stored files don't
       // share a timeline on macOS) so the dedup window is correctly centred.
       const offsetMs = estimateMicSysOffsetMs(micUtterances, sysUtterances);
+      micSysOffsetMs = offsetMs;
       // Coverage histogram of KEPT segments: a cluster of survivors in 0.5–0.8
       // means divergent-ASR bleed the exact-token matcher can't catch (the
       // residual after the offset fix). This tells us — with data — whether a
@@ -656,7 +669,7 @@ export class ProjectTranscriptService {
     const totalSeconds =
       utterances.length > 0 ? Math.ceil(utterances[utterances.length - 1].end) : 0;
 
-    return { combinedText, utterances, totalSeconds, diagnostics };
+    return { combinedText, utterances, totalSeconds, diagnostics, micSysOffsetMs };
   }
 
   public async createPendingTranscript(
@@ -809,10 +822,11 @@ export class ProjectTranscriptService {
     const user = await prisma.user.findUnique({ where: { id: input.userId } });
     let principalSpeaker: string | undefined;
     let diarizationDiagnostics: string[] = [];
+    // Kept so the player can play the two recorded files in step.
+    let micSysOffsetMs: number | null = null;
     // In a room, one mic hears everyone: the first mic speaker is not
     // necessarily the user, so only a voice-profile match may claim "You".
-    const inPerson =
-      (existing.metadata as Prisma.JsonObject | null)?.recordingMode === "in_person";
+    const inPerson = (existing.metadata as Prisma.JsonObject | null)?.recordingMode === "in_person";
 
     if (existing.rawMicUrl || existing.rawSysUrl) {
       logger.info(`Starting batch diarization for ${existing.id}...`);
@@ -847,6 +861,7 @@ export class ProjectTranscriptService {
       let { combinedText, utterances } = diarizationResult;
       const { totalSeconds } = diarizationResult;
       diarizationDiagnostics = diarizationResult.diagnostics;
+      micSysOffsetMs = diarizationResult.micSysOffsetMs;
       if (diarizationDiagnostics.length > 0) {
         logger.warn(
           `[Diarization] ${existing.id} completed with channel failures: ${diarizationDiagnostics.join(" | ")}`,
@@ -940,6 +955,20 @@ export class ProjectTranscriptService {
       }
     }
 
+    // Nothing came out of the audio this time: it was deleted (retention rule
+    // or by hand), or the speech-to-text service failed. Keep the speakers
+    // found before, or a reprocess would wipe them.
+    if (utterancesJson === null && Array.isArray(existing.utterances)) {
+      const saved = existing.utterances as unknown as Utterance[];
+      if (saved.length > 0) {
+        utterancesJson = saved;
+        speakerCount = existing.speakerCount ?? new Set(saved.map((u) => u.speaker)).size;
+        durationSeconds = existing.durationSeconds ?? Math.ceil(saved[saved.length - 1].end);
+        const savedPrincipal = (existing.metadata as Prisma.JsonObject | null)?.principalSpeaker;
+        if (typeof savedPrincipal === "string") principalSpeaker = savedPrincipal;
+      }
+    }
+
     // "Save transcript only" with audio and no live text: keep the
     // transcription and stop here, like the text-only save does.
     if (input.transcribeOnly) {
@@ -958,12 +987,13 @@ export class ProjectTranscriptService {
             processingStatus: "DONE",
             principalSpeaker,
             ...(diarizationDiagnostics.length > 0 ? { diarizationDiagnostics } : {}),
+            ...(micSysOffsetMs !== null ? { micSysOffsetMs } : {}),
           } as unknown as Prisma.InputJsonValue,
         },
       });
       if (input.syncToTwenty) {
-        void this.autoPushToTwenty(input.workspaceId, updated, input.twentyCompanyId).catch(
-          (err) => logger.error(`Failed to push transcript ${transcriptId} to Twenty`, err),
+        void this.autoPushToTwenty(input.workspaceId, updated, input.twentyCompanyId).catch((err) =>
+          logger.error(`Failed to push transcript ${transcriptId} to Twenty`, err),
         );
       }
       logger.info(`[processPendingTranscript] ${transcriptId} transcribed only (no AI steps)`);
@@ -1031,6 +1061,7 @@ export class ProjectTranscriptService {
             processingStatus: "EXTRACTING_TASKS",
             principalSpeaker,
             ...(diarizationDiagnostics.length > 0 ? { diarizationDiagnostics } : {}),
+            ...(micSysOffsetMs !== null ? { micSysOffsetMs } : {}),
           } as unknown as Prisma.InputJsonValue,
         },
       });
@@ -1050,6 +1081,7 @@ export class ProjectTranscriptService {
             processingStatus: "EXTRACTING_TASKS",
             principalSpeaker,
             ...(diarizationDiagnostics.length > 0 ? { diarizationDiagnostics } : {}),
+            ...(micSysOffsetMs !== null ? { micSysOffsetMs } : {}),
           } as unknown as Prisma.InputJsonValue,
         },
       });
@@ -1102,12 +1134,16 @@ export class ProjectTranscriptService {
       }
     }
 
+    // What the client sent besides the audio: moments the user marked during
+    // the meeting and the calendar invite (title, attendees).
+    const recordingMetadata = (existing.metadata as Prisma.JsonObject | null) ?? {};
+    const meetingNotes = meetingNotesForAi(recordingMetadata);
     const [analysisRaw, speakerInsights] = await Promise.all([
       this.analyzeTranscript(
         input.userId,
         input.workspaceId,
         processedContent,
-        input.contextPrompt ?? "",
+        [input.contextPrompt ?? "", meetingNotes].filter((s) => s.trim()).join("\n\n"),
         input.contextIds,
         effectivePersona,
         effectiveObjective,
@@ -1124,6 +1160,7 @@ export class ProjectTranscriptService {
         processedContent,
         principalSpeaker,
         input.modelKey ?? undefined,
+        attendeeNames(recordingMetadata),
       ),
     ]);
 
@@ -2076,6 +2113,8 @@ ${content}`;
     fullTranscript: string,
     principalSpeakerLabel: string | undefined,
     modelKey?: string,
+    /** Attendee names from the calendar invite, if the recording had one. */
+    invitedNames: string[] = [],
   ): Promise<SpeakerInsight[]> {
     if (!utterances || utterances.length === 0) return [];
 
@@ -2152,11 +2191,13 @@ ${content}`;
         select: { user: { select: { name: true } } },
         take: 50,
       });
-      const names = members
-        .map((m) => m.user?.name?.trim())
-        .filter((n): n is string => !!n && n.length > 1);
+      const names = [
+        ...members.map((m) => m.user?.name?.trim()),
+        // People invited to this meeting are the most likely speakers.
+        ...invitedNames,
+      ].filter((n): n is string => !!n && n.length > 1);
       if (names.length > 0) {
-        knownPeopleBlock = `\nKNOWN WORKSPACE MEMBERS (correct spellings): ${[...new Set(names)].join(", ")}.\nWhen a name heard in the transcript phonetically matches one of these, use THIS spelling (e.g. transcript says "Naila" but the member list has "Nayla" → output "Nayla").\n`;
+        knownPeopleBlock = `\nKNOWN PEOPLE, workspace members and people invited to this meeting (correct spellings): ${[...new Set(names)].join(", ")}.\nWhen a name heard in the transcript phonetically matches one of these, use THIS spelling (e.g. transcript says "Naila" but the member list has "Nayla" → output "Nayla").\n`;
       }
     } catch {
       // Non-fatal: identification simply runs without the vocabulary.

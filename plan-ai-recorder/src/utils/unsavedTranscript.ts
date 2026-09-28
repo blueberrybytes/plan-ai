@@ -13,6 +13,11 @@
  * single key is still read, so copies written by older versions are not lost.
  */
 
+import type { CalendarEvent } from "./recorderConfig";
+import type { components } from "../types/api";
+
+export type RecordingBookmark = components["schemas"]["RecordingBookmark"];
+
 const LEGACY_KEY = "planai_unsaved_transcript";
 const KEY_PREFIX = "planai_unsaved_meeting:";
 
@@ -25,12 +30,18 @@ export interface UnsavedTranscript {
   startedAt?: number;
   /** ASR language picked for the recording ("" = auto). */
   language?: string;
+  /** Moments marked during the meeting (seconds on the saved audio). */
+  bookmarks?: RecordingBookmark[];
+  /** Calendar event of the meeting, when one was happening. */
+  calendarEvent?: CalendarEvent;
 }
 
 export interface UnsavedSession {
   sessionId: string;
   startedAt: number;
   language?: string;
+  bookmarks?: RecordingBookmark[];
+  calendarEvent?: CalendarEvent;
 }
 
 function write(key: string, record: UnsavedTranscript): void {
@@ -55,6 +66,11 @@ function parse(raw: string | null): UnsavedTranscript | null {
         typeof parsed.startedAt === "number" ? parsed.startedAt : undefined,
       language:
         typeof parsed.language === "string" ? parsed.language : undefined,
+      bookmarks: Array.isArray(parsed.bookmarks) ? parsed.bookmarks : undefined,
+      calendarEvent:
+        parsed.calendarEvent && typeof parsed.calendarEvent.title === "string"
+          ? parsed.calendarEvent
+          : undefined,
     };
   } catch {
     return null;
@@ -80,6 +96,21 @@ export function persistUnsavedTranscript(
     savedAt: Date.now(),
     ...session,
   });
+}
+
+/** Updates a meeting's record in place, keeping its transcript text. */
+export function updateUnsavedMeeting(
+  sessionId: string,
+  patch: Partial<Omit<UnsavedTranscript, "sessionId">>,
+): void {
+  const key = `${KEY_PREFIX}${sessionId}`;
+  try {
+    const current = parse(localStorage.getItem(key));
+    if (!current) return;
+    write(key, { ...current, ...patch, sessionId });
+  } catch {
+    /* localStorage unavailable */
+  }
 }
 
 /** Every meeting that was never confirmed as saved, oldest first. */

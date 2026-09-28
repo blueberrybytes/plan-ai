@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-empty-function */
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
   Box,
@@ -29,6 +29,8 @@ import PersonIcon from "@mui/icons-material/Person";
 import WarningAmberIcon from "@mui/icons-material/WarningAmber";
 import CodeIcon from "@mui/icons-material/Code";
 import HubOutlinedIcon from "@mui/icons-material/HubOutlined";
+import CalendarMonthOutlinedIcon from "@mui/icons-material/CalendarMonthOutlined";
+import EventOutlinedIcon from "@mui/icons-material/EventOutlined";
 
 import githubSvg from "../icons/github.svg";
 import notionSvg from "../icons/notion.svg";
@@ -57,6 +59,9 @@ import {
   useGetGithubRepositoriesQuery,
   useLazyGetGoogleAuthUrlQuery,
   useLazyGetMicrosoftAuthUrlQuery,
+  useLazyGetGoogleCalendarAuthUrlQuery,
+  useLazyGetOutlookCalendarAuthUrlQuery,
+  useConnectCalendarMutation,
   GithubRepository,
   integrationApi,
   useDisconnectIntegrationMutation,
@@ -123,6 +128,8 @@ type ProviderTabValue =
   | "notion"
   | "microsoft"
   | "asana"
+  | "google-calendar"
+  | "outlook-calendar"
   | "plan-ai-mcp";
 
 type ProviderConfig = {
@@ -233,6 +240,26 @@ const PROVIDER_CONFIGS: ProviderConfig[] = [
     notConnectedKey: "integrationsPage.providers.microsoft.notConnected",
     //isBeta: true,
     isWorkspaceLevel: true,
+  },
+  {
+    tabValue: "google-calendar",
+    provider: "GOOGLE_CALENDAR",
+    labelKey: "integrationsPage.providers.googleCalendar.label",
+    descriptionKey: "integrationsPage.providers.googleCalendar.description",
+    connectCtaKey: "integrationsPage.providers.googleCalendar.connectCta",
+    comingSoon: false,
+    notConnectedKey: "integrationsPage.providers.googleCalendar.notConnected",
+    isWorkspaceLevel: false,
+  },
+  {
+    tabValue: "outlook-calendar",
+    provider: "OUTLOOK_CALENDAR",
+    labelKey: "integrationsPage.providers.outlookCalendar.label",
+    descriptionKey: "integrationsPage.providers.outlookCalendar.description",
+    connectCtaKey: "integrationsPage.providers.outlookCalendar.connectCta",
+    comingSoon: false,
+    notConnectedKey: "integrationsPage.providers.outlookCalendar.notConnected",
+    isWorkspaceLevel: false,
   },
 ];
 
@@ -448,6 +475,10 @@ const Integrations: React.FC = () => {
     useLazyGetGoogleAuthUrlQuery();
   const [triggerMicrosoftAuthorization, { isFetching: isMicrosoftAuthLoading }] =
     useLazyGetMicrosoftAuthUrlQuery();
+  const [triggerGoogleCalendarAuthorization, { isFetching: isGoogleCalendarAuthLoading }] =
+    useLazyGetGoogleCalendarAuthUrlQuery();
+  const [triggerOutlookCalendarAuthorization, { isFetching: isOutlookCalendarAuthLoading }] =
+    useLazyGetOutlookCalendarAuthUrlQuery();
 
   useEffect(() => {
     const installationId = searchParams.get("installation_id");
@@ -480,6 +511,53 @@ const Integrations: React.FC = () => {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams, user, bindGithub, navigate]);
+
+  // Google and Microsoft send the browser back here with ?code&state after the
+  // calendar consent screen. The code is posted with this user's session, so
+  // the calendar lands on whoever finished the flow. A code works once, hence
+  // the ref (React runs effects twice in development).
+  const [connectCalendar] = useConnectCalendarMutation();
+  const handledCalendarCode = useRef<string | null>(null);
+  useEffect(() => {
+    const code = searchParams.get("code");
+    const state = searchParams.get("state");
+    const oauthError = searchParams.get("error");
+    const calendarTab =
+      activeTab === "google-calendar" || activeTab === "outlook-calendar" ? activeTab : null;
+    if (!calendarTab || !state || (!code && !oauthError) || !user) return;
+    const key = code ?? state;
+    if (handledCalendarCode.current === key) return;
+    handledCalendarCode.current = key;
+
+    const finish = (connected: boolean, errorReason?: string, redirectPath?: string) => {
+      const params = new URLSearchParams({
+        provider: calendarTab,
+        status: connected ? "success" : "error",
+      });
+      if (errorReason) params.set("error_reason", errorReason);
+      const path =
+        redirectPath && redirectPath.startsWith("/") && !redirectPath.startsWith("//")
+          ? redirectPath
+          : `/integrations/${calendarTab}`;
+      navigate(`${path}?${params.toString()}`, { replace: true });
+    };
+
+    connectCalendar({
+      provider: calendarTab === "google-calendar" ? "google" : "outlook",
+      code: code ?? undefined,
+      state,
+      error: oauthError ?? undefined,
+    })
+      .unwrap()
+      .then((response) => {
+        const result = response.data;
+        finish(!!result?.connected, result?.errorReason, result?.redirectPath);
+      })
+      .catch((error) => {
+        console.error("Failed to connect the calendar", error);
+        finish(false, "ExchangeFailed");
+      });
+  }, [searchParams, activeTab, user, connectCalendar, navigate]);
 
   const handleChangeTab = (_event: React.SyntheticEvent, newValue: ProviderTabValue) => {
     navigate(`/integrations?provider=${newValue}`);
@@ -648,6 +726,46 @@ const Integrations: React.FC = () => {
     }
   };
 
+  const handleConnectGoogleCalendar = async () => {
+    try {
+      const response = await triggerGoogleCalendarAuthorization(
+        "/integrations/google-calendar",
+      ).unwrap();
+      const authorizationUrl = response.data?.authorizationUrl;
+      if (authorizationUrl) {
+        window.location.href = authorizationUrl;
+      }
+    } catch (error) {
+      console.error("Failed to fetch Google Calendar authorization URL", error);
+      dispatch(
+        setToastMessage({
+          severity: "error",
+          message: t("integrationsPage.providers.googleCalendar.connectFailed"),
+        }),
+      );
+    }
+  };
+
+  const handleConnectOutlookCalendar = async () => {
+    try {
+      const response = await triggerOutlookCalendarAuthorization(
+        "/integrations/outlook-calendar",
+      ).unwrap();
+      const authorizationUrl = response.data?.authorizationUrl;
+      if (authorizationUrl) {
+        window.location.href = authorizationUrl;
+      }
+    } catch (error) {
+      console.error("Failed to fetch Outlook Calendar authorization URL", error);
+      dispatch(
+        setToastMessage({
+          severity: "error",
+          message: t("integrationsPage.providers.outlookCalendar.connectFailed"),
+        }),
+      );
+    }
+  };
+
   const findIntegration = (provider: IntegrationProviderType): UserIntegrationSummary | undefined =>
     integrations.find(
       (integration): integration is UserIntegrationSummary =>
@@ -726,7 +844,11 @@ const Integrations: React.FC = () => {
                           ? handleConnectMicrosoft
                           : config.tabValue === "asana"
                             ? handleConnectAsana
-                            : undefined
+                            : config.tabValue === "google-calendar"
+                              ? handleConnectGoogleCalendar
+                              : config.tabValue === "outlook-calendar"
+                                ? handleConnectOutlookCalendar
+                                : undefined
               }
               canEdit={canEdit}
             />
@@ -1059,6 +1181,34 @@ const Integrations: React.FC = () => {
                       : undefined}
                 </Button>
               )}
+              {config.tabValue === "google-calendar" && (
+                <Button
+                  variant="contained"
+                  color="primary"
+                  onClick={handleConnectGoogleCalendar}
+                  disabled={isGoogleCalendarAuthLoading}
+                >
+                  {isGoogleCalendarAuthLoading
+                    ? t("integrationsPage.connect.redirecting")
+                    : config.connectCtaKey
+                      ? t(config.connectCtaKey)
+                      : undefined}
+                </Button>
+              )}
+              {config.tabValue === "outlook-calendar" && (
+                <Button
+                  variant="contained"
+                  color="primary"
+                  onClick={handleConnectOutlookCalendar}
+                  disabled={isOutlookCalendarAuthLoading}
+                >
+                  {isOutlookCalendarAuthLoading
+                    ? t("integrationsPage.connect.redirecting")
+                    : config.connectCtaKey
+                      ? t(config.connectCtaKey)
+                      : undefined}
+                </Button>
+              )}
               {config.tabValue === "notion" && (
                 <Box
                   sx={{ mt: 2, display: "flex", flexDirection: "column", gap: 3, maxWidth: 400 }}
@@ -1236,6 +1386,12 @@ const Integrations: React.FC = () => {
                 case "asana":
                   iconEl = <img src={asanaSvg} alt="Asana" width={16} height={16} />;
                   break;
+                case "google-calendar":
+                  iconEl = <CalendarMonthOutlinedIcon sx={{ fontSize: 16 }} />;
+                  break;
+                case "outlook-calendar":
+                  iconEl = <EventOutlinedIcon sx={{ fontSize: 16 }} />;
+                  break;
               }
 
               if (iconEl && theme.palette.mode === "dark") {
@@ -1340,7 +1496,9 @@ const Integrations: React.FC = () => {
               {messageFromQuery ??
                 (isSuccessStatus
                   ? t("integrationsPage.statusAlert.success")
-                  : t("integrationsPage.statusAlert.error"))}
+                  : searchParams.get("error_reason") === "MissingScope"
+                    ? t("integrationsPage.statusAlert.missingScope")
+                    : t("integrationsPage.statusAlert.error"))}
             </Alert>
           ) : null}
 

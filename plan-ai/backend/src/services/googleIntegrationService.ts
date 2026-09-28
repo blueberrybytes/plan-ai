@@ -2,7 +2,10 @@
 import { google, drive_v3, Auth } from "googleapis";
 import { Readable } from "stream";
 import EnvUtils from "../utils/EnvUtils";
+import { encryptSecret } from "../utils/secretCrypto";
+import { withDecryptedTokens } from "../utils/integrationSecrets";
 import { PrismaClient, IntegrationProvider, IntegrationStatus, Prisma } from "@prisma/client";
+import { safeRedirectPath } from "../utils/oauthState";
 
 const prisma = new PrismaClient();
 
@@ -60,8 +63,10 @@ class GoogleIntegrationService {
     if (state) {
       try {
         const stateObj = JSON.parse(state);
-        if (stateObj.redirectPath) {
-          const redirectUrl = new URL(`${frontendUrl}${stateObj.redirectPath}`);
+        // Only a path inside the web app: "@evil.com" would leave it.
+        const redirectPath = safeRedirectPath(stateObj.redirectPath);
+        if (redirectPath) {
+          const redirectUrl = new URL(`${frontendUrl}${redirectPath}`);
           redirectUrl.searchParams.append("provider", "google");
           redirectUrl.searchParams.append("status", status);
           if (errorReason) redirectUrl.searchParams.append("error_reason", errorReason);
@@ -103,8 +108,8 @@ class GoogleIntegrationService {
       },
       update: {
         status: IntegrationStatus.CONNECTED,
-        accessToken: tokens.accessToken,
-        ...(finalRefreshToken ? { refreshToken: finalRefreshToken } : {}),
+        accessToken: encryptSecret(tokens.accessToken),
+        ...(finalRefreshToken ? { refreshToken: encryptSecret(finalRefreshToken) } : {}),
         expiresAt: tokens.expiresAt,
         accountId: tokens.accountId,
         accountName: tokens.accountName,
@@ -113,8 +118,8 @@ class GoogleIntegrationService {
         workspaceId,
         provider: IntegrationProvider.GOOGLE_DRIVE,
         status: IntegrationStatus.CONNECTED,
-        accessToken: tokens.accessToken,
-        refreshToken: finalRefreshToken || "",
+        accessToken: encryptSecret(tokens.accessToken),
+        refreshToken: encryptSecret(finalRefreshToken || ""),
         expiresAt: tokens.expiresAt,
         accountId: tokens.accountId,
         accountName: tokens.accountName,
@@ -237,14 +242,16 @@ class GoogleIntegrationService {
     buffer: Buffer,
     mimeType: string,
   ): Promise<string> {
-    const integration = await prisma.workspaceIntegration.findUnique({
-      where: {
-        workspaceId_provider: {
-          workspaceId,
-          provider: IntegrationProvider.GOOGLE_DRIVE,
+    const integration = withDecryptedTokens(
+      await prisma.workspaceIntegration.findUnique({
+        where: {
+          workspaceId_provider: {
+            workspaceId,
+            provider: IntegrationProvider.GOOGLE_DRIVE,
+          },
         },
-      },
-    });
+      }),
+    );
 
     if (
       !integration ||

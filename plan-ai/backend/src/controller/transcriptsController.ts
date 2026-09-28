@@ -32,7 +32,18 @@ import {
   type PainPointResponse,
 } from "./projectsModelController";
 import { transcriptGenerationQueue } from "../queue/transcriptGenerationQueue";
+import { emailConfigured } from "../services/emailService";
+import { NotesEmailError, sendMeetingNotes } from "../services/meetingNotesEmailService";
 import {
+  AudioInUseError,
+  audioIsOnlyCopy,
+  BUSY_STATUSES,
+  deleteTranscriptAudio as deleteAudioFiles,
+} from "../services/audioRetentionService";
+import { parseBookmarks, parseCalendarEvent } from "../services/meetingNotes";
+import {
+  DISPLAY_URL_TTL_MS,
+  readableUrl,
   uploadPrivateFile,
   recordingPartPath,
   recordingPartsPrefix,
@@ -52,6 +63,57 @@ export interface RecordingPartResponse {
   index: number;
   size: number;
 }
+
+export interface TranscriptAudioResponse {
+  /** Signed URL of the microphone file (12 h), when there is one. */
+  micUrl?: string;
+  /** Signed URL of the system audio file (12 h), when there is one. */
+  sysUrl?: string;
+  /**
+   * How much later the mic file runs than the system file, in seconds. To
+   * play both in step: system time = mic time - offset.
+   */
+  micSysOffsetSeconds?: number;
+  /** Set when the audio was deleted (retention rule or by hand). */
+  audioDeletedAt?: string;
+}
+
+export interface SendMeetingNotesRequest {
+  /** Email addresses, usually the people in the calendar invite. At most 30. */
+  recipients: string[];
+  /** Optional note shown above the notes. At most 2000 characters. */
+  message?: string;
+}
+
+export interface SendMeetingNotesResponse {
+  /** Addresses that got the email. */
+  sent: string[];
+  /** Addresses the email service refused or could not reach. */
+  failed: string[];
+  /** Entries that are not email addresses. */
+  invalid: string[];
+}
+
+// Audio types accepted for files imported into the app and sent in slices.
+const IMPORTED_AUDIO_TYPES: Record<string, string> = {
+  wav: "audio/wav",
+  m4a: "audio/mp4",
+  mp4: "audio/mp4",
+  aac: "audio/aac",
+  mp3: "audio/mpeg",
+  ogg: "audio/ogg",
+  opus: "audio/ogg",
+  webm: "audio/webm",
+  flac: "audio/flac",
+  caf: "audio/x-caf",
+};
+
+const importedAudioType = (fileName?: string): { ext: string; contentType: string } => {
+  const ext = fileName?.split(".").pop()?.toLowerCase() ?? "";
+  return IMPORTED_AUDIO_TYPES[ext]
+    ? { ext, contentType: IMPORTED_AUDIO_TYPES[ext] }
+    : { ext: "wav", contentType: "audio/wav" };
+};
 import { DocDocumentResponse } from "./docController";
 import { TranscriptMetadata, type PostMeetingTaskKind } from "../services/transcriptMetadataTypes";
 import { logger } from "../utils/logger";
@@ -439,6 +501,15 @@ export class TranscriptsController extends BaseWorkspaceController {
     @FormField() clientSessionId?: string,
     /** "in_person" (one mic, several people in the room) or "remote". */
     @FormField() recordingMode?: string,
+    /** JSON array of { atSeconds, note? }: moments marked during the meeting. */
+    @FormField() bookmarks?: string,
+    /** JSON { title, start?, end?, attendees[{ name?, email }], meetingUrl?, provider? }. */
+    @FormField() calendarEvent?: string,
+    /**
+     * Original file name of audio sent in slices, for imported files (m4a,
+     * mp3...). Recordings made in the app are WAV and can omit it.
+     */
+    @FormField() micFileName?: string,
     @UploadedFile("micFile") micFile?: Express.Multer.File,
     @UploadedFile("sysFile") sysFile?: Express.Multer.File,
   ): Promise<ApiResponse<StandaloneTranscriptResponse>> {
@@ -489,6 +560,8 @@ export class TranscriptsController extends BaseWorkspaceController {
     }
 
     const { user, workspaceId } = await this.getPaidLlmAccess(request);
+    const parsedBookmarks = parseBookmarks(bookmarks);
+    const parsedCalendarEvent = parseCalendarEvent(calendarEvent);
     const mode =
       recordingMode === "in_person" || recordingMode === "remote" ? recordingMode : undefined;
 
@@ -643,10 +716,11 @@ export class TranscriptsController extends BaseWorkspaceController {
         };
       }
       const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
+      const audioType = importedAudioType(micFileName);
       rawMicUrl = await composePaths(
         parts,
-        `transcripts/${user.id}/${uniqueSuffix}-mic.wav`,
-        "audio/wav",
+        `transcripts/${user.id}/${uniqueSuffix}-mic.${audioType.ext}`,
+        audioType.contentType,
       );
       // Deleted once the transcript row exists (below): if creating it fails,
       // the client retries with the same parts instead of sending them again.
@@ -707,6 +781,12 @@ export class TranscriptsController extends BaseWorkspaceController {
           ...(recordingWindow ? { recording: recordingWindow } : {}),
           ...(mode ? { recordingMode: mode } : {}),
           ...(sessionId ? { clientSessionId: sessionId } : {}),
+          ...(parsedBookmarks.length > 0
+            ? { bookmarks: parsedBookmarks as unknown as Prisma.JsonArray }
+            : {}),
+          ...(parsedCalendarEvent
+            ? { calendarEvent: parsedCalendarEvent as unknown as Prisma.JsonObject }
+            : {}),
           ...(transcribeOnly ? { transcribeOnly: true } : {}),
           generationOptions,
         } as Prisma.JsonObject,
@@ -905,6 +985,123 @@ export class TranscriptsController extends BaseWorkspaceController {
       console.error("[ERROR] Failed to create transcript:", error);
       throw error;
     }
+  }
+
+  /**
+   * Short-lived links to listen to a meeting's audio, plus what the player
+   * needs to keep the two files in step.
+   */
+  /**
+   * Emails the summary, key points and action items to the people the user
+   * picks. Each gets their own email and replies go to the user. Allowed for
+   * whoever recorded the meeting and for workspace admins.
+   */
+  @Post("{id}/send-notes")
+  @Security("ClientLevel")
+  public async sendMeetingNotes(
+    @Request() request: AuthenticatedRequest,
+    @Path() id: string,
+    @Body() body: SendMeetingNotesRequest,
+  ): Promise<ApiResponse<SendMeetingNotesResponse>> {
+    const { user, workspaceId, role } = await this.getAuthorizedWorkspaceAccess(request);
+    const transcript = await transcriptCrudService.getTranscriptForWorkspace(workspaceId, id);
+    if (!transcriptCrudService.canDeleteTranscript(transcript, user.id, role)) {
+      throw {
+        status: 403,
+        message: "Only the person who recorded it or a workspace admin can send the notes.",
+      };
+    }
+    if (!emailConfigured()) {
+      throw { status: 503, message: "Email is not configured on this server." };
+    }
+    // Until the pipeline finishes, the action items are not there yet.
+    const status = (transcript.metadata as Prisma.JsonObject | null)?.processingStatus;
+    if (typeof status === "string" && BUSY_STATUSES.has(status)) {
+      throw { status: 409, message: "The notes are not ready yet. Try again when it finishes." };
+    }
+    let result: SendMeetingNotesResponse;
+    try {
+      result = await sendMeetingNotes({
+        transcript,
+        workspaceId,
+        sender: { id: user.id, name: user.name, email: user.email },
+        recipients: body.recipients,
+        message: body.message,
+      });
+    } catch (err) {
+      if (err instanceof NotesEmailError) throw { status: err.status, message: err.message };
+      throw err;
+    }
+    if (result.sent.length === 0) {
+      throw { status: 502, message: "The email could not be sent. Try again later." };
+    }
+    return { status: 200, data: result };
+  }
+
+  @Get("{id}/audio")
+  @Security("ClientLevel")
+  public async getTranscriptAudio(
+    @Request() request: AuthenticatedRequest,
+    @Path() id: string,
+  ): Promise<ApiResponse<TranscriptAudioResponse>> {
+    const { workspaceId } = await this.getAuthorizedWorkspaceAccess(request);
+    const transcript = await transcriptCrudService.getTranscriptForWorkspace(workspaceId, id);
+    const meta = (transcript.metadata as Prisma.JsonObject | null) ?? {};
+    const [micUrl, sysUrl] = await Promise.all([
+      transcript.rawMicUrl ? readableUrl(transcript.rawMicUrl, DISPLAY_URL_TTL_MS) : undefined,
+      transcript.rawSysUrl ? readableUrl(transcript.rawSysUrl, DISPLAY_URL_TTL_MS) : undefined,
+    ]);
+    const offsetMs = typeof meta.micSysOffsetMs === "number" ? meta.micSysOffsetMs : undefined;
+    return {
+      status: 200,
+      data: {
+        ...(micUrl ? { micUrl } : {}),
+        ...(sysUrl ? { sysUrl } : {}),
+        ...(offsetMs !== undefined ? { micSysOffsetSeconds: offsetMs / 1000 } : {}),
+        ...(typeof meta.audioDeletedAt === "string" ? { audioDeletedAt: meta.audioDeletedAt } : {}),
+      },
+    };
+  }
+
+  /**
+   * Deletes a meeting's audio files and keeps everything made from them.
+   * Allowed for whoever recorded it and for workspace owners.
+   */
+  @Delete("{id}/audio")
+  @Security("ClientLevel")
+  public async deleteTranscriptAudio(
+    @Request() request: AuthenticatedRequest,
+    @Path() id: string,
+  ): Promise<ApiResponse<{ success: boolean }>> {
+    const { user, workspaceId, role } = await this.getAuthorizedWorkspaceAccess(request);
+    const transcript = await transcriptCrudService.getTranscriptForWorkspace(workspaceId, id);
+    if (!transcriptCrudService.canDeleteTranscript(transcript, user.id, role)) {
+      throw {
+        status: 403,
+        message: "Only the person who recorded it or a workspace admin can delete it.",
+      };
+    }
+    const status = (transcript.metadata as Prisma.JsonObject | null)?.processingStatus;
+    if (typeof status === "string" && BUSY_STATUSES.has(status)) {
+      throw {
+        status: 409,
+        message: "The meeting is still being processed. Try again when it finishes.",
+      };
+    }
+    if (audioIsOnlyCopy(transcript)) {
+      throw {
+        status: 409,
+        message:
+          "This meeting was never transcribed, so the audio is all there is. Delete the meeting instead.",
+      };
+    }
+    try {
+      await deleteAudioFiles(transcript, "user");
+    } catch (err) {
+      if (err instanceof AudioInUseError) throw { status: 409, message: err.message };
+      throw err;
+    }
+    return { status: 200, data: { success: true } };
   }
 
   @Get("{id}")
@@ -1112,9 +1309,12 @@ export class TranscriptsController extends BaseWorkspaceController {
     @Request() request: AuthenticatedRequest,
     @Path() id: string,
   ): Promise<ApiResponse<{ success: boolean }>> {
-    const { workspaceId } = await this.getAuthorizedWorkspaceAccess(request);
+    const { user, workspaceId, role } = await this.getAuthorizedWorkspaceAccess(request);
 
-    await transcriptCrudService.deleteTranscriptForWorkspace(workspaceId, id);
+    await transcriptCrudService.deleteTranscriptForWorkspace(workspaceId, id, {
+      userId: user.id,
+      role,
+    });
 
     return {
       status: 200,

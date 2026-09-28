@@ -37,6 +37,7 @@ import { githubContextQueue } from "../queue/githubContextQueue";
 import { googleIntegrationService } from "../services/googleIntegrationService";
 import { microsoftIntegrationService } from "../services/microsoftIntegrationService";
 import { webScraperService } from "../services/webScraperService";
+import { withDecryptedTokens } from "../utils/integrationSecrets";
 
 interface ImportWebsiteRequest {
   url: string;
@@ -521,14 +522,16 @@ export class ContextController extends BaseWorkspaceController {
       throw { status: 400, message: "No file IDs provided" };
     }
 
-    const integration = await prisma.workspaceIntegration.findUnique({
-      where: {
-        workspaceId_provider: {
-          workspaceId,
-          provider: "GOOGLE_DRIVE",
+    const integration = withDecryptedTokens(
+      await prisma.workspaceIntegration.findUnique({
+        where: {
+          workspaceId_provider: {
+            workspaceId,
+            provider: "GOOGLE_DRIVE",
+          },
         },
-      },
-    });
+      }),
+    );
 
     if (!integration || integration.status !== "CONNECTED" || !integration.accessToken) {
       this.setStatus(400);

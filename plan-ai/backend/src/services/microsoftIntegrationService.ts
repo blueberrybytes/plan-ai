@@ -3,6 +3,9 @@ import axios from "axios";
 import { PrismaClient, IntegrationStatus, IntegrationProvider, Prisma } from "@prisma/client";
 import EnvUtils from "../utils/EnvUtils";
 import { logger } from "../utils/logger";
+import { encryptSecret } from "../utils/secretCrypto";
+import { encryptTokens, withDecryptedTokens } from "../utils/integrationSecrets";
+import { safeRedirectPath } from "../utils/oauthState";
 
 const prisma = new PrismaClient();
 
@@ -51,8 +54,10 @@ export class MicrosoftIntegrationService {
     if (state) {
       try {
         const stateObj = JSON.parse(state);
-        if (stateObj.redirectPath) {
-          const redirectUrl = new URL(`${frontendUrl}${stateObj.redirectPath}`);
+        // Only a path inside the web app: "@evil.com" would leave it.
+        const redirectPath = safeRedirectPath(stateObj.redirectPath);
+        if (redirectPath) {
+          const redirectUrl = new URL(`${frontendUrl}${redirectPath}`);
           redirectUrl.searchParams.append("provider", "microsoft");
           redirectUrl.searchParams.append("status", status);
           if (errorReason) redirectUrl.searchParams.append("error_reason", errorReason);
@@ -119,8 +124,8 @@ export class MicrosoftIntegrationService {
       },
       update: {
         status: IntegrationStatus.CONNECTED,
-        accessToken: access_token,
-        refreshToken: refresh_token,
+        accessToken: encryptSecret(access_token),
+        refreshToken: encryptSecret(refresh_token),
         expiresAt,
         accountName: userEmail,
       },
@@ -128,8 +133,8 @@ export class MicrosoftIntegrationService {
         workspaceId,
         provider: IntegrationProvider.ONEDRIVE,
         status: IntegrationStatus.CONNECTED,
-        accessToken: access_token,
-        refreshToken: refresh_token,
+        accessToken: encryptSecret(access_token),
+        refreshToken: encryptSecret(refresh_token),
         expiresAt,
         accountName: userEmail,
       },
@@ -157,9 +162,11 @@ export class MicrosoftIntegrationService {
    * Returns the (possibly refreshed) integration record.
    */
   public async refreshTokenIfExpired(workspaceId: string): Promise<{ accessToken: string }> {
-    const integration = await prisma.workspaceIntegration.findUnique({
-      where: { workspaceId_provider: { workspaceId, provider: IntegrationProvider.ONEDRIVE } },
-    });
+    const integration = withDecryptedTokens(
+      await prisma.workspaceIntegration.findUnique({
+        where: { workspaceId_provider: { workspaceId, provider: IntegrationProvider.ONEDRIVE } },
+      }),
+    );
 
     if (
       !integration ||
@@ -210,11 +217,11 @@ export class MicrosoftIntegrationService {
 
       await prisma.workspaceIntegration.update({
         where: { id: integration.id },
-        data: {
+        data: encryptTokens({
           accessToken: access_token,
           refreshToken: refresh_token ?? integration.refreshToken, // Microsoft may or may not issue a new refresh token
           expiresAt,
-        },
+        }),
       });
 
       console.log(`[MicrosoftIntegrationService] Token refreshed for workspace ${workspaceId}`);

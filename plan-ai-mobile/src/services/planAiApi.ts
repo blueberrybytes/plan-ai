@@ -28,6 +28,9 @@ export type UserResponse           = components['schemas']['UserResponse'];
 export type CreateStandaloneTranscriptBody = components['schemas']['CreateStandaloneTranscriptBody'];
 export type SubscriptionStatusResponse = components['schemas']['SubscriptionStatusResponse'];
 export type UpdateSpeakerNamesBody = components['schemas']['UpdateSpeakerNamesBody'];
+export type TranscriptAudio        = components['schemas']['TranscriptAudioResponse'];
+export type RecordingBookmark      = components['schemas']['RecordingBookmark'];
+export type MeetingCalendarEvent   = components['schemas']['MeetingCalendarEvent'];
 
 /**
  * An API error that keeps the HTTP status, so callers can tell a request
@@ -564,6 +567,12 @@ export const createPlanAiApi = (
       recordingMode?: "in_person" | "remote";
       recordingStartedAt?: string;
       recordingWallClockSeconds?: number;
+      /** Moments marked while recording, in seconds of the saved audio. */
+      bookmarks?: RecordingBookmark[];
+      /** Calendar event the meeting belongs to. */
+      calendarEvent?: MeetingCalendarEvent;
+      /** Original name of an imported file sent in slices ("memo.m4a"). */
+      micFileName?: string;
       /** Workspace the meeting was recorded in (defaults to the active one). */
       workspaceId?: string | null;
       /** No alert on network errors: the caller keeps the meeting and retries. */
@@ -618,6 +627,13 @@ export const createPlanAiApi = (
         if (payload.location) {
           formData.append("location", JSON.stringify(payload.location));
         }
+        if (payload.bookmarks && payload.bookmarks.length > 0) {
+          formData.append("bookmarks", JSON.stringify(payload.bookmarks));
+        }
+        if (payload.calendarEvent) {
+          formData.append("calendarEvent", JSON.stringify(payload.calendarEvent));
+        }
+        if (payload.micFileName) formData.append("micFileName", payload.micFileName);
 
         // Determine mime types based on platform or defaults
         if (payload.micFile) {
@@ -727,6 +743,41 @@ export const createPlanAiApi = (
       return handleResponseWithRetry<Transcript>(res, () => req(true));
     },
 
+    /**
+     * Links to listen to a meeting (valid 12 h) and the offset between its
+     * two files. No alert on network errors: the screen just shows no player.
+     */
+    async getTranscriptAudio(id: string): Promise<TranscriptAudio> {
+      const req = async (force: boolean) =>
+        silentFetch(`${BASE_URL}/api/transcripts/${encodeURIComponent(id)}/audio`, {
+          headers: await getAuthHeaders(force),
+        });
+
+      const res = await req(false);
+      const data = await handleResponseWithRetry<TranscriptAudio | null>(res, () => req(true));
+      return data ?? {};
+    },
+
+    /**
+     * Deletes a meeting's audio files for good. The transcript, summary and
+     * tasks stay. 403: not the recorder or an owner. 409: still processing.
+     */
+    async deleteTranscriptAudio(id: string): Promise<void> {
+      const req = async (force: boolean) =>
+        silentFetch(`${BASE_URL}/api/transcripts/${encodeURIComponent(id)}/audio`, {
+          method: "DELETE",
+          headers: await getAuthHeaders(force),
+        });
+
+      let res: Response;
+      try {
+        res = await req(false);
+      } catch (err) {
+        throw new HttpError(err instanceof Error ? err.message : String(err));
+      }
+      await handleResponseWithRetry(res, () => req(true));
+    },
+
     async updateTranscript(id: string, payload: { title?: string }): Promise<Transcript> {
       const req = async (force: boolean) =>
         safeFetch(`${BASE_URL}/api/transcripts/${id}`, {
@@ -819,19 +870,15 @@ export const createPlanAiApi = (
       return handleResponseWithRetry<{ response: string }>(res, () => req(true));
     },
 
-    async getLiveSummary(payload: {
-      liveTranscript: string;
-      previousSummary?: string;
-      contextIds?: string[];
-      projectIds?: string[];
-      modelKey?: string;
-    }): Promise<string> {
+    async getLiveSummary(payload: components['schemas']['LiveSummaryRequest']): Promise<string> {
+      // Background update during a meeting: silent (no alert mid-recording)
+      // and a 90 s timeout; if it is slow, the next update tries again.
       const req = async (force: boolean) =>
-        safeFetch(`${BASE_URL}/api/chat/live-summary`, {
+        silentFetch(`${BASE_URL}/api/chat/live-summary`, {
           method: "POST",
           headers: await getAuthHeaders(force),
           body: JSON.stringify(payload),
-        }, false, 300000);
+        }, 90000);
 
       const res = await req(false);
       return handleResponseWithRetry<{ summary: string }>(res, () => req(true)).then(
@@ -879,6 +926,30 @@ export const createPlanAiApi = (
       const res = await req(false);
       const data = await handleResponseWithRetry<{ text: string }>(res, () => req(true));
       return data.text.replace(/^User:\s*/i, "").trim();
+    },
+
+    /**
+     * The meeting on now, or starting within 15 minutes, from the user's
+     * connected Google or Outlook calendar. Null when there is none, no
+     * calendar is connected or the request fails. Silent (no alert) with a
+     * 15 s timeout, so it never gets in the way of a recording.
+     */
+    async getCurrentMeeting(): Promise<components['schemas']['CurrentMeeting'] | null> {
+      try {
+        const req = async (force: boolean) =>
+          silentFetch(`${BASE_URL}/api/calendar/current-meeting`, {
+            headers: await getAuthHeaders(force),
+          }, 15000);
+
+        const res = await req(false);
+        const data = await handleResponseWithRetry<
+          components['schemas']['CurrentMeetingResponse'] | null
+        >(res, () => req(true));
+        return data?.event ?? null;
+      } catch (err) {
+        console.warn("[planAiApi] getCurrentMeeting failed:", err);
+        return null;
+      }
     },
   };
 };

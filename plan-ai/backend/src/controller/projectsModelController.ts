@@ -921,10 +921,13 @@ export class ProjectsModelController extends BaseWorkspaceController {
     @Path() projectId: string,
     @Path() transcriptId: string,
   ): Promise<ApiResponse<null>> {
-    const { workspaceId } = await this.getAuthorizedWorkspaceAccess(request);
+    const { user, workspaceId, role } = await this.getAuthorizedWorkspaceAccess(request);
     await this.getProjectForWorkspace(request, projectId, workspaceId);
 
-    await transcriptCrudService.deleteTranscriptForWorkspace(workspaceId, transcriptId);
+    await transcriptCrudService.deleteTranscriptForWorkspace(workspaceId, transcriptId, {
+      userId: user.id,
+      role,
+    });
 
     return {
       status: 200,

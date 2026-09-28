@@ -9,6 +9,8 @@ import {
   Alert,
   FlatList,
   Linking,
+  Keyboard,
+  Share,
 } from "react-native";
 import {
   Text,
@@ -24,6 +26,7 @@ import {
   Divider,
   Portal,
   Modal,
+  Dialog,
   SegmentedButtons,
   ProgressBar,
 } from "react-native-paper";
@@ -50,6 +53,7 @@ import {
   type RecordingApi,
 } from "@/services/recordingService";
 import { saveAndUpload } from "@/services/recordingUploader";
+import { readManifest, type MeetingCalendarEvent } from "@/services/recordingSessions";
 import { loadLastLanguage, saveLastLanguage } from "@/utils/recordingPrefs";
 
 const formatDuration = (ms: number): string => {
@@ -81,6 +85,69 @@ const ElapsedTime = ({
   const ms =
     recordedMsBefore + (segmentStartedAt ? Math.max(0, now - segmentStartedAt) : 0);
   return <Text style={style}>{formatDuration(ms)}</Text>;
+};
+
+// Shared from the consent banner so the room knows it is being recorded.
+const CONSENT_MESSAGE =
+  "I am recording this meeting with Plan AI to write the notes and the tasks. Tell me if you would prefer I did not.";
+
+// The session whose consent banner was closed. Kept outside the screen so it
+// stays closed when the screen remounts mid-meeting, and only for that meeting.
+let consentDismissedFor: string | null = null;
+
+/** Optional note for the moment just marked. Skipping keeps the mark. */
+const BookmarkNoteDialog = ({
+  visible,
+  atSeconds,
+  onSave,
+  onSkip,
+}: {
+  visible: boolean;
+  atSeconds: number;
+  onSave: (note: string) => void;
+  onSkip: () => void;
+}) => {
+  const [note, setNote] = useState("");
+  // Paper's dialog stays centred on the full screen, so on iOS the keyboard
+  // covers its buttons. Android resizes the window on its own.
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  useEffect(() => {
+    if (visible) setNote("");
+  }, [visible]);
+  useEffect(() => {
+    if (Platform.OS !== "ios") return;
+    const show = Keyboard.addListener("keyboardWillShow", (e) =>
+      setKeyboardHeight(e.endCoordinates.height),
+    );
+    const hide = Keyboard.addListener("keyboardWillHide", () => setKeyboardHeight(0));
+    return () => {
+      show.remove();
+      hide.remove();
+    };
+  }, []);
+  return (
+    <Portal>
+      <Dialog visible={visible} onDismiss={onSkip} style={{ marginBottom: keyboardHeight }}>
+        <Dialog.Title>Marked at {formatDuration(atSeconds * 1000)}</Dialog.Title>
+        <Dialog.Content>
+          <TextInput
+            mode="outlined"
+            placeholder="Add a note (optional)"
+            value={note}
+            onChangeText={setNote}
+            maxLength={200}
+            autoFocus
+            returnKeyType="done"
+            onSubmitEditing={() => onSave(note)}
+          />
+        </Dialog.Content>
+        <Dialog.Actions>
+          <Button onPress={onSkip}>Skip</Button>
+          <Button onPress={() => onSave(note)}>Save</Button>
+        </Dialog.Actions>
+      </Dialog>
+    </Portal>
+  );
 };
 
 type Phase =
@@ -391,7 +458,45 @@ export default function RecordScreen() {
     autoPausedBy,
     recordedMsBefore,
     segmentStartedAt,
+    bookmarks,
   } = session;
+
+  // Bookmark whose note dialog is open, by index in session.bookmarks.
+  const [markIndex, setMarkIndex] = useState<number | null>(null);
+  const handleMark = () => {
+    try {
+      const index = recordingService.addBookmark();
+      if (index !== null) setMarkIndex(index);
+    } catch (err) {
+      console.warn("[record] could not add the bookmark", err);
+    }
+  };
+  const closeMarkDialog = (note?: string) => {
+    try {
+      if (markIndex !== null && note?.trim()) {
+        recordingService.setBookmarkNote(markIndex, note);
+      }
+    } catch (err) {
+      console.warn("[record] could not save the bookmark note", err);
+    }
+    setMarkIndex(null);
+  };
+
+  const [consentClosedFor, setConsentClosedFor] = useState(consentDismissedFor);
+  const closeConsent = () => {
+    consentDismissedFor = session.sessionId;
+    setConsentClosedFor(session.sessionId);
+  };
+  const shareConsent = async () => {
+    try {
+      const result = await Share.share({ message: CONSENT_MESSAGE });
+      if (result.action === Share.sharedAction) closeConsent();
+    } catch (err) {
+      Alert.alert("Could not share", err instanceof Error ? err.message : String(err));
+    }
+  };
+  const showConsent =
+    isRecording && !!session.sessionId && consentClosedFor !== session.sessionId;
   const [meetingLocation, setMeetingLocation] = useState<{
     latitude: number;
     longitude: number;
@@ -433,7 +538,6 @@ export default function RecordScreen() {
   const [liveSummary, setLiveSummary] = useState<string>("");
   const [liveSummaryLoading, setLiveSummaryLoading] = useState(false);
   const [summaryProgress, setSummaryProgress] = useState(0);
-  const previousTranscriptLength = useRef<number>(0);
   const summaryPollCounterRef = useRef<number>(0);
   const summaryPollTimerRef = useRef<ReturnType<typeof setInterval> | null>(
     null,
@@ -516,43 +620,62 @@ export default function RecordScreen() {
     liveSummaryRef.current = liveSummary;
   }, [liveSummary]);
 
-  // Live Summary Polling Loop (Every 15 seconds, mapped to 1s UI ticks)
+  // Live summary, checked every 15 s (1 s UI ticks). Only the lines said
+  // since the last summary are sent, with the summary itself: re-sending the
+  // whole meeting every 15 s cost tokens with the square of its length. An
+  // update waits for 200 new characters or one minute, and never overlaps.
+  const summarizedLengthRef = useRef(0);
+  const lastSummaryAtRef = useRef(0);
+  const summaryInFlightRef = useRef(false);
   useEffect(() => {
     if (phase !== "recording" || !api) return;
 
     summaryPollTimerRef.current = setInterval(() => {
       setSummaryProgress((prev) => (prev >= 100 ? 5 : prev + 5));
       summaryPollCounterRef.current += 1;
+      if (summaryPollCounterRef.current < 15) return;
+      summaryPollCounterRef.current = 0;
+      if (summaryInFlightRef.current) return;
 
-      if (summaryPollCounterRef.current >= 15) {
-        summaryPollCounterRef.current = 0;
-
-        const currentTranscript = transcriptRef.current;
-        if (currentTranscript.length === 0) return;
-
-        if (currentTranscript.length > previousTranscriptLength.current) {
-          previousTranscriptLength.current = currentTranscript.length;
-
-          setLiveSummaryLoading(true);
-          const prevSummary = liveSummaryRef.current;
-
-          api
-            .getLiveSummary({
-              liveTranscript: currentTranscript,
-              contextIds:
-                selectedContextIdsRef.current?.length > 0
-                  ? selectedContextIdsRef.current
-                  : undefined,
-              projectIds: selectedProjectId ? [selectedProjectId] : undefined,
-              previousSummary: prevSummary || undefined,
-            })
-            .then((newSummary) => {
-              if (newSummary) setLiveSummary(newSummary);
-            })
-            .catch((e) => console.warn("Live summary poll failed: ", e))
-            .finally(() => setLiveSummaryLoading(false));
-        }
+      const current = transcriptRef.current;
+      // A new session started: its transcript is shorter than what we had.
+      if (current.length < summarizedLengthRef.current) {
+        summarizedLengthRef.current = 0;
+        liveSummaryRef.current = "";
       }
+      const done = summarizedLengthRef.current;
+      const delta = current.slice(done);
+      if (!delta.trim()) return;
+      if (delta.length < 200 && Date.now() - lastSummaryAtRef.current < 60_000) return;
+
+      const prevSummary = liveSummaryRef.current;
+      const upTo = current.length;
+      summaryInFlightRef.current = true;
+      setLiveSummaryLoading(true);
+      api
+        .getLiveSummary({
+          ...(prevSummary
+            ? {
+                liveTranscript: current.slice(Math.max(0, done - 1500), done),
+                newTranscript: delta,
+                previousSummary: prevSummary,
+              }
+            : { liveTranscript: current }),
+          contextIds:
+            selectedContextIdsRef.current?.length > 0 ? selectedContextIdsRef.current : undefined,
+          projectIds: selectedProjectId ? [selectedProjectId] : undefined,
+        })
+        .then((newSummary) => {
+          if (!newSummary) return;
+          setLiveSummary(newSummary);
+          summarizedLengthRef.current = upTo;
+          lastSummaryAtRef.current = Date.now();
+        })
+        .catch((e) => console.warn("Live summary poll failed: ", e))
+        .finally(() => {
+          summaryInFlightRef.current = false;
+          setLiveSummaryLoading(false);
+        });
     }, 1000);
 
     return () => {
@@ -617,8 +740,16 @@ export default function RecordScreen() {
     }
   };
 
+  // The meeting happening now in the user's connected calendar (web app,
+  // Integrations): it names the recording and its invitees help name the
+  // speakers. Restored from the session when the screen remounts mid-meeting.
+  const [calendarEvent, setCalendarEvent] = useState<MeetingCalendarEvent | null>(() => {
+    const s = recordingService.getSnapshot();
+    const id = s.sessionId ?? s.stoppedSessionId;
+    return id ? (readManifest(id)?.calendarEvent ?? null) : null;
+  });
   useEffect(() => {
-    if (phase === "save_options" && transcript && !title) {
+    if (phase === "save_options" && transcript && !title && !calendarEvent?.title) {
       setIsGeneratingTitle(true);
       api
         .sendLiveChatMessage({
@@ -638,7 +769,7 @@ export default function RecordScreen() {
           setIsGeneratingTitle(false);
         });
     }
-  }, [phase, transcript, api, title]);
+  }, [phase, transcript, api, title, calendarEvent?.title]);
 
   // Re-attach this screen to an in-progress session when it remounts (the user
   // navigated away while recording and came back). The session keeps running in
@@ -665,6 +796,24 @@ export default function RecordScreen() {
       }
     }, [phase, api]),
   );
+
+  useEffect(() => {
+    if (phase !== "setup" || !api) return;
+    let cancelled = false;
+    void api.getCurrentMeeting().then((event) => {
+      if (!cancelled) setCalendarEvent(event);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [phase, api]);
+  // The invite title is the default name on the save screen.
+  useEffect(() => {
+    if (phase === "save_options" && calendarEvent?.title && !title) {
+      setTitle(calendarEvent.title);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase, calendarEvent]);
 
   useEffect(() => {
     if (phase === "setup") {
@@ -791,6 +940,7 @@ export default function RecordScreen() {
         projectId: selectedProjectId,
         workspaceId: activeWorkspaceId || null,
         ownerUid: user?.uid ?? null,
+        calendarEvent: calendarEvent ?? undefined,
         api: api as unknown as RecordingApi,
       });
     } catch (err) {
@@ -828,7 +978,8 @@ export default function RecordScreen() {
     // crash or a dead network mid-upload loses nothing: the dashboard picks
     // it up and retries.
     const upload = saveAndUpload(api, sessionId, {
-      title: title || getDefaultMeetingTitle(),
+      title: title || calendarEvent?.title || getDefaultMeetingTitle(),
+      calendarEvent: calendarEvent ?? undefined,
       projectId: selectedProjectId || undefined,
       contextIds: selectedContextIds.length > 0 ? selectedContextIds : undefined,
       // ASR language ("" = auto): the batch pass uses it instead of "multi",
@@ -1009,6 +1160,34 @@ export default function RecordScreen() {
           </View>
         ) : (
           <ScrollView contentContainerStyle={{ padding: 24, gap: 24 }}>
+            {calendarEvent && (
+              <Surface
+                elevation={0}
+                style={{
+                  padding: 12,
+                  borderRadius: 12,
+                  backgroundColor: theme.colors.secondaryContainer,
+                }}
+              >
+                <Text variant="labelMedium" style={{ opacity: 0.8 }}>
+                  Happening now in your calendar
+                </Text>
+                <Text variant="titleMedium" style={{ fontWeight: "bold" }}>
+                  {calendarEvent.title}
+                </Text>
+                {calendarEvent.attendees.length > 0 && (
+                  <Text variant="bodySmall" style={{ opacity: 0.8 }}>
+                    {calendarEvent.attendees
+                      .slice(0, 6)
+                      .map((a) => a.name || a.email)
+                      .join(", ")}
+                    {calendarEvent.attendees.length > 6
+                      ? ` and ${calendarEvent.attendees.length - 6} more`
+                      : ""}
+                  </Text>
+                )}
+              </Surface>
+            )}
             <View>
               <Text
                 variant="labelLarge"
@@ -1500,6 +1679,38 @@ export default function RecordScreen() {
         </View>
       </View>
 
+      {showConsent && (
+        <View
+          style={{
+            backgroundColor: theme.colors.primaryContainer,
+            paddingLeft: 16,
+            paddingRight: 4,
+            paddingVertical: 6,
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 8,
+          }}
+        >
+          <Text
+            variant="bodySmall"
+            style={{ flex: 1, color: theme.colors.onPrimaryContainer }}
+          >
+            Let the people in the room know you are recording.
+          </Text>
+          <Button mode="text" compact onPress={shareConsent}>
+            Share message
+          </Button>
+          <IconButton
+            icon="close"
+            size={18}
+            accessibilityLabel="Close"
+            iconColor={theme.colors.onPrimaryContainer}
+            style={{ margin: 0 }}
+            onPress={closeConsent}
+          />
+        </View>
+      )}
+
       {isRecording && isPaused && (
         <View
           style={{
@@ -1598,7 +1809,7 @@ export default function RecordScreen() {
           }}
         >
           <Text variant="bodySmall" style={{ color: theme.colors.onTertiaryContainer }}>
-            Less than 500 MB free. The recording uses about 173 MB per hour and pauses on its
+            Less than 500 MB free. The recording uses about 115 MB per hour and pauses on its
             own if the phone runs out of space.
           </Text>
         </View>
@@ -1961,7 +2172,15 @@ export default function RecordScreen() {
 
           <WaveformBox isRecording={isRecording && !isPaused} theme={theme} />
 
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: 8 }}>
+          <View
+            style={{
+              flexDirection: "row",
+              flexWrap: "wrap",
+              alignItems: "center",
+              columnGap: 8,
+              marginTop: 8,
+            }}
+          >
             <Text variant="labelLarge" style={{ opacity: 0.6 }}>
               {isRecording
                 ? isPaused
@@ -1980,10 +2199,26 @@ export default function RecordScreen() {
                 style={{ opacity: 0.6, fontVariant: ["tabular-nums"] }}
               />
             )}
+            {isRecording && bookmarks.length > 0 && (
+              <Text variant="labelMedium" style={{ color: theme.colors.primary }}>
+                {bookmarks.length} marked
+              </Text>
+            )}
           </View>
         </View>
 
         <View style={styles.footerControls}>
+          {isRecording && (
+            <IconButton
+              icon="bookmark-plus-outline"
+              mode="contained-tonal"
+              size={24}
+              style={{ margin: 0 }}
+              disabled={isPaused || isStarting}
+              accessibilityLabel="Mark this moment"
+              onPress={handleMark}
+            />
+          )}
           {isRecording && (
             <IconButton
               icon={isPaused ? "play" : "pause"}
@@ -2008,6 +2243,13 @@ export default function RecordScreen() {
           />
         </View>
       </View>
+
+      <BookmarkNoteDialog
+        visible={markIndex !== null}
+        atSeconds={markIndex !== null ? (bookmarks[markIndex]?.atSeconds ?? 0) : 0}
+        onSave={(note) => closeMarkDialog(note)}
+        onSkip={() => closeMarkDialog()}
+      />
     </View>
   );
 }
@@ -2037,7 +2279,9 @@ const styles = StyleSheet.create({
     maxWidth: "85%",
   },
   footer: {
-    paddingHorizontal: 32,
+    // 20, not 32: three controls (mark, pause, stop) must leave room for the
+    // waveform on a 360 pt wide phone.
+    paddingHorizontal: 20,
     paddingVertical: 24,
     borderTopWidth: 1,
     flexDirection: "row",
@@ -2052,7 +2296,7 @@ const styles = StyleSheet.create({
   footerControls: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 16,
+    gap: 12,
   },
   optionRow: {
     flexDirection: "row",

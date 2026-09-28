@@ -23,6 +23,9 @@ This is the most critical environment file. It handles database connections, API
 | `APP_URL` | The main URL of the app. Used to build links that leave the product — emails, and the document link written into CRM notes — so a wrong value ships a broken link to your customers. | `https://plan-ai.blueberrybytes.com` |
 | `CORS_ORIGINS` | Comma-separated list of allowed CORS origins for production. Leave empty for local dev (allows all origins). | `https://plan-ai.blueberrybytes.com` |
 | `API_ADMIN_KEY` | Secret key for cron jobs or admin overrides. | `test123` |
+| `SECRETS_ENCRYPTION_KEY` | Encrypts the stored API keys and integration tokens (AES-256-GCM). 32 bytes, base64: `openssl rand -base64 32`. Keep a copy outside the server: without it the stored keys cannot be read, and every workspace has to enter its keys and reconnect its integrations again. After setting it, run `yarn secrets:encrypt` once to encrypt the values saved before. | `base64 key` |
+| `SECRETS_ENCRYPTION_KEY_PREVIOUS` | Only while rotating the key: the old value of `SECRETS_ENCRYPTION_KEY`. Values sealed with it are still read. Run `yarn secrets:encrypt` to rewrite them with the new key, then remove this variable. | `base64 key` |
+| `OAUTH_STATE_SECRET` | Signs the OAuth state of the Google Drive, OneDrive, Linear and Notion connections. Optional; the OAuth client secret is used when empty. | `base64 key` |
 | `LOG_LEVEL` | Logging verbosity (`info`, `debug`, `error`). | `info` |
 | **Databases** | | |
 | `DATABASE_URL` | PostgreSQL connection string. | `postgresql://planai:planai123@localhost/planai_db` |
@@ -71,10 +74,12 @@ This is the most critical environment file. It handles database connections, API
 | `GOOGLE_CLIENT_ID` | Google OAuth ID (Drive integration). | `xxxx` |
 | `GOOGLE_CLIENT_SECRET` | Google OAuth Secret. | `xxxx` |
 | `GOOGLE_REDIRECT_URI` | Google OAuth callback URL. | `http://localhost:8080/api/google/callback` |
+| `GOOGLE_CALENDAR_REDIRECT_URI` | Google Calendar callback. It is a page of the web app, which confirms the connection with the user's session. Register it in the same OAuth client. Defaults to `APP_URL` + `/integrations/google-calendar`. | `http://localhost:3000/integrations/google-calendar` |
 | `MICROSOFT_CLIENT_ID` | Microsoft OAuth client ID (OneDrive integration). | `xxxx` |
 | `MICROSOFT_CLIENT_SECRET` | Microsoft OAuth client secret. | `xxxx` |
 | `MICROSOFT_TENANT_ID` | Microsoft Azure tenant ID. | `xxxx` |
 | `MICROSOFT_REDIRECT_URI` | Microsoft OAuth callback URL. | `http://localhost:8080/api/microsoft/callback` |
+| `MICROSOFT_CALENDAR_REDIRECT_URI` | Outlook Calendar callback, a page of the web app. Register it in the same app registration (platform "Web"). Defaults to `APP_URL` + `/integrations/outlook-calendar`. | `http://localhost:3000/integrations/outlook-calendar` |
 | `NOTION_CLIENT_ID` | Notion OAuth client ID. | `xxxx` |
 | `NOTION_CLIENT_SECRET` | Notion OAuth client secret. | `xxxx` |
 | `NOTION_REDIRECT_URI` | Notion OAuth callback URL. | `http://localhost:8080/api/notion/callback` |

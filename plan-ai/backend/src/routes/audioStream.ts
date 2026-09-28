@@ -5,6 +5,7 @@ import { firebaseAdmin } from "../firebase/firebaseAdmin";
 import prisma from "../prisma/prismaClient";
 import { logger } from "../utils/logger";
 import EnvUtils from "../utils/EnvUtils";
+import { withDecryptedWorkspaceKeys } from "../utils/workspaceSecrets";
 import { EchoDeduper, wordsFromDeepgram, wordsFromText } from "../utils/echoDedup";
 import { LiveTranscriptionEvents } from "@deepgram/sdk";
 import { getSttProvider } from "../services/stt/sttConfig";
@@ -254,6 +255,17 @@ export function setupAudioStream(server: Server) {
 
       const workspaceIdParam = url.searchParams.get("workspaceId");
       if (workspaceIdParam) {
+        // The stream runs on this workspace's Deepgram key and bills its
+        // usage, so the id in the URL must be one the user belongs to.
+        const member = await prisma.workspaceMember.findUnique({
+          where: { workspaceId_userId: { workspaceId: workspaceIdParam, userId: dbUser.id } },
+          select: { id: true },
+        });
+        if (!member) {
+          ws.send(JSON.stringify({ type: "error", message: "Forbidden: not a workspace member" }));
+          ws.close(1008);
+          return;
+        }
         currentWorkspaceId = workspaceIdParam;
       } else {
         const membership = await prisma.workspaceMember.findFirst({ where: { userId: dbUser.id } });
@@ -264,7 +276,9 @@ export function setupAudioStream(server: Server) {
 
       let workspaceRecord = null;
       if (currentWorkspaceId && currentWorkspaceId !== "placeholder") {
-        workspaceRecord = await prisma.workspace.findUnique({ where: { id: currentWorkspaceId } });
+        workspaceRecord = withDecryptedWorkspaceKeys(
+          await prisma.workspace.findUnique({ where: { id: currentWorkspaceId } }),
+        );
 
         // Enforce subscription before opening Deepgram (which costs us / the
         // user real money per second of audio). Self-host / OSS instances

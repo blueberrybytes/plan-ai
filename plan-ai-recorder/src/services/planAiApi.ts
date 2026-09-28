@@ -87,6 +87,11 @@ async function handleResponseWithRetry<T>(
         `You've reached your monthly ${friendly} limit. Upgrade your plan or wait until next billing cycle.`,
       );
     }
+    // A limit the server explains (e.g. the notes of a meeting were already
+    // sent 5 times) is shown as it is, not as a temporary rate limit.
+    if (typeof data.message === "string" && data.message.trim()) {
+      throw new Error(data.message);
+    }
     throw new Error(
       "Rate limit reached. Please wait a moment before trying again.",
     );
@@ -405,6 +410,10 @@ export const createPlanAiApi = (
          * already saved instead of creating it twice.
          */
         clientSessionId?: string;
+        /** Moments marked during the meeting (seconds on the saved audio, pauses excluded). */
+        bookmarks?: components["schemas"]["RecordingBookmark"][];
+        /** The calendar event the meeting belongs to (title, attendees). */
+        calendarEvent?: components["schemas"]["MeetingCalendarEvent"];
         skipAi?: boolean;
         /** Twenty company chosen for THIS meeting (destination of the CRM note). */
         twentyCompanyId?: string;
@@ -462,6 +471,12 @@ export const createPlanAiApi = (
         }
         if (payload.recordingStartedAt) {
           formData.append("recordingStartedAt", payload.recordingStartedAt);
+        }
+        if (payload.bookmarks && payload.bookmarks.length > 0) {
+          formData.append("bookmarks", JSON.stringify(payload.bookmarks));
+        }
+        if (payload.calendarEvent) {
+          formData.append("calendarEvent", JSON.stringify(payload.calendarEvent));
         }
         if (payload.clientSessionId) {
           formData.append("clientSessionId", payload.clientSessionId);
@@ -538,6 +553,50 @@ export const createPlanAiApi = (
 
       const res = await req(false);
       return handleResponseWithRetry<Transcript>(res, () => req(true));
+    },
+
+    /** Short-lived links to listen to a meeting (see the transcript view player). */
+    async getTranscriptAudio(
+      id: string,
+    ): Promise<components["schemas"]["TranscriptAudioResponse"]> {
+      const req = async (force: boolean) =>
+        safeFetch(
+          `${BASE_URL}/api/transcripts/${id}/audio`,
+          { headers: await getAuthHeaders(force) },
+          true,
+        );
+      const res = await req(false);
+      return handleResponseWithRetry<
+        components["schemas"]["TranscriptAudioResponse"]
+      >(res, () => req(true));
+    },
+
+    /** Emails the meeting notes to the given people. Replies go to the user. */
+    async sendMeetingNotes(
+      id: string,
+      body: components["schemas"]["SendMeetingNotesRequest"],
+    ): Promise<components["schemas"]["SendMeetingNotesResponse"]> {
+      const req = async (force: boolean) =>
+        safeFetch(`${BASE_URL}/api/transcripts/${id}/send-notes`, {
+          method: "POST",
+          headers: await getAuthHeaders(force),
+          body: JSON.stringify(body),
+        });
+      const res = await req(false);
+      return handleResponseWithRetry<
+        components["schemas"]["SendMeetingNotesResponse"]
+      >(res, () => req(true));
+    },
+
+    /** Deletes a meeting's audio files; the transcript and the rest stay. */
+    async deleteTranscriptAudio(id: string): Promise<void> {
+      const req = async (force: boolean) =>
+        safeFetch(`${BASE_URL}/api/transcripts/${id}/audio`, {
+          method: "DELETE",
+          headers: await getAuthHeaders(force),
+        });
+      const res = await req(false);
+      await handleResponseWithRetry(res, () => req(true));
     },
 
     async updateTranscript(
@@ -647,13 +706,9 @@ export const createPlanAiApi = (
       );
     },
 
-    async getLiveSummary(payload: {
-      liveTranscript: string;
-      previousSummary?: string;
-      contextIds?: string[];
-      projectIds?: string[];
-      modelKey?: string;
-    }): Promise<string> {
+    async getLiveSummary(
+      payload: components["schemas"]["LiveSummaryRequest"],
+    ): Promise<string> {
       const req = async (force: boolean) =>
         // Background auto-summary: silent (never pop a blocking alert mid-recording)
         // and a tighter 90s timeout — if it's slow, the next update retries.
@@ -693,6 +748,35 @@ export const createPlanAiApi = (
         skipped: number;
         errors: string[];
       }>(res, () => req(true));
+    },
+
+    /**
+     * The meeting on now, or starting within 15 minutes, from the user's
+     * connected Google or Outlook calendar. Null when there is none, no
+     * calendar is connected or the request fails. Silent (no offline notice)
+     * with a 15 s timeout, so it never gets in the way of a recording.
+     */
+    async getCurrentMeeting(): Promise<
+      components["schemas"]["CurrentMeeting"] | null
+    > {
+      try {
+        const req = async (force: boolean) =>
+          safeFetch(
+            `${BASE_URL}/api/calendar/current-meeting`,
+            { headers: await getAuthHeaders(force) },
+            true,
+            15000,
+          );
+
+        const res = await req(false);
+        const data = await handleResponseWithRetry<
+          components["schemas"]["CurrentMeetingResponse"] | null
+        >(res, () => req(true));
+        return data?.event ?? null;
+      } catch (err) {
+        console.warn("[planAiApi] getCurrentMeeting failed:", err);
+        return null;
+      }
     },
   };
 };

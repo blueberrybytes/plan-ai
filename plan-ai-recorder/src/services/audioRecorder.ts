@@ -211,6 +211,10 @@ export class AudioRecorder {
   // buffered PCM seconds against real elapsed time (a sys deficit = the
   // reference timeline is being compressed, which starves the canceller).
   private recStartWallMs = 0;
+  // When the mic file really began: permissions, the macOS capture binary and
+  // the worklet take 0.5 to 2 s after start(). Times shown to the user (live
+  // lines, bookmarks) are measured from here, like the saved audio.
+  private micStartWallMs = 0;
   // Wall-clock when stop() was requested. Buffering ceases there, but the AEC
   // runs after a 2.5s flush grace — measuring wall against THIS avoids a
   // phantom ~2.75s "deficit" in the diagnostics (seen 2026-07-06).
@@ -292,11 +296,9 @@ export class AudioRecorder {
    * audio.
    */
   recordedMsAt(wallMs: number): number {
-    if (!this.recStartWallMs) return 0;
-    return Math.max(
-      0,
-      wallMs - this.recStartWallMs - this.pausedMsUntil(wallMs),
-    );
+    const origin = this.micStartWallMs || this.recStartWallMs;
+    if (!origin) return 0;
+    return Math.max(0, wallMs - origin - this.pausedMsUntil(wallMs));
   }
 
   /** Keeps a recorded chunk for the upload and copies it to the crash-safe disk store. */
@@ -592,6 +594,7 @@ export class AudioRecorder {
       this.state = "recording";
       window.addEventListener("online", this.handleOnline);
       this.recStartWallMs = Date.now();
+      this.micStartWallMs = 0;
       this.recStopWallMs = 0;
       this.sysChunkStats = {
         chunks: 0,
@@ -888,8 +891,10 @@ export class AudioRecorder {
 
       this.micMediaRecorder.ondataavailable = (e) =>
         this.keepChunk("mic", e.data);
-      this.micMediaRecorder.onstart = () =>
+      this.micMediaRecorder.onstart = () => {
+        this.micStartWallMs = Date.now();
         console.log("[AudioRecorder] micMediaRecorder STARTED");
+      };
       this.micMediaRecorder.onerror = (err) =>
         console.error("[AudioRecorder] micMediaRecorder ERROR", err);
 

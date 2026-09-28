@@ -720,6 +720,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/transcripts/{id}/send-notes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description Short-lived links to listen to a meeting's audio, plus what the player
+         *     needs to keep the two files in step.
+         */
+        post: operations["SendMeetingNotes"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/transcripts/{id}/audio": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetTranscriptAudio"];
+        put?: never;
+        post?: never;
+        /**
+         * @description Deletes a meeting's audio files and keeps everything made from them.
+         *     Allowed for whoever recorded it and for workspace owners.
+         */
+        delete: operations["DeleteTranscriptAudio"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/transcripts/{id}": {
         parameters: {
             query?: never;
@@ -2066,6 +2106,91 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["GenerateLiveSummary"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/calendar/current-meeting": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description The meeting the user is in now, or the next one within 15 minutes, from
+         *     every connected calendar. `event` is null when there is none or the
+         *     calendars cannot be read.
+         */
+        get: operations["GetCurrentMeeting"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/calendar/google/auth-url": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetGoogleCalendarAuthUrl"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/calendar/google/connect": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ConnectGoogleCalendar"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/calendar/outlook/auth-url": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetOutlookCalendarAuthUrl"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/calendar/outlook/connect": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ConnectOutlookCalendar"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3510,6 +3635,28 @@ export interface components {
              */
             wallClockSeconds?: number;
         };
+        /** @description A moment the person recording marked during the meeting. */
+        RecordingBookmark: {
+            /**
+             * Format: double
+             * @description Seconds from the start of the recorded audio (pauses excluded).
+             */
+            atSeconds: number;
+            /** @description Optional short note typed with the mark. */
+            note?: string;
+        };
+        /** @description The calendar event the recording belongs to, as the client saw it. */
+        MeetingCalendarEvent: {
+            title: string;
+            start?: string;
+            end?: string;
+            attendees: {
+                email: string;
+                name?: string;
+            }[];
+            meetingUrl?: string;
+            provider?: string;
+        };
         TranscriptMetadata: {
             /** @enum {string} */
             processingStatus?: "PENDING" | "PROCESSING" | "EXTRACTING_TASKS" | "REFINING_TASKS" | "COMPLETED" | "FAILED" | "DONE";
@@ -3552,6 +3699,27 @@ export interface components {
              *     id returns the transcript already created instead of a duplicate.
              */
             clientSessionId?: string;
+            /** @description Moments the person recording marked during the meeting. */
+            bookmarks?: components["schemas"]["RecordingBookmark"][];
+            /** @description The calendar event the recording belongs to (title, attendees). */
+            calendarEvent?: components["schemas"]["MeetingCalendarEvent"];
+            /**
+             * Format: double
+             * @description How much later the mic file runs than the system audio file, in ms, so
+             *     the player can play both in step. Absent when it could not be measured.
+             */
+            micSysOffsetMs?: number;
+            /** @description When the audio files were deleted (retention rule or by hand). */
+            audioDeletedAt?: string;
+            /** @enum {string} */
+            audioDeletedReason?: "retention" | "user";
+            /** @description Each time the notes were emailed to people in the meeting. */
+            notesEmails?: {
+                /** Format: double */
+                count: number;
+                sentBy: string;
+                sentAt: string;
+            }[];
         };
         TranscriptContextSummary: {
             id: string;
@@ -3679,6 +3847,46 @@ export interface components {
             agenticInvestigation?: boolean;
             createDoc?: boolean;
             createSlides?: boolean;
+        };
+        SendMeetingNotesResponse: {
+            /** @description Addresses that got the email. */
+            sent: string[];
+            /** @description Addresses the email service refused or could not reach. */
+            failed: string[];
+            /** @description Entries that are not email addresses. */
+            invalid: string[];
+        };
+        ApiResponse_SendMeetingNotesResponse_: {
+            message?: string;
+            data: components["schemas"]["SendMeetingNotesResponse"] | null;
+            /** Format: double */
+            status: number;
+        };
+        SendMeetingNotesRequest: {
+            /** @description Email addresses, usually the people in the calendar invite. At most 30. */
+            recipients: string[];
+            /** @description Optional note shown above the notes. At most 2000 characters. */
+            message?: string;
+        };
+        TranscriptAudioResponse: {
+            /** @description Signed URL of the microphone file (12 h), when there is one. */
+            micUrl?: string;
+            /** @description Signed URL of the system audio file (12 h), when there is one. */
+            sysUrl?: string;
+            /**
+             * Format: double
+             * @description How much later the mic file runs than the system file, in seconds. To
+             *     play both in step: system time = mic time - offset.
+             */
+            micSysOffsetSeconds?: number;
+            /** @description Set when the audio was deleted (retention rule or by hand). */
+            audioDeletedAt?: string;
+        };
+        ApiResponse_TranscriptAudioResponse_: {
+            message?: string;
+            data: components["schemas"]["TranscriptAudioResponse"] | null;
+            /** Format: double */
+            status: number;
         };
         UpdateStandaloneTranscriptBody: {
             title?: string | null;
@@ -4142,7 +4350,7 @@ export interface components {
             projectId: string;
         };
         /** @enum {string} */
-        "_36_Enums.IntegrationProvider": "JIRA" | "LINEAR" | "GITHUB" | "GOOGLE_DRIVE" | "TRELLO" | "NOTION" | "ONEDRIVE" | "ASANA" | "TWENTY";
+        "_36_Enums.IntegrationProvider": "JIRA" | "LINEAR" | "GITHUB" | "GOOGLE_DRIVE" | "TRELLO" | "NOTION" | "ONEDRIVE" | "ASANA" | "TWENTY" | "GOOGLE_CALENDAR" | "OUTLOOK_CALENDAR";
         IntegrationProvider: components["schemas"]["_36_Enums.IntegrationProvider"];
         /** @enum {string} */
         "_36_Enums.IntegrationStatus": "CONNECTED" | "DISCONNECTED" | "ERROR";
@@ -4390,13 +4598,72 @@ export interface components {
             status: number;
         };
         LiveSummaryRequest: {
+            /**
+             * @description The transcript so far. When `newTranscript` is sent with a
+             *     `previousSummary`, clients send only a short recent tail here, for
+             *     context.
+             */
             liveTranscript: string;
             previousSummary?: string;
+            /**
+             * @description Only what was said since `previousSummary` was made. Lets the summary be
+             *     updated from the new lines instead of re-reading the whole meeting every
+             *     few seconds, which grew with the square of the meeting length.
+             */
+            newTranscript?: string;
             /** @description Legacy: direct context IDs. Prefer `projectIds`. */
             contextIds?: string[];
             /** @description Preferred: user-facing project IDs. */
             projectIds?: string[];
             modelKey?: string;
+        };
+        CurrentMeetingAttendee: {
+            name?: string;
+            email: string;
+        };
+        /**
+         * @description Calendar the meeting came from.
+         * @enum {string}
+         */
+        CalendarProvider: "GOOGLE_CALENDAR" | "OUTLOOK_CALENDAR";
+        /** @description The meeting the recorder should use to name the recording and the speakers. */
+        CurrentMeeting: {
+            title: string;
+            /** Format: date-time */
+            start: string;
+            /** Format: date-time */
+            end: string;
+            attendees: components["schemas"]["CurrentMeetingAttendee"][];
+            meetingUrl?: string;
+            provider: components["schemas"]["CalendarProvider"];
+        };
+        CurrentMeetingResponse: {
+            event: components["schemas"]["CurrentMeeting"] | null;
+        };
+        ApiResponse_CurrentMeetingResponse_: {
+            message?: string;
+            data: components["schemas"]["CurrentMeetingResponse"] | null;
+            /** Format: double */
+            status: number;
+        };
+        CalendarConnectResult: {
+            connected: boolean;
+            /** @description OAuthDeclined, MissingParams, InvalidState, MissingScope or ExchangeFailed. */
+            errorReason?: string;
+            /** @description Path inside the web app to show next. */
+            redirectPath?: string;
+        };
+        ApiResponse_CalendarConnectResult_: {
+            message?: string;
+            data: components["schemas"]["CalendarConnectResult"] | null;
+            /** Format: double */
+            status: number;
+        };
+        /** @description What Google or Microsoft put in the web app URL after the consent screen. */
+        CalendarConnectRequest: {
+            code?: string;
+            state?: string;
+            error?: string;
         };
         BrandThemeResponse: {
             id: string;
@@ -4833,6 +5100,11 @@ export interface components {
             isCourtesy?: boolean;
             /** @description Workspace-wide default brand theme for AI-generated docs & slides. Null = none. */
             defaultThemeId?: string | null;
+            /**
+             * Format: double
+             * @description Days meeting audio is kept before it is deleted. Null keeps it forever.
+             */
+            audioRetentionDays?: number | null;
         };
         /** @enum {string} */
         "_36_Enums.UserPersona": "PROJECT_MANAGER" | "SOFTWARE_ENGINEER" | "DESIGNER" | "PRODUCT_MANAGER" | "EXECUTIVE" | "OTHER";
@@ -4876,9 +5148,14 @@ export interface components {
             openaiKey?: string | null;
             /** Format: double */
             monthlyTokenLimit?: number;
-            isCourtesy?: boolean;
             /** @description Workspace-wide default brand theme. Pass null to clear; omit to leave unchanged. */
             defaultThemeId?: string | null;
+            /**
+             * Format: double
+             * @description Days to keep meeting audio (1 to 3650). Null keeps it forever; omit to
+             *     leave unchanged. Transcripts, summaries and tasks are never deleted.
+             */
+            audioRetentionDays?: number | null;
         };
         CreateMcpTokenResponse: {
             /** @description The raw token — shown ONCE, never retrievable again */
@@ -6601,6 +6878,15 @@ export interface operations {
                     clientSessionId?: string;
                     /** @description "in_person" (one mic, several people in the room) or "remote". */
                     recordingMode?: string;
+                    /** @description JSON array of { atSeconds, note? }: moments marked during the meeting. */
+                    bookmarks?: string;
+                    /** @description JSON { title, start?, end?, attendees[{ name?, email }], meetingUrl?, provider? }. */
+                    calendarEvent?: string;
+                    /**
+                     * @description Original file name of audio sent in slices, for imported files (m4a,
+                     *     mp3...). Recordings made in the app are WAV and can omit it.
+                     */
+                    micFileName?: string;
                     /** Format: binary */
                     micFile?: string;
                     /** Format: binary */
@@ -6616,6 +6902,76 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ApiResponse_StandaloneTranscriptResponse_"];
+                };
+            };
+        };
+    };
+    SendMeetingNotes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SendMeetingNotesRequest"];
+            };
+        };
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_SendMeetingNotesResponse_"];
+                };
+            };
+        };
+    };
+    GetTranscriptAudio: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_TranscriptAudioResponse_"];
+                };
+            };
+        };
+    };
+    DeleteTranscriptAudio: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse__success-boolean__"];
                 };
             };
         };
@@ -8892,6 +9248,120 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ApiResponse_LiveSummaryResponse_"];
+                };
+            };
+        };
+    };
+    GetCurrentMeeting: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_CurrentMeetingResponse_"];
+                };
+            };
+        };
+    };
+    GetGoogleCalendarAuthUrl: {
+        parameters: {
+            query?: {
+                redirectPath?: string;
+                appOrigin?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description URL fetched successfully */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse__authorizationUrl-string__"];
+                };
+            };
+        };
+    };
+    ConnectGoogleCalendar: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CalendarConnectRequest"];
+            };
+        };
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_CalendarConnectResult_"];
+                };
+            };
+        };
+    };
+    GetOutlookCalendarAuthUrl: {
+        parameters: {
+            query?: {
+                redirectPath?: string;
+                appOrigin?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description URL fetched successfully */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse__authorizationUrl-string__"];
+                };
+            };
+        };
+    };
+    ConnectOutlookCalendar: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CalendarConnectRequest"];
+            };
+        };
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_CalendarConnectResult_"];
                 };
             };
         };

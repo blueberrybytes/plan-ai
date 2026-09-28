@@ -15,6 +15,17 @@ export type ApiResponseGithubRepositories =
   operations["GetConnectedRepositories"]["responses"]["200"]["content"]["application/json"];
 export type ApiResponseGithubBranches =
   operations["GetRepositoryBranches"]["responses"]["200"]["content"]["application/json"];
+export type ApiResponseCalendarAuthUrl =
+  operations["GetGoogleCalendarAuthUrl"]["responses"]["200"]["content"]["application/json"];
+export type CalendarConnectRequest = components["schemas"]["CalendarConnectRequest"];
+export type ApiResponseCalendarConnect =
+  components["schemas"]["ApiResponse_CalendarConnectResult_"];
+
+const calendarAuthParams = (redirectPath?: string): string => {
+  const params = new URLSearchParams({ appOrigin: window.location.origin });
+  if (redirectPath) params.set("redirectPath", redirectPath);
+  return params.toString();
+};
 
 export const integrationApi = createApi({
   reducerPath: "integrationApi",
@@ -84,6 +95,34 @@ export const integrationApi = createApi({
         method: "GET",
       }),
     }),
+    // Calendars are personal connections, separate from Google Drive and OneDrive.
+    // The web runs on more than one domain. Google and Microsoft must send the
+    // user back to this one, where their session is.
+    getGoogleCalendarAuthUrl: builder.query<ApiResponseCalendarAuthUrl, string>({
+      query: (redirectPath) => ({
+        url: `/api/calendar/google/auth-url?${calendarAuthParams(redirectPath)}`,
+        method: "GET",
+      }),
+    }),
+    getOutlookCalendarAuthUrl: builder.query<ApiResponseCalendarAuthUrl, string>({
+      query: (redirectPath) => ({
+        url: `/api/calendar/outlook/auth-url?${calendarAuthParams(redirectPath)}`,
+        method: "GET",
+      }),
+    }),
+    // The consent screen sends the browser back to the web app with a code.
+    // Posting it with the user's session ties the calendar to that user.
+    connectCalendar: builder.mutation<
+      ApiResponseCalendarConnect,
+      { provider: "google" | "outlook" } & CalendarConnectRequest
+    >({
+      query: ({ provider, ...body }) => ({
+        url: `/api/calendar/${provider}/connect`,
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: [{ type: "Integration" as const, id: "LIST" }],
+    }),
     disconnectIntegration: builder.mutation<{ success: boolean; message?: string }, string>({
       query: (provider) => ({
         url: `/api/integrations/${provider}`,
@@ -133,6 +172,9 @@ export const {
   useGetGithubRepositoryBranchesQuery,
   useLazyGetGoogleAuthUrlQuery,
   useLazyGetMicrosoftAuthUrlQuery,
+  useLazyGetGoogleCalendarAuthUrlQuery,
+  useLazyGetOutlookCalendarAuthUrlQuery,
+  useConnectCalendarMutation,
   useDisconnectIntegrationMutation,
   useSetGoogleDefaultFolderMutation,
   useSetMicrosoftDefaultFolderMutation,

@@ -101,8 +101,19 @@ export interface LiveChatMessageResponse {
 }
 
 export interface LiveSummaryRequest {
+  /**
+   * The transcript so far. When `newTranscript` is sent with a
+   * `previousSummary`, clients send only a short recent tail here, for
+   * context.
+   */
   liveTranscript: string;
   previousSummary?: string;
+  /**
+   * Only what was said since `previousSummary` was made. Lets the summary be
+   * updated from the new lines instead of re-reading the whole meeting every
+   * few seconds, which grew with the square of the meeting length.
+   */
+  newTranscript?: string;
   /** Legacy: direct context IDs. Prefer `projectIds`. */
   contextIds?: string[];
   /** Preferred: user-facing project IDs. */
@@ -760,6 +771,28 @@ CRITICAL: You MUST respond in the EXACT same language that the user used to ask 
     }
   }
 
+  // The knowledge-base lookup behind the live summary uses a fixed query, so
+  // its result only changes when the project's files change. It ran on every
+  // update (every 15 s); now it is reused for 10 minutes.
+  private static liveSummaryContextCache = new Map<string, { text: string; at: number }>();
+  private static readonly LIVE_SUMMARY_CONTEXT_TTL_MS = 10 * 60_000;
+
+  private async liveSummaryContext(workspaceId: string, contextIds: string[]): Promise<string> {
+    if (contextIds.length === 0) return "";
+    const key = `${workspaceId}:${[...contextIds].sort().join(",")}`;
+    const cache = ChatController.liveSummaryContextCache;
+    const hit = cache.get(key);
+    if (hit && Date.now() - hit.at < ChatController.LIVE_SUMMARY_CONTEXT_TTL_MS) return hit.text;
+    const contexts = await queryContexts(contextIds, "summary tasks action items", 500);
+    const text = contexts && contexts.length > 0 ? contexts.join("\n---\n") : "";
+    if (cache.size >= 500) {
+      const oldest = cache.keys().next().value;
+      if (oldest !== undefined) cache.delete(oldest);
+    }
+    cache.set(key, { text, at: Date.now() });
+    return text;
+  }
+
   @Post("live-summary")
   public async generateLiveSummary(
     @Body() body: LiveSummaryRequest,
@@ -768,27 +801,35 @@ CRITICAL: You MUST respond in the EXACT same language that the user used to ask 
     const { workspaceId } = await this.getAuthorizedWorkspaceAccess(request);
 
     // 1. Retrieve Context (RAG) — accept either projectIds (preferred) or contextIds.
-    let contextText = "";
     const validContextIds = await this.resolveAndValidate(
       body.projectIds,
       body.contextIds,
       workspaceId,
     );
-    if (validContextIds.length > 0) {
-      const contexts = await queryContexts(validContextIds, "summary tasks action items", 500);
-      if (contexts && contexts.length > 0) {
-        contextText = contexts.join("\n---\n");
-      }
-    }
+    const contextText = await this.liveSummaryContext(workspaceId, validContextIds);
 
-    // 2. Build instructions
+    // 2. Build instructions. With a previous summary and only the new lines,
+    // the model updates the summary instead of re-reading the whole meeting.
+    const incremental = !!body.previousSummary && body.newTranscript !== undefined;
+    const transcriptSection = incremental
+      ? `Here is what was said since your last summary:
+<new_transcript>
+${body.newTranscript}
+</new_transcript>
+
+The lines just before that, for context only (already covered by the summary):
+<recent_context>
+${body.liveTranscript}
+</recent_context>`
+      : `Here is the transcript of the meeting so far:
+<live_transcript>
+${body.liveTranscript}
+</live_transcript>`;
+
     const systemPrompt = `You are a real-time meeting summarizer.
 Your job is to read the rolling live transcript and extract a clean, concise bulleted summary and a list of specific Action Items/Tasks.
 
-Here is the transcript of the meeting so far:
-<live_transcript>
-${body.liveTranscript}
-</live_transcript>
+${transcriptSection}
 
 Here is the supplementary Knowledge Base Context to help understand acronyms, rules, or domain specifics (if any):
 <context>
@@ -797,12 +838,12 @@ ${contextText}
 
 ${
   body.previousSummary
-    ? `IMPORTANT: Here is the summary you generated 20 seconds ago:\n<previous_summary>\n${body.previousSummary}\n</previous_summary>\n\nPlease UPDATE this summary. If new information was discussed, append it or modify existing points. Do NOT duplicate identical tasks if they were already listed.`
+    ? `IMPORTANT: Here is the summary you generated earlier:\n<previous_summary>\n${body.previousSummary}\n</previous_summary>\n\nPlease UPDATE this summary. If new information was discussed, append it or modify existing points. Do NOT duplicate identical tasks if they were already listed.`
     : `Please create the initial running summary.`
 }
 
 CRITICAL LANGUAGE RULES:
-1. You MUST analyze the PREDOMINANT language of the ENTIRE live transcript.
+1. You MUST analyze the PREDOMINANT language of the ENTIRE meeting (the transcript, or the previous summary plus the new lines).
 2. Even if the meeting starts in one language (e.g. English), if the majority of the conversation shifts to another language (e.g. Spanish), you MUST write the summary and action items in that NEW predominant language.
 3. If the previous summary is in the wrong language compared to the current predominant language, TRANSLATE it into the correct language while updating it.
 4. This applies to the HEADINGS TOO, not just the body. Writing a Spanish summary under an English heading is wrong — translate the section titles into the predominant language as well.

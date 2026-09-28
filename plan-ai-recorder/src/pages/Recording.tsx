@@ -34,12 +34,14 @@ import {
   Check as CheckIcon,
   VolumeUp as SpeakerIcon,
   Headset as HeadsetIcon,
+  BookmarkAdd as BookmarkAddIcon,
 } from "@mui/icons-material";
-import { IconButton, TextField } from "@mui/material";
+import { IconButton, Popover, TextField } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 import { AudioRecorder, type AecTelemetry } from "../services/audioRecorder";
 import {
+  type CalendarEvent,
   loadConfig,
   saveConfig,
   saveLanguagePreference,
@@ -48,6 +50,8 @@ import {
   persistUnsavedTranscript,
   clearUnsavedTranscript,
   startUnsavedMeeting,
+  updateUnsavedMeeting,
+  type RecordingBookmark,
   type UnsavedSession,
 } from "../utils/unsavedTranscript";
 import {
@@ -227,6 +231,14 @@ const LONG_RUN_GRACE_MS = 10 * 60_000;
 const SPEECH_RMS = 0.015;
 
 type AutoPauseReason = "silence" | "long";
+
+// Recording people without telling them is illegal in many places. This is
+// the message the user can paste into the meeting chat.
+const CONSENT_MESSAGE =
+  "I am recording this meeting with Plan AI to write the notes and the tasks. Tell me if you would prefer I did not.";
+const HIDE_CONSENT_KEY = "planai_hide_consent_notice";
+
+type Bookmark = RecordingBookmark;
 
 // ── Acoustic-echo dedup ─────────────────────────────────────────────────────
 // When the user is on a speaker (no headphones), the remote audio (Others)
@@ -600,7 +612,6 @@ const Recording: React.FC = () => {
   const [liveSummary, setLiveSummary] = useState<string>("");
   const [liveSummaryLoading, setLiveSummaryLoading] = useState(false);
   const [summaryProgress, setSummaryProgress] = useState(0);
-  const previousTranscriptLength = useRef<number>(0);
   const summaryPollCounterRef = useRef<number>(0);
   const summaryPollTimerRef = useRef<ReturnType<typeof setInterval> | null>(
     null,
@@ -609,16 +620,127 @@ const Recording: React.FC = () => {
   const recorderRef = useRef<AudioRecorder | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   // Crash-recovery session: the text record and the on-disk audio share it.
+  // Home checks the calendar every 3 minutes, so its event can be one that
+  // already ended (back-to-back meetings). Only one still on is kept.
+  const configEvent =
+    config?.calendarEvent && Date.parse(config.calendarEvent.end) > Date.now()
+      ? config.calendarEvent
+      : undefined;
   const recoverySessionRef = useRef<UnsavedSession>({
     sessionId: newRecordingSessionId(),
     startedAt: Date.now(),
     language: config?.language || undefined,
+    calendarEvent: configEvent,
   });
+  // The calendar event this meeting belongs to. Asked again at the start:
+  // the calendar knows best which meeting is on now.
+  const [calendarEvent, setCalendarEvent] = useState<CalendarEvent | undefined>(
+    configEvent,
+  );
+  const calendarEventRef = useRef<CalendarEvent | undefined>(configEvent);
+  useEffect(() => {
+    if (!api) return;
+    let cancelled = false;
+    void api.getCurrentMeeting().then((event) => {
+      if (cancelled || !event) return;
+      const known = calendarEventRef.current;
+      if (known && known.title === event.title && known.start === event.start)
+        return;
+      calendarEventRef.current = event;
+      setCalendarEvent(event);
+      recoverySessionRef.current = {
+        ...recoverySessionRef.current,
+        calendarEvent: event,
+      };
+      updateUnsavedMeeting(recoverySessionRef.current.sessionId, {
+        calendarEvent: event,
+      });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [api]);
   const pausedRef = useRef(false);
   // Last sign of speech on either channel, and last time the user confirmed
   // the recording (start, resume, dismissing a warning). Drive the auto-pause.
   const lastActivityRef = useRef(Date.now());
   const lastConfirmedRef = useRef(Date.now());
+
+  // ── Marked moments ──────────────────────────────────────────────────────
+  // Saved with the recording (and in the crash-recovery copy); the AI gives
+  // what was said around them priority, and the player jumps to them.
+  const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
+  const bookmarksRef = useRef<Bookmark[]>([]);
+  const [noteAnchor, setNoteAnchor] = useState<HTMLElement | null>(null);
+  const noteAnchorRef = useRef<HTMLElement | null>(null);
+  noteAnchorRef.current = noteAnchor;
+  // Which mark the open note belongs to (another may be added meanwhile).
+  const noteIndexRef = useRef(-1);
+  const [noteDraft, setNoteDraft] = useState("");
+  const markButtonRef = useRef<HTMLButtonElement>(null);
+  const storeBookmarks = useCallback((next: Bookmark[]) => {
+    bookmarksRef.current = next;
+    setBookmarks(next);
+    recoverySessionRef.current = {
+      ...recoverySessionRef.current,
+      bookmarks: next,
+    };
+    updateUnsavedMeeting(recoverySessionRef.current.sessionId, {
+      bookmarks: next,
+    });
+  }, []);
+  const addBookmark = useCallback(() => {
+    const recorder = recorderRef.current;
+    if (!recorder || recorder.currentState !== "recording") return;
+    const atSeconds = Math.round(recorder.recordedMsAt(Date.now()) / 100) / 10;
+    noteIndexRef.current = bookmarksRef.current.length;
+    storeBookmarks([...bookmarksRef.current, { atSeconds }]);
+    setNoteDraft("");
+    setNoteAnchor(markButtonRef.current);
+  }, [storeBookmarks]);
+  const saveBookmarkNote = useCallback(() => {
+    const note = noteDraft.trim();
+    const list = bookmarksRef.current;
+    const index = noteIndexRef.current;
+    if (note && index >= 0 && index < list.length) {
+      const next = [...list];
+      next[index] = { ...list[index], note: note.slice(0, 500) };
+      storeBookmarks(next);
+    }
+    noteIndexRef.current = -1;
+    setNoteAnchor(null);
+  }, [noteDraft, storeBookmarks]);
+  // Ctrl+B / Cmd+B marks the moment without reaching for the mouse. Not while
+  // typing (Ctrl+B moves the cursor in macOS text fields), not while a note is
+  // open, and not on key repeat.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (!(e.metaKey || e.ctrlKey) || e.key.toLowerCase() !== "b") return;
+      if (e.repeat || noteAnchorRef.current) return;
+      const target = e.target as HTMLElement | null;
+      if (
+        target &&
+        (target.isContentEditable ||
+          ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName))
+      ) {
+        return;
+      }
+      e.preventDefault();
+      addBookmark();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [addBookmark]);
+
+  // ── Consent notice ──────────────────────────────────────────────────────
+  const [showConsent, setShowConsent] = useState(() => {
+    try {
+      return localStorage.getItem(HIDE_CONSENT_KEY) !== "true";
+    } catch {
+      return true;
+    }
+  });
+  const [consentCopied, setConsentCopied] = useState(false);
   // Real wall-clock instant capture began — NOT derived from `elapsed` (which
   // only ticks once the timer interval starts and drifts under tab throttling).
   // Sent with the upload so the backend can tell whether two teammates'
@@ -1031,9 +1153,10 @@ const Recording: React.FC = () => {
             },
           ).format(now);
 
-          let aiTitle: string | null = null;
+          // The calendar invite names the meeting better than a guess.
+          let aiTitle: string | null = calendarEventRef.current?.title ?? null;
           try {
-            if (!skipAi && fullPayload.length > 50) {
+            if (!aiTitle && !skipAi && fullPayload.length > 50) {
               const res = await api.sendLiveChatMessage({
                 content:
                   "Generate a short, concise, 3-5 word title for this meeting based on the transcript. Reply ONLY with the title string, no quotes.",
@@ -1064,6 +1187,10 @@ const Recording: React.FC = () => {
             ? Math.round((Date.now() - startedAt.getTime()) / 1000)
             : undefined,
           clientSessionId: recoverySessionRef.current.sessionId,
+          bookmarks:
+            bookmarksRef.current.length > 0 ? bookmarksRef.current : undefined,
+          calendarEvent: calendarEventRef.current,
+          title: calendarEventRef.current?.title,
           projectId: targetProjectId,
           // Selected ASR language ("" = auto) — persisted so the backend's batch
           // re-diarization uses it instead of "multi" (which has no Catalan).
@@ -1243,66 +1370,96 @@ const Recording: React.FC = () => {
     return () => window.removeEventListener("focus", handleFocus);
   }, [loadContexts]);
 
-  // Live Summary Polling Loop (Every 15 seconds, mapped to 1s UI ticks)
+  // Live summary, checked every 15 s (1 s UI ticks). Only what was said since
+  // the last summary is sent, with the summary itself: re-sending the whole
+  // meeting every 15 s cost tokens with the square of its length. Bubbles grow
+  // when a speaker keeps talking and late lines land in their spoken place,
+  // so progress is kept per bubble, not as one offset. An update waits for
+  // 200 new characters or one minute, and never overlaps the previous one.
+  const blocksRef = useRef<TranscriptBlock[]>([]);
+  useEffect(() => {
+    blocksRef.current = blocks;
+  }, [blocks]);
+  const liveSummaryRef = useRef("");
+  useEffect(() => {
+    liveSummaryRef.current = liveSummary;
+  }, [liveSummary]);
+  const summarizedRef = useRef(new Map<string, number>());
+  const lastSummaryAtRef = useRef(0);
+  const summaryInFlightRef = useRef(false);
+
   useEffect(() => {
     if (phase !== "recording" || !api) return;
 
     summaryPollTimerRef.current = setInterval(() => {
       setSummaryProgress((prev) => (prev >= 100 ? 5 : prev + 5));
       summaryPollCounterRef.current += 1;
+      if (summaryPollCounterRef.current < 15) return;
+      summaryPollCounterRef.current = 0;
+      if (summaryInFlightRef.current) return;
 
-      if (summaryPollCounterRef.current >= 15) {
-        summaryPollCounterRef.current = 0;
-
-        // Functional state updates to read the latest blocks without triggering stale closures
-        setBlocks((currentBlocks) => {
-          const fullPayload = currentBlocks
-            .map((b) => `${b.source === "mic" ? "User" : "Others"}: ${b.text}`)
-            .join("\n");
-
-          if (fullPayload.length === 0) return currentBlocks;
-
-          // Only trigger API if the transcript changed to save cost
-          if (fullPayload.length > previousTranscriptLength.current) {
-            previousTranscriptLength.current = fullPayload.length;
-
-            setLiveSummaryLoading(true);
-            setLiveSummary((prevSummary) => {
-              api
-                .getLiveSummary({
-                  liveTranscript: fullPayload,
-                  contextIds: selectedContextId
-                    ? [selectedContextId]
-                    : undefined,
-                  projectIds: selectedProjectId
-                    ? [selectedProjectId]
-                    : undefined,
-                  modelKey: modelKey || undefined,
-                  previousSummary: prevSummary || undefined,
-                })
-                .then((newSummary) => {
-                  setLiveSummary(newSummary);
-                })
-                .catch((err) => {
-                  console.warn("Live summary poll failed: ", err);
-                })
-                .finally(() => {
-                  setLiveSummaryLoading(false);
-                });
-              return prevSummary;
-            });
-          }
-
-          return currentBlocks;
-        });
+      const current = blocksRef.current;
+      const summarized = summarizedRef.current;
+      const label = (b: TranscriptBlock) =>
+        b.source === "mic" ? "User" : "Others";
+      const newLines: string[] = [];
+      const oldLines: string[] = [];
+      let newChars = 0;
+      for (const b of current) {
+        const done = Math.min(summarized.get(b.id) ?? 0, b.text.length);
+        const before = b.text.slice(0, done).trim();
+        const after = b.text.slice(done).trim();
+        if (before) oldLines.push(`${label(b)}: ${before}`);
+        if (after) {
+          newLines.push(`${label(b)}: ${after}`);
+          newChars += after.length;
+        }
       }
+      if (newChars === 0) return;
+      if (newChars < 200 && Date.now() - lastSummaryAtRef.current < 60_000)
+        return;
+
+      const prevSummary = liveSummaryRef.current;
+      const progress = new Map(current.map((b) => [b.id, b.text.length]));
+      summaryInFlightRef.current = true;
+      setLiveSummaryLoading(true);
+      api
+        .getLiveSummary({
+          ...(prevSummary
+            ? {
+                liveTranscript: oldLines.join("\n").slice(-1500),
+                newTranscript: newLines.join("\n"),
+                previousSummary: prevSummary,
+              }
+            : {
+                liveTranscript: current
+                  .map((b) => `${label(b)}: ${b.text}`)
+                  .join("\n"),
+              }),
+          contextIds: selectedContextId ? [selectedContextId] : undefined,
+          projectIds: selectedProjectId ? [selectedProjectId] : undefined,
+          modelKey: modelKey || undefined,
+        })
+        .then((newSummary) => {
+          if (!newSummary) return;
+          setLiveSummary(newSummary);
+          summarizedRef.current = progress;
+          lastSummaryAtRef.current = Date.now();
+        })
+        .catch((err) => {
+          console.warn("Live summary poll failed: ", err);
+        })
+        .finally(() => {
+          summaryInFlightRef.current = false;
+          setLiveSummaryLoading(false);
+        });
     }, 1000); // 1s UI progress intervals
 
     return () => {
       if (summaryPollTimerRef.current)
         clearInterval(summaryPollTimerRef.current);
     };
-  }, [phase, api, selectedContextId, modelKey]);
+  }, [phase, api, selectedContextId, selectedProjectId, modelKey]);
 
   // Start recorder on mount
   useEffect(() => {
@@ -2136,6 +2293,23 @@ const Recording: React.FC = () => {
                 : "Listening..."}
           </Typography>
           <Chip label={formatTime(elapsed)} size="small" variant="outlined" />
+          {calendarEvent && (
+            <Tooltip
+              title={
+                calendarEvent.attendees.length > 0
+                  ? `Invited: ${calendarEvent.attendees
+                      .map((a) => a.name || a.email)
+                      .join(", ")}`
+                  : "From your calendar"
+              }
+            >
+              <Chip
+                size="small"
+                label={calendarEvent.title}
+                sx={{ maxWidth: 260 }}
+              />
+            </Tooltip>
+          )}
         </Stack>
 
         <Stack direction="row" spacing={2} alignItems="center">
@@ -2197,6 +2371,43 @@ const Recording: React.FC = () => {
             </IconButton>
           </Tooltip>
 
+          <Tooltip title="Mark this moment (Ctrl+B or Cmd+B)">
+            <span>
+              <Button
+                ref={markButtonRef}
+                variant="outlined"
+                color="inherit"
+                size="small"
+                startIcon={<BookmarkAddIcon />}
+                onClick={addBookmark}
+                disabled={isPaused || isStopping}
+              >
+                {bookmarks.length > 0 ? `Mark (${bookmarks.length})` : "Mark"}
+              </Button>
+            </span>
+          </Tooltip>
+          <Popover
+            open={!!noteAnchor}
+            anchorEl={noteAnchor}
+            onClose={saveBookmarkNote}
+            anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
+          >
+            <Box sx={{ p: 1.5, width: 300 }}>
+              <TextField
+                autoFocus
+                fullWidth
+                size="small"
+                label="Note (optional)"
+                value={noteDraft}
+                onChange={(e) => setNoteDraft(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") saveBookmarkNote();
+                }}
+                helperText="Enter to save. The moment is marked either way."
+              />
+            </Box>
+          </Popover>
+
           <Tooltip
             title={
               isPaused
@@ -2238,6 +2449,50 @@ const Recording: React.FC = () => {
           </Button>
         </Stack>
       </Stack>
+
+      {showConsent && (
+        <Alert
+          severity="info"
+          sx={{ m: 2 }}
+          onClose={() => setShowConsent(false)}
+          action={
+            <Stack direction="row" spacing={1} alignItems="center">
+              <Button
+                color="inherit"
+                size="small"
+                onClick={() => {
+                  void navigator.clipboard
+                    .writeText(CONSENT_MESSAGE)
+                    .then(() => {
+                      setConsentCopied(true);
+                      setTimeout(() => setConsentCopied(false), 2000);
+                    })
+                    .catch(() => undefined);
+                }}
+              >
+                {consentCopied ? "COPIED" : "COPY MESSAGE"}
+              </Button>
+              <Button
+                color="inherit"
+                size="small"
+                onClick={() => {
+                  try {
+                    localStorage.setItem(HIDE_CONSENT_KEY, "true");
+                  } catch {
+                    /* the banner just shows again next time */
+                  }
+                  setShowConsent(false);
+                }}
+              >
+                DON&apos;T SHOW AGAIN
+              </Button>
+            </Stack>
+          }
+        >
+          Let the others know you are recording. Copy this message into the
+          meeting chat: &quot;{CONSENT_MESSAGE}&quot;
+        </Alert>
+      )}
 
       {isPaused && (
         <Alert

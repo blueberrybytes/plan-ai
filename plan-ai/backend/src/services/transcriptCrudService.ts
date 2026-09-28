@@ -1,5 +1,6 @@
 import { Prisma, Transcript, TranscriptSource } from "@prisma/client";
 import prisma from "../prisma/prismaClient";
+import { deleteStoredObject } from "../firebase/privateStorage";
 
 export interface TranscriptListResult {
   transcripts: (Transcript & { project?: { id: string; title: string } | null })[];
@@ -253,11 +254,35 @@ export class TranscriptCrudService {
     });
   }
 
+  /** Whoever recorded a meeting, and the workspace owners and admins, may delete it. */
+  public canDeleteTranscript(
+    transcript: Pick<Transcript, "userId">,
+    userId: string,
+    role: string | null | undefined,
+  ): boolean {
+    return transcript.userId === userId || role === "OWNER" || role === "ADMIN";
+  }
+
+  /**
+   * Deletes a meeting and its audio files. The files go first: a row deleted
+   * with its files still in the bucket leaves them there for good, since
+   * nothing points at them any more.
+   */
   public async deleteTranscriptForWorkspace(
     workspaceId: string,
     transcriptId: string,
+    actor: { userId: string; role: string | null | undefined },
   ): Promise<void> {
-    await this.getTranscriptForWorkspace(workspaceId, transcriptId);
+    const transcript = await this.getTranscriptForWorkspace(workspaceId, transcriptId);
+    if (!this.canDeleteTranscript(transcript, actor.userId, actor.role)) {
+      throw {
+        status: 403,
+        message: "Only the person who recorded it or a workspace admin can delete it.",
+      };
+    }
+    for (const ref of [transcript.rawMicUrl, transcript.rawSysUrl]) {
+      if (ref) await deleteStoredObject(ref);
+    }
     await prisma.transcript.delete({ where: { id: transcriptId } });
   }
 

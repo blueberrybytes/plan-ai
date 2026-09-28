@@ -1,6 +1,13 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import React from "react";
-import { Box, Typography } from "@mui/material";
+import React, { useRef } from "react";
+import { Box, Chip, Typography } from "@mui/material";
+import BookmarkIcon from "@mui/icons-material/BookmarkBorder";
+import { useTranslation } from "react-i18next";
+import RecordingAudioPlayer, {
+  channelOfUtterance,
+  formatClock,
+  type RecordingAudioPlayerHandle,
+} from "./RecordingAudioPlayer";
 import type { SpeakerInsight } from "./SpeakerInsightsTab";
 import { parseSpeakerBlocks } from "./speakerBlocks";
 
@@ -24,6 +31,56 @@ const formatTimestamp = (seconds?: number | null) => {
  * "Label: text" parse of the flat transcript, then the raw text.
  */
 const TranscriptBody = ({ transcript }: { transcript: any }) => {
+  const { t } = useTranslation();
+  const playerRef = useRef<RecordingAudioPlayerHandle>(null);
+  const bookmarks: { atSeconds: number; note?: string }[] =
+    (transcript?.metadata as { bookmarks?: { atSeconds: number; note?: string }[] } | null)
+      ?.bookmarks ?? [];
+
+  return (
+    <>
+      {/* Player and marked moments above the text, when the meeting has audio. */}
+      {transcript?.id && (
+        <RecordingAudioPlayer
+          ref={playerRef}
+          transcriptId={transcript.id}
+          durationHint={transcript.durationSeconds}
+          metadata={transcript.metadata}
+        />
+      )}
+      {bookmarks.length > 0 && (
+        <Box sx={{ mb: 2 }}>
+          <Typography variant="subtitle2" sx={{ mb: 1 }}>
+            {t("recordingPlayer.bookmarks")}
+          </Typography>
+          <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
+            {bookmarks.map((b, i) => (
+              <Chip
+                key={i}
+                icon={<BookmarkIcon />}
+                label={`${formatClock(b.atSeconds)} · ${b.note || t("recordingPlayer.noNote")}`}
+                onClick={() => playerRef.current?.seek(b.atSeconds, "mic")}
+                variant="outlined"
+                size="small"
+              />
+            ))}
+          </Box>
+        </Box>
+      )}
+      <TranscriptText transcript={transcript} playerRef={playerRef} />
+    </>
+  );
+};
+
+/** The transcript itself; a timestamp click plays that moment. */
+const TranscriptText = ({
+  transcript,
+  playerRef,
+}: {
+  transcript: any;
+  playerRef: React.RefObject<RecordingAudioPlayerHandle | null>;
+}) => {
+  const { t } = useTranslation();
   const principalSpeaker = (transcript?.metadata as any)?.principalSpeaker;
 
   const speakers: SpeakerInsight[] =
@@ -77,7 +134,21 @@ const TranscriptBody = ({ transcript }: { transcript: any }) => {
                 color={isMe ? "primary.main" : "secondary.main"}
                 fontWeight="bold"
               >
-                {formatTimestamp(u.start)} {node}
+                <Box
+                  component="button"
+                  type="button"
+                  onClick={() => playerRef.current?.seek(u.start ?? 0, channelOfUtterance(u))}
+                  title={t("recordingPlayer.jumpTo", { time: formatClock(u.start ?? 0) })}
+                  sx={{
+                    all: "unset",
+                    cursor: "pointer",
+                    fontVariantNumeric: "tabular-nums",
+                    "&:hover": { textDecoration: "underline" },
+                  }}
+                >
+                  {formatTimestamp(u.start)}
+                </Box>{" "}
+                {node}
               </Typography>
               <Typography variant="body1" sx={{ lineHeight: 1.6, color: "text.primary" }}>
                 {u.transcript}

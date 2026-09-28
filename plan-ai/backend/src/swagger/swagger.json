@@ -2489,6 +2489,68 @@
 				"type": "object",
 				"additionalProperties": false
 			},
+			"RecordingBookmark": {
+				"description": "A moment the person recording marked during the meeting.",
+				"properties": {
+					"atSeconds": {
+						"type": "number",
+						"format": "double",
+						"description": "Seconds from the start of the recorded audio (pauses excluded)."
+					},
+					"note": {
+						"type": "string",
+						"description": "Optional short note typed with the mark."
+					}
+				},
+				"required": [
+					"atSeconds"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"MeetingCalendarEvent": {
+				"description": "The calendar event the recording belongs to, as the client saw it.",
+				"properties": {
+					"title": {
+						"type": "string"
+					},
+					"start": {
+						"type": "string"
+					},
+					"end": {
+						"type": "string"
+					},
+					"attendees": {
+						"items": {
+							"properties": {
+								"email": {
+									"type": "string"
+								},
+								"name": {
+									"type": "string"
+								}
+							},
+							"required": [
+								"email"
+							],
+							"type": "object"
+						},
+						"type": "array"
+					},
+					"meetingUrl": {
+						"type": "string"
+					},
+					"provider": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"title",
+					"attendees"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
 			"TranscriptMetadata": {
 				"properties": {
 					"processingStatus": {
@@ -2578,6 +2640,57 @@
 					"clientSessionId": {
 						"type": "string",
 						"description": "Recording session id chosen by the client. A retried upload with the same\nid returns the transcript already created instead of a duplicate."
+					},
+					"bookmarks": {
+						"items": {
+							"$ref": "#/components/schemas/RecordingBookmark"
+						},
+						"type": "array",
+						"description": "Moments the person recording marked during the meeting."
+					},
+					"calendarEvent": {
+						"$ref": "#/components/schemas/MeetingCalendarEvent",
+						"description": "The calendar event the recording belongs to (title, attendees)."
+					},
+					"micSysOffsetMs": {
+						"type": "number",
+						"format": "double",
+						"description": "How much later the mic file runs than the system audio file, in ms, so\nthe player can play both in step. Absent when it could not be measured."
+					},
+					"audioDeletedAt": {
+						"type": "string",
+						"description": "When the audio files were deleted (retention rule or by hand)."
+					},
+					"audioDeletedReason": {
+						"type": "string",
+						"enum": [
+							"retention",
+							"user"
+						]
+					},
+					"notesEmails": {
+						"items": {
+							"properties": {
+								"count": {
+									"type": "number",
+									"format": "double"
+								},
+								"sentBy": {
+									"type": "string"
+								},
+								"sentAt": {
+									"type": "string"
+								}
+							},
+							"required": [
+								"count",
+								"sentBy",
+								"sentAt"
+							],
+							"type": "object"
+						},
+						"type": "array",
+						"description": "Each time the notes were emailed to people in the meeting."
 					}
 				},
 				"type": "object",
@@ -3069,6 +3182,129 @@
 				},
 				"type": "object",
 				"additionalProperties": false
+			},
+			"SendMeetingNotesResponse": {
+				"properties": {
+					"sent": {
+						"items": {
+							"type": "string"
+						},
+						"type": "array",
+						"description": "Addresses that got the email."
+					},
+					"failed": {
+						"items": {
+							"type": "string"
+						},
+						"type": "array",
+						"description": "Addresses the email service refused or could not reach."
+					},
+					"invalid": {
+						"items": {
+							"type": "string"
+						},
+						"type": "array",
+						"description": "Entries that are not email addresses."
+					}
+				},
+				"required": [
+					"sent",
+					"failed",
+					"invalid"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"ApiResponse_SendMeetingNotesResponse_": {
+				"properties": {
+					"message": {
+						"type": "string"
+					},
+					"data": {
+						"allOf": [
+							{
+								"$ref": "#/components/schemas/SendMeetingNotesResponse"
+							}
+						],
+						"nullable": true
+					},
+					"status": {
+						"type": "number",
+						"format": "double"
+					}
+				},
+				"required": [
+					"data",
+					"status"
+				],
+				"type": "object"
+			},
+			"SendMeetingNotesRequest": {
+				"properties": {
+					"recipients": {
+						"items": {
+							"type": "string"
+						},
+						"type": "array",
+						"description": "Email addresses, usually the people in the calendar invite. At most 30."
+					},
+					"message": {
+						"type": "string",
+						"description": "Optional note shown above the notes. At most 2000 characters."
+					}
+				},
+				"required": [
+					"recipients"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"TranscriptAudioResponse": {
+				"properties": {
+					"micUrl": {
+						"type": "string",
+						"description": "Signed URL of the microphone file (12 h), when there is one."
+					},
+					"sysUrl": {
+						"type": "string",
+						"description": "Signed URL of the system audio file (12 h), when there is one."
+					},
+					"micSysOffsetSeconds": {
+						"type": "number",
+						"format": "double",
+						"description": "How much later the mic file runs than the system file, in seconds. To\nplay both in step: system time = mic time - offset."
+					},
+					"audioDeletedAt": {
+						"type": "string",
+						"description": "Set when the audio was deleted (retention rule or by hand)."
+					}
+				},
+				"type": "object",
+				"additionalProperties": false
+			},
+			"ApiResponse_TranscriptAudioResponse_": {
+				"properties": {
+					"message": {
+						"type": "string"
+					},
+					"data": {
+						"allOf": [
+							{
+								"$ref": "#/components/schemas/TranscriptAudioResponse"
+							}
+						],
+						"nullable": true
+					},
+					"status": {
+						"type": "number",
+						"format": "double"
+					}
+				},
+				"required": [
+					"data",
+					"status"
+				],
+				"type": "object"
 			},
 			"UpdateStandaloneTranscriptBody": {
 				"properties": {
@@ -4793,7 +5029,9 @@
 					"NOTION",
 					"ONEDRIVE",
 					"ASANA",
-					"TWENTY"
+					"TWENTY",
+					"GOOGLE_CALENDAR",
+					"OUTLOOK_CALENDAR"
 				]
 			},
 			"IntegrationProvider": {
@@ -5759,10 +5997,15 @@
 			"LiveSummaryRequest": {
 				"properties": {
 					"liveTranscript": {
-						"type": "string"
+						"type": "string",
+						"description": "The transcript so far. When `newTranscript` is sent with a\n`previousSummary`, clients send only a short recent tail here, for\ncontext."
 					},
 					"previousSummary": {
 						"type": "string"
+					},
+					"newTranscript": {
+						"type": "string",
+						"description": "Only what was said since `previousSummary` was made. Lets the summary be\nupdated from the new lines instead of re-reading the whole meeting every\nfew seconds, which grew with the square of the meeting length."
 					},
 					"contextIds": {
 						"items": {
@@ -5785,6 +6028,167 @@
 				"required": [
 					"liveTranscript"
 				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"CurrentMeetingAttendee": {
+				"properties": {
+					"name": {
+						"type": "string"
+					},
+					"email": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"email"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"CalendarProvider": {
+				"type": "string",
+				"enum": [
+					"GOOGLE_CALENDAR",
+					"OUTLOOK_CALENDAR"
+				],
+				"description": "Calendar the meeting came from."
+			},
+			"CurrentMeeting": {
+				"description": "The meeting the recorder should use to name the recording and the speakers.",
+				"properties": {
+					"title": {
+						"type": "string"
+					},
+					"start": {
+						"type": "string",
+						"format": "date-time"
+					},
+					"end": {
+						"type": "string",
+						"format": "date-time"
+					},
+					"attendees": {
+						"items": {
+							"$ref": "#/components/schemas/CurrentMeetingAttendee"
+						},
+						"type": "array"
+					},
+					"meetingUrl": {
+						"type": "string"
+					},
+					"provider": {
+						"$ref": "#/components/schemas/CalendarProvider"
+					}
+				},
+				"required": [
+					"title",
+					"start",
+					"end",
+					"attendees",
+					"provider"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"CurrentMeetingResponse": {
+				"properties": {
+					"event": {
+						"allOf": [
+							{
+								"$ref": "#/components/schemas/CurrentMeeting"
+							}
+						],
+						"nullable": true
+					}
+				},
+				"required": [
+					"event"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"ApiResponse_CurrentMeetingResponse_": {
+				"properties": {
+					"message": {
+						"type": "string"
+					},
+					"data": {
+						"allOf": [
+							{
+								"$ref": "#/components/schemas/CurrentMeetingResponse"
+							}
+						],
+						"nullable": true
+					},
+					"status": {
+						"type": "number",
+						"format": "double"
+					}
+				},
+				"required": [
+					"data",
+					"status"
+				],
+				"type": "object"
+			},
+			"CalendarConnectResult": {
+				"properties": {
+					"connected": {
+						"type": "boolean"
+					},
+					"errorReason": {
+						"type": "string",
+						"description": "OAuthDeclined, MissingParams, InvalidState, MissingScope or ExchangeFailed."
+					},
+					"redirectPath": {
+						"type": "string",
+						"description": "Path inside the web app to show next."
+					}
+				},
+				"required": [
+					"connected"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"ApiResponse_CalendarConnectResult_": {
+				"properties": {
+					"message": {
+						"type": "string"
+					},
+					"data": {
+						"allOf": [
+							{
+								"$ref": "#/components/schemas/CalendarConnectResult"
+							}
+						],
+						"nullable": true
+					},
+					"status": {
+						"type": "number",
+						"format": "double"
+					}
+				},
+				"required": [
+					"data",
+					"status"
+				],
+				"type": "object"
+			},
+			"CalendarConnectRequest": {
+				"description": "What Google or Microsoft put in the web app URL after the consent screen.",
+				"properties": {
+					"code": {
+						"type": "string"
+					},
+					"state": {
+						"type": "string"
+					},
+					"error": {
+						"type": "string"
+					}
+				},
 				"type": "object",
 				"additionalProperties": false
 			},
@@ -7332,6 +7736,12 @@
 						"type": "string",
 						"nullable": true,
 						"description": "Workspace-wide default brand theme for AI-generated docs & slides. Null = none."
+					},
+					"audioRetentionDays": {
+						"type": "number",
+						"format": "double",
+						"nullable": true,
+						"description": "Days meeting audio is kept before it is deleted. Null keeps it forever."
 					}
 				},
 				"required": [
@@ -7509,13 +7919,16 @@
 						"type": "number",
 						"format": "double"
 					},
-					"isCourtesy": {
-						"type": "boolean"
-					},
 					"defaultThemeId": {
 						"type": "string",
 						"nullable": true,
 						"description": "Workspace-wide default brand theme. Pass null to clear; omit to leave unchanged."
+					},
+					"audioRetentionDays": {
+						"type": "number",
+						"format": "double",
+						"nullable": true,
+						"description": "Days to keep meeting audio (1 to 3650). Null keeps it forever; omit to\nleave unchanged. Transcripts, summaries and tasks are never deleted."
 					}
 				},
 				"type": "object",
@@ -7833,7 +8246,7 @@
 	},
 	"info": {
 		"title": "backend",
-		"version": "4.3.5",
+		"version": "4.4.0",
 		"license": {
 			"name": "BUSL-1.1"
 		},
@@ -10569,6 +10982,18 @@
 										"type": "string",
 										"description": "\"in_person\" (one mic, several people in the room) or \"remote\"."
 									},
+									"bookmarks": {
+										"type": "string",
+										"description": "JSON array of { atSeconds, note? }: moments marked during the meeting."
+									},
+									"calendarEvent": {
+										"type": "string",
+										"description": "JSON { title, start?, end?, attendees[{ name?, email }], meetingUrl?, provider? }."
+									},
+									"micFileName": {
+										"type": "string",
+										"description": "Original file name of audio sent in slices, for imported files (m4a,\nmp3...). Recordings made in the app are WAV and can omit it."
+									},
 									"micFile": {
 										"type": "string",
 										"format": "binary"
@@ -10582,6 +11007,121 @@
 						}
 					}
 				}
+			}
+		},
+		"/api/transcripts/{id}/send-notes": {
+			"post": {
+				"operationId": "SendMeetingNotes",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiResponse_SendMeetingNotesResponse_"
+								}
+							}
+						}
+					}
+				},
+				"description": "Short-lived links to listen to a meeting's audio, plus what the player\nneeds to keep the two files in step.",
+				"tags": [
+					"Transcripts"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": [
+					{
+						"in": "path",
+						"name": "id",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/SendMeetingNotesRequest"
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/transcripts/{id}/audio": {
+			"get": {
+				"operationId": "GetTranscriptAudio",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiResponse_TranscriptAudioResponse_"
+								}
+							}
+						}
+					}
+				},
+				"tags": [
+					"Transcripts"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": [
+					{
+						"in": "path",
+						"name": "id",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				]
+			},
+			"delete": {
+				"operationId": "DeleteTranscriptAudio",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiResponse__success-boolean__"
+								}
+							}
+						}
+					}
+				},
+				"description": "Deletes a meeting's audio files and keeps everything made from them.\nAllowed for whoever recorded it and for workspace owners.",
+				"tags": [
+					"Transcripts"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": [
+					{
+						"in": "path",
+						"name": "id",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				]
 			}
 		},
 		"/api/transcripts/{id}": {
@@ -14193,6 +14733,191 @@
 						"application/json": {
 							"schema": {
 								"$ref": "#/components/schemas/LiveSummaryRequest"
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/calendar/current-meeting": {
+			"get": {
+				"operationId": "GetCurrentMeeting",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiResponse_CurrentMeetingResponse_"
+								}
+							}
+						}
+					}
+				},
+				"description": "The meeting the user is in now, or the next one within 15 minutes, from\nevery connected calendar. `event` is null when there is none or the\ncalendars cannot be read.",
+				"tags": [
+					"Calendar"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": []
+			}
+		},
+		"/api/calendar/google/auth-url": {
+			"get": {
+				"operationId": "GetGoogleCalendarAuthUrl",
+				"responses": {
+					"200": {
+						"description": "URL fetched successfully",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiResponse__authorizationUrl-string__"
+								}
+							}
+						}
+					}
+				},
+				"tags": [
+					"Calendar"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": [
+					{
+						"in": "query",
+						"name": "redirectPath",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"in": "query",
+						"name": "appOrigin",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					}
+				]
+			}
+		},
+		"/api/calendar/google/connect": {
+			"post": {
+				"operationId": "ConnectGoogleCalendar",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiResponse_CalendarConnectResult_"
+								}
+							}
+						}
+					}
+				},
+				"tags": [
+					"Calendar"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": [],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/CalendarConnectRequest"
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/calendar/outlook/auth-url": {
+			"get": {
+				"operationId": "GetOutlookCalendarAuthUrl",
+				"responses": {
+					"200": {
+						"description": "URL fetched successfully",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiResponse__authorizationUrl-string__"
+								}
+							}
+						}
+					}
+				},
+				"tags": [
+					"Calendar"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": [
+					{
+						"in": "query",
+						"name": "redirectPath",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"in": "query",
+						"name": "appOrigin",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					}
+				]
+			}
+		},
+		"/api/calendar/outlook/connect": {
+			"post": {
+				"operationId": "ConnectOutlookCalendar",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiResponse_CalendarConnectResult_"
+								}
+							}
+						}
+					}
+				},
+				"tags": [
+					"Calendar"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": [],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/CalendarConnectRequest"
 							}
 						}
 					}
