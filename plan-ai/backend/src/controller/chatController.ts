@@ -26,6 +26,11 @@ import prisma from "../prisma/prismaClient";
 import { logger } from "../utils/logger";
 import { type AuthenticatedRequest } from "../middleware/authMiddleware";
 import { queryContexts } from "../vector/contextFileVectorService";
+import {
+  CONTEXT_SUPPORTED_FILE_LABELS,
+  extractTextFromBuffer,
+  isSupportedContextFileMimeType,
+} from "../utils/documentTextExtractor";
 import { generateText, stepCountIs } from "ai";
 import {
   getConfiguredModel,
@@ -94,11 +99,70 @@ export interface LiveChatMessageRequest {
   history?: LiveChatHistoryItem[];
   modelKey?: string;
   complexityLevel?: string;
+  /**
+   * Files attached to the chat during the meeting, as the text returned by
+   * POST /api/chat/live/documents. The client sends them with every question.
+   */
+  documents?: LiveChatDocument[];
+}
+
+export interface LiveChatDocument {
+  name: string;
+  text: string;
 }
 
 export interface LiveChatMessageResponse {
   response: string;
 }
+
+export interface LiveChatDocumentResponse {
+  name: string;
+  mimeType: string;
+  size: number;
+  text: string;
+  /** The file had more text than the chat keeps. Only the start is in `text`. */
+  truncated: boolean;
+}
+
+// One file is cut at 50,000 characters (about 12,000 tokens) and all files
+// together at 150,000, because the whole text goes with every question.
+const LIVE_DOCUMENT_MAX_CHARS = 50_000;
+const LIVE_DOCUMENTS_TOTAL_MAX_CHARS = 150_000;
+const LIVE_DOCUMENTS_MAX_COUNT = 5;
+const LIVE_DOCUMENT_MAX_BYTES = 20 * 1024 * 1024;
+
+// The recorder sends "" or application/octet-stream when the OS does not know
+// the extension, which happens with .md on macOS.
+const TEXT_TYPE_BY_EXTENSION: Record<string, string> = {
+  md: "text/markdown",
+  markdown: "text/markdown",
+  txt: "text/plain",
+  csv: "text/csv",
+  json: "application/json",
+  xml: "application/xml",
+};
+
+const liveDocumentMimeType = (mimetype: string, fileName: string): string => {
+  if (mimetype && mimetype !== "application/octet-stream") return mimetype;
+  const ext = fileName.split(".").pop()?.toLowerCase() ?? "";
+  return TEXT_TYPE_BY_EXTENSION[ext] ?? mimetype;
+};
+
+/** The attached files as a prompt block, inside the size limits above. */
+const formatLiveDocuments = (documents: LiveChatDocument[] | undefined): string => {
+  if (!Array.isArray(documents) || documents.length === 0) return "";
+  let budget = LIVE_DOCUMENTS_TOTAL_MAX_CHARS;
+  const parts: string[] = [];
+  for (const doc of documents.slice(0, LIVE_DOCUMENTS_MAX_COUNT)) {
+    if (typeof doc?.text !== "string" || budget <= 0) continue;
+    const limit = Math.min(LIVE_DOCUMENT_MAX_CHARS, budget);
+    const text = doc.text.length > limit ? `${doc.text.slice(0, limit)}\n[cut here]` : doc.text;
+    budget -= Math.min(doc.text.length, limit);
+    const name = String(doc.name ?? "file").replace(/["<>]/g, "");
+    parts.push(`<document name="${name}">\n${text}\n</document>`);
+  }
+  return parts.join("\n");
+};
 
 export interface LiveSummaryRequest {
   /**
@@ -702,22 +766,32 @@ ${MERMAID_SYNTAX_RULES}`;
       }
     }
 
+    const documentsText = formatLiveDocuments(body.documents);
+    const documentsSection = documentsText
+      ? `
+Here are the files the user attached to this chat during the meeting:
+<meeting_documents>
+${documentsText}
+</meeting_documents>
+`
+      : "";
+
     // 2. Build the Live system prompt
     const systemPrompt = `You are a helpful AI Meeting Assistant sidekick.
-You are actively listening in on a live meeting. 
+You are actively listening in on a live meeting.
 The user will ask you questions about the meeting or related documents.
 
 Here is what has been spoken in the live meeting transcript so far:
 <live_transcript>
 ${body.liveTranscript}
 </live_transcript>
-
+${documentsSection}
 Here is the supplementary Knowledge Base Context (if any):
 <context>
 ${contextText}
 </context>
 
-Answer the user's question directly and concisely, drawing primarily from the live transcript and context provided. If the topic has not been discussed yet, say so.
+Answer the user's question directly and concisely, drawing primarily from the live transcript, the attached files and the context provided. When the answer comes from an attached file, name the file. If the topic has not been discussed yet and is not in the files, say so.
 
 CRITICAL: You MUST respond in the EXACT same language that the user used to ask their question. (e.g., if the user asks in Spanish, you MUST answer in Spanish; if in English, answer in English).`;
 
@@ -769,6 +843,66 @@ CRITICAL: You MUST respond in the EXACT same language that the user used to ask 
       logger.error("Error generating Live AI response", error);
       throw new Error("Failed to generate live response");
     }
+  }
+
+  /**
+   * Reads a file attached to the live chat during a recording and returns its
+   * text. Nothing is stored: the recorder keeps the text for the rest of the
+   * meeting and sends it with every question.
+   */
+  @Post("live/documents")
+  public async extractLiveChatDocument(
+    @Request() request: AuthenticatedRequest,
+    @UploadedFile("file") file: Express.Multer.File,
+  ): Promise<ApiResponse<LiveChatDocumentResponse>> {
+    await this.getAuthorizedWorkspaceAccess(request);
+
+    if (!file) {
+      this.setStatus(400);
+      throw { status: 400, message: "No file uploaded" };
+    }
+    if (file.size > LIVE_DOCUMENT_MAX_BYTES) {
+      this.setStatus(400);
+      throw { status: 400, message: "File too large (max 20MB)" };
+    }
+
+    const name = Buffer.from(file.originalname, "latin1").toString("utf8");
+    const mimeType = liveDocumentMimeType(file.mimetype, name);
+    if (!isSupportedContextFileMimeType(mimeType)) {
+      this.setStatus(400);
+      throw {
+        status: 400,
+        message: `Unsupported file type. Supported types: ${CONTEXT_SUPPORTED_FILE_LABELS.join(", ")}.`,
+      };
+    }
+
+    let text: string;
+    try {
+      text = await extractTextFromBuffer(file.buffer, mimeType);
+    } catch (error) {
+      logger.warn(`[LiveChat] Could not read "${name}" (${mimeType})`, error);
+      this.setStatus(422);
+      throw { status: 422, message: `Could not read ${name}.` };
+    }
+    if (!text.trim()) {
+      this.setStatus(422);
+      throw {
+        status: 422,
+        message: `${name} has no text to read. Scanned PDFs are not supported yet.`,
+      };
+    }
+
+    const truncated = text.length > LIVE_DOCUMENT_MAX_CHARS;
+    return {
+      status: 200,
+      data: {
+        name,
+        mimeType,
+        size: file.size,
+        text: truncated ? text.slice(0, LIVE_DOCUMENT_MAX_CHARS) : text,
+        truncated,
+      },
+    };
   }
 
   // The knowledge-base lookup behind the live summary uses a fixed query, so

@@ -35,6 +35,8 @@ import {
   VolumeUp as SpeakerIcon,
   Headset as HeadsetIcon,
   BookmarkAdd as BookmarkAddIcon,
+  AttachFile as AttachIcon,
+  InsertDriveFileOutlined as FileIcon,
 } from "@mui/icons-material";
 import { IconButton, Popover, TextField } from "@mui/material";
 import { useNavigate } from "react-router-dom";
@@ -69,6 +71,7 @@ import type {
   AiModel,
   UserIntegrationSummary,
   TwentyCompanyItem,
+  LiveChatDocument,
 } from "../services/planAiApi";
 
 type Phase = "recording" | "context_selection" | "saving" | "done" | "error";
@@ -84,6 +87,11 @@ export interface TranscriptBlock {
    */
   ts: number;
 }
+
+// Same limit the backend applies to the files sent with a live chat question.
+const MAX_CHAT_DOCUMENTS = 5;
+const CHAT_DOCUMENT_ACCEPT =
+  ".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.md,.csv,.json,.xml";
 
 const LANGUAGE_OPTIONS = [
   AUTO_LANGUAGE_OPTION,
@@ -607,6 +615,15 @@ const Recording: React.FC = () => {
     { role: "user" | "assistant"; content: string }[]
   >([]);
   const [chatLoading, setChatLoading] = useState(false);
+  // Files attached to the live chat. Their text goes with every question, and
+  // the files themselves are added to the meeting's context when it is saved.
+  const [chatDocuments, setChatDocuments] = useState<
+    (LiveChatDocument & { id: string; file: File })[]
+  >([]);
+  const [chatAttaching, setChatAttaching] = useState(false);
+  const [chatAttachError, setChatAttachError] = useState<string | null>(null);
+  const [chatDragOver, setChatDragOver] = useState(false);
+  const chatFileInputRef = useRef<HTMLInputElement>(null);
 
   const [activeTab, setActiveTab] = useState<"summary" | "chat">("summary");
   const [liveSummary, setLiveSummary] = useState<string>("");
@@ -858,6 +875,10 @@ const Recording: React.FC = () => {
         history: chatHistory,
         modelKey: modelKey || undefined,
         complexityLevel: complexityLevel || undefined,
+        documents:
+          chatDocuments.length > 0
+            ? chatDocuments.map((d) => ({ name: d.name, text: d.text }))
+            : undefined,
       });
 
       setChatHistory((p) => [...p, { role: "assistant", content: response }]);
@@ -876,6 +897,43 @@ const Recording: React.FC = () => {
           chatBoxRef.current.scrollTop = chatBoxRef.current.scrollHeight;
         }
       }, 50);
+    }
+  };
+
+  // Files are read one by one so a bad file does not drop the others.
+  const handleAttachChatFiles = async (files: File[]) => {
+    if (!api || files.length === 0) return;
+    setChatAttachError(null);
+    const room = MAX_CHAT_DOCUMENTS - chatDocuments.length;
+    if (files.length > room) {
+      setChatAttachError(
+        `You can attach up to ${MAX_CHAT_DOCUMENTS} files per meeting.`,
+      );
+    }
+    const accepted = files.slice(0, Math.max(0, room));
+    if (accepted.length === 0) return;
+
+    setChatAttaching(true);
+    try {
+      for (const file of accepted) {
+        try {
+          const doc = await api.extractLiveChatDocument(file);
+          setChatDocuments((p) => [
+            ...p,
+            {
+              ...doc,
+              id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+              file,
+            },
+          ]);
+        } catch (err) {
+          setChatAttachError(
+            err instanceof Error ? err.message : `Could not read ${file.name}.`,
+          );
+        }
+      }
+    } finally {
+      setChatAttaching(false);
     }
   };
 
@@ -1225,6 +1283,20 @@ const Recording: React.FC = () => {
           aecTelemetry: aecTelemetry ?? undefined,
         });
 
+        // Files attached to the live chat go into the meeting's context, so the
+        // project and later chats keep them. The meeting is already saved, so
+        // a failed upload is only logged.
+        const meetingContextId = savedTranscript.contextIds?.[0];
+        if (meetingContextId && chatDocuments.length > 0) {
+          await Promise.all(
+            chatDocuments.map((d) =>
+              api.addFileToContext(meetingContextId, d.file).catch((err) => {
+                console.warn(`Could not add ${d.name} to the context`, err);
+              }),
+            ),
+          );
+        }
+
         // Saved successfully — clear the local recovery copy (text and audio).
         clearUnsavedTranscript(recoverySessionRef.current.sessionId);
         deleteRecoveryAudio(recoverySessionRef.current.sessionId);
@@ -1261,6 +1333,7 @@ const Recording: React.FC = () => {
       createDoc,
       createSlides,
       chatHistory,
+      chatDocuments,
       modelKey,
       complexityLevel,
     ],
@@ -1765,6 +1838,14 @@ const Recording: React.FC = () => {
                 ))}
               </Select>
             </FormControl>
+
+            {chatDocuments.length > 0 && (
+              <Typography variant="caption" color="text.secondary">
+                {chatDocuments.length === 1
+                  ? `${chatDocuments[0].name} (attached to the live chat) will be added to the meeting's context.`
+                  : `The ${chatDocuments.length} files attached to the live chat will be added to the meeting's context.`}
+              </Typography>
+            )}
 
             <FormControl fullWidth size="small">
               <InputLabel shrink>Agile Task Generation</InputLabel>
@@ -2929,7 +3010,33 @@ const Recording: React.FC = () => {
 
           {/* Tab 2: Live Chat */}
           {activeTab === "chat" && (
-            <>
+            <Box
+              onDragOver={(e) => {
+                if (!e.dataTransfer.types.includes("Files")) return;
+                e.preventDefault();
+                setChatDragOver(true);
+              }}
+              onDragLeave={(e) => {
+                if (!e.currentTarget.contains(e.relatedTarget as Node | null)) {
+                  setChatDragOver(false);
+                }
+              }}
+              onDrop={(e) => {
+                if (!e.dataTransfer.files.length) return;
+                e.preventDefault();
+                setChatDragOver(false);
+                void handleAttachChatFiles(Array.from(e.dataTransfer.files));
+              }}
+              sx={{
+                flex: 1,
+                minHeight: 0,
+                display: "flex",
+                flexDirection: "column",
+                outline: chatDragOver ? "2px dashed" : "none",
+                outlineColor: "primary.main",
+                outlineOffset: -6,
+              }}
+            >
               <Box
                 ref={chatBoxRef}
                 sx={{
@@ -2947,7 +3054,8 @@ const Recording: React.FC = () => {
                     color="text.secondary"
                     sx={{ textAlign: "center", fontStyle: "italic", mt: 4 }}
                   >
-                    Ask questions about the meeting in real-time.
+                    Ask questions about the meeting in real-time. Attach a file
+                    with the clip, or drop it here, to ask about it too.
                   </Typography>
                 )}
 
@@ -2969,7 +3077,82 @@ const Recording: React.FC = () => {
               </Box>
 
               <Box sx={{ p: 2, borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+                {(chatDocuments.length > 0 ||
+                  chatAttaching ||
+                  chatAttachError) && (
+                  <Stack
+                    direction="row"
+                    sx={{ flexWrap: "wrap", gap: 0.75, mb: 1.5 }}
+                  >
+                    {chatDocuments.map((d) => (
+                      <Tooltip
+                        key={d.id}
+                        title={
+                          d.truncated
+                            ? "Long file: the chat reads only the first part. The whole file is added to the context when you save."
+                            : "The chat reads this file. It is added to the context when you save."
+                        }
+                      >
+                        <Chip
+                          size="small"
+                          variant="outlined"
+                          icon={<FileIcon />}
+                          label={d.truncated ? `${d.name} (partial)` : d.name}
+                          onDelete={() =>
+                            setChatDocuments((p) =>
+                              p.filter((x) => x.id !== d.id),
+                            )
+                          }
+                          sx={{ maxWidth: "100%" }}
+                        />
+                      </Tooltip>
+                    ))}
+                    {chatAttaching && (
+                      <Chip
+                        size="small"
+                        icon={<CircularProgress size={12} />}
+                        label="Reading file..."
+                      />
+                    )}
+                    {chatAttachError && (
+                      <Typography
+                        variant="caption"
+                        color="error"
+                        sx={{ width: "100%" }}
+                      >
+                        {chatAttachError}
+                      </Typography>
+                    )}
+                  </Stack>
+                )}
                 <Stack direction="row" spacing={1}>
+                  <input
+                    ref={chatFileInputRef}
+                    type="file"
+                    multiple
+                    hidden
+                    accept={CHAT_DOCUMENT_ACCEPT}
+                    onChange={(e) => {
+                      const files = Array.from(e.target.files ?? []);
+                      // Reset so the same file can be picked again after removing it.
+                      e.target.value = "";
+                      void handleAttachChatFiles(files);
+                    }}
+                  />
+                  <Tooltip title="Attach a file (PDF, Word, Excel, PowerPoint, text)">
+                    <span style={{ alignSelf: "flex-end" }}>
+                      <IconButton
+                        onClick={() => chatFileInputRef.current?.click()}
+                        disabled={
+                          chatAttaching ||
+                          chatDocuments.length >= MAX_CHAT_DOCUMENTS
+                        }
+                        sx={{ mb: 0.5 }}
+                      >
+                        <AttachIcon />
+                      </IconButton>
+                    </span>
+                  </Tooltip>
                   <TextField
                     fullWidth
                     size="small"
@@ -2979,7 +3162,9 @@ const Recording: React.FC = () => {
                     onKeyDown={(e) => {
                       if (e.key === "Enter" && !e.shiftKey) {
                         e.preventDefault();
-                        void handleSendChat();
+                        // Wait for the file being read, or the question
+                        // would go without it.
+                        if (!chatAttaching) void handleSendChat();
                       }
                     }}
                     multiline
@@ -2991,14 +3176,16 @@ const Recording: React.FC = () => {
                   <IconButton
                     color="primary"
                     onClick={() => void handleSendChat()}
-                    disabled={chatLoading || !chatMessage.trim()}
+                    disabled={
+                      chatLoading || chatAttaching || !chatMessage.trim()
+                    }
                     sx={{ alignSelf: "flex-end", mb: 0.5 }}
                   >
                     <SendIcon />
                   </IconButton>
                 </Stack>
               </Box>
-            </>
+            </Box>
           )}
         </Box>
       </Stack>

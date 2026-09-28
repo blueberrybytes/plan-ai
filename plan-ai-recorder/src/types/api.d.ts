@@ -2096,6 +2096,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/chat/live/documents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description Reads a file attached to the live chat during a recording and returns its
+         *     text. Nothing is stored: the recorder keeps the text for the rest of the
+         *     meeting and sends it with every question.
+         */
+        post: operations["ExtractLiveChatDocument"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/chat/live-summary": {
         parameters: {
             query?: never;
@@ -4577,6 +4598,10 @@ export interface components {
             /** Format: double */
             status: number;
         };
+        LiveChatDocument: {
+            name: string;
+            text: string;
+        };
         LiveChatMessageRequest: {
             content: string;
             liveTranscript: string;
@@ -4587,6 +4612,26 @@ export interface components {
             history?: components["schemas"]["LiveChatHistoryItem"][];
             modelKey?: string;
             complexityLevel?: string;
+            /**
+             * @description Files attached to the chat during the meeting, as the text returned by
+             *     POST /api/chat/live/documents. The client sends them with every question.
+             */
+            documents?: components["schemas"]["LiveChatDocument"][];
+        };
+        LiveChatDocumentResponse: {
+            name: string;
+            mimeType: string;
+            /** Format: double */
+            size: number;
+            text: string;
+            /** @description The file had more text than the chat keeps. Only the start is in `text`. */
+            truncated: boolean;
+        };
+        ApiResponse_LiveChatDocumentResponse_: {
+            message?: string;
+            data: components["schemas"]["LiveChatDocumentResponse"] | null;
+            /** Format: double */
+            status: number;
         };
         LiveSummaryResponse: {
             summary: string;
@@ -9224,6 +9269,33 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ApiResponse_LiveChatMessageResponse_"];
+                };
+            };
+        };
+    };
+    ExtractLiveChatDocument: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    file: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_LiveChatDocumentResponse_"];
                 };
             };
         };

@@ -5916,6 +5916,22 @@
 				],
 				"type": "object"
 			},
+			"LiveChatDocument": {
+				"properties": {
+					"name": {
+						"type": "string"
+					},
+					"text": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"name",
+					"text"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
 			"LiveChatMessageRequest": {
 				"properties": {
 					"content": {
@@ -5949,6 +5965,13 @@
 					},
 					"complexityLevel": {
 						"type": "string"
+					},
+					"documents": {
+						"items": {
+							"$ref": "#/components/schemas/LiveChatDocument"
+						},
+						"type": "array",
+						"description": "Files attached to the chat during the meeting, as the text returned by\nPOST /api/chat/live/documents. The client sends them with every question."
 					}
 				},
 				"required": [
@@ -5957,6 +5980,60 @@
 				],
 				"type": "object",
 				"additionalProperties": false
+			},
+			"LiveChatDocumentResponse": {
+				"properties": {
+					"name": {
+						"type": "string"
+					},
+					"mimeType": {
+						"type": "string"
+					},
+					"size": {
+						"type": "number",
+						"format": "double"
+					},
+					"text": {
+						"type": "string"
+					},
+					"truncated": {
+						"type": "boolean",
+						"description": "The file had more text than the chat keeps. Only the start is in `text`."
+					}
+				},
+				"required": [
+					"name",
+					"mimeType",
+					"size",
+					"text",
+					"truncated"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"ApiResponse_LiveChatDocumentResponse_": {
+				"properties": {
+					"message": {
+						"type": "string"
+					},
+					"data": {
+						"allOf": [
+							{
+								"$ref": "#/components/schemas/LiveChatDocumentResponse"
+							}
+						],
+						"nullable": true
+					},
+					"status": {
+						"type": "number",
+						"format": "double"
+					}
+				},
+				"required": [
+					"data",
+					"status"
+				],
+				"type": "object"
 			},
 			"LiveSummaryResponse": {
 				"properties": {
@@ -14697,6 +14774,52 @@
 						"application/json": {
 							"schema": {
 								"$ref": "#/components/schemas/LiveChatMessageRequest"
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/chat/live/documents": {
+			"post": {
+				"operationId": "ExtractLiveChatDocument",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiResponse_LiveChatDocumentResponse_"
+								}
+							}
+						}
+					}
+				},
+				"description": "Reads a file attached to the live chat during a recording and returns its\ntext. Nothing is stored: the recorder keeps the text for the rest of the\nmeeting and sends it with every question.",
+				"tags": [
+					"Chat"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": [],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"multipart/form-data": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"file": {
+										"type": "string",
+										"format": "binary"
+									}
+								},
+								"required": [
+									"file"
+								]
 							}
 						}
 					}

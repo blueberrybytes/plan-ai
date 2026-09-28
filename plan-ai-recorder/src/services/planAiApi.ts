@@ -28,6 +28,8 @@ export type AiModel = components["schemas"]["AiModelResponse"];
 export type UserIntegrationSummary =
   components["schemas"]["IntegrationSummaryResponse"];
 export type TwentyCompanyItem = components["schemas"]["TwentyCompanyItem"];
+export type LiveChatDocument =
+  components["schemas"]["LiveChatDocumentResponse"];
 export type UserResponse = components["schemas"]["UserResponse"];
 export type CreateStandaloneTranscriptBody =
   components["schemas"]["CreateStandaloneTranscriptBody"];
@@ -122,6 +124,18 @@ export const createPlanAiApi = (
     if (wsId) {
       headers["X-Workspace-Id"] = wsId;
     }
+    return headers;
+  };
+
+  // For FormData bodies: the browser sets the multipart Content-Type itself.
+  const getUploadHeaders = async (
+    forceRefresh = false,
+  ): Promise<HeadersInit> => {
+    const headers = (await getAuthHeaders(forceRefresh)) as Record<
+      string,
+      string
+    >;
+    delete headers["Content-Type"];
     return headers;
   };
 
@@ -685,6 +699,7 @@ export const createPlanAiApi = (
       history?: { role: "user" | "assistant"; content: string }[];
       modelKey?: string;
       complexityLevel?: string;
+      documents?: components["schemas"]["LiveChatDocument"][];
     }): Promise<{ response: string }> {
       const req = async (force: boolean) =>
         // Live chat during recording: silent (the chat UI surfaces failures
@@ -704,6 +719,51 @@ export const createPlanAiApi = (
       return handleResponseWithRetry<{ response: string }>(res, () =>
         req(true),
       );
+    },
+
+    /**
+     * Reads a file attached to the live chat and returns its text. The server
+     * keeps nothing; the text goes with every later question.
+     */
+    async extractLiveChatDocument(file: File): Promise<LiveChatDocument> {
+      const req = async (force: boolean) => {
+        const formData = new FormData();
+        formData.append("file", file, file.name);
+        return safeFetch(
+          `${BASE_URL}/api/chat/live/documents`,
+          {
+            method: "POST",
+            headers: await getUploadHeaders(force),
+            body: formData,
+          },
+          true,
+          120000,
+        );
+      };
+
+      const res = await req(false);
+      return handleResponseWithRetry<LiveChatDocument>(res, () => req(true));
+    },
+
+    /** Adds a file to a context. The backend indexes it in the background. */
+    async addFileToContext(contextId: string, file: File): Promise<void> {
+      const req = async (force: boolean) => {
+        const formData = new FormData();
+        formData.append("files", file, file.name);
+        return safeFetch(
+          `${BASE_URL}/api/contexts/${contextId}/files`,
+          {
+            method: "POST",
+            headers: await getUploadHeaders(force),
+            body: formData,
+          },
+          true,
+          120000,
+        );
+      };
+
+      const res = await req(false);
+      await handleResponseWithRetry<unknown>(res, () => req(true));
     },
 
     async getLiveSummary(
