@@ -3,6 +3,7 @@ import { redisClient } from "../utils/redisClient";
 import { logger } from "../utils/logger";
 import { deleteOlderThan, RECORDING_PARTS_ROOT } from "../firebase/privateStorage";
 import { applyAudioRetention } from "../services/audioRetentionService";
+import { purgeOldTrash } from "../services/noteService";
 
 /**
  * Daily storage housekeeping.
@@ -31,11 +32,19 @@ export const storageCleanupWorker = new Worker(
     } catch (err) {
       logger.error("[storage-cleanup] could not apply audio retention", err);
     }
+    let notesPurged = 0;
+    try {
+      // Notes left in the trash longer than 30 days.
+      notesPurged = await purgeOldTrash();
+    } catch (err) {
+      logger.error("[storage-cleanup] could not empty the notes trash", err);
+    }
     logger.info(
       `[storage-cleanup] job ${job.id}: deleted ${removed} stale recording slices, ` +
-        `audio of ${audioDeleted} meetings past their workspace retention`,
+        `audio of ${audioDeleted} meetings past their workspace retention, ` +
+        `${notesPurged} notes from the trash`,
     );
-    return { removed, audioDeleted };
+    return { removed, audioDeleted, notesPurged };
   },
   { connection: redisClient, lockDuration: 10 * 60_000 },
 );

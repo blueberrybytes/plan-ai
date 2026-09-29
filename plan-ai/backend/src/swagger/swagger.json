@@ -4733,6 +4733,206 @@
 				"type": "object",
 				"additionalProperties": false
 			},
+			"NoteVisibilityValue": {
+				"type": "string",
+				"enum": [
+					"PRIVATE",
+					"WORKSPACE"
+				]
+			},
+			"NotePeriodValue": {
+				"type": "string",
+				"enum": [
+					"DAY",
+					"WEEK"
+				]
+			},
+			"NoteSourceValue": {
+				"type": "string",
+				"enum": [
+					"WEB",
+					"MOBILE",
+					"RECORDER",
+					"ASSISTANT"
+				]
+			},
+			"NoteResponse": {
+				"properties": {
+					"id": {
+						"type": "string"
+					},
+					"workspaceId": {
+						"type": "string"
+					},
+					"userId": {
+						"type": "string",
+						"description": "The author."
+					},
+					"isMine": {
+						"type": "boolean",
+						"description": "True when the signed-in user wrote it (and so can edit it)."
+					},
+					"title": {
+						"type": "string",
+						"nullable": true
+					},
+					"body": {
+						"type": "string",
+						"description": "Markdown."
+					},
+					"visibility": {
+						"$ref": "#/components/schemas/NoteVisibilityValue"
+					},
+					"pinned": {
+						"type": "boolean"
+					},
+					"projectId": {
+						"type": "string",
+						"nullable": true
+					},
+					"transcriptId": {
+						"type": "string",
+						"nullable": true
+					},
+					"periodType": {
+						"allOf": [
+							{
+								"$ref": "#/components/schemas/NotePeriodValue"
+							}
+						],
+						"nullable": true
+					},
+					"periodStart": {
+						"type": "string",
+						"nullable": true,
+						"description": "YYYY-MM-DD, the author's local day (the Monday for a weekly note)."
+					},
+					"source": {
+						"$ref": "#/components/schemas/NoteSourceValue"
+					},
+					"version": {
+						"type": "number",
+						"format": "double"
+					},
+					"deletedAt": {
+						"type": "string",
+						"nullable": true
+					},
+					"createdAt": {
+						"type": "string"
+					},
+					"updatedAt": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"id",
+					"workspaceId",
+					"userId",
+					"isMine",
+					"title",
+					"body",
+					"visibility",
+					"pinned",
+					"projectId",
+					"transcriptId",
+					"periodType",
+					"periodStart",
+					"source",
+					"version",
+					"deletedAt",
+					"createdAt",
+					"updatedAt"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"NoteListResponse": {
+				"properties": {
+					"notes": {
+						"items": {
+							"$ref": "#/components/schemas/NoteResponse"
+						},
+						"type": "array"
+					},
+					"nextCursor": {
+						"type": "string",
+						"nullable": true
+					}
+				},
+				"required": [
+					"notes",
+					"nextCursor"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"CreateNoteRequest": {
+				"properties": {
+					"id": {
+						"type": "string",
+						"description": "Optional id made by the app (16 to 64 of A-Z a-z 0-9 _ -), so a retried create is not duplicated."
+					},
+					"title": {
+						"type": "string",
+						"nullable": true
+					},
+					"body": {
+						"type": "string"
+					},
+					"projectId": {
+						"type": "string",
+						"nullable": true
+					},
+					"transcriptId": {
+						"type": "string",
+						"nullable": true
+					},
+					"visibility": {
+						"$ref": "#/components/schemas/NoteVisibilityValue"
+					},
+					"pinned": {
+						"type": "boolean"
+					},
+					"source": {
+						"$ref": "#/components/schemas/NoteSourceValue"
+					}
+				},
+				"type": "object",
+				"additionalProperties": false
+			},
+			"UpdateNoteRequest": {
+				"properties": {
+					"title": {
+						"type": "string",
+						"nullable": true
+					},
+					"body": {
+						"type": "string"
+					},
+					"projectId": {
+						"type": "string",
+						"nullable": true
+					},
+					"transcriptId": {
+						"type": "string",
+						"nullable": true
+					},
+					"visibility": {
+						"$ref": "#/components/schemas/NoteVisibilityValue"
+					},
+					"pinned": {
+						"type": "boolean"
+					},
+					"baseVersion": {
+						"type": "number",
+						"format": "double",
+						"description": "The version the app edited. When the server has a newer one the answer is 409 with the current note."
+					}
+				},
+				"type": "object",
+				"additionalProperties": false
+			},
 			"MicrosoftSummaryResponse": {
 				"properties": {
 					"isConnected": {
@@ -5660,8 +5860,8 @@
 			"_36_Enums.ChatRole": {
 				"type": "string",
 				"enum": [
-					"USER",
-					"ASSISTANT"
+					"ASSISTANT",
+					"USER"
 				]
 			},
 			"ChatRole": {
@@ -12855,6 +13055,361 @@
 						}
 					}
 				}
+			}
+		},
+		"/api/notes": {
+			"get": {
+				"operationId": "ListNotes",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/NoteListResponse"
+								}
+							}
+						}
+					}
+				},
+				"description": "Notes the user can read, pinned first, newest first. `scope`: all, inbox\n(own notes not filed anywhere), pinned, mine, shared, trash (own only).",
+				"tags": [
+					"Notes"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": [
+					{
+						"in": "query",
+						"name": "scope",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"in": "query",
+						"name": "projectId",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"in": "query",
+						"name": "transcriptId",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"in": "query",
+						"name": "q",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"in": "query",
+						"name": "limit",
+						"required": false,
+						"schema": {
+							"format": "double",
+							"type": "number"
+						}
+					},
+					{
+						"in": "query",
+						"name": "cursor",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					}
+				]
+			},
+			"post": {
+				"operationId": "CreateNote",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/NoteResponse"
+								}
+							}
+						}
+					}
+				},
+				"description": "Creates a note. Sending the same id again returns the note created the first time.",
+				"tags": [
+					"Notes"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": [],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/CreateNoteRequest"
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/notes/period/{period}/{date}": {
+			"get": {
+				"operationId": "GetPeriodNote",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/NoteResponse"
+								}
+							}
+						}
+					}
+				},
+				"description": "The user's daily (or weekly) note for a local date, YYYY-MM-DD. Created empty the first time.",
+				"tags": [
+					"Notes"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": [
+					{
+						"in": "path",
+						"name": "period",
+						"required": true,
+						"schema": {
+							"$ref": "#/components/schemas/NotePeriodValue"
+						}
+					},
+					{
+						"in": "path",
+						"name": "date",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				]
+			}
+		},
+		"/api/notes/{id}": {
+			"get": {
+				"operationId": "GetNote",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/NoteResponse"
+								}
+							}
+						}
+					}
+				},
+				"tags": [
+					"Notes"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": [
+					{
+						"in": "path",
+						"name": "id",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				]
+			},
+			"patch": {
+				"operationId": "UpdateNote",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/NoteResponse"
+								}
+							}
+						}
+					}
+				},
+				"tags": [
+					"Notes"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": [
+					{
+						"in": "path",
+						"name": "id",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/UpdateNoteRequest"
+							}
+						}
+					}
+				}
+			},
+			"delete": {
+				"operationId": "TrashNote",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"success": {
+											"type": "boolean"
+										}
+									},
+									"required": [
+										"success"
+									],
+									"type": "object"
+								}
+							}
+						}
+					}
+				},
+				"description": "Moves the note to the trash (kept 30 days).",
+				"tags": [
+					"Notes"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": [
+					{
+						"in": "path",
+						"name": "id",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				]
+			}
+		},
+		"/api/notes/{id}/restore": {
+			"post": {
+				"operationId": "RestoreNote",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/NoteResponse"
+								}
+							}
+						}
+					}
+				},
+				"tags": [
+					"Notes"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": [
+					{
+						"in": "path",
+						"name": "id",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				]
+			}
+		},
+		"/api/notes/{id}/permanent": {
+			"delete": {
+				"operationId": "PurgeNote",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"success": {
+											"type": "boolean"
+										}
+									},
+									"required": [
+										"success"
+									],
+									"type": "object"
+								}
+							}
+						}
+					}
+				},
+				"description": "Deletes a note in the trash for good.",
+				"tags": [
+					"Notes"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": [
+					{
+						"in": "path",
+						"name": "id",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				]
 			}
 		},
 		"/api/microsoft/auth-url": {

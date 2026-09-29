@@ -20,7 +20,14 @@ const signed = async (ref: string | null | undefined): Promise<string | null> =>
   }
 };
 
-export async function exportWorkspace(workspaceId: string): Promise<Record<string, unknown>> {
+/**
+ * `exportedBy` is the owner running the export: their own private notes are
+ * included, other members' private notes never are.
+ */
+export async function exportWorkspace(
+  workspaceId: string,
+  exportedBy: string,
+): Promise<Record<string, unknown>> {
   const workspace = await prisma.workspace.findUniqueOrThrow({
     where: { id: workspaceId },
     select: {
@@ -45,6 +52,7 @@ export async function exportWorkspace(workspaceId: string): Promise<Record<strin
     diagrams,
     threads,
     auditLog,
+    notes,
   ] = await Promise.all([
     prisma.workspaceMember.findMany({
       where: { workspaceId },
@@ -132,6 +140,27 @@ export async function exportWorkspace(workspaceId: string): Promise<Record<strin
       orderBy: { createdAt: "desc" },
       take: AUDIT_EXPORT_LIMIT,
     }),
+    prisma.note.findMany({
+      where: {
+        workspaceId,
+        deletedAt: null,
+        OR: [{ visibility: "WORKSPACE" }, { userId: exportedBy }],
+      },
+      select: {
+        id: true,
+        userId: true,
+        title: true,
+        body: true,
+        visibility: true,
+        pinned: true,
+        projectId: true,
+        transcriptId: true,
+        periodType: true,
+        periodStart: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    }),
   ]);
 
   const transcriptsOut = [];
@@ -171,6 +200,7 @@ export async function exportWorkspace(workspaceId: string): Promise<Record<strin
     presentations,
     diagrams,
     chatThreads: threads,
+    notes,
     auditLog,
   };
 }

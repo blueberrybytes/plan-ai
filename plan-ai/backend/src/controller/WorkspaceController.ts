@@ -801,7 +801,7 @@ export class WorkspaceController extends BaseWorkspaceController {
       throw { status: 403, message: "Only the workspace owner can export its data." };
     }
     await recordAudit({ workspaceId, actor: user, action: "workspace.exported", request });
-    return (await exportWorkspace(workspaceId)) as TsoaJsonObject;
+    return (await exportWorkspace(workspaceId, user.id)) as TsoaJsonObject;
   }
 
   /**

@@ -1353,6 +1353,94 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/notes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description Notes the user can read, pinned first, newest first. `scope`: all, inbox
+         *     (own notes not filed anywhere), pinned, mine, shared, trash (own only).
+         */
+        get: operations["ListNotes"];
+        put?: never;
+        /** @description Creates a note. Sending the same id again returns the note created the first time. */
+        post: operations["CreateNote"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/notes/period/{period}/{date}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description The user's daily (or weekly) note for a local date, YYYY-MM-DD. Created empty the first time. */
+        get: operations["GetPeriodNote"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/notes/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetNote"];
+        put?: never;
+        post?: never;
+        /** @description Moves the note to the trash (kept 30 days). */
+        delete: operations["TrashNote"];
+        options?: never;
+        head?: never;
+        patch: operations["UpdateNote"];
+        trace?: never;
+    };
+    "/api/notes/{id}/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["RestoreNote"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/notes/{id}/permanent": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** @description Deletes a note in the trash for good. */
+        delete: operations["PurgeNote"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/microsoft/auth-url": {
         parameters: {
             query?: never;
@@ -4370,6 +4458,64 @@ export interface components {
         SetDefaultDatabaseRequest: {
             databaseId: string;
         };
+        /** @enum {string} */
+        NoteVisibilityValue: "PRIVATE" | "WORKSPACE";
+        /** @enum {string} */
+        NotePeriodValue: "DAY" | "WEEK";
+        /** @enum {string} */
+        NoteSourceValue: "WEB" | "MOBILE" | "RECORDER" | "ASSISTANT";
+        NoteResponse: {
+            id: string;
+            workspaceId: string;
+            /** @description The author. */
+            userId: string;
+            /** @description True when the signed-in user wrote it (and so can edit it). */
+            isMine: boolean;
+            title: string | null;
+            /** @description Markdown. */
+            body: string;
+            visibility: components["schemas"]["NoteVisibilityValue"];
+            pinned: boolean;
+            projectId: string | null;
+            transcriptId: string | null;
+            periodType: components["schemas"]["NotePeriodValue"] | null;
+            /** @description YYYY-MM-DD, the author's local day (the Monday for a weekly note). */
+            periodStart: string | null;
+            source: components["schemas"]["NoteSourceValue"];
+            /** Format: double */
+            version: number;
+            deletedAt: string | null;
+            createdAt: string;
+            updatedAt: string;
+        };
+        NoteListResponse: {
+            notes: components["schemas"]["NoteResponse"][];
+            nextCursor: string | null;
+        };
+        CreateNoteRequest: {
+            /** @description Optional id made by the app (16 to 64 of A-Z a-z 0-9 _ -), so a retried create is not duplicated. */
+            id?: string;
+            title?: string | null;
+            body?: string;
+            projectId?: string | null;
+            transcriptId?: string | null;
+            visibility?: components["schemas"]["NoteVisibilityValue"];
+            pinned?: boolean;
+            source?: components["schemas"]["NoteSourceValue"];
+        };
+        UpdateNoteRequest: {
+            title?: string | null;
+            body?: string;
+            projectId?: string | null;
+            transcriptId?: string | null;
+            visibility?: components["schemas"]["NoteVisibilityValue"];
+            pinned?: boolean;
+            /**
+             * Format: double
+             * @description The version the app edited. When the server has a newer one the answer is 409 with the current note.
+             */
+            baseVersion?: number;
+        };
         MicrosoftSummaryResponse: {
             isConnected: boolean;
             userEmail?: string;
@@ -4602,7 +4748,7 @@ export interface components {
             status: number;
         };
         /** @enum {string} */
-        "_36_Enums.ChatRole": "USER" | "ASSISTANT";
+        "_36_Enums.ChatRole": "ASSISTANT" | "USER";
         ChatRole: components["schemas"]["_36_Enums.ChatRole"];
         ChatAttachment: {
             url: string;
@@ -8137,6 +8283,198 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ApiResponse_null_"];
+                };
+            };
+        };
+    };
+    ListNotes: {
+        parameters: {
+            query?: {
+                scope?: string;
+                projectId?: string;
+                transcriptId?: string;
+                q?: string;
+                limit?: number;
+                cursor?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NoteListResponse"];
+                };
+            };
+        };
+    };
+    CreateNote: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateNoteRequest"];
+            };
+        };
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NoteResponse"];
+                };
+            };
+        };
+    };
+    GetPeriodNote: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                period: components["schemas"]["NotePeriodValue"];
+                date: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NoteResponse"];
+                };
+            };
+        };
+    };
+    GetNote: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NoteResponse"];
+                };
+            };
+        };
+    };
+    TrashNote: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        success: boolean;
+                    };
+                };
+            };
+        };
+    };
+    UpdateNote: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateNoteRequest"];
+            };
+        };
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NoteResponse"];
+                };
+            };
+        };
+    };
+    RestoreNote: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NoteResponse"];
+                };
+            };
+        };
+    };
+    PurgeNote: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        success: boolean;
+                    };
                 };
             };
         };

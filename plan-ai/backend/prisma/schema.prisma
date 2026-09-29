@@ -111,6 +111,7 @@ model Workspace {
   billingEvents  BillingEvent[]
   telegramLinks  TelegramLink[]
   prototypes     Prototype[]
+  notes          Note[]
 
   @@index([defaultThemeId])
 }
@@ -365,6 +366,7 @@ model User {
   mcpTokens            McpToken[]
   telegramLinks        TelegramLink[]
   prototypes           Prototype[]
+  notes                Note[]
 }
 
 model DesktopAuthCode {
@@ -468,6 +470,7 @@ model Project {
   aiUsageLogs AiUsageLog[]
   context     Context?
   documents   DocDocument[]
+  notes       Note[]
 
   @@index([userId])
   @@index([workspaceId])
@@ -504,6 +507,8 @@ model Transcript {
   chatThread ChatThread?
   project    Project?             @relation(fields: [projectId], references: [id], onDelete: Cascade)
   user       User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  notes Note[]
 
   @@index([projectId])
   @@index([workspaceId])
@@ -969,4 +974,60 @@ model AiUsageLog {
   @@index([createdAt])
   @@index([projectId])
   @@index([workspaceId, createdAt])
+}
+
+enum NoteVisibility {
+  PRIVATE
+  WORKSPACE
+}
+
+enum NotePeriod {
+  DAY
+  WEEK
+}
+
+enum NoteSource {
+  WEB
+  MOBILE
+  RECORDER
+  ASSISTANT
+}
+
+/// A note a member writes down. Private to its author unless shared with the
+/// workspace. With no project, meeting or period it sits in the inbox, to be
+/// filed later. A note with a period is the author's daily or weekly note:
+/// one per author, workspace and period start.
+model Note {
+  /// The apps may send their own id, so a retried create never makes a copy.
+  id           String         @id @default(cuid())
+  workspaceId  String
+  userId       String
+  title        String?        @db.VarChar(200)
+  body         String         @default("") @db.Text
+  visibility   NoteVisibility @default(PRIVATE)
+  pinned       Boolean        @default(false)
+  projectId    String?
+  transcriptId String?
+  periodType   NotePeriod?
+  /// Local calendar day of the author (the Monday for a weekly note).
+  periodStart  DateTime?      @db.Date
+  source       NoteSource     @default(WEB)
+  /// Bumped on every edit. An edit sent with an older version is refused, so
+  /// two devices never overwrite each other silently.
+  version      Int            @default(1)
+  /// In the trash since then. Purged after 30 days.
+  deletedAt    DateTime?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  workspace  Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project    Project?    @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  transcript Transcript? @relation(fields: [transcriptId], references: [id], onDelete: SetNull)
+
+  @@unique([workspaceId, userId, periodType, periodStart])
+  @@index([workspaceId, userId, updatedAt])
+  @@index([workspaceId, visibility, updatedAt])
+  @@index([projectId])
+  @@index([transcriptId])
 }
