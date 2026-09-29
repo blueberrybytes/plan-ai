@@ -105,7 +105,8 @@ Fill in your credentials. Both templates include inline comments for every key.
 | Key                         | Description                                           |
 | --------------------------- | ----------------------------------------------------- |
 | `PORT`                      | API server port (default `8080`)                      |
-| `FRONTEND_URL`              | Allowed CORS origin (default `http://localhost:3000`) |
+| `FRONTEND_URL`              | Public URL of the web app (default `http://localhost:3000`) |
+| `CORS_ORIGINS`              | Allowed origins, comma-separated. Empty in production allows only `APP_URL`; `app://recorder` is always allowed |
 | `DATABASE_URL`              | PostgreSQL connection string (Compose publishes Postgres on `5433`) |
 | `QDRANT_URL`                | Qdrant REST URL (default `http://127.0.0.1:6333`)     |
 | `QDRANT_CONTEXT_COLLECTION` | Qdrant collection name (default `context_files`)      |
@@ -129,7 +130,7 @@ Fill in your credentials. Both templates include inline comments for every key.
 | `MICROSOFT_TENANT_ID`       | Microsoft Azure tenant ID                              |
 | `NOTION_OAUTH_CLIENT_ID`    | Notion OAuth client ID                                 |
 | `NOTION_OAUTH_CLIENT_SECRET`| Notion OAuth client secret                             |
-| `API_ADMIN_KEY`             | Admin API key for service-to-service calls            |
+| `API_ADMIN_KEY`             | Admin API key for service-to-service calls. 32+ characters, or empty to turn it off |
 
 **Frontend keys** (`frontend/.env`):
 

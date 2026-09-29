@@ -19,7 +19,9 @@ import sentry_sdk
 _PLATFORM_SENTRY_DSN = "https://22b2182401ea5abb0092d103c1742f75@o4511196762734592.ingest.us.sentry.io/4511461842812928"
 sentry_sdk.init(
     dsn=os.environ.get("SENTRY_DSN", _PLATFORM_SENTRY_DSN) or None,
-    send_default_pii=True,
+    # Reports go to a third party: no request bodies, headers or IPs.
+    send_default_pii=False,
+    max_request_body_size="never",
     traces_sample_rate=0.2,
     environment=os.environ.get("ENV", "local"),
 )
