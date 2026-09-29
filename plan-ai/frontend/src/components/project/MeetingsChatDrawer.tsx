@@ -14,6 +14,7 @@ import SendIcon from "@mui/icons-material/Send";
 import DeleteSweepOutlinedIcon from "@mui/icons-material/DeleteSweepOutlined";
 import QuestionAnswerOutlinedIcon from "@mui/icons-material/QuestionAnswerOutlined";
 import ReactMarkdown from "react-markdown";
+import SafeMarkdownImage from "../common/SafeMarkdownImage";
 import { useTranslation } from "react-i18next";
 import { useSendLiveChatMessageMutation } from "../../store/apis/chatApi";
 import type { components } from "../../types/api";
@@ -211,7 +212,7 @@ const MeetingsChatDrawer: React.FC<MeetingsChatDrawerProps> = ({
                 }}
               >
                 {m.role === "assistant" ? (
-                  <ReactMarkdown>{m.content}</ReactMarkdown>
+                  <ReactMarkdown components={{ img: SafeMarkdownImage }}>{m.content}</ReactMarkdown>
                 ) : (
                   <Typography variant="body2">{m.content}</Typography>
                 )}

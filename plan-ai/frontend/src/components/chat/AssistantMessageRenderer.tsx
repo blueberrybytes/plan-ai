@@ -6,9 +6,8 @@ import {
   DescriptionOutlined,
   OpenInNew as OpenInNewIcon,
 } from "@mui/icons-material";
-import { useSelector } from "react-redux";
 import { useNavigate, Link as RouterLink } from "react-router-dom";
-import { RootState } from "../../store/store";
+import { TokenService } from "../../services/tokenService";
 
 interface AssistantMessageRendererProps {
   content: string;
@@ -25,7 +24,6 @@ export const AssistantMessageRenderer: React.FC<AssistantMessageRendererProps> =
   isStreaming,
 }) => {
   const [isTyping, setIsTyping] = useState(false);
-  const token = useSelector((state: RootState) => state.auth.user?.token);
   const navigate = useNavigate();
 
   // ── Navigation marker handling ────────────────────────────────────────
@@ -67,7 +65,7 @@ export const AssistantMessageRenderer: React.FC<AssistantMessageRendererProps> =
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
+            ...(await TokenService.getAuthHeaders()),
           },
           body: JSON.stringify({
             title: "AI Generated Document",
@@ -187,7 +185,7 @@ export const AssistantMessageRenderer: React.FC<AssistantMessageRendererProps> =
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
+            ...(await TokenService.getAuthHeaders()),
           },
           body: JSON.stringify({
             projectId,

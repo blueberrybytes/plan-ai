@@ -58,7 +58,14 @@ export const docApi = createApi({
           }),
         );
         try {
-          await queryFulfilled;
+          // The server's copy carries fields the request did not send, such
+          // as the new shareToken when sharing is turned on.
+          const { data: updated } = await queryFulfilled;
+          dispatch(
+            docApi.util.updateQueryData("getDoc", id, (draft) => {
+              Object.assign(draft, updated);
+            }),
+          );
         } catch {
           patch.undo();
         }

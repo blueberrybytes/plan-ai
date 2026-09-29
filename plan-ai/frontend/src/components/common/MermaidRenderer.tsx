@@ -11,6 +11,7 @@ import {
 } from "@mui/icons-material";
 import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
 import { injectMermaidThemeStyles, repairMermaidSyntax } from "../../utils/mermaidUtils";
+import { sanitizeMermaidSvg } from "../../utils/sanitizeSvg";
 
 interface MermaidRendererProps {
   chart: string;
@@ -315,7 +316,9 @@ const MermaidRenderer: React.FC<MermaidRendererProps> = ({
           // Per-diagram colour config (these colours are NOT themeVariables).
           er: { fill: primHex, stroke: secHex } as any,
           sankey: { linkColor: primHex } as any,
-          securityLevel: "loose",
+          // Diagram source can come from model output. "strict" sanitises labels and
+          // disables click callbacks; the final SVG is sanitised again below.
+          securityLevel: "strict",
           logLevel: 5,
           suppressErrorRendering: true,
         });
@@ -339,7 +342,7 @@ const MermaidRenderer: React.FC<MermaidRendererProps> = ({
             nodeTextColor,
             secondaryTextColor,
           });
-          setSvgContent(themedSvg);
+          setSvgContent(sanitizeMermaidSvg(themedSvg));
         }
       } catch (err: any) {
         console.error("Mermaid parsing error:", err);

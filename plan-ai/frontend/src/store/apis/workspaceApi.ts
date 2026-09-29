@@ -1,5 +1,5 @@
 import { createApi } from "@reduxjs/toolkit/query/react";
-import { components } from "../../types/api";
+import { components, operations } from "../../types/api";
 import { baseQueryWithReauth } from "../../utils/baseQuery";
 
 export interface WorkspaceResponse extends Omit<components["schemas"]["WorkspaceResponse"], ""> {
@@ -14,11 +14,22 @@ export type CreateWorkspaceRequest = components["schemas"]["CreateWorkspaceReque
 export type WorkspaceTeamResponse = components["schemas"]["WorkspaceTeamResponse"];
 export type UpdateWorkspaceSettingsRequest =
   components["schemas"]["UpdateWorkspaceSettingsRequest"];
+export type WorkspaceMemberResponse = components["schemas"]["WorkspaceMemberResponse"];
+export type AuditLogResponse = components["schemas"]["AuditLogResponse"];
+export type AuditLogEntryResponse = components["schemas"]["AuditLogEntryResponse"];
+export type AuditLogQuery = NonNullable<operations["GetAuditLog"]["parameters"]["query"]>;
+export type WorkspaceExport = components["schemas"]["TsoaJsonObject"];
+export type TransferOwnershipRequest =
+  operations["TransferOwnership"]["requestBody"]["content"]["application/json"];
+export type DeleteWorkspaceRequest =
+  operations["DeleteWorkspace"]["requestBody"]["content"]["application/json"];
+type WorkspaceActionResponse =
+  operations["DeleteWorkspace"]["responses"][200]["content"]["application/json"];
 
 export const workspaceApi = createApi({
   reducerPath: "workspaceApi",
   baseQuery: baseQueryWithReauth,
-  tagTypes: ["Workspace"],
+  tagTypes: ["Workspace", "AuditLog"],
   endpoints: (builder) => ({
     getMyWorkspaces: builder.query<WorkspaceResponse[], void>({
       query: () => "/api/workspaces",
@@ -81,7 +92,34 @@ export const workspaceApi = createApi({
         method: "PUT",
         body,
       }),
-      invalidatesTags: ["Workspace"],
+      invalidatesTags: ["Workspace", "AuditLog"],
+    }),
+    getWorkspaceAuditLog: builder.query<AuditLogResponse, AuditLogQuery>({
+      query: (params) => ({ url: "/api/workspaces/audit-log", params }),
+      providesTags: ["AuditLog"],
+    }),
+    // The export holds every meeting of the workspace, so it is never kept in the cache.
+    exportWorkspaceData: builder.query<WorkspaceExport, void>({
+      query: () => "/api/workspaces/export",
+      keepUnusedDataFor: 0,
+    }),
+    transferWorkspaceOwnership: builder.mutation<WorkspaceActionResponse, TransferOwnershipRequest>(
+      {
+        query: (body) => ({
+          url: "/api/workspaces/transfer-ownership",
+          method: "POST",
+          body,
+        }),
+        invalidatesTags: ["Workspace", "AuditLog"],
+      },
+    ),
+    deleteWorkspace: builder.mutation<WorkspaceActionResponse, DeleteWorkspaceRequest>({
+      query: (body) => ({
+        url: "/api/workspaces/delete",
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["Workspace", "AuditLog"],
     }),
   }),
 });
@@ -95,4 +133,7 @@ export const {
   useCancelWorkspaceInvitationMutation,
   useCreateWorkspaceMutation,
   useUpdateWorkspaceSettingsMutation,
+  useLazyGetWorkspaceAuditLogQuery,
+  useTransferWorkspaceOwnershipMutation,
+  useDeleteWorkspaceMutation,
 } = workspaceApi;

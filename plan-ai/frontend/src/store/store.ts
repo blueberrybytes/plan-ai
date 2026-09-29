@@ -34,6 +34,12 @@ import { analyticsApi } from "./apis/analyticsApi";
 import { mcpApi } from "./apis/mcpApi";
 import { billingApi } from "./apis/billingApi";
 
+// Only these slices are written to localStorage. RTK Query caches (projects, chats,
+// contexts, transcripts...) hold meeting data and must not stay on a shared computer,
+// so every API slice is left out and always fetched fresh. The Firebase ID token is
+// not in Redux at all (see TokenService.getIdToken).
+const PERSISTED_SLICES = ["app", "auth", "preferences", "chatHome"];
+
 const migrations = {
   1: (state: any) => {
     console.debug("Executing migration 1");
@@ -41,17 +47,29 @@ const migrations = {
       ...state,
     };
   },
+  // Version 1 persisted RTK Query caches and the ID token (auth.user.token).
+  // redux-persist rehydrates every stored key, even ones no longer whitelisted,
+  // so drop them here once. The next write then replaces the stored copy.
+  2: (state: any) => {
+    if (!state) return state;
+    const next: any = { _persist: state._persist };
+    for (const key of PERSISTED_SLICES) {
+      if (key in state) next[key] = state[key];
+    }
+    if (next.auth?.user && "token" in next.auth.user) {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { token, ...user } = next.auth.user;
+      next.auth = { ...next.auth, user };
+    }
+    return next;
+  },
 };
 
 const persistConfig = {
   key: "root",
   storage,
-  // billingApi holds live server state (catalog, subscription, usage limits).
-  // Persisting it served a STALE catalog from localStorage after deploys — e.g.
-  // a cached catalog without `byokTrialDays` hid the free-trial badge until the
-  // cache happened to refetch. Never persist it; always fetch fresh.
-  blacklist: ["docApi", "slideApi", "authApi", "transcriptApi", "billingApi"],
-  version: 1,
+  whitelist: PERSISTED_SLICES,
+  version: 2,
   migrate: createMigrate(migrations, { debug: false }),
 };
 

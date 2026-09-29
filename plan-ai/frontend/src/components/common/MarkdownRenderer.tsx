@@ -10,6 +10,7 @@ import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
 import { Link as RouterLink } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import MermaidRenderer from "./MermaidRenderer";
+import SafeMarkdownImage from "./SafeMarkdownImage";
 
 const CopyButton: React.FC<{
   getText: () => string;
@@ -278,6 +279,8 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
               </h6>
             );
           },
+          // Model output can contain images that leak data to remote hosts. Only load ours.
+          img: SafeMarkdownImage,
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           table: ({ children, ...props }: any) => (
             <TableWithCopy tableProps={props}>{children}</TableWithCopy>

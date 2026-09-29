@@ -33,6 +33,7 @@ import {
 import { useTranslation } from "react-i18next";
 import { ContentCopy as CopyIcon, Check as CheckIcon } from "@mui/icons-material";
 import ReactMarkdown from "react-markdown";
+import SafeMarkdownImage from "../components/common/SafeMarkdownImage";
 import ReactJson from "react-json-view";
 import MermaidRenderer from "../components/common/MermaidRenderer";
 import { AiGraphTrace, ContextGraph } from "../components/project/ContextGraph";
@@ -80,7 +81,7 @@ const ChatMessageItem = ({ msg }: { msg: { role: string; content: string } }) =>
           color: msg.role === "USER" ? "primary.contrastText" : "text.secondary",
         }}
       >
-        <ReactMarkdown>{msg.content}</ReactMarkdown>
+        <ReactMarkdown components={{ img: SafeMarkdownImage }}>{msg.content}</ReactMarkdown>
       </Box>
 
       <IconButton

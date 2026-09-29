@@ -20,7 +20,11 @@ import {
   Refresh as RefreshIcon,
 } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
+import { useDispatch } from "react-redux";
+import { useTranslation } from "react-i18next";
 import SidebarLayout from "../components/layout/SidebarLayout";
+import { openSharedLink, shareAndGetLinkKey } from "../utils/openSharedLink";
+import { setToastMessage } from "../store/slices/app/appSlice";
 import PageHeader from "../components/layout/PageHeader";
 import { detectMermaidType } from "../utils/mermaidUtils";
 import {
@@ -55,6 +59,8 @@ const getDiagramTypeColor = (type: string): ChipProps["color"] => {
 
 const Diagrams: React.FC = () => {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
+  const { t } = useTranslation();
   const {
     data: response,
     isLoading,
@@ -68,10 +74,17 @@ const Diagrams: React.FC = () => {
 
   const handleOpenPublicLink = async (d: DiagramResponse, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!d.isPublic) {
-      await updateDiagram({ id: d.id, body: { isPublic: true } });
+    try {
+      await openSharedLink(
+        (linkKey) => `/diagram/public/${linkKey}`,
+        () =>
+          shareAndGetLinkKey(d, () =>
+            updateDiagram({ id: d.id, body: { isPublic: true } }).unwrap(),
+          ),
+      );
+    } catch {
+      dispatch(setToastMessage({ severity: "error", message: t("common.sharing.failed") }));
     }
-    window.open(`/diagram/public/${d.id}`, "_blank");
   };
 
   const handleDelete = async (id: string, e: React.MouseEvent) => {

@@ -5,6 +5,7 @@ import { baseQueryWithReauth } from "../../utils/baseQuery";
 export type ApiResponseUserResponse = components["schemas"]["ApiResponse_UserResponse_"];
 export type ApiResponseCustomToken = components["schemas"]["ApiResponse__code-string__"];
 export type LoginRequest = operations["Login"]["requestBody"]["content"]["application/json"];
+export type DeleteVoiceProfileResponse = components["schemas"]["ApiResponse__deleted-boolean__"];
 
 export const authApi = createApi({
   reducerPath: "authApi",
@@ -36,6 +37,13 @@ export const authApi = createApi({
       }),
       invalidatesTags: ["User"],
     }),
+    deleteVoiceProfile: builder.mutation<DeleteVoiceProfileResponse, void>({
+      query: () => ({
+        url: "/api/session/me/voice-profile",
+        method: "DELETE",
+      }),
+      invalidatesTags: ["User"],
+    }),
   }),
 });
 
@@ -44,4 +52,5 @@ export const {
   useGetCurrentUserQuery,
   useGetDesktopTokenMutation,
   useCompleteHomeTourMutation,
+  useDeleteVoiceProfileMutation,
 } = authApi;

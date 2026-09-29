@@ -31,6 +31,9 @@ ENV REACT_APP_GOOGLE_CLIENT_ID=$REACT_APP_GOOGLE_CLIENT_ID
 ENV REACT_APP_GOOGLE_API_KEY=$REACT_APP_GOOGLE_API_KEY
 ENV REACT_APP_GOOGLE_APP_ID=$REACT_APP_GOOGLE_APP_ID
 ENV REACT_APP_MICROSOFT_CLIENT_ID=$REACT_APP_MICROSOFT_CLIENT_ID
+# Emit the webpack runtime as a file instead of an inline <script>, so the
+# Content-Security-Policy does not need 'unsafe-inline' for scripts.
+ENV INLINE_RUNTIME_CHUNK=false
 
 WORKDIR /app
 
@@ -52,8 +55,9 @@ FROM nginx:alpine
 # Copy the built app from the build stage
 COPY --from=build /app/build /usr/share/nginx/html
 
-# Copy our custom nginx configuration
+# Copy our custom nginx configuration and the shared security headers
 COPY ./nginx.conf /etc/nginx/conf.d/default.conf
+COPY ./security-headers.conf /etc/nginx/snippets/security-headers.conf
 
 # Set environment variables
 ENV PORT=3000

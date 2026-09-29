@@ -1,6 +1,7 @@
 import { useCallback, useRef, useState } from "react";
 import { useSelector } from "react-redux";
 import { RootState } from "../../../store/store";
+import { TokenService } from "../../../services/tokenService";
 import type { ChatAttachment } from "../../../store/apis/chatApi";
 
 interface UseChatAttachmentsOptions {
@@ -28,7 +29,6 @@ interface UseChatAttachmentsOptions {
  * each chat can wire them where it makes sense.
  */
 export function useChatAttachments({ uploadEndpoint, disabled }: UseChatAttachmentsOptions) {
-  const token = useSelector((state: RootState) => state.auth.user?.token);
   const activeWorkspaceId = useSelector((state: RootState) => state.app.activeWorkspaceId);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -51,7 +51,7 @@ export function useChatAttachments({ uploadEndpoint, disabled }: UseChatAttachme
           const res = await fetch(`${baseUrl}${uploadEndpoint}`, {
             method: "POST",
             headers: {
-              Authorization: `Bearer ${token}`,
+              ...(await TokenService.getAuthHeaders()),
               "x-workspace-id": activeWorkspaceId || "",
             },
             body: formData,
@@ -70,7 +70,7 @@ export function useChatAttachments({ uploadEndpoint, disabled }: UseChatAttachme
         if (fileInputRef.current) fileInputRef.current.value = "";
       }
     },
-    [disabled, baseUrl, uploadEndpoint, token, activeWorkspaceId],
+    [disabled, baseUrl, uploadEndpoint, activeWorkspaceId],
   );
 
   const removeAt = useCallback((idx: number) => {

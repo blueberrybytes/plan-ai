@@ -33,6 +33,7 @@ import SidebarLayout from "../components/layout/SidebarLayout";
 import { useDispatch } from "react-redux";
 import { setToastMessage } from "../store/slices/app/appSlice";
 import ReactMarkdown from "react-markdown";
+import SafeMarkdownImage from "../components/common/SafeMarkdownImage";
 import MermaidRenderer from "../components/common/MermaidRenderer";
 import SyncBadges from "../components/recording/SyncBadges";
 import ExtractionReasoningPanel from "../components/transcripts/ExtractionReasoningPanel";
@@ -78,7 +79,7 @@ const ChatMessageItem = ({ msg }: { msg: { role: string; content: string } }) =>
           color: msg.role === "USER" ? "primary.contrastText" : "text.secondary",
         }}
       >
-        <ReactMarkdown>{msg.content}</ReactMarkdown>
+        <ReactMarkdown components={{ img: SafeMarkdownImage }}>{msg.content}</ReactMarkdown>
       </Box>
 
       <IconButton

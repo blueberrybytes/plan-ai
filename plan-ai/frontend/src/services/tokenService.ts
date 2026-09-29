@@ -30,12 +30,36 @@ export class TokenService {
   }
 
   /**
-   * Update Redux store with user info and token
-   * @param dispatch Redux dispatch function
-   * @param user Firebase user object
-   * @param token Firebase ID token
+   * Returns the Firebase ID token of the signed-in user, or null when nobody is signed in.
+   *
+   * The token is read from Firebase at request time and is never copied into Redux,
+   * so it is never written to localStorage by redux-persist. On page load it waits
+   * until Firebase has restored the session, so early requests still carry a token.
+   * Firebase caches the token and refreshes it when it is close to expiry.
    */
-  static async updateUserInStore(dispatch: Dispatch, token?: string): Promise<void> {
+  static async getIdToken(forceRefresh = false): Promise<string | null> {
+    await auth.authStateReady();
+    const user = auth.currentUser;
+    if (!user) return null;
+    return user.getIdToken(forceRefresh);
+  }
+
+  /**
+   * Authorization header for fetch calls made outside RTK Query.
+   * Returns an empty object when nobody is signed in.
+   */
+  static async getAuthHeaders(): Promise<Record<string, string>> {
+    // Without a token the request gets a 401, which the caller already handles.
+    const token = await TokenService.getIdToken().catch(() => null);
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  }
+
+  /**
+   * Update Redux store with the signed-in user's profile info.
+   * The ID token is deliberately not stored; use getIdToken() when a request needs it.
+   * @param dispatch Redux dispatch function
+   */
+  static async updateUserInStore(dispatch: Dispatch): Promise<void> {
     const user = auth.currentUser;
     if (!user) {
       throw new Error("No user is logged in");
@@ -52,13 +76,10 @@ export class TokenService {
       return;
     }
 
-    const idToken = token || (await user.getIdToken());
-
     // Create user info object with the UserInfo type
     const userInfo: UserInfo = {
       uid: user.uid,
       email: user.email || "",
-      token: idToken,
       creationTime: user.metadata.creationTime || "",
       lastSignInTime: user.metadata.lastSignInTime || "",
       emailVerified: user.emailVerified || hasNonPasswordProvider,
@@ -109,8 +130,8 @@ export class TokenService {
         TokenService.refreshPromise = this.refreshToken();
         const newToken = await TokenService.refreshPromise;
 
-        // Update the token in Redux store
-        await this.updateUserInStore(dispatch, newToken);
+        // Refresh the profile info in Redux (the token itself stays in Firebase)
+        await this.updateUserInStore(dispatch);
 
         return newToken;
       } catch (error) {

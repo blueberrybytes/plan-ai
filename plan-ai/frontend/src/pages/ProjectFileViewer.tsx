@@ -11,6 +11,7 @@ import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
 import { useSelector } from "react-redux";
 import { RootState } from "../store/store";
+import { TokenService } from "../services/tokenService";
 import MarkdownRenderer from "../components/common/MarkdownRenderer";
 import CsvRenderer from "../components/common/CsvRenderer";
 
@@ -28,7 +29,6 @@ const ProjectFileViewer: React.FC = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
 
-  const token = useSelector((state: RootState) => state.auth.user?.token);
   const activeWorkspaceId = useSelector((state: RootState) => state.app.activeWorkspaceId);
 
   // First get the project to find the contextId
@@ -78,15 +78,18 @@ const ProjectFileViewer: React.FC = () => {
       file.mimeType.includes("ms-excel") ||
       isOfficeDocument(file.mimeType);
 
-    if (isTextBase && contextId && file.id && token && activeWorkspaceId) {
+    if (isTextBase && contextId && file.id && activeWorkspaceId) {
       setIsFetchingText(true);
       const baseUrl = (process.env.REACT_APP_API_BACKEND_URL || "").replace(/\/+$/, "");
-      fetch(`${baseUrl}/api/contexts/${contextId}/files/${file.id}/content`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "x-workspace-id": activeWorkspaceId,
-        },
-      })
+      TokenService.getAuthHeaders()
+        .then((authHeaders) =>
+          fetch(`${baseUrl}/api/contexts/${contextId}/files/${file.id}/content`, {
+            headers: {
+              ...authHeaders,
+              "x-workspace-id": activeWorkspaceId,
+            },
+          }),
+        )
         .then((res) => {
           if (!res.ok) throw new Error("Network response was not ok");
           return res.text();
@@ -107,7 +110,7 @@ const ProjectFileViewer: React.FC = () => {
         .catch((err) => console.error("Failed to load text content:", err))
         .finally(() => setIsFetchingText(false));
     }
-  }, [file, contextId, token, activeWorkspaceId]);
+  }, [file, contextId, activeWorkspaceId]);
 
   const renderContent = () => {
     if (!file)

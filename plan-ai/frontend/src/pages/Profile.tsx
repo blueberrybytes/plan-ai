@@ -49,6 +49,9 @@ import { useTranslation } from "react-i18next";
 import { getAppThemePresets } from "../utils/appThemes";
 import { useBrandIdentity } from "../hooks/useBrandIdentity";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
+import TwoStepVerificationCard from "../components/profile/TwoStepVerificationCard";
+import VoiceProfileCard from "../components/profile/VoiceProfileCard";
+import { apiErrorMessage } from "../utils/apiError";
 
 const AppThemeSelector: React.FC = () => {
   const { t } = useTranslation();
@@ -305,12 +308,17 @@ const Profile: React.FC = () => {
   const handleConfirmDelete = async () => {
     setDeleteError(null);
     try {
-      await deleteMyAccount().unwrap();
+      const response = await deleteMyAccount().unwrap();
+      // The backend answers { status: 409, data: false, message } when the user still owns
+      // a workspace with other members. Its message says what to do, so show it.
+      if (response.status !== 200 || response.data !== true) {
+        setDeleteError(response.message || t("profile.errors.deleteAccount"));
+        return;
+      }
       dispatch(logout());
     } catch (error) {
       console.error("Error deleting account", error);
-      setDeleteError(t("profile.errors.deleteAccount"));
-      throw error;
+      setDeleteError(apiErrorMessage(error, t("profile.errors.deleteAccount")));
     }
   };
 
@@ -605,6 +613,17 @@ const Profile: React.FC = () => {
               </Paper>
             </Box>
           </Grid>
+        </Grid>
+
+        <Grid container spacing={4} sx={{ mt: 0 }}>
+          <Grid item xs={12} md={6}>
+            <TwoStepVerificationCard />
+          </Grid>
+          {currentUserData?.data?.hasVoiceProfile ? (
+            <Grid item xs={12} md={6}>
+              <VoiceProfileCard />
+            </Grid>
+          ) : null}
         </Grid>
 
         <Box

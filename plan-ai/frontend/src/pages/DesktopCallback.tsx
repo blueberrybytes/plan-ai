@@ -9,19 +9,40 @@ import { useGetDesktopTokenMutation } from "../store/apis/authApi";
 import { useBrandIdentity } from "../hooks/useBrandIdentity";
 
 /**
- * /auth/desktop?local_port=4321 — opened by the Plan AI Recorder (Electron app)
- * via shell.openExternal() in the system browser.
+ * /auth/desktop?state=...&local_port=4321 — opened by the Plan AI Recorder
+ * (Electron app), in the system browser or in its Apple sign-in window.
  *
- * This acts strictly as a silent bridge. By the time the user arrives here, they
- * have already authenticated on the main /login page.
+ * This acts strictly as a silent bridge. If the user is not signed in yet, it
+ * sends them to /login, which comes back here once they are.
  *
  * Flow:
- *  1. Login.tsx successfully authenticates via Popup/Email -> redirects here
+ *  1. We keep the recorder's `state` in sessionStorage (it survives /login)
  *  2. We wait for `firebaseUser` to hydrate in the state
- *  3. We wait for `userDb` to populate (guarantees backend registration is complete)
- *  4. We fetch the Custom Firebase Desktop Token from the backend
- *  5. We safely deliver the token to Electron via http://localhost:4321/auth?token=...
+ *  3. We fetch a one-time desktop code from the backend
+ *  4. We hand code AND state to the recorder, via the deep link, or via
+ *     http://localhost:<local_port>/auth in development
+ *
+ * The recorder accepts a code only with the state of the login it started, so
+ * a page cannot sign the recorder into another account (login CSRF). Without
+ * a state (an old recorder) we refuse to hand over a code at all.
  */
+const DESKTOP_STATE_KEY = "desktop_auth_state";
+// The recorder sends 32 random bytes in base64url (43 characters).
+const STATE_PATTERN = /^[A-Za-z0-9_-]{32,128}$/;
+// A bare port number. Anything else could turn "http://localhost:<port>" into
+// a URL on another host, which would receive the code.
+const PORT_PATTERN = /^[0-9]{2,5}$/;
+
+function readDesktopState(): string | null {
+  const fromUrl = new URLSearchParams(window.location.search).get("state");
+  if (fromUrl && STATE_PATTERN.test(fromUrl)) {
+    sessionStorage.setItem(DESKTOP_STATE_KEY, fromUrl);
+    return fromUrl;
+  }
+  const stored = sessionStorage.getItem(DESKTOP_STATE_KEY);
+  return stored && STATE_PATTERN.test(stored) ? stored : null;
+}
+
 const DesktopCallback: React.FC = () => {
   const { isAuthInitialized } = useAuth();
   const { deepLinkScheme } = useBrandIdentity();
@@ -36,37 +57,30 @@ const DesktopCallback: React.FC = () => {
   const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
   const [errorMsg, setErrorMsg] = useState<string>("");
 
-  const localPort =
+  const rawLocalPort =
     new URLSearchParams(window.location.search).get("local_port") ||
     sessionStorage.getItem("local_port");
+  const localPortValid = !rawLocalPort || PORT_PATTERN.test(rawLocalPort);
+  const localPort = rawLocalPort && localPortValid ? rawLocalPort : null;
+  const autoTrigger = new URLSearchParams(window.location.search).get("auto_trigger");
+  const [desktopState] = useState<string | null>(() => readDesktopState());
 
   console.log("[DesktopCallback] === INIT ===");
-  console.log("[DesktopCallback] Full URL:", window.location.href);
-  console.log(
-    "[DesktopCallback] local_port from URL:",
-    new URLSearchParams(window.location.search).get("local_port"),
-  );
-  console.log(
-    "[DesktopCallback] local_port from sessionStorage:",
-    sessionStorage.getItem("local_port"),
-  );
-  console.log("[DesktopCallback] resolved localPort:", localPort);
-  console.log(
-    "[DesktopCallback] desktop_auth from sessionStorage:",
-    sessionStorage.getItem("desktop_auth"),
-  );
-  console.log("[DesktopCallback] deepLinkScheme:", "will log when used");
+  console.log("[DesktopCallback] local_port:", localPort, "valid:", localPortValid);
+  console.log("[DesktopCallback] state present:", !!desktopState);
 
   const [triggerGetDesktopToken] = useGetDesktopTokenMutation();
 
   const cancelAuth = useCallback(() => {
-    if (localPort) {
-      navigator.sendBeacon(`http://localhost:${localPort}/auth-cancel`);
+    if (localPort && desktopState) {
+      navigator.sendBeacon(
+        `http://localhost:${localPort}/auth-cancel?state=${encodeURIComponent(desktopState)}`,
+      );
       window.setTimeout(() => window.close(), 100);
     }
     setStatus("error");
     setErrorMsg("Authentication was cancelled.");
-  }, [localPort]);
+  }, [localPort, desktopState]);
 
   useEffect(() => {
     if (!isAuthInitialized) {
@@ -78,16 +92,28 @@ const DesktopCallback: React.FC = () => {
       return;
     }
 
+    // Refuse before any code exists: a code must only ever travel with the
+    // state of the recorder that asked for it, to the recorder itself.
+    if (!localPortValid) {
+      setStatus("error");
+      setErrorMsg("This sign-in link is not valid. Start the sign-in again from Plan AI Recorder.");
+      return;
+    }
+    if (!desktopState) {
+      setStatus("error");
+      setErrorMsg(
+        "This sign-in link is missing its security check. Update Plan AI Recorder to the latest version, then sign in again from the app.",
+      );
+      return;
+    }
+
     if (!firebaseUser) {
       console.log("[DesktopCallback] No firebase user found, redirecting to login...");
-      // If we landed here without an active session somehow, bump them back to the login screen
-      if (localPort) {
-        console.log("[DesktopCallback] Redirecting to login with local port...");
-        window.location.href = `/login?desktop_auth=true&local_port=${localPort}`;
-      } else {
-        console.log("[DesktopCallback] Redirecting to login...");
-        window.location.href = `/login`;
-      }
+      // The state stays in sessionStorage; /login brings the user back here.
+      const params = new URLSearchParams({ desktop_auth: "true" });
+      if (localPort) params.set("local_port", localPort);
+      if (autoTrigger === "apple") params.set("auto_trigger", "apple");
+      window.location.href = `/login?${params.toString()}`;
       return;
     }
 
@@ -123,18 +149,20 @@ const DesktopCallback: React.FC = () => {
           }
 
           const authCode = fetchResponse.data.code;
+          const query = `code=${encodeURIComponent(authCode)}&state=${encodeURIComponent(desktopState)}`;
+          // One login, one hand-off: a reload of this tab must not reuse it.
+          sessionStorage.removeItem(DESKTOP_STATE_KEY);
 
           if (localPort) {
             console.log("[DesktopCallback] Delivering code via local HTTP server...");
             // Dev mode: deliver code via local HTTP server
-            const url = `http://localhost:${localPort}/auth?code=${encodeURIComponent(authCode)}`;
-            window.location.href = url;
+            window.location.href = `http://localhost:${localPort}/auth?${query}`;
             setStatus("success");
             console.log("[DesktopCallback] Code delivered successfully.");
           } else {
             // Prod mode: deliver via custom protocol handler
             console.log("[DesktopCallback] Delivering code via custom protocol handler...");
-            window.location.href = `${deepLinkScheme}://auth?code=${encodeURIComponent(authCode)}`;
+            window.location.href = `${deepLinkScheme}://auth?${query}`;
             setStatus("success");
           }
           return; // Success! Loop ends.
@@ -152,7 +180,17 @@ const DesktopCallback: React.FC = () => {
     };
 
     attemptFetch();
-  }, [isAuthInitialized, firebaseUser, triggerGetDesktopToken, localPort, status, deepLinkScheme]);
+  }, [
+    isAuthInitialized,
+    firebaseUser,
+    triggerGetDesktopToken,
+    localPort,
+    localPortValid,
+    autoTrigger,
+    desktopState,
+    status,
+    deepLinkScheme,
+  ]);
 
   return (
     <Box

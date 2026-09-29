@@ -37,7 +37,7 @@ import {
 } from "../store/apis/slideApi";
 import { useDispatch } from "react-redux";
 import { setToastMessage } from "../store/slices/app/appSlice";
-import { openSharedLink } from "../utils/openSharedLink";
+import { openSharedLink, shareAndGetLinkKey } from "../utils/openSharedLink";
 import { exportToPptx } from "../services/pptxExportService";
 import EditPresentationDialog from "../components/slides/EditPresentationDialog";
 
@@ -61,10 +61,12 @@ const Slides: React.FC = () => {
 
   const handleOpenPublicLink = async (pres: PresentationResponse) => {
     try {
-      await openSharedLink(`/p/${pres.id}`, () =>
-        pres.isPublic
-          ? Promise.resolve()
-          : updatePresentation({ id: pres.id, data: { isPublic: true } }).unwrap(),
+      await openSharedLink(
+        (linkKey) => `/p/${linkKey}`,
+        () =>
+          shareAndGetLinkKey(pres, () =>
+            updatePresentation({ id: pres.id, data: { isPublic: true } }).unwrap(),
+          ),
       );
     } catch {
       dispatch(setToastMessage({ severity: "error", message: t("common.sharing.failed") }));

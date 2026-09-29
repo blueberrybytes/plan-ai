@@ -33,6 +33,8 @@ import { navigate } from "../../navigation/navigation";
 import { logEvent, setUserId, setUserProperties } from "firebase/analytics";
 import axios from "axios";
 import { User as UserType } from "../../types/UserTypes";
+import i18n from "../../i18n";
+import { mfaSignInErrorKey, signInWithMfa } from "../../services/mfaService";
 
 // API imports
 import { ApiResponseUserResponse, projectApi } from "../apis/projectApi";
@@ -43,6 +45,12 @@ import { authApi } from "../apis/authApi";
 const getApiBaseUrl = () => {
   const url = process.env.REACT_APP_API_BACKEND_URL || "";
   return url.replace(/\/+$/, "");
+};
+
+/** Sign-in error text: a translated message for two-step verification errors, else Firebase's. */
+const signInErrorMessage = (error: any): string => {
+  const mfaKey = mfaSignInErrorKey(error);
+  return mfaKey ? i18n.t(mfaKey) : error?.message;
 };
 
 /**
@@ -63,7 +71,8 @@ function* loginMicrosoftFunc(): Generator<any, void, any> {
     console.log("Starting Microsoft login process");
     const provider = new OAuthProvider("microsoft.com");
     // Optionally add scopes if needed in future: provider.addScope("User.Read");
-    const result: UserCredential = yield call(signInWithPopup, auth, provider);
+    // Asks for the authenticator code when the account has two-step verification
+    const result: UserCredential = yield call(signInWithMfa, () => signInWithPopup(auth, provider));
     const user = result.user;
     console.log("Microsoft login successful, user:", user.uid, user.email);
 
@@ -81,7 +90,6 @@ function* loginMicrosoftFunc(): Generator<any, void, any> {
       uid: user.uid,
       creationTime: user.metadata.creationTime,
       lastSignInTime: user.metadata.lastSignInTime,
-      token,
       emailVerified,
     };
 
@@ -137,7 +145,7 @@ function* loginMicrosoftFunc(): Generator<any, void, any> {
     }
   } catch (error: any) {
     const appError: AppExceptionType = {
-      message: error.message,
+      message: signInErrorMessage(error),
       cause: ErrorCause.UNKNOWN,
     };
     yield put(sessionError(appError));
@@ -153,7 +161,8 @@ function* loginAppleFunc(): Generator<any, void, any> {
     const provider = new OAuthProvider("apple.com");
     provider.addScope("email");
     provider.addScope("name");
-    const result: UserCredential = yield call(signInWithPopup, auth, provider);
+    // Asks for the authenticator code when the account has two-step verification
+    const result: UserCredential = yield call(signInWithMfa, () => signInWithPopup(auth, provider));
     const user = result.user;
     console.log("Apple login successful, user:", user.uid, user.email);
 
@@ -171,7 +180,6 @@ function* loginAppleFunc(): Generator<any, void, any> {
       uid: user.uid,
       creationTime: user.metadata.creationTime,
       lastSignInTime: user.metadata.lastSignInTime,
-      token,
       emailVerified,
     };
 
@@ -227,7 +235,7 @@ function* loginAppleFunc(): Generator<any, void, any> {
     }
   } catch (error: any) {
     const appError: AppExceptionType = {
-      message: error.message,
+      message: signInErrorMessage(error),
       cause: ErrorCause.UNKNOWN,
     };
     yield put(sessionError(appError));
@@ -237,10 +245,10 @@ function* loginAppleFunc(): Generator<any, void, any> {
 }
 
 function* loginStats(user: User): Generator<any, void, any> {
-  // Set user ID and properties in Firebase Analytics
+  // Set user ID and properties in Firebase Analytics.
+  // The email is not sent: the uid is enough to tell users apart.
   yield call(setUserId, analytics, user.uid);
   yield call(setUserProperties, analytics, {
-    email: user.email,
     creation_time: user.metadata.creationTime,
     last_sign_in: user.metadata.lastSignInTime,
   });
@@ -253,11 +261,9 @@ function* loginStats(user: User): Generator<any, void, any> {
 function* loginEmailFunc(action: ReturnType<typeof loginEmail>): Generator<any, void, any> {
   try {
     const { email, password } = action.payload;
-    const userCredential: UserCredential = yield call(
-      signInWithEmailAndPassword,
-      auth,
-      email,
-      password,
+    // Asks for the authenticator code when the account has two-step verification
+    const userCredential: UserCredential = yield call(signInWithMfa, () =>
+      signInWithEmailAndPassword(auth, email, password),
     );
     const user: User = userCredential.user;
 
@@ -313,7 +319,6 @@ function* loginEmailFunc(action: ReturnType<typeof loginEmail>): Generator<any, 
       uid: user.uid,
       creationTime: user.metadata.creationTime,
       lastSignInTime: user.metadata.lastSignInTime,
-      token,
       emailVerified: true,
     };
 
@@ -362,6 +367,10 @@ function* loginEmailFunc(action: ReturnType<typeof loginEmail>): Generator<any, 
         break;
     }
 
+    // Errors from the two-step verification step get their own message
+    const mfaKey = mfaSignInErrorKey(error);
+    if (mfaKey) message = i18n.t(mfaKey);
+
     const appError: AppExceptionType = { message, cause };
     yield put(sessionError(appError));
   } finally {
@@ -375,7 +384,8 @@ function* loginGoogleFunc(): Generator<any, void, any> {
     console.log("Starting Google login process");
     const provider = new GoogleAuthProvider();
 
-    const result: UserCredential = yield call(signInWithPopup, auth, provider);
+    // Asks for the authenticator code when the account has two-step verification
+    const result: UserCredential = yield call(signInWithMfa, () => signInWithPopup(auth, provider));
     const user = result.user;
 
     console.log("Google login successful, user:", user.uid, user.email);
@@ -394,7 +404,6 @@ function* loginGoogleFunc(): Generator<any, void, any> {
       uid: user.uid,
       creationTime: user.metadata.creationTime,
       lastSignInTime: user.metadata.lastSignInTime,
-      token,
       emailVerified,
     };
 
@@ -457,7 +466,7 @@ function* loginGoogleFunc(): Generator<any, void, any> {
     }
   } catch (error: any) {
     const appError: AppExceptionType = {
-      message: error.message,
+      message: signInErrorMessage(error),
       cause: ErrorCause.UNKNOWN,
     };
     yield put(sessionError(appError));
@@ -487,7 +496,6 @@ function* signupEmailFunc(action: ReturnType<typeof signupEmail>): Generator<any
       uid: user.uid,
       creationTime: user.metadata.creationTime,
       lastSignInTime: user.metadata.lastSignInTime,
-      token,
       emailVerified: !!user.emailVerified,
     };
 
@@ -603,10 +611,30 @@ function* forgotPasswordFunc(action: ReturnType<typeof forgotPassword>): Generat
   }
 }
 
+// Assistant chat histories kept in localStorage (see AssistantChatPanel and useAssistantChat).
+const LOCAL_CHAT_KEY_PREFIXES = ["assistant_v2:", "local:project_assistant_"];
+
+/** Removes chat histories from localStorage so they do not stay on a shared computer. */
+function clearLocalChatHistory(): void {
+  try {
+    const keys = Object.keys(localStorage);
+    for (const key of keys) {
+      if (LOCAL_CHAT_KEY_PREFIXES.some((prefix) => key.startsWith(prefix))) {
+        localStorage.removeItem(key);
+      }
+    }
+  } catch (error) {
+    console.error("Could not clear local chat history:", error);
+  }
+}
+
 function* logoutFunc(): Generator<any, void, any> {
   try {
     // First, sign out from Firebase
     yield call(signOut, auth);
+
+    // Chat histories live outside Redux, so resetStore does not remove them
+    yield call(clearLocalChatHistory);
 
     // Reset all API states (shared with resetSessionAllSaga)
     yield call(resetAllApiStates);

@@ -7,6 +7,9 @@
     "node": "22.23.1"
   },
   "jest": {
+    "transformIgnorePatterns": [
+      "node_modules/(?!(@standard-schema)/)"
+    ],
     "collectCoverageFrom": [
       "src/**/*.{ts,tsx,js,jsx}",
       "!src/**/index.{ts,tsx,js,jsx}",
@@ -88,6 +91,7 @@
     "date-fns": "2.30.0",
     "dayjs": "^1.11.13",
     "docx": "^9.6.0",
+    "dompurify": "^3.4.2",
     "downloadjs": "^1.4.7",
     "file-saver": "^2.0.5",
     "firebase": "^11.1.0",
@@ -99,6 +103,7 @@
     "mermaid": "^11.16.0",
     "papaparse": "^5.5.3",
     "pptxgenjs": "3.12.0",
+    "qrcode.react": "^4.2.0",
     "react": "18",
     "react-big-calendar": "^1.19.4",
     "react-dom": "18",

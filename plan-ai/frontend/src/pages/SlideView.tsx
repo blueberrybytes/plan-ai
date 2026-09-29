@@ -33,7 +33,7 @@ import { useTranslation } from "react-i18next";
 import SidebarLayout from "../components/layout/SidebarLayout";
 import SlideRenderer from "../components/slides/SlideRenderer";
 import { useGetPresentationQuery, useUpdatePresentationMutation } from "../store/apis/slideApi";
-import { openSharedLink } from "../utils/openSharedLink";
+import { openSharedLink, shareAndGetLinkKey } from "../utils/openSharedLink";
 import { useDispatch } from "react-redux";
 import { setToastMessage } from "../store/slices/app/appSlice";
 import { useGetBrandThemesQuery } from "../store/apis/brandThemeApi";
@@ -331,10 +331,12 @@ const SlideView: React.FC = () => {
     if (!presentation?.id) return;
     const presentationId = presentation.id;
     try {
-      await openSharedLink(`/p/${presentationId}`, () =>
-        presentation.isPublic
-          ? Promise.resolve()
-          : updatePresentation({ id: presentationId, data: { isPublic: true } }).unwrap(),
+      await openSharedLink(
+        (linkKey) => `/p/${linkKey}`,
+        () =>
+          shareAndGetLinkKey(presentation, () =>
+            updatePresentation({ id: presentationId, data: { isPublic: true } }).unwrap(),
+          ),
       );
     } catch {
       showSharingError();

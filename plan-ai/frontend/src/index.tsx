@@ -8,7 +8,6 @@ import { PersistGate } from "redux-persist/integration/react";
 import SnackbarProvider from "./providers/SnackbarProvider";
 import ErrorFallback from "./components/error/ErrorFallback";
 import { ErrorBoundary } from "react-error-boundary";
-import Clarity from "@microsoft/clarity";
 import dayjs from "dayjs";
 import localizedFormat from "dayjs/plugin/localizedFormat";
 import utc from "dayjs/plugin/utc";
@@ -27,9 +26,7 @@ dayjs.extend(relativeTime);
 
 initLoggerSink();
 
-if (process.env.REACT_APP_MICROSOFT_CLARITY_ID) {
-  Clarity.init(process.env.REACT_APP_MICROSOFT_CLARITY_ID);
-}
+// Microsoft Clarity is started per route by ClarityRouteGate (marketing pages only).
 
 const attachGlobalErrorListeners = () => {
   const globalScope = window as Window &

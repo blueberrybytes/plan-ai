@@ -2,6 +2,7 @@
 import { useCallback, useState } from "react";
 import { useSelector } from "react-redux";
 import { RootState } from "../../../store/store";
+import { TokenService } from "../../../services/tokenService";
 import type { ChatAttachment } from "../../../store/apis/chatApi";
 
 export interface AssistantUIMessage {
@@ -43,7 +44,6 @@ export function useAssistantStream({
   onMessagesChange,
   initialMessages,
 }: UseAssistantStreamOptions = {}) {
-  const token = useSelector((state: RootState) => state.auth.user?.token);
   const activeWorkspaceId = useSelector((state: RootState) => state.app.activeWorkspaceId);
 
   const [messages, setMessagesState] = useState<AssistantUIMessage[]>(initialMessages ?? []);
@@ -114,7 +114,7 @@ export function useAssistantStream({
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
+            ...(await TokenService.getAuthHeaders()),
             "x-workspace-id": activeWorkspaceId || "",
           },
           body: JSON.stringify({
@@ -165,7 +165,7 @@ export function useAssistantStream({
         setIsStreaming(false);
       }
     },
-    [isStreaming, messages, token, activeWorkspaceId, projectId, setMessages],
+    [isStreaming, messages, activeWorkspaceId, projectId, setMessages],
   );
 
   return {

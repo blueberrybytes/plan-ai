@@ -29,6 +29,7 @@ import {
 } from "@mui/icons-material";
 import { useSelector } from "react-redux";
 import { RootState } from "../../store/store";
+import { TokenService } from "../../services/tokenService";
 import AssistantMessageRenderer from "./AssistantMessageRenderer";
 import AiModelSelector from "../common/AiModelSelector";
 import { useGetAssistantSkillsQuery } from "../../store/apis/chatApi";
@@ -45,7 +46,6 @@ export const FloatingAssistant: React.FC = () => {
   const { productName } = useBrandIdentity();
   const [isOpen, setIsOpen] = useState(false);
   const anchorRef = useRef<HTMLButtonElement | null>(null);
-  const token = useSelector((state: RootState) => state.auth.user?.token);
   const activeWorkspaceId = useSelector((state: RootState) => state.app.activeWorkspaceId);
   // Hydrate from localStorage synchronously so the selector doesn't flash "Auto Model"
   // before the saved preference loads.
@@ -133,7 +133,7 @@ export const FloatingAssistant: React.FC = () => {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
+          ...(await TokenService.getAuthHeaders()),
           "x-workspace-id": activeWorkspaceId || "",
         },
         body: JSON.stringify({

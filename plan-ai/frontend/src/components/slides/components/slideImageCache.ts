@@ -12,6 +12,8 @@
  *     duplicate fetches: if two components request the same URL simultaneously,
  *     only one network call is made.
  */
+import { TokenService } from "../../../services/tokenService";
+
 const cache = new Map<string, Promise<string>>();
 
 const backendUrl = (): string => (process.env.REACT_APP_API_BACKEND_URL || "").replace(/\/+$/, "");
@@ -30,7 +32,15 @@ export const fetchProxiedSlideImage = (url: string): Promise<string> => {
   }
 
   if (!cache.has(url)) {
-    const promise = fetch(`${backendUrl()}/api/proxy/image?url=${encodeURIComponent(url)}`)
+    // The proxy needs a signed-in user. Public pages have no session, so they use the
+    // direct URL straight away (same as the fallback below).
+    const promise = TokenService.getIdToken()
+      .then((token) => {
+        if (!token) throw new Error("No session for the image proxy");
+        return fetch(`${backendUrl()}/api/proxy/image?url=${encodeURIComponent(url)}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+      })
       .then((res) => {
         if (!res.ok) throw new Error(`Proxy responded ${res.status}`);
         return res.json();

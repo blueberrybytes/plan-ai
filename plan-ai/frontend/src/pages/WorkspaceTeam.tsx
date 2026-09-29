@@ -28,12 +28,13 @@ import RefreshIcon from "@mui/icons-material/Refresh";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import CheckIcon from "@mui/icons-material/Check";
 import InsightsIcon from "@mui/icons-material/Insights";
-import { useTranslation } from "react-i18next";
+import { Trans, useTranslation } from "react-i18next";
 import { useSelector, useDispatch } from "react-redux";
 import SidebarLayout from "../components/layout/SidebarLayout";
 import ThemeSelect from "../components/theme/ThemeSelect";
 import { AiUsageContent } from "./AiUsage";
 import WorkspaceMembersModal from "../components/layout/WorkspaceMembersModal";
+import WorkspaceSecuritySection from "../components/workspace/security/WorkspaceSecuritySection";
 import EditWorkspaceMemberModal from "../components/layout/EditWorkspaceMemberModal";
 import {
   useGetWorkspaceMembersQuery,
@@ -477,6 +478,8 @@ const WorkspaceTeam: React.FC = () => {
     if (canViewUsage) list.push({ id: "analytics", label: "My usage" });
     if (activeWorkspace?.role === "OWNER" && isByokTrack)
       list.push({ id: "settings", label: "Settings" });
+    if (activeWorkspace?.role === "OWNER" || activeWorkspace?.role === "ADMIN")
+      list.push({ id: "security", label: t("workspaceSecurity.tab") });
     return list;
   }, [
     activeMembers.length,
@@ -484,6 +487,7 @@ const WorkspaceTeam: React.FC = () => {
     activeWorkspace?.role,
     canViewUsage,
     isByokTrack,
+    t,
   ]);
 
   // Sync tab value with query param ?tab=
@@ -527,15 +531,13 @@ const WorkspaceTeam: React.FC = () => {
                 </IconButton>
               </Tooltip>
             </Box>
-            <Typography
-              variant="body1"
-              color="text.secondary"
-              dangerouslySetInnerHTML={{
-                __html: t("workspaceTeam.description", {
-                  workspaceName: activeWorkspace?.name || "",
-                }),
-              }}
-            />
+            <Typography variant="body1" color="text.secondary">
+              {/* The workspace name is user data: pass it as a React child, never as HTML. */}
+              <Trans
+                i18nKey="workspaceTeam.description"
+                components={{ name: <strong>{activeWorkspace?.name || ""}</strong> }}
+              />
+            </Typography>
           </Box>
           <Box sx={{ display: "flex", gap: 2 }}>
             {isAdmin && (
@@ -920,6 +922,8 @@ const WorkspaceTeam: React.FC = () => {
           <AiUsageContent hideBreadcrumbs />
         ) : tabs[tabValue]?.id === "settings" && activeWorkspace?.role === "OWNER" ? (
           <WorkspaceSettingsSection activeWorkspace={activeWorkspace} />
+        ) : tabs[tabValue]?.id === "security" && activeWorkspace ? (
+          <WorkspaceSecuritySection workspace={activeWorkspace} />
         ) : null}
       </Box>
 

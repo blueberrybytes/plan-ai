@@ -6,7 +6,7 @@
   <meta name="viewport" content="initial-scale=1, width=device-width" />
   <meta name="theme-color" content="#000000" />
   <meta name="description"
-    content="Plan AI Privacy Policy describing how transcript data, generated tasks, and workspace analytics are protected in our open-source BYOK architecture." />
+    content="Plan AI Privacy Policy describing how transcript data, generated tasks, and workspace analytics are protected in our source-available BYOK architecture." />
   <meta name="keywords" content="Plan AI, privacy policy, transcript security, AI project management, BlueberryBytes" />
   <link rel="canonical" href="https://plan-ai.blueberrybytes.com/privacy-policy" />
   <title>Privacy Policy - Plan AI Transcript Workflows</title>
@@ -151,12 +151,49 @@
     the API keys you provide to the application.
   </p>
 
-  <h2>7. Changes to This Privacy Policy</h2>
+  <h2>7. Service Providers</h2>
+  <p>
+    The hosted service uses these providers. Each one receives only the data it needs for its task.
+  </p>
+  <ul>
+    <li><strong>Railway</strong>: hosting of the application and its database.</li>
+    <li><strong>Google Firebase (Google Cloud)</strong>: sign-in and file storage.</li>
+    <li><strong>Deepgram</strong>: speech-to-text for meeting audio.</li>
+    <li>
+      <strong>OpenRouter</strong>: sends meeting text to the language model provider chosen for your workspace
+      (for example OpenAI, Anthropic or Google), to write notes, tasks and documents. That model provider also
+      receives the text.
+    </li>
+    <li>
+      <strong>Resend</strong>: delivers the emails of the service, such as workspace invitations, weekly digests and
+      the meeting notes you choose to send.
+    </li>
+    <li>
+      <strong>Stripe</strong>: subscriptions and payments. You enter card details on Stripe's pages, and Plan AI does
+      not store them.
+    </li>
+    <li><strong>Sentry</strong>: error reports, used to find and fix bugs.</li>
+    <li>
+      <strong>Google Analytics for Firebase</strong>: usage statistics for the web app, such as sign-ins. It receives
+      an internal user id, not your email address.
+    </li>
+    <li>
+      <strong>Microsoft Clarity</strong>: records how visitors use our public marketing pages, such as clicks and
+      scrolling, so we can improve them. It is only loaded on those pages for visitors who are not signed in, and it
+      stops when you enter the app.
+    </li>
+  </ul>
+  <p>
+    As described in section 3, workspaces that use their own keys send meeting audio and text to their own
+    Deepgram and language model accounts instead of ours.
+  </p>
+
+  <h2>8. Changes to This Privacy Policy</h2>
   <p>
     We may update this privacy policy from time to time. The date at the top shows the last change.
   </p>
 
-  <h2>8. Contact Us</h2>
+  <h2>9. Contact Us</h2>
   <p>
     If you have any questions about this privacy policy, please contact us at projects@blueberrybytes.com.
   </p>

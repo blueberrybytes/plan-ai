@@ -51,7 +51,7 @@ import type { DocDocumentResponse } from "../store/apis/docApi";
 import { useGetBrandThemesQuery } from "../store/apis/brandThemeApi";
 import { useDispatch } from "react-redux";
 import { setToastMessage } from "../store/slices/app/appSlice";
-import { openSharedLink } from "../utils/openSharedLink";
+import { openSharedLink, shareAndGetLinkKey } from "../utils/openSharedLink";
 import { splitMarkdownIntoChunks, MarkdownChunk } from "../utils/markdownParser";
 import HybridChunkEditor from "../components/docs/HybridChunkEditor";
 import TiptapEditor from "../components/docs/TiptapEditor";
@@ -226,8 +226,12 @@ const DocView: React.FC = () => {
   const handleOpenPublicLink = async () => {
     if (!id) return;
     try {
-      await openSharedLink(`/doc/public/${id}`, () =>
-        doc?.isPublic ? Promise.resolve() : updateDoc({ id, data: { isPublic: true } }).unwrap(),
+      await openSharedLink(
+        (linkKey) => `/doc/public/${linkKey}`,
+        () =>
+          shareAndGetLinkKey({ id, isPublic: doc?.isPublic, shareToken: doc?.shareToken }, () =>
+            updateDoc({ id, data: { isPublic: true } }).unwrap(),
+          ),
       );
     } catch {
       dispatch(setToastMessage({ severity: "error", message: t("common.sharing.failed") }));

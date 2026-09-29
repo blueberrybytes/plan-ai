@@ -9,10 +9,18 @@ import {
   List,
   ListItem,
   ListItemText,
+  Link,
 } from "@mui/material";
-import { useTranslation } from "react-i18next";
+import { Trans, useTranslation } from "react-i18next";
 
 export type HowToProvider = "jira" | "linear" | "trello";
+
+// Help links live in code, not in the translation strings, so the strings carry no HTML attributes.
+const PROVIDER_HELP_LINKS: Record<HowToProvider, string | undefined> = {
+  jira: "https://id.atlassian.com/manage-profile/security/api-tokens",
+  linear: undefined,
+  trello: "https://trello.com/app-key",
+};
 
 interface HowToConnectDialogProps {
   open: boolean;
@@ -29,13 +37,22 @@ export const HowToConnectDialog: React.FC<HowToConnectDialogProps> = ({
 
   if (!provider) return null;
 
-  const getSteps = () => {
-    // Each provider currently has 4 steps defined in the localization keys
-    type StepKey = `integrationsPage.helpDialog.providers.${HowToProvider}.step${1 | 2 | 3 | 4}`;
+  // Each provider currently has 4 steps defined in the localization keys
+  const stepKeys = ([1, 2, 3, 4] as const).map(
+    (stepNumber) => `integrationsPage.helpDialog.providers.${provider}.step${stepNumber}`,
+  );
 
-    return ([1, 2, 3, 4] as const).map((stepNumber) =>
-      t(`integrationsPage.helpDialog.providers.${provider}.step${stepNumber}` as StepKey),
-    );
+  // Only these tags are rendered from the translation strings. Anything else stays plain text.
+  // The link tag is called "anchor" because Trans treats "link" as a void HTML element.
+  const helpLink = PROVIDER_HELP_LINKS[provider];
+  const stepComponents = {
+    strong: <strong />,
+    code: <code />,
+    anchor: helpLink ? (
+      <Link href={helpLink} target="_blank" rel="noopener noreferrer" />
+    ) : (
+      <span />
+    ),
   };
 
   return (
@@ -47,8 +64,8 @@ export const HowToConnectDialog: React.FC<HowToConnectDialogProps> = ({
       </DialogTitle>
       <DialogContent dividers>
         <List sx={{ pt: 0 }}>
-          {getSteps().map((stepHtml, index) => (
-            <ListItem key={index} alignItems="flex-start" sx={{ px: 0 }}>
+          {stepKeys.map((stepKey, index) => (
+            <ListItem key={stepKey} alignItems="flex-start" sx={{ px: 0 }}>
               <Typography
                 variant="body1"
                 sx={{ mr: 2, fontWeight: "bold", color: "text.secondary" }}
@@ -57,7 +74,7 @@ export const HowToConnectDialog: React.FC<HowToConnectDialogProps> = ({
               </Typography>
               <ListItemText
                 primaryTypographyProps={{ variant: "body1" }}
-                primary={<span dangerouslySetInnerHTML={{ __html: stepHtml }} />}
+                primary={<Trans i18nKey={stepKey} components={stepComponents} />}
               />
             </ListItem>
           ))}

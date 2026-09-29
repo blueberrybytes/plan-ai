@@ -13,7 +13,6 @@ import { NavLink } from "react-router-dom";
 import PeopleIcon from "@mui/icons-material/People";
 import MonetizationOnIcon from "@mui/icons-material/MonetizationOn";
 import MailIcon from "@mui/icons-material/MailOutline";
-import ChatIcon from "@mui/icons-material/Chat";
 import ElectricalServicesIcon from "@mui/icons-material/ElectricalServices";
 import SidebarLayout from "../../components/layout/SidebarLayout";
 
@@ -42,12 +41,6 @@ const AdminDashboard: React.FC = () => {
       description: "Monitor tokens and test the MCP SSE endpoint.",
       path: "/admin/mcp",
       icon: <ElectricalServicesIcon fontSize="large" color="primary" />,
-    },
-    {
-      title: "Chat Stream Test",
-      description: "Test AI stream parsing and formatting components.",
-      path: "/chat-stream-test",
-      icon: <ChatIcon fontSize="large" color="primary" />,
     },
   ];
 

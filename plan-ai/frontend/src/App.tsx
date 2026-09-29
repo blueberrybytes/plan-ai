@@ -6,6 +6,8 @@ import { Provider, useDispatch, useSelector } from "react-redux";
 import { PersistGate } from "redux-persist/integration/react";
 import { selectUser } from "./store/slices/auth/authSelector";
 import NavigationProvider from "./providers/NavigationProvider";
+import ClarityRouteGate from "./components/analytics/ClarityRouteGate";
+import MfaCodeDialog from "./components/auth/MfaCodeDialog";
 import FirebaseAuthProvider, { useAuth } from "./providers/FirebaseAuthProvider";
 import TokenRefreshProvider from "./providers/TokenRefreshProvider";
 import Login from "./pages/Login";
@@ -39,7 +41,6 @@ import NotFound from "./pages/NotFound";
 import Docs from "./pages/Docs";
 import DocCreate from "./pages/DocCreate";
 import DocView from "./pages/DocView";
-import ChatStreamTest from "./pages/ChatStreamTest";
 import Downloads from "./pages/Downloads";
 import PublicDocView from "./pages/PublicDocView";
 import PublicPrototypeView from "./pages/PublicPrototypeView";
@@ -165,7 +166,6 @@ const AppContent: React.FC = () => {
           <Route path="/team/users/:targetUserId/usage" element={<AiUsage />} />
           <Route path="/onboarding" element={<Onboarding />} />
           <Route path="/pending-review" element={<PendingReview />} />
-          <Route path="/chat-stream-test" element={<ChatStreamTest />} />
         </Route>
 
         <Route path="*" element={<NotFound />} />
@@ -185,6 +185,9 @@ const AppRoutes: React.FC = () => {
       </Helmet>
       <Router>
         <NavigationProvider />
+        <ClarityRouteGate />
+        {/* Code prompt for sign-ins that need two-step verification */}
+        <MfaCodeDialog />
         <FirebaseAuthProvider>
           {/* Conditionally render AppContent with or without TokenRefreshProvider */}
           <Routes>

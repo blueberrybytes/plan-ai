@@ -31,6 +31,7 @@ import ChatMessageItem from "./ChatMessageItem";
 import { useListProjectsQuery } from "../../store/apis/projectApi";
 import { useSelector } from "react-redux";
 import { RootState } from "../../store/store";
+import { TokenService } from "../../services/tokenService";
 import { useNavigate } from "react-router-dom";
 import AiModelSelector from "../common/AiModelSelector";
 
@@ -72,7 +73,6 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const userScrolledUp = useRef(false);
-  const token = useSelector((state: RootState) => state.auth.user?.token);
   const activeWorkspaceId = useSelector((state: RootState) => state.app.activeWorkspaceId);
 
   // Fetch contexts here to display chips only
@@ -133,7 +133,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
         const res = await fetch(`${baseUrl}/api/chat/threads/${activeThread.id}/attachments`, {
           method: "POST",
           headers: {
-            Authorization: `Bearer ${token}`,
+            ...(await TokenService.getAuthHeaders()),
             "x-workspace-id": activeWorkspaceId || "",
           },
           body: formData,
@@ -193,7 +193,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
+          ...(await TokenService.getAuthHeaders()),
           "x-workspace-id": activeWorkspaceId || "",
         },
         body: JSON.stringify({

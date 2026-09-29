@@ -500,7 +500,7 @@
       "close": "Cerrar",
       "providers": {
         "jira": {
-          "step1": "Ve a la página de Seguridad de Atlassian: <a href=\"https://id.atlassian.com/manage-profile/security/api-tokens\" target=\"_blank\" rel=\"noopener noreferrer\">API Tokens</a>.",
+          "step1": "Ve a la página de Seguridad de Atlassian: <anchor>API Tokens</anchor>.",
           "step2": "Haz clic en el botón <strong>Create API token</strong>.",
           "step3": "Etiqueta tu token (ej. \"Plan AI\") y establece una fecha de expiración si lo necesitas.",
           "step4": "Haz clic en <strong>Create</strong> y copia el token generado inmediatamente."
@@ -512,7 +512,7 @@
           "step4": "Etiquétalo \"Plan AI\" y presiona <strong>Create</strong>. Copia tu clave inmediatamente."
         },
         "trello": {
-          "step1": "Ve a la <a href=\"https://trello.com/app-key\" target=\"_blank\" rel=\"noopener noreferrer\">página de administración de Power-Ups de Trello</a>.",
+          "step1": "Ve a la <anchor>página de administración de Power-Ups de Trello</anchor>.",
           "step2": "Haz clic en <strong>New</strong> para crear una aplicación Power-Up personalizada. En Name pon \"Plan AI Integration\", selecciona tu workspace, acepta los términos y presiona <strong>Create</strong>.",
           "step3": "Copia la <strong>API Key</strong> que se muestra en la parte superior de la página en nuestra configuración.",
           "step4": "Haz clic en el enlace <strong>Token</strong> justo debajo de tu API Key en la misma página. Presiona <strong>Allow</strong> en la siguiente pantalla y copia la cadena del token de la página en blanco."
@@ -650,7 +650,7 @@
             "Controles de admin + audit logs",
             "Topes de presupuesto IA por asiento",
             "Brand themes para decks de cliente",
-            "SSO (Google + Microsoft)"
+            "Inicio de sesión con Google o Microsoft"
           ]
         },
         "businessManaged": {
@@ -671,7 +671,6 @@
           "tagline": "Instalación privada en tus propios servidores, con SLAs a medida.",
           "features": [
             "Instalación privada: la IA funciona en tus servidores",
-            "Papeleo de SOC 2",
             "DPA + MSA a petición",
             "Routing personalizado de Deepgram / modelos",
             "Onboarding + training"
@@ -699,6 +698,14 @@
         "ownKeys": {
           "title": "Tus claves, tus contratos",
           "description": "En la versión cloud puedes usar tus propias claves de OpenRouter y Deepgram. Así la IA funciona con tus cuentas y bajo tus propios acuerdos con esos proveedores."
+        },
+        "audio": {
+          "title": "Tú decides cuánto dura el audio",
+          "description": "Borra el audio de una reunión y conserva sus notas, o deja que el workspace lo borre solo pasados de 7 a 365 días. Pausa cuando quieras y avisa a los demás de que grabas con un mensaje."
+        },
+        "encrypted": {
+          "title": "Claves y tokens cifrados",
+          "description": "Tus claves de IA y los tokens de las herramientas conectadas se guardan cifrados en la base de datos, con la clave fuera de ella. Conectar una herramienta usa una petición firmada que caduca en 10 minutos."
         }
       }
     }
@@ -988,6 +995,7 @@
     }
   },
   "common": {
+    "externalImageBlocked": "No se ha cargado la imagen externa. Abre el enlace para verla.",
     "back": "Volver",
     "next": "Siguiente",
     "save": "Guardar",
@@ -1395,7 +1403,7 @@
   },
   "workspaceTeam": {
     "title": "Gestionar Equipo del Workspace",
-    "description": "Invita a compañeros a unirse a <strong>{{workspaceName}}</strong>. Tienen que crearse una cuenta antes de que los puedas añadir.",
+    "description": "Invita a compañeros a unirse a <name/>. Tienen que crearse una cuenta antes de que los puedas añadir.",
     "emailLabel": "Dirección de Email",
     "roleLabel": "Rol",
     "roleMember": "Miembro",
@@ -1470,7 +1478,178 @@
       "subscriptionRequired": "Suscripción requerida — ve a Facturación para elegir un plan."
     }
   },
+  "mfa": {
+    "prompt": {
+      "title": "Verificación en dos pasos",
+      "description": "Introduce el código de 6 cifras de tu app de autenticación.",
+      "codeLabel": "Código",
+      "verify": "Verificar"
+    },
+    "errors": {
+      "notEnabled": "La verificación en dos pasos aún no está disponible. Un administrador tiene que activarla antes en Firebase (Identity Platform).",
+      "cancelled": "Inicio de sesión cancelado. No se ha introducido el código.",
+      "unsupportedFactor": "Tu cuenta usa un segundo factor que esta app no admite. Contacta con soporte.",
+      "invalidCode": "El código no es correcto. Revisa la hora de tu móvil y vuelve a intentarlo.",
+      "recentLogin": "Por seguridad, cierra sesión, vuelve a entrar y repite este paso.",
+      "unverifiedEmail": "Verifica tu email antes de activar la verificación en dos pasos.",
+      "unsupportedFirstFactor": "La verificación en dos pasos no está disponible para este método de inicio de sesión.",
+      "alreadyEnrolled": "Este autenticador ya está configurado en tu cuenta.",
+      "tooManyFactors": "Tu cuenta ya tiene el máximo de segundos factores.",
+      "expired": "La configuración ha tardado demasiado. Empieza de nuevo.",
+      "signInAgain": "Tu sesión ha terminado. Vuelve a iniciar sesión.",
+      "generic": "La verificación en dos pasos ha fallado. Vuelve a intentarlo."
+    },
+    "enrol": {
+      "title": "Verificación en dos pasos",
+      "description": "Pide un código de una app de autenticación cada vez que inicias sesión.",
+      "sendVerification": "Enviar email de verificación",
+      "verificationSent": "Te hemos enviado un enlace de verificación. Ábrelo, vuelve aquí y repite el paso.",
+      "statusOn": "Activada",
+      "statusOff": "Desactivada",
+      "turnOn": "Activar",
+      "turnOff": "Desactivar",
+      "scanQr": "Escanea este código QR con tu app de autenticación (Google Authenticator, Microsoft Authenticator, 1Password...).",
+      "secretLabel": "O introduce esta clave a mano",
+      "codeLabel": "Código de 6 cifras de la app",
+      "verify": "Verificar y activar",
+      "factorName": "App de autenticación",
+      "enabled": "La verificación en dos pasos está activada.",
+      "disabled": "La verificación en dos pasos está desactivada.",
+      "removeTitle": "Desactivar la verificación en dos pasos",
+      "removeDescription": "Tu cuenta quedará protegida solo por tu método de inicio de sesión. Puede que tengas que volver a iniciar sesión.",
+      "removeConfirm": "Desactivar"
+    }
+  },
+  "voiceProfile": {
+    "title": "Perfil de voz",
+    "description": "Tu huella de voz sirve para ponerte nombre en las transcripciones. Es un dato biométrico y puedes borrarla cuando quieras.",
+    "delete": "Borrar perfil de voz",
+    "confirmTitle": "Borrar perfil de voz",
+    "confirmDescription": "Ya no se te reconocerá por la voz en las reuniones. Puedes grabar un perfil nuevo más adelante desde la app móvil o de escritorio.",
+    "deleted": "Perfil de voz borrado.",
+    "deleteFailed": "No se ha podido borrar el perfil de voz. Vuelve a intentarlo."
+  },
+  "workspaceSecurity": {
+    "tab": "Seguridad",
+    "ownerOnly": "Solo el propietario del workspace puede cambiar esto.",
+    "auditLog": {
+      "title": "Registro de auditoría",
+      "description": "Quién ha hecho qué en este workspace, de lo más reciente a lo más antiguo.",
+      "filterLabel": "Acción",
+      "filterAll": "Todas las acciones",
+      "columns": {
+        "time": "Fecha",
+        "who": "Quién",
+        "action": "Acción",
+        "target": "Objeto",
+        "details": "Detalles"
+      },
+      "system": "Sistema",
+      "loadMore": "Cargar más",
+      "downloadCsv": "Descargar CSV",
+      "empty": "Todavía no hay entradas.",
+      "loadFailed": "No se ha podido cargar el registro de auditoría. Vuelve a intentarlo.",
+      "retry": "Reintentar",
+      "actions": {
+        "member_invited": "Miembro invitado",
+        "member_added": "Miembro añadido",
+        "member_joined": "Miembro unido",
+        "member_removed": "Miembro eliminado",
+        "member_role_changed": "Rol de miembro cambiado",
+        "member_invitation_cancelled": "Invitación cancelada",
+        "settings_updated": "Ajustes actualizados",
+        "workspace_exported": "Datos del workspace exportados",
+        "workspace_ownership_transferred": "Propiedad transferida",
+        "workspace_deleted": "Workspace borrado",
+        "project_deleted": "Proyecto borrado",
+        "meeting_deleted": "Reunión borrada",
+        "meeting_audio_deleted": "Audio de reunión borrado",
+        "document_shared": "Documento compartido",
+        "document_unshared": "Documento dejado de compartir",
+        "presentation_shared": "Presentación compartida",
+        "presentation_unshared": "Presentación dejada de compartir",
+        "diagram_shared": "Diagrama compartido",
+        "diagram_unshared": "Diagrama dejado de compartir",
+        "integration_disconnected": "Integración desconectada",
+        "assistant_task_status_changed": "Estado de tarea cambiado por el asistente",
+        "assistant_task_assigned": "Tarea asignada por el asistente",
+        "platform_admin_access": "Acceso de un administrador de la plataforma"
+      },
+      "groups": {
+        "member": "Miembros",
+        "settings": "Ajustes",
+        "workspace": "Workspace",
+        "project": "Proyectos",
+        "meeting": "Reuniones",
+        "document": "Documentos",
+        "presentation": "Presentaciones",
+        "diagram": "Diagramas",
+        "integration": "Integraciones",
+        "assistant": "Asistente",
+        "platform_admin": "Administración de la plataforma"
+      }
+    },
+    "signInRules": {
+      "title": "Reglas de inicio de sesión",
+      "description": "Los miembros que no cumplan estas reglas no podrán abrir el workspace.",
+      "identityPlatformNote": "El SSO propio y la verificación en dos pasos necesitan tener activado Firebase Identity Platform.",
+      "domainsLabel": "Dominios de email permitidos",
+      "domainsHelper": "Escribe un dominio como acme.com y pulsa Intro. Déjalo vacío para permitir cualquier dominio.",
+      "invalidDomain": "\"{{domain}}\" no es un dominio válido.",
+      "requireMfa": "Exigir verificación en dos pasos",
+      "requireMfaHelper": "Los miembros tendrán que iniciar sesión con un código de una app de autenticación.",
+      "providerLabel": "Método de inicio de sesión obligatorio",
+      "providers": {
+        "none": "Cualquier método",
+        "google": "Google",
+        "microsoft": "Microsoft",
+        "apple": "Apple",
+        "password": "Email y contraseña",
+        "custom": "Proveedor SSO propio"
+      },
+      "customProviderLabel": "ID del proveedor SSO",
+      "customProviderHelper": "El ID del proveedor en Firebase, por ejemplo saml.acme u oidc.acme.",
+      "save": "Guardar reglas",
+      "saved": "Reglas de inicio de sesión guardadas.",
+      "saveFailed": "No se han podido guardar las reglas de inicio de sesión."
+    },
+    "data": {
+      "title": "Datos del workspace",
+      "export": {
+        "title": "Exportar todos los datos",
+        "description": "Descarga reuniones, tareas, ficheros, documentos, chats y el registro de auditoría en un solo fichero JSON. No incluye claves ni tokens.",
+        "button": "Exportar todos los datos",
+        "done": "Exportación descargada.",
+        "failed": "No se han podido exportar los datos del workspace."
+      },
+      "transfer": {
+        "title": "Transferir la propiedad",
+        "description": "Haz propietario a otro miembro. Tú pasarás a ser administrador.",
+        "button": "Transferir la propiedad",
+        "memberLabel": "Nuevo propietario",
+        "noMembers": "Invita antes a un miembro. Solo los miembros activos pueden ser propietarios.",
+        "confirm": "Transferir",
+        "done": "Propiedad transferida.",
+        "failed": "No se ha podido transferir la propiedad."
+      },
+      "delete": {
+        "title": "Borrar el workspace",
+        "description": "Borra el workspace y todos sus datos: reuniones con su audio, ficheros, documentos, chats y miembros. No se puede deshacer.",
+        "button": "Borrar el workspace",
+        "dialogWarning": "Cancela antes cualquier suscripción de pago. Para confirmar, escribe el nombre del workspace:",
+        "confirmLabel": "Nombre del workspace",
+        "confirm": "Borrar para siempre",
+        "done": "Workspace borrado.",
+        "failed": "No se ha podido borrar el workspace."
+      }
+    }
+  },
   "workspace": {
+    "accessRules": {
+      "mfaRequired": "Este workspace exige la verificación en dos pasos. Actívala en tu cuenta y vuelve a iniciar sesión.",
+      "ssoRequired": "Este workspace exige que inicies sesión con la cuenta de tu empresa.",
+      "emailDomainNotAllowed": "El dominio de tu email no está permitido en este workspace. Pide acceso a un administrador del workspace."
+    },
     "identifiers": {
       "title": "Identificadores",
       "description": "Necesarios para conectar este workspace con integraciones de servidor, como el bot de Telegram. Pégalos en tu fichero .env.",

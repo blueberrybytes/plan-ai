@@ -33,6 +33,10 @@ import {
 } from "@mui/icons-material";
 import { toPng } from "html-to-image";
 import { useNavigate, useParams } from "react-router-dom";
+import { useDispatch } from "react-redux";
+import { useTranslation } from "react-i18next";
+import { openSharedLink, shareAndGetLinkKey } from "../utils/openSharedLink";
+import { setToastMessage } from "../store/slices/app/appSlice";
 import {
   useGetDiagramQuery,
   useUpdateDiagramMutation,
@@ -44,6 +48,8 @@ import { useGetBrandThemesQuery } from "../store/apis/brandThemeApi";
 
 const DiagramView: React.FC = () => {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
+  const { t } = useTranslation();
   const { diagramId } = useParams<{ diagramId: string }>();
 
   const {
@@ -164,11 +170,18 @@ const DiagramView: React.FC = () => {
 
   const handleOpenPublicLink = async () => {
     if (!diagramId) return;
-    if (!diagram?.isPublic) {
-      await updateDiagram({ id: diagramId, body: { isPublic: true } });
+    try {
+      await openSharedLink(
+        (linkKey) => `/diagram/public/${linkKey}`,
+        () =>
+          shareAndGetLinkKey(
+            { id: diagramId, isPublic: diagram?.isPublic, shareToken: diagram?.shareToken },
+            () => updateDiagram({ id: diagramId, body: { isPublic: true } }).unwrap(),
+          ),
+      );
+    } catch {
+      dispatch(setToastMessage({ severity: "error", message: t("common.sharing.failed") }));
     }
-    const publicUrl = `${window.location.origin}/diagram/public/${diagramId}`;
-    window.open(publicUrl, "_blank");
   };
 
   const handleAssistantSubmit = async () => {

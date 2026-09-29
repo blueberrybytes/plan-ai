@@ -20,7 +20,7 @@ export type UserApp = {
   uid: string;
   creationTime?: string;
   lastSignInTime?: string;
-  token: string;
+  // No ID token here: this slice is persisted to localStorage. Use TokenService.getIdToken().
   emailVerified: boolean;
   displayName?: string | null;
 };

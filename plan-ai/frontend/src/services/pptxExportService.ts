@@ -1,12 +1,17 @@
 import PptxGenJS from "pptxgenjs";
+import { TokenService } from "./tokenService";
 
 const fetchProxiedImage = async (url: string): Promise<string> => {
   try {
+    // The proxy needs a signed-in user; without a session the image is skipped below.
+    const token = await TokenService.getIdToken();
+    if (!token) throw new Error("No session for the image proxy");
     // Strip trailing slash(es) so we don't end up with a `…com//api/…`
     // double-slash request that hits the Express 404 catch-all.
     const backendUrl = (process.env.REACT_APP_API_BACKEND_URL || "").replace(/\/+$/, "");
     const proxyResponse = await fetch(
       `${backendUrl}/api/proxy/image?url=${encodeURIComponent(url)}`,
+      { headers: { Authorization: `Bearer ${token}` } },
     );
     if (!proxyResponse.ok) throw new Error("Proxy fetch failed");
     const proxyData = await proxyResponse.json();

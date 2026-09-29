@@ -38,7 +38,7 @@ import {
 } from "../store/apis/docApi";
 import { useDispatch } from "react-redux";
 import { setToastMessage } from "../store/slices/app/appSlice";
-import { openSharedLink } from "../utils/openSharedLink";
+import { openSharedLink, shareAndGetLinkKey } from "../utils/openSharedLink";
 import { useListProjectsQuery } from "../store/apis/projectApi";
 
 const Docs: React.FC = () => {
@@ -60,10 +60,12 @@ const Docs: React.FC = () => {
 
   const handleOpenPublicLink = async (doc: DocDocumentResponse) => {
     try {
-      await openSharedLink(`/doc/public/${doc.id}`, () =>
-        doc.isPublic
-          ? Promise.resolve()
-          : updateDoc({ id: doc.id, data: { isPublic: true } }).unwrap(),
+      await openSharedLink(
+        (linkKey) => `/doc/public/${linkKey}`,
+        () =>
+          shareAndGetLinkKey(doc, () =>
+            updateDoc({ id: doc.id, data: { isPublic: true } }).unwrap(),
+          ),
       );
     } catch {
       dispatch(setToastMessage({ severity: "error", message: t("common.sharing.failed") }));

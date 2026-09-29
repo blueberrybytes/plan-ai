@@ -14,7 +14,7 @@ import i18n from "../i18n";
 const createBaseQuery = (customBaseUrl?: string) =>
   fetchBaseQuery({
     baseUrl: customBaseUrl || process.env.REACT_APP_API_BACKEND_URL || "",
-    prepareHeaders: (headers, { getState, endpoint }) => {
+    prepareHeaders: async (headers, { getState, endpoint }) => {
       const user = selectUser(getState() as RootState);
       const activeWorkspaceId = selectActiveWorkspaceId(getState() as RootState);
 
@@ -27,8 +27,19 @@ const createBaseQuery = (customBaseUrl?: string) =>
         headers.set("X-Workspace-Id", activeWorkspaceId);
       }
 
-      if (user?.token) {
-        headers.set("Authorization", `Bearer ${user.token}`);
+      // The ID token is read from Firebase for every request and never kept in Redux.
+      // getIdToken() waits for Firebase to restore the session on page load.
+      // A failure here (offline after sleep, revoked session) must not throw out
+      // of prepareHeaders: the request then goes without a token, gets a 401,
+      // and the reauth path below handles it.
+      let token: string | null = null;
+      try {
+        token = await TokenService.getIdToken();
+      } catch (error) {
+        console.warn("Could not get an ID token for this request", error);
+      }
+      if (token) {
+        headers.set("Authorization", `Bearer ${token}`);
       } else {
         console.warn(
           `No token available for request to ${endpoint}, path: ${currentPath}. Authentication may fail.`,
@@ -113,10 +124,10 @@ const createBaseQueryWithReauth =
           // Wait longer for the auth state to fully propagate and stabilize
           await new Promise((resolve) => setTimeout(resolve, 2000));
 
-          // Verify we still have a user and token before retrying
+          // Verify we are still signed in before retrying
           const updatedUser = selectUser(api.getState() as RootState);
 
-          if (updatedUser?.token) {
+          if (updatedUser) {
             // Retry the initial query with new token
             result = await customBaseQuery(args, api, extraOptions);
           } else {
@@ -154,7 +165,7 @@ const createBaseQueryWithReauth =
         const currentState = api.getState() as RootState;
         const updatedUser = selectUser(currentState);
 
-        if (updatedUser?.token) {
+        if (updatedUser) {
           console.log(`Token refresh finished, retrying request to ${requestUrl}`);
           result = await customBaseQuery(args, api, extraOptions);
         } else {
@@ -184,6 +195,27 @@ const createBaseQueryWithReauth =
           autoHideDuration: 7000,
         }),
       );
+    }
+
+    // Workspace sign-in rules: the backend answers 403 with a `code`. Show the reason as an
+    // error. A 403 never logs the user out: the session is valid, the workspace refuses access.
+    if (result.error && httpStatus === 403) {
+      const errorData = result.error.data as { code?: string; message?: string } | undefined;
+      const accessRuleKeys: Record<string, string> = {
+        mfa_required: "workspace.accessRules.mfaRequired",
+        sso_required: "workspace.accessRules.ssoRequired",
+        email_domain_not_allowed: "workspace.accessRules.emailDomainNotAllowed",
+      };
+      const messageKey = errorData?.code ? accessRuleKeys[errorData.code] : undefined;
+      if (messageKey) {
+        api.dispatch(
+          setToastMessage({
+            message: i18n.t(messageKey),
+            severity: "error",
+            autoHideDuration: 8000,
+          }),
+        );
+      }
     }
 
     // Handle rate limit responses (429 Too Many Requests)
@@ -266,7 +298,7 @@ const createBaseQueryWithReauth =
 
       // Check if we have a user in the store before attempting to refresh the token
       const user = selectUser(api.getState() as RootState);
-      if (user?.token) {
+      if (user) {
         try {
           // Use TokenService to handle token refresh
           const newToken = await TokenService.handleTokenRefresh(api.dispatch);
@@ -277,9 +309,9 @@ const createBaseQueryWithReauth =
 
             await new Promise((resolve) => setTimeout(resolve, 2000)); // Increased to 2 seconds
 
-            // Verify we still have a user and token before retrying
+            // Verify we are still signed in before retrying
             const updatedUser = selectUser(api.getState() as RootState);
-            if (!updatedUser?.token) {
+            if (!updatedUser) {
               console.warn("No user/token found after refresh, skipping retry");
               return result;
             }

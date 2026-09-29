@@ -5,6 +5,8 @@ import {
   Lock as LockIcon,
   LinkOff as LinkOffIcon,
   Key as KeyIcon,
+  AutoDelete as AutoDeleteIcon,
+  EnhancedEncryption as EncryptionIcon,
   ArrowForward as ArrowForwardIcon,
 } from "@mui/icons-material";
 import { useTranslation } from "react-i18next";
@@ -25,6 +27,8 @@ const SecuritySection: React.FC = () => {
     { key: "privateFiles", icon: <LockIcon /> },
     { key: "sharing", icon: <LinkOffIcon /> },
     { key: "ownKeys", icon: <KeyIcon /> },
+    { key: "audio", icon: <AutoDeleteIcon /> },
+    { key: "encrypted", icon: <EncryptionIcon /> },
   ];
 
   return (

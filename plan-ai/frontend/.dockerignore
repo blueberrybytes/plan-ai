@@ -1,0 +1,6 @@
+# Only the static build reaches the final image; this keeps the build stage
+# small and stops a local node_modules from being copied over the fresh install.
+node_modules
+build
+coverage
+*.log

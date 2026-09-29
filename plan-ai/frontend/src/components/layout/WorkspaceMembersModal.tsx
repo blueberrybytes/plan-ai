@@ -16,7 +16,7 @@ import {
   Alert,
   CircularProgress,
 } from "@mui/material";
-import { useTranslation } from "react-i18next";
+import { Trans, useTranslation } from "react-i18next";
 import {
   useGetMyWorkspacesQuery,
   useInviteWorkspaceMemberMutation,
@@ -87,15 +87,13 @@ const WorkspaceMembersModal: React.FC<WorkspaceMembersModalProps> = ({ open, onC
       <DialogTitle>{t("workspaceTeam.title")}</DialogTitle>
       <DialogContent>
         <Box sx={{ mt: 1, mb: 3 }}>
-          <Typography
-            variant="body2"
-            color="text.secondary"
-            dangerouslySetInnerHTML={{
-              __html: t("workspaceTeam.description", {
-                workspaceName: activeWorkspace?.name || "",
-              }),
-            }}
-          />
+          <Typography variant="body2" color="text.secondary">
+            {/* The workspace name is user data: pass it as a React child, never as HTML. */}
+            <Trans
+              i18nKey="workspaceTeam.description"
+              components={{ name: <strong>{activeWorkspace?.name || ""}</strong> }}
+            />
+          </Typography>
         </Box>
 
         {errorMsg && (

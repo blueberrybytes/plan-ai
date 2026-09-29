@@ -1,0 +1,5 @@
+Contact: mailto:security@blueberrybytes.com
+Expires: 2027-09-29T00:00:00.000Z
+Preferred-Languages: en, es
+Canonical: https://plan-ai.blueberrybytes.com/.well-known/security.txt
+Policy: https://github.com/blueberrybytes/plan-ai/blob/main/SECURITY.md

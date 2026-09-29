@@ -506,7 +506,7 @@
       "close": "Close",
       "providers": {
         "jira": {
-          "step1": "Go to your Atlassian Security page: <a href=\"https://id.atlassian.com/manage-profile/security/api-tokens\" target=\"_blank\" rel=\"noopener noreferrer\">API Tokens</a>.",
+          "step1": "Go to your Atlassian Security page: <anchor>API Tokens</anchor>.",
           "step2": "Click the <strong>Create API token</strong> button.",
           "step3": "Label your token (e.g., \"Plan AI\") and set an expiration date if needed.",
           "step4": "Click <strong>Create</strong> and copy the generated token immediately."
@@ -518,7 +518,7 @@
           "step4": "Label it \"Plan AI\" and hit <strong>Create</strong>. Copy your key immediately."
         },
         "trello": {
-          "step1": "Go to the <a href=\"https://trello.com/app-key\" target=\"_blank\" rel=\"noopener noreferrer\">Trello Power-Up Admin page</a>.",
+          "step1": "Go to the <anchor>Trello Power-Up Admin page</anchor>.",
           "step2": "Click <strong>New</strong> to create a custom Power-Up app. Under Name, put \"Plan AI Integration\", select your workspace, accept the terms, and hit <strong>Create</strong>.",
           "step3": "Copy the <strong>API Key</strong> displayed at the top of the page into our settings.",
           "step4": "Click the <strong>Token</strong> link right below your API Key on the same page. Hit <strong>Allow</strong> on the next screen, and copy the token string from the blank page."
@@ -656,7 +656,7 @@
             "Admin controls + audit logs",
             "Per-seat AI budget caps",
             "Brand themes for client decks",
-            "SSO (Google + Microsoft)"
+            "Sign in with Google or Microsoft"
           ]
         },
         "businessManaged": {
@@ -677,7 +677,6 @@
           "tagline": "Private install on your own servers, with custom SLAs.",
           "features": [
             "Private install: the AI runs on your servers",
-            "SOC 2 paperwork",
             "DPA + MSA on request",
             "Custom Deepgram / model routing",
             "Onboarding + training"
@@ -705,6 +704,14 @@
         "ownKeys": {
           "title": "Your keys, your provider contracts",
           "description": "On the cloud version you can bring your own OpenRouter and Deepgram keys. The AI then runs under your own accounts and your own agreements with those providers."
+        },
+        "audio": {
+          "title": "You decide how long audio stays",
+          "description": "Delete a meeting's audio and keep its notes, or let the workspace delete audio automatically after 7 to 365 days. Pause whenever you want, and tell the other people you are recording with one message."
+        },
+        "encrypted": {
+          "title": "Encrypted keys and tokens",
+          "description": "Your AI keys and the tokens of connected tools are encrypted in the database, with the key kept outside it. Connecting a tool uses a signed request that expires in 10 minutes."
         }
       }
     }
@@ -994,6 +1001,7 @@
     }
   },
   "common": {
+    "externalImageBlocked": "External image not loaded. Open the link to view it.",
     "back": "Back",
     "next": "Next",
     "save": "Save",
@@ -1401,7 +1409,7 @@
   },
   "workspaceTeam": {
     "title": "Manage Workspace Team",
-    "description": "Invite colleagues to join <strong>{{workspaceName}}</strong>. They must create an account first before you can add them.",
+    "description": "Invite colleagues to join <name/>. They must create an account first before you can add them.",
     "emailLabel": "Email Address",
     "roleLabel": "Role",
     "roleMember": "Member",
@@ -1476,7 +1484,178 @@
       "subscriptionRequired": "Subscription required — open Billing to choose a plan."
     }
   },
+  "mfa": {
+    "prompt": {
+      "title": "Two-step verification",
+      "description": "Enter the 6-digit code from your authenticator app.",
+      "codeLabel": "Code",
+      "verify": "Verify"
+    },
+    "errors": {
+      "notEnabled": "Two-step verification is not available yet. An administrator must turn it on in Firebase (Identity Platform) first.",
+      "cancelled": "Sign-in cancelled. The code was not entered.",
+      "unsupportedFactor": "Your account uses a second factor this app does not support. Contact support.",
+      "invalidCode": "The code is not correct. Check the time on your phone and try again.",
+      "recentLogin": "For your security, sign out and sign in again, then repeat this step.",
+      "unverifiedEmail": "Verify your email address before you turn on two-step verification.",
+      "unsupportedFirstFactor": "Two-step verification is not available for this sign-in method.",
+      "alreadyEnrolled": "This authenticator is already set up on your account.",
+      "tooManyFactors": "Your account already has the maximum number of second factors.",
+      "expired": "The setup took too long. Start again.",
+      "signInAgain": "Your session ended. Sign in again.",
+      "generic": "Two-step verification failed. Try again."
+    },
+    "enrol": {
+      "title": "Two-step verification",
+      "description": "Ask for a code from an authenticator app each time you sign in.",
+      "sendVerification": "Send verification email",
+      "verificationSent": "We sent a verification link to your email. Open it, then come back and try again.",
+      "statusOn": "On",
+      "statusOff": "Off",
+      "turnOn": "Turn on",
+      "turnOff": "Turn off",
+      "scanQr": "Scan this QR code with your authenticator app (Google Authenticator, Microsoft Authenticator, 1Password...).",
+      "secretLabel": "Or enter this key by hand",
+      "codeLabel": "6-digit code from the app",
+      "verify": "Verify and turn on",
+      "factorName": "Authenticator app",
+      "enabled": "Two-step verification is on.",
+      "disabled": "Two-step verification is off.",
+      "removeTitle": "Turn off two-step verification",
+      "removeDescription": "Your account will only be protected by your sign-in method. You may need to sign in again.",
+      "removeConfirm": "Turn off"
+    }
+  },
+  "voiceProfile": {
+    "title": "Voice profile",
+    "description": "Your voice print helps name you in transcripts. It is biometric data and you can delete it at any time.",
+    "delete": "Delete voice profile",
+    "confirmTitle": "Delete voice profile",
+    "confirmDescription": "Speakers will no longer be matched to you by voice. You can record a new profile later from the mobile or desktop app.",
+    "deleted": "Voice profile deleted.",
+    "deleteFailed": "Could not delete the voice profile. Try again."
+  },
+  "workspaceSecurity": {
+    "tab": "Security",
+    "ownerOnly": "Only the workspace owner can change this.",
+    "auditLog": {
+      "title": "Audit log",
+      "description": "Who did what in this workspace, newest first.",
+      "filterLabel": "Action",
+      "filterAll": "All actions",
+      "columns": {
+        "time": "Time",
+        "who": "Who",
+        "action": "Action",
+        "target": "Target",
+        "details": "Details"
+      },
+      "system": "System",
+      "loadMore": "Load more",
+      "downloadCsv": "Download CSV",
+      "empty": "No entries yet.",
+      "loadFailed": "Could not load the audit log. Try again.",
+      "retry": "Retry",
+      "actions": {
+        "member_invited": "Member invited",
+        "member_added": "Member added",
+        "member_joined": "Member joined",
+        "member_removed": "Member removed",
+        "member_role_changed": "Member role changed",
+        "member_invitation_cancelled": "Invitation cancelled",
+        "settings_updated": "Settings updated",
+        "workspace_exported": "Workspace data exported",
+        "workspace_ownership_transferred": "Ownership transferred",
+        "workspace_deleted": "Workspace deleted",
+        "project_deleted": "Project deleted",
+        "meeting_deleted": "Meeting deleted",
+        "meeting_audio_deleted": "Meeting audio deleted",
+        "document_shared": "Document shared",
+        "document_unshared": "Document sharing stopped",
+        "presentation_shared": "Presentation shared",
+        "presentation_unshared": "Presentation sharing stopped",
+        "diagram_shared": "Diagram shared",
+        "diagram_unshared": "Diagram sharing stopped",
+        "integration_disconnected": "Integration disconnected",
+        "assistant_task_status_changed": "Task status changed by the assistant",
+        "assistant_task_assigned": "Task assigned by the assistant",
+        "platform_admin_access": "Access by a platform admin"
+      },
+      "groups": {
+        "member": "Members",
+        "settings": "Settings",
+        "workspace": "Workspace",
+        "project": "Projects",
+        "meeting": "Meetings",
+        "document": "Documents",
+        "presentation": "Presentations",
+        "diagram": "Diagrams",
+        "integration": "Integrations",
+        "assistant": "Assistant",
+        "platform_admin": "Platform admin"
+      }
+    },
+    "signInRules": {
+      "title": "Sign-in rules",
+      "description": "Members who do not meet these rules cannot open the workspace.",
+      "identityPlatformNote": "Custom SSO and two-step verification need Firebase Identity Platform turned on.",
+      "domainsLabel": "Allowed email domains",
+      "domainsHelper": "Type a domain such as acme.com and press Enter. Leave empty to allow any domain.",
+      "invalidDomain": "\"{{domain}}\" is not a valid domain.",
+      "requireMfa": "Require two-step verification",
+      "requireMfaHelper": "Members must sign in with a code from an authenticator app.",
+      "providerLabel": "Required sign-in method",
+      "providers": {
+        "none": "Any method",
+        "google": "Google",
+        "microsoft": "Microsoft",
+        "apple": "Apple",
+        "password": "Email and password",
+        "custom": "Custom SSO provider"
+      },
+      "customProviderLabel": "SSO provider id",
+      "customProviderHelper": "The provider id from Firebase, for example saml.acme or oidc.acme.",
+      "save": "Save rules",
+      "saved": "Sign-in rules saved.",
+      "saveFailed": "Could not save the sign-in rules."
+    },
+    "data": {
+      "title": "Workspace data",
+      "export": {
+        "title": "Export all data",
+        "description": "Download meetings, tasks, files, documents, chats and the audit log as one JSON file. Keys and tokens are not included.",
+        "button": "Export all data",
+        "done": "Export downloaded.",
+        "failed": "Could not export the workspace data."
+      },
+      "transfer": {
+        "title": "Transfer ownership",
+        "description": "Make another member the owner. You become an admin.",
+        "button": "Transfer ownership",
+        "memberLabel": "New owner",
+        "noMembers": "Invite a member first. Only active members can become the owner.",
+        "confirm": "Transfer",
+        "done": "Ownership transferred.",
+        "failed": "Could not transfer ownership."
+      },
+      "delete": {
+        "title": "Delete workspace",
+        "description": "Delete the workspace and all its data: meetings with their audio, files, documents, chats and members. This cannot be undone.",
+        "button": "Delete workspace",
+        "dialogWarning": "Cancel any paid subscription first. To confirm, type the workspace name:",
+        "confirmLabel": "Workspace name",
+        "confirm": "Delete for ever",
+        "done": "Workspace deleted.",
+        "failed": "Could not delete the workspace."
+      }
+    }
+  },
   "workspace": {
+    "accessRules": {
+      "mfaRequired": "This workspace requires two-step verification. Turn it on for your account and sign in again.",
+      "ssoRequired": "This workspace requires you to sign in with your company account.",
+      "emailDomainNotAllowed": "Your email domain is not allowed in this workspace. Ask a workspace admin for access."
+    },
     "identifiers": {
       "title": "Identifiers",
       "description": "Needed to connect this workspace to server-side integrations, such as the Telegram bot. Paste them into your .env file.",
