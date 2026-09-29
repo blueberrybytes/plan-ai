@@ -143,6 +143,15 @@ export default function DrawerLayout() {
         }} 
       />
       <Drawer.Screen
+        name="notes"
+        options={{
+          title: 'Notes',
+          drawerIcon: ({ color, size }: { color: string; size: number }) => (
+            <MaterialCommunityIcons name="note-text-outline" color={color} size={size} />
+          )
+        }}
+      />
+      <Drawer.Screen
         name="docs"
         options={{ 
           title: 'Docs',

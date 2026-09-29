@@ -31,6 +31,14 @@ export type UpdateSpeakerNamesBody = components['schemas']['UpdateSpeakerNamesBo
 export type TranscriptAudio        = components['schemas']['TranscriptAudioResponse'];
 export type RecordingBookmark      = components['schemas']['RecordingBookmark'];
 export type MeetingCalendarEvent   = components['schemas']['MeetingCalendarEvent'];
+export type Note                   = components['schemas']['NoteResponse'];
+export type NoteList               = components['schemas']['NoteListResponse'];
+export type CreateNoteRequest      = components['schemas']['CreateNoteRequest'];
+export type UpdateNoteRequest      = components['schemas']['UpdateNoteRequest'];
+export type NoteVisibility         = components['schemas']['NoteVisibilityValue'];
+export type NotePeriod             = components['schemas']['NotePeriodValue'];
+/** Which notes GET /api/notes returns. Mirrors the backend's list of scopes. */
+export type NoteScope = "all" | "inbox" | "pinned" | "mine" | "shared" | "trash";
 
 /**
  * An API error that keeps the HTTP status, so callers can tell a request
@@ -46,6 +54,25 @@ export class HttpError extends Error {
     this.name = "HttpError";
   }
 }
+
+/**
+ * A note PATCH sent with a baseVersion the server has moved past. `current`
+ * is the server's copy when the answer carried it, null otherwise (the app
+ * then fetches the note).
+ */
+export class NoteConflictError extends HttpError {
+  constructor(
+    message: string,
+    public readonly current: Note | null,
+  ) {
+    super(message, 409);
+    this.name = "NoteConflictError";
+  }
+}
+
+// Notes calls run in the background outbox. They never show an alert and
+// give up sooner than the default 60 s, so a bad network does not hold the queue.
+const NOTES_TIMEOUT_MS = 20000;
 
 let rawBaseUrl = process.env.EXPO_PUBLIC_PLAN_AI_API_URL ?? "http://localhost:8080";
 if (__DEV__ && Platform.OS === 'android') {
@@ -157,6 +184,29 @@ export const createPlanAiApi = (
   // Variant of safeFetch that suppresses the alert banner on network errors.
   // Use this when the caller already handles the error gracefully (e.g. .catch(() => [])).
   const silentFetch = (url: string, init?: RequestInit, timeoutMs = 60000) => safeFetch(url, init, true, timeoutMs);
+
+  // Auth headers with the workspace of a note. Falls back to the active one.
+  const noteHeaders = async (force: boolean, workspaceId?: string | null): Promise<HeadersInit> => {
+    const headers = { ...(await getAuthHeaders(force)) } as Record<string, string>;
+    if (workspaceId) headers["X-Workspace-Id"] = workspaceId;
+    return headers;
+  };
+
+  // Fetch for the notes outbox. Being offline is normal for it, so a network
+  // error is not sent to Sentry and never shows an alert. It becomes an
+  // HttpError with no status, which the outbox retries later.
+  const noteFetch = async (url: string, init: RequestInit): Promise<Response> => {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), NOTES_TIMEOUT_MS);
+    try {
+      return await fetch(url, { ...init, signal: controller.signal as any });
+    } catch (err) {
+      const aborted = err instanceof Error && err.name === "AbortError";
+      throw new HttpError(aborted ? "The server did not answer in time" : "No connection");
+    } finally {
+      clearTimeout(timeoutId);
+    }
+  };
 
   return {
     getAuthHeaders,
@@ -905,6 +955,115 @@ export const createPlanAiApi = (
         console.warn("[planAiApi] getCurrentMeeting failed:", err);
         return null;
       }
+    },
+
+    // ── Notes ──────────────────────────────────────────────────────────────
+    // Every notes call takes the note's own workspace. A note written in one
+    // workspace must reach that workspace even if the user switched since.
+    // A network error throws HttpError with no status, so the outbox retries.
+
+    async listNotes(
+      opts: {
+        scope?: NoteScope;
+        projectId?: string;
+        transcriptId?: string;
+        q?: string;
+        limit?: number;
+        cursor?: string;
+      } = {},
+      workspaceId?: string | null,
+    ): Promise<NoteList> {
+      const url = new URL(`${BASE_URL}/api/notes`);
+      if (opts.scope) url.searchParams.set("scope", opts.scope);
+      if (opts.projectId) url.searchParams.set("projectId", opts.projectId);
+      if (opts.transcriptId) url.searchParams.set("transcriptId", opts.transcriptId);
+      if (opts.q) url.searchParams.set("q", opts.q);
+      if (opts.limit) url.searchParams.set("limit", String(opts.limit));
+      if (opts.cursor) url.searchParams.set("cursor", opts.cursor);
+      const req = async (force: boolean) =>
+        noteFetch(url.toString(), { headers: await noteHeaders(force, workspaceId) });
+      return handleResponseWithRetry<NoteList>(await req(false), () => req(true));
+    },
+
+    async getNote(id: string, workspaceId?: string | null): Promise<Note> {
+      const req = async (force: boolean) =>
+        noteFetch(`${BASE_URL}/api/notes/${encodeURIComponent(id)}`, {
+          headers: await noteHeaders(force, workspaceId),
+        });
+      return handleResponseWithRetry<Note>(await req(false), () => req(true));
+    },
+
+    /** The user's daily or weekly note for a local date (YYYY-MM-DD), created empty the first time. */
+    async getPeriodNote(
+      period: NotePeriod,
+      date: string,
+      workspaceId?: string | null,
+    ): Promise<Note> {
+      const req = async (force: boolean) =>
+        noteFetch(
+          `${BASE_URL}/api/notes/period/${encodeURIComponent(period)}/${encodeURIComponent(date)}`,
+          { headers: await noteHeaders(force, workspaceId) },
+        );
+      return handleResponseWithRetry<Note>(await req(false), () => req(true));
+    },
+
+    /** Idempotent when `payload.id` is set: sending it again returns the first note. */
+    async createNote(payload: CreateNoteRequest, workspaceId?: string | null): Promise<Note> {
+      const req = async (force: boolean) =>
+        noteFetch(`${BASE_URL}/api/notes`, {
+          method: "POST",
+          headers: await noteHeaders(force, workspaceId),
+          body: JSON.stringify(payload),
+        });
+      return handleResponseWithRetry<Note>(await req(false), () => req(true));
+    },
+
+    /** Throws NoteConflictError when `baseVersion` is older than the server's. */
+    async updateNote(
+      id: string,
+      payload: UpdateNoteRequest,
+      workspaceId?: string | null,
+    ): Promise<Note> {
+      const req = async (force: boolean) =>
+        noteFetch(`${BASE_URL}/api/notes/${encodeURIComponent(id)}`, {
+          method: "PATCH",
+          headers: await noteHeaders(force, workspaceId),
+          body: JSON.stringify(payload),
+        });
+      let res = await req(false);
+      if (res.status === 401) res = await req(true);
+      if (res.status === 409) {
+        const body = (await res.json().catch(() => ({}))) as {
+          code?: string;
+          message?: string;
+          current?: Note | null;
+        };
+        const message = body.message ?? "HTTP 409";
+        if (body.code === "note_version_conflict") {
+          throw new NoteConflictError(message, body.current ?? null);
+        }
+        throw new HttpError(message, 409);
+      }
+      return handleResponseWithRetry<Note>(res, () => req(true));
+    },
+
+    /** Moves a note to the trash (kept 30 days). */
+    async trashNote(id: string, workspaceId?: string | null): Promise<void> {
+      const req = async (force: boolean) =>
+        noteFetch(`${BASE_URL}/api/notes/${encodeURIComponent(id)}`, {
+          method: "DELETE",
+          headers: await noteHeaders(force, workspaceId),
+        });
+      await handleResponseWithRetry<{ success: boolean }>(await req(false), () => req(true));
+    },
+
+    async restoreNote(id: string, workspaceId?: string | null): Promise<Note> {
+      const req = async (force: boolean) =>
+        noteFetch(`${BASE_URL}/api/notes/${encodeURIComponent(id)}/restore`, {
+          method: "POST",
+          headers: await noteHeaders(force, workspaceId),
+        });
+      return handleResponseWithRetry<Note>(await req(false), () => req(true));
     },
   };
 };

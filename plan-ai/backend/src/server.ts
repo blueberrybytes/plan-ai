@@ -337,13 +337,17 @@ app.use((err: unknown, req: express.Request, res: express.Response, next: expres
     "status" in err &&
     "message" in err
   ) {
-    const errObj = err as { status: number; message: string; code?: unknown };
+    const errObj = err as { status: number; message: string; code?: unknown; current?: unknown };
     console.warn(`[Controller Error] ${errObj.status}: ${errObj.message}`);
     // `code` tells the apps what to do, e.g. "mfa_required" for a workspace
-    // that needs two-step verification.
+    // that needs two-step verification. `current` is the server's copy of a
+    // note on a version conflict, so the app can keep both texts.
     res.status(errObj.status).json({
       message: errObj.message,
       ...(typeof errObj.code === "string" ? { code: errObj.code } : {}),
+      ...(errObj.code === "note_version_conflict" && errObj.current
+        ? { current: errObj.current }
+        : {}),
     });
     return;
   }

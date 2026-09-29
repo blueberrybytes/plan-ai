@@ -22,6 +22,7 @@ import { createPkcePair, queryParams, randomBase64Url } from '../utils/pkce';
 import * as Sentry from '@sentry/react-native';
 import { migrateLegacyRecordings } from '../services/recordingSessions';
 import { useOutboxProcessor } from '../services/recordingUploader';
+import { useNotesSync } from '../services/notesSync';
 
 const BASE_URL = process.env.EXPO_PUBLIC_PLAN_AI_API_URL ?? 'http://localhost:8080';
 const MICROSOFT_REDIRECT_URI = 'planaimobile://auth/microsoft/callback';
@@ -317,6 +318,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   // Saved recordings upload whenever the app is open and signed in.
   useOutboxProcessor(planAiApi, !!user && !backendPending);
+  // Notes written on the phone upload the same way (notesSync.ts).
+  useNotesSync(planAiApi, !!user && !backendPending, activeWorkspaceId);
 
   const signInWithGoogle = async () => {
     try {

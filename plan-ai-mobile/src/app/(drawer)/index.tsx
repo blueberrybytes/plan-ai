@@ -658,6 +658,18 @@ export default function DashboardScreen() {
         </View>
       )}
 
+      {/* Quick capture: the editor opens with the keyboard up and saves on the phone first. */}
+      <FAB
+        icon="note-plus-outline"
+        label="Note"
+        accessibilityLabel="New note"
+        style={[
+          styles.noteFab,
+          { backgroundColor: theme.colors.secondaryContainer, bottom: 20 + insets.bottom },
+        ]}
+        color={theme.colors.onSecondaryContainer}
+        onPress={() => router.push("/note/new" as Href)}
+      />
       <FAB
         icon={isImporting ? "timer-sand" : "file-music-outline"}
         size="small"
@@ -710,6 +722,12 @@ const styles = StyleSheet.create({
     margin: 16,
     right: 0,
     bottom: 20,
+    borderRadius: 16,
+  },
+  noteFab: {
+    position: "absolute",
+    margin: 16,
+    left: 0,
     borderRadius: 16,
   },
   // Centred above the 56 pt microphone button.
