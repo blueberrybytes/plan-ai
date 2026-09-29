@@ -33,6 +33,7 @@ import { onboardingApi } from "./apis/onboardingApi";
 import { analyticsApi } from "./apis/analyticsApi";
 import { mcpApi } from "./apis/mcpApi";
 import { billingApi } from "./apis/billingApi";
+import { notesApi } from "./apis/notesApi";
 
 // Only these slices are written to localStorage. RTK Query caches (projects, chats,
 // contexts, transcripts...) hold meeting data and must not stay on a shared computer,
@@ -116,6 +117,7 @@ const store = configureStore({
       analyticsApi.middleware,
       mcpApi.middleware,
       billingApi.middleware,
+      notesApi.middleware,
     ),
 });
 

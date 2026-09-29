@@ -1,5 +1,6 @@
 import type { AuditLogEntryResponse } from "../../../store/apis/workspaceApi";
 import {
+  AUDIT_ACTION_GROUPS,
   auditActionLabelKey,
   buildAuditCsv,
   formatAuditDetails,
@@ -35,6 +36,16 @@ describe("audit log format", () => {
     expect(auditActionLabelKey("platform_admin.access")).toBe(
       "workspaceSecurity.auditLog.actions.platform_admin_access",
     );
+    expect(auditActionLabelKey("note.shared")).toBe(
+      "workspaceSecurity.auditLog.actions.note_shared",
+    );
+    expect(auditActionLabelKey("note.unshared")).toBe(
+      "workspaceSecurity.auditLog.actions.note_unshared",
+    );
+    expect(auditActionLabelKey("note.deleted")).toBe(
+      "workspaceSecurity.auditLog.actions.note_deleted",
+    );
+    expect(AUDIT_ACTION_GROUPS).toContain("note");
     expect(auditActionLabelKey("something.new")).toBeNull();
   });
 

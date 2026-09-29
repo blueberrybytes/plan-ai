@@ -955,6 +955,7 @@
       "team": "Workspace Team",
       "sessions": "Projects",
       "chat": "Chat",
+      "notes": "Notes",
       "contexts": "Contexts",
       "slides": "Slides",
       "documents": "Documents",
@@ -1576,6 +1577,9 @@
         "presentation_unshared": "Presentation sharing stopped",
         "diagram_shared": "Diagram shared",
         "diagram_unshared": "Diagram sharing stopped",
+        "note_shared": "Note shared",
+        "note_unshared": "Note made private",
+        "note_deleted": "Shared note deleted",
         "integration_disconnected": "Integration disconnected",
         "assistant_task_status_changed": "Task status changed by the assistant",
         "assistant_task_assigned": "Task assigned by the assistant",
@@ -1590,6 +1594,7 @@
         "document": "Documents",
         "presentation": "Presentations",
         "diagram": "Diagrams",
+        "note": "Notes",
         "integration": "Integrations",
         "assistant": "Assistant",
         "platform_admin": "Platform admin"
@@ -1745,5 +1750,125 @@
     "callLink": "Call link",
     "invited": "Invited ({{count}}):",
     "nobody": "nobody else"
+  },
+  "notes": {
+    "title": "Notes",
+    "newNote": "New note",
+    "today": "Today",
+    "searchPlaceholder": "Search notes",
+    "shortcutHint": "Press N to start a new note.",
+    "selectHint": "Pick a note or start a new one.",
+    "untitled": "Untitled",
+    "titlePlaceholder": "Title",
+    "bodyPlaceholder": "Write here. Markdown works.",
+    "dailyTitle": "Daily note, {{date}}",
+    "weeklyTitle": "Week of {{date}}",
+    "conflictedCopy": "conflicted copy",
+    "byMember": "Shared by a member, {{when}}",
+    "readOnly": "A workspace member shared this note. You can read it but not edit it.",
+    "inTrash": "This note is in the trash. It is deleted for good 30 days after it was moved there.",
+    "loadMore": "Load more",
+    "loadFailed": "Could not load notes. Try again.",
+    "noteLoadFailed": "Could not open this note. It may have been deleted or made private.",
+    "retry": "Retry",
+    "back": "Back to notes",
+    "tabs": {
+      "inbox": "Inbox",
+      "all": "All",
+      "pinned": "Pinned",
+      "shared": "Shared",
+      "trash": "Trash"
+    },
+    "empty": {
+      "search": "No notes match your search.",
+      "inbox": {
+        "title": "Your inbox is empty",
+        "body": "New notes without a project or meeting land here."
+      },
+      "all": {
+        "title": "No notes yet",
+        "body": "Write down ideas, to-dos and meeting notes. They save as you type."
+      },
+      "pinned": {
+        "title": "Nothing pinned",
+        "body": "Pin a note to keep it at the top."
+      },
+      "shared": {
+        "title": "No shared notes",
+        "body": "Notes you or your team share with the workspace show here."
+      },
+      "mine": {
+        "title": "No notes yet",
+        "body": "Notes you write show here."
+      },
+      "trash": {
+        "title": "The trash is empty",
+        "body": "Deleted notes stay here for 30 days."
+      }
+    },
+    "status": {
+      "saving": "Saving",
+      "saved": "Saved",
+      "offline": "Offline",
+      "offlineHint": "Your changes are kept on this page and sent when you are back online.",
+      "error": "Not saved"
+    },
+    "format": {
+      "bold": "Bold",
+      "italic": "Italic",
+      "heading": "Heading",
+      "bulletList": "Bullet list",
+      "orderedList": "Numbered list",
+      "quote": "Quote",
+      "code": "Code block"
+    },
+    "actions": {
+      "pin": "Pin",
+      "unpin": "Unpin",
+      "share": "Share with the workspace",
+      "makePrivate": "Make private",
+      "delete": "Move to trash",
+      "restore": "Restore",
+      "deleteForever": "Delete forever",
+      "project": "Project",
+      "noProject": "No project",
+      "linkedProject": "Linked project",
+      "openInNotes": "Open in Notes"
+    },
+    "badges": {
+      "pinned": "Pinned",
+      "shared": "Shared with the workspace",
+      "daily": "Daily note",
+      "project": "Linked to a project",
+      "meeting": "Linked to a meeting"
+    },
+    "shareDialog": {
+      "title": "Share this note with the workspace?",
+      "body": "Every member of this workspace will be able to read it. Only you can edit it. You can make it private again at any time.",
+      "confirm": "Share",
+      "cancel": "Cancel"
+    },
+    "purgeDialog": {
+      "title": "Delete this note forever?",
+      "description": "The note is removed for good. You cannot undo this."
+    },
+    "section": {
+      "title": "Notes",
+      "add": "Add note",
+      "close": "Close",
+      "emptyTitle": "No notes here yet",
+      "emptyProject": "Notes you add here are linked to this project.",
+      "emptyMeeting": "Notes you add here are linked to this meeting."
+    },
+    "toast": {
+      "conflict": "This note changed on another device. Your text is saved as a new note, \"{{title}}\". The editor now shows the latest version.",
+      "conflictNoCopy": "This note changed on another device. The editor now shows the latest version.",
+      "saveFailed": "Could not save the note.",
+      "trashed": "Note moved to the trash.",
+      "restored": "Note restored.",
+      "purged": "Note deleted for good.",
+      "todayFailed": "Could not open today's note. Try again.",
+      "actionFailed": "That did not work. Try again."
+    }
   }
 }

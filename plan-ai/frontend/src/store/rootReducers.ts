@@ -32,6 +32,7 @@ import { onboardingApi } from "./apis/onboardingApi";
 import { analyticsApi } from "./apis/analyticsApi";
 import { mcpApi } from "./apis/mcpApi";
 import { billingApi } from "./apis/billingApi";
+import { notesApi } from "./apis/notesApi";
 
 // Define the combined reducers
 const appReducers = combineReducers({
@@ -66,6 +67,7 @@ const appReducers = combineReducers({
   [analyticsApi.reducerPath]: analyticsApi.reducer,
   [mcpApi.reducerPath]: mcpApi.reducer,
   [billingApi.reducerPath]: billingApi.reducer,
+  [notesApi.reducerPath]: notesApi.reducer,
 });
 
 // Create a root reducer that can handle the reset action
@@ -102,6 +104,7 @@ const rootReducers = (state: any, action: any) => {
       [aiUsageApi.reducerPath]: undefined,
       [analyticsApi.reducerPath]: undefined,
       [billingApi.reducerPath]: undefined,
+      [notesApi.reducerPath]: undefined,
       // Note: We deliberately exclude authApi, accountApi, userApi, adminApi, onboardingApi
       // because their context is global (User-level) and doesn't rotate.
       // We also exclude workspaceApi so the switcher UI doesn't stutter/reload its dropdown list.

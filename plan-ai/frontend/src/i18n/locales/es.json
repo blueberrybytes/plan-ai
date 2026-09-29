@@ -947,6 +947,7 @@
       "dashboard": "Panel de Control",
       "team": "Equipo de Trabajo",
       "chat": "Chat",
+      "notes": "Notas",
       "sessions": "Proyectos",
       "contexts": "Biblioteca",
       "docs": "Documentos",
@@ -1570,6 +1571,9 @@
         "presentation_unshared": "Presentación dejada de compartir",
         "diagram_shared": "Diagrama compartido",
         "diagram_unshared": "Diagrama dejado de compartir",
+        "note_shared": "Nota compartida",
+        "note_unshared": "Nota hecha privada",
+        "note_deleted": "Nota compartida borrada",
         "integration_disconnected": "Integración desconectada",
         "assistant_task_status_changed": "Estado de tarea cambiado por el asistente",
         "assistant_task_assigned": "Tarea asignada por el asistente",
@@ -1584,6 +1588,7 @@
         "document": "Documentos",
         "presentation": "Presentaciones",
         "diagram": "Diagramas",
+        "note": "Notas",
         "integration": "Integraciones",
         "assistant": "Asistente",
         "platform_admin": "Administración de la plataforma"
@@ -1739,5 +1744,125 @@
     "callLink": "Enlace de la llamada",
     "invited": "Invitados ({{count}}):",
     "nobody": "nadie más"
+  },
+  "notes": {
+    "title": "Notas",
+    "newNote": "Nueva nota",
+    "today": "Hoy",
+    "searchPlaceholder": "Buscar notas",
+    "shortcutHint": "Pulsa N para empezar una nota nueva.",
+    "selectHint": "Elige una nota o empieza una nueva.",
+    "untitled": "Sin título",
+    "titlePlaceholder": "Título",
+    "bodyPlaceholder": "Escribe aquí. Puedes usar Markdown.",
+    "dailyTitle": "Nota del día, {{date}}",
+    "weeklyTitle": "Semana del {{date}}",
+    "conflictedCopy": "copia en conflicto",
+    "byMember": "Compartida por un miembro, {{when}}",
+    "readOnly": "Un miembro del workspace ha compartido esta nota. Puedes leerla, pero no editarla.",
+    "inTrash": "Esta nota está en la papelera. Se borra del todo 30 días después de moverla allí.",
+    "loadMore": "Cargar más",
+    "loadFailed": "No se han podido cargar las notas. Vuelve a intentarlo.",
+    "noteLoadFailed": "No se ha podido abrir esta nota. Puede que se haya borrado o que ya no esté compartida.",
+    "retry": "Reintentar",
+    "back": "Volver a las notas",
+    "tabs": {
+      "inbox": "Bandeja",
+      "all": "Todas",
+      "pinned": "Fijadas",
+      "shared": "Compartidas",
+      "trash": "Papelera"
+    },
+    "empty": {
+      "search": "Ninguna nota coincide con la búsqueda.",
+      "inbox": {
+        "title": "Tu bandeja está vacía",
+        "body": "Aquí llegan las notas nuevas que no tienen proyecto ni reunión."
+      },
+      "all": {
+        "title": "Todavía no hay notas",
+        "body": "Apunta ideas, tareas y notas de reuniones. Se guardan mientras escribes."
+      },
+      "pinned": {
+        "title": "No hay nada fijado",
+        "body": "Fija una nota para tenerla siempre arriba."
+      },
+      "shared": {
+        "title": "No hay notas compartidas",
+        "body": "Aquí aparecen las notas que tú o tu equipo compartís con el workspace."
+      },
+      "mine": {
+        "title": "Todavía no hay notas",
+        "body": "Aquí aparecen las notas que escribes."
+      },
+      "trash": {
+        "title": "La papelera está vacía",
+        "body": "Las notas borradas se quedan aquí 30 días."
+      }
+    },
+    "status": {
+      "saving": "Guardando",
+      "saved": "Guardado",
+      "offline": "Sin conexión",
+      "offlineHint": "Tus cambios se quedan en esta página y se envían cuando vuelvas a tener conexión.",
+      "error": "No guardado"
+    },
+    "format": {
+      "bold": "Negrita",
+      "italic": "Cursiva",
+      "heading": "Encabezado",
+      "bulletList": "Lista con viñetas",
+      "orderedList": "Lista numerada",
+      "quote": "Cita",
+      "code": "Bloque de código"
+    },
+    "actions": {
+      "pin": "Fijar",
+      "unpin": "Dejar de fijar",
+      "share": "Compartir con el workspace",
+      "makePrivate": "Hacer privada",
+      "delete": "Mover a la papelera",
+      "restore": "Restaurar",
+      "deleteForever": "Borrar para siempre",
+      "project": "Proyecto",
+      "noProject": "Sin proyecto",
+      "linkedProject": "Proyecto vinculado",
+      "openInNotes": "Abrir en Notas"
+    },
+    "badges": {
+      "pinned": "Fijada",
+      "shared": "Compartida con el workspace",
+      "daily": "Nota del día",
+      "project": "Vinculada a un proyecto",
+      "meeting": "Vinculada a una reunión"
+    },
+    "shareDialog": {
+      "title": "¿Compartir esta nota con el workspace?",
+      "body": "Todos los miembros de este workspace podrán leerla. Solo tú puedes editarla. Puedes volver a hacerla privada cuando quieras.",
+      "confirm": "Compartir",
+      "cancel": "Cancelar"
+    },
+    "purgeDialog": {
+      "title": "¿Borrar esta nota para siempre?",
+      "description": "La nota se borra del todo. No se puede deshacer."
+    },
+    "section": {
+      "title": "Notas",
+      "add": "Añadir nota",
+      "close": "Cerrar",
+      "emptyTitle": "Todavía no hay notas",
+      "emptyProject": "Las notas que añadas aquí quedan vinculadas a este proyecto.",
+      "emptyMeeting": "Las notas que añadas aquí quedan vinculadas a esta reunión."
+    },
+    "toast": {
+      "conflict": "Esta nota ha cambiado en otro dispositivo. Tu texto se ha guardado como una nota nueva, \"{{title}}\". El editor muestra ahora la última versión.",
+      "conflictNoCopy": "Esta nota ha cambiado en otro dispositivo. El editor muestra ahora la última versión.",
+      "saveFailed": "No se ha podido guardar la nota.",
+      "trashed": "Nota movida a la papelera.",
+      "restored": "Nota restaurada.",
+      "purged": "Nota borrada para siempre.",
+      "todayFailed": "No se ha podido abrir la nota de hoy. Vuelve a intentarlo.",
+      "actionFailed": "No ha funcionado. Vuelve a intentarlo."
+    }
   }
 }

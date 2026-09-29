@@ -30,6 +30,7 @@ import {
 import { useParams, useNavigate } from "react-router-dom";
 import { useGetTranscriptQuery, useReprocessTranscriptMutation } from "../store/apis/transcriptApi";
 import SidebarLayout from "../components/layout/SidebarLayout";
+import NotesSection from "../components/notes/NotesSection";
 import { useDispatch } from "react-redux";
 import { setToastMessage } from "../store/slices/app/appSlice";
 import ReactMarkdown from "react-markdown";
@@ -894,6 +895,15 @@ const RecordingDetail: React.FC = () => {
             )}
           </CardContent>
         </Card>
+
+        {recordingId && (
+          <Box className="no-print" sx={{ mt: 3 }}>
+            <NotesSection
+              transcriptId={recordingId}
+              projectId={transcript.data?.projectId ?? null}
+            />
+          </Box>
+        )}
       </Box>
     </SidebarLayout>
   );

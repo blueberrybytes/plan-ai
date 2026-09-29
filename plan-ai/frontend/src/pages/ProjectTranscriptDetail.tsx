@@ -24,6 +24,7 @@ import {
   Place as LocationIcon,
 } from "@mui/icons-material";
 import SidebarLayout from "../components/layout/SidebarLayout";
+import NotesSection from "../components/notes/NotesSection";
 import {
   useGetProjectQuery,
   useGetProjectTranscriptQuery,
@@ -693,6 +694,8 @@ const ProjectTranscriptDetail: React.FC = () => {
                 </Card>
               </>
             )}
+
+            <NotesSection transcriptId={transcript.id} projectId={projectId} />
 
             <PostMeetingTasksPanel
               tasks={(transcript.metadata as TranscriptMetadata | null)?.postMeetingTasks}

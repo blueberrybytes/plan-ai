@@ -43,6 +43,7 @@ import CategoryFilterBar from "../components/project/CategoryFilterBar";
 import MeetingsTab from "../components/project/MeetingsTab";
 import ProjectFilesTab from "../components/project/ProjectFilesTab";
 import ProjectKeywordsTab from "../components/project/ProjectKeywordsTab";
+import NotesSection from "../components/notes/NotesSection";
 import AssistantChatPanel from "../components/chat/AssistantChatPanel";
 import ProjectDigestBanner from "../components/project/ProjectDigestBanner";
 import ProjectTaskDependencyDiagram from "../components/project/ProjectTaskDependencyDiagram";
@@ -120,6 +121,7 @@ const ProjectDetails: React.FC = () => {
     "timeline",
     "canvas",
     "keywords",
+    "notes",
     "assistant",
   ] as const;
   type TabValue = (typeof VALID_TABS)[number];
@@ -607,6 +609,7 @@ const ProjectDetails: React.FC = () => {
                       <Tab label="Files" value="files" />
                       <Tab label={t("meetings.tab", "Meetings")} value="meetings" />
                       <Tab label="Keywords" value="keywords" />
+                      <Tab label={t("notes.section.title")} value="notes" />
                       <Tab label={t("projectDetails.tabs.board")} value="board" />
                       <Tab label={t("projectDetails.tabs.diagram")} value="diagram" />
                       <Tab label={t("projectDetails.tabs.timeline")} value="timeline" />
@@ -617,6 +620,10 @@ const ProjectDetails: React.FC = () => {
                     {activeTab === "meetings" ? (
                       projectId ? (
                         <MeetingsTab projectId={projectId} />
+                      ) : null
+                    ) : activeTab === "notes" ? (
+                      projectId ? (
+                        <NotesSection projectId={projectId} />
                       ) : null
                     ) : activeTab === "assistant" ? (
                       projectId ? (

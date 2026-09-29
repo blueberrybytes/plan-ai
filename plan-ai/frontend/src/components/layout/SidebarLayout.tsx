@@ -37,6 +37,7 @@ import {
   ExpandMore as ExpandMoreIcon,
   Brush as BrushIcon,
   CreditCard as CreditCardIcon,
+  StickyNote2 as NotesIcon,
 } from "@mui/icons-material";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
@@ -78,6 +79,7 @@ const coreNavItems: NavItem[] = [
     icon: <ViewKanbanIcon fontSize="small" />,
   },
   { labelKey: "sidebarLayout.nav.chat", path: "/chat", icon: <ChatIcon fontSize="small" /> },
+  { labelKey: "sidebarLayout.nav.notes", path: "/notes", icon: <NotesIcon fontSize="small" /> },
 ];
 
 const libraryNavItems: NavItem[] = [
