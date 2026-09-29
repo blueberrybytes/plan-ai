@@ -61,6 +61,7 @@ import {
   deleteRecoveryAudio,
 } from "../utils/recoveryAudio";
 import ReactMarkdown from "react-markdown";
+import { markdownComponents } from "../utils/markdownComponents";
 import {
   DEEPGRAM_LANGUAGES,
   AUTO_LANGUAGE_OPTION,
@@ -142,7 +143,7 @@ const ChatMessageItem = ({
             msg.role === "user" ? "primary.contrastText" : "text.secondary",
         }}
       >
-        <ReactMarkdown>{msg.content}</ReactMarkdown>
+        <ReactMarkdown components={markdownComponents}>{msg.content}</ReactMarkdown>
       </Box>
 
       <IconButton
@@ -2993,7 +2994,7 @@ const Recording: React.FC = () => {
                     color: "text.secondary",
                   }}
                 >
-                  <ReactMarkdown>{liveSummary}</ReactMarkdown>
+                  <ReactMarkdown components={markdownComponents}>{liveSummary}</ReactMarkdown>
                 </Box>
               ) : (
                 <Typography

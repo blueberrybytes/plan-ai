@@ -35,7 +35,9 @@ import { WorkspaceMemberResponse } from "../services/planAiApi";
 
 const Profile: React.FC = () => {
   const navigate = useNavigate();
-  const { user, signOut, api, token } = useAuth();
+  const { user, dbUser, signOut, api, token } = useAuth();
+  // Diagnostics and crash tools: development builds, or platform admins.
+  const canUseDebugPanel = import.meta.env.DEV || dbUser?.role === "ADMIN";
 
   const [profileData, setProfileData] = useState<{
     name: string | null;
@@ -407,22 +409,24 @@ const Profile: React.FC = () => {
               </Box>
             </Stack>
 
-            <Button
-              variant="outlined"
-              color="inherit"
-              fullWidth
-              startIcon={<BugIcon />}
-              onClick={() => navigate("/debug")}
-              sx={{
-                mt: "auto",
-                py: 1.2,
-                mb: 1.5,
-                borderColor: "rgba(255,255,255,0.2)",
-                color: "text.secondary",
-              }}
-            >
-              Export Debug Logs
-            </Button>
+            {canUseDebugPanel && (
+              <Button
+                variant="outlined"
+                color="inherit"
+                fullWidth
+                startIcon={<BugIcon />}
+                onClick={() => navigate("/debug")}
+                sx={{
+                  mt: "auto",
+                  py: 1.2,
+                  mb: 1.5,
+                  borderColor: "rgba(255,255,255,0.2)",
+                  color: "text.secondary",
+                }}
+              >
+                Export Debug Logs
+              </Button>
+            )}
 
             <Button
               variant="outlined"
@@ -430,7 +434,8 @@ const Profile: React.FC = () => {
               fullWidth
               startIcon={<LogoutIcon />}
               onClick={handleLogout}
-              sx={{ py: 1.2, mb: 1 }}
+              // Keeps the buttons at the bottom when the debug button is hidden.
+              sx={{ mt: canUseDebugPanel ? 0 : "auto", py: 1.2, mb: 1 }}
             >
               Sign Out Securely
             </Button>

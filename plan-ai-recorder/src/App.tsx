@@ -149,6 +149,9 @@ const AppRoutes: React.FC = () => {
 
   const activeWorkspace = workspaces.find((w) => w.id === activeWorkspaceId);
 
+  // Diagnostics and crash tools: development builds, or platform admins.
+  const canUseDebugPanel = import.meta.env.DEV || dbUser?.role === "ADMIN";
+
   // Only BYOK workspaces need user-provided API keys. Managed plans get
   // platform-provided AI, courtesy workspaces use global fallback keys,
   // and workspaces without a plan yet are handled by the subscription gate.
@@ -336,7 +339,10 @@ const AppRoutes: React.FC = () => {
           path="/profile"
           element={user ? <Profile /> : <Navigate to="/login" replace />}
         />
-        <Route path="/debug" element={<Debug />} />
+        <Route
+          path="/debug"
+          element={canUseDebugPanel ? <Debug /> : <Navigate to="/" replace />}
+        />
         <Route
           path="/transcript/:id"
           element={user ? <TranscriptView /> : <Navigate to="/login" replace />}

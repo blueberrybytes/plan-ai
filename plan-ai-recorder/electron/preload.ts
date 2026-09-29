@@ -13,6 +13,9 @@ contextBridge.exposeInMainWorld("electron", {
   // Opens the web app /auth/desktop page in the system browser
   openDesktopAuth: (provider?: string): Promise<void> => ipcRenderer.invoke("open-desktop-auth", provider),
 
+  // Web URL of the login in progress (carries its state), or null
+  getDesktopAuthUrl: (): Promise<string | null> => ipcRenderer.invoke("get-desktop-auth-url"),
+
   // Clears Chromium defaultSession storage so Apple/Google Logins don't infinitely auto-connect
   clearAuthSession: (): Promise<boolean> => ipcRenderer.invoke("clear-auth-session"),
 
@@ -39,6 +42,13 @@ contextBridge.exposeInMainWorld("electron", {
     const handler = (_event: Electron.IpcRendererEvent, code: string) => callback(code);
     ipcRenderer.on("desktop-auth-code", handler);
     return () => ipcRenderer.removeListener("desktop-auth-code", handler);
+  },
+
+  // Listen for a login callback refused because its state did not match
+  onDesktopAuthRejected: (callback: () => void): (() => void) => {
+    const handler = () => callback();
+    ipcRenderer.on("desktop-auth-rejected", handler);
+    return () => ipcRenderer.removeListener("desktop-auth-rejected", handler);
   },
 
   // Listen for the auth flow being cancelled (window closed early)
@@ -69,6 +79,13 @@ contextBridge.exposeInMainWorld("electron", {
       ipcRenderer.invoke("recovery-audio-delete", sessionId),
     prune: (keepSessionIds: string[]): Promise<number> =>
       ipcRenderer.invoke("recovery-audio-prune", keepSessionIds),
+  },
+
+  // Encrypts crash-recovery text with the local data key (see main.ts).
+  // Synchronous because localStorage is. Both return null when unavailable.
+  localData: {
+    seal: (text: string): string | null => ipcRenderer.sendSync("local-data-seal", text),
+    open: (sealed: string): string | null => ipcRenderer.sendSync("local-data-open", sealed),
   },
 
   // Save file natively using Electron dialog
@@ -103,7 +120,7 @@ contextBridge.exposeInMainWorld("electron", {
     return () => ipcRenderer.removeListener("ota-update-downloaded", handler);
   },
 
-  // Trigger a native main process crash (for Sentry testing)
+  // Trigger a native main process crash (for Sentry testing). Ignored in packaged builds.
   simulateMainCrash: (): void => ipcRenderer.send("simulate-main-crash"),
 
   // Auto-Updater: Restart and install the downloaded update

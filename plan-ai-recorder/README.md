@@ -10,6 +10,12 @@ Plan AI Desktop Recorder is a macOS desktop application that captures meetings i
 - **Smart Active Microphone Detection**: A background Swift process (`MicActivity.swift`) monitors when your microphone becomes active (e.g., joining a Zoom/Meet call) and sends a toast notification to start recording.
 - **Seamless Web Authentication**: Deep linking with a custom protocol (`blueberrybytes-recorder://`) and a local auth server allows smooth login via the Plan AI web application.
 - **Live Audio Streaming**: Streams microphone and system audio as PCM over a WebSocket to the Plan AI backend, which transcribes with whatever provider it's configured for (Deepgram, or a self-hosted Whisper server). The recorder doesn't know which one is in use (`audioRecorder.ts`, `planAiApi.ts`).
+- **Pause and Resume**: Pausing stops capture and live transcription. The recorder also pauses after 15 minutes without speech and asks for confirmation after 3 hours (`Recording.tsx`, `audioRecorder.ts`).
+- **Crash Recovery**: Every audio chunk is written to `userData/recording-recovery/<sessionId>/` while recording, with a text copy in localStorage. Home offers to recover a meeting that was never saved, with its audio, marks and calendar event (`recoveryAudio.ts`, `unsavedTranscript.ts`).
+- **Marks**: Mark button or Ctrl/Cmd+B, with an optional note. Sent with the recording and shown on the meeting page.
+- **Consent Notice**: A message to paste in the meeting chat telling the other people they are being recorded.
+- **Calendar**: With Google Calendar or Outlook connected in the web app, Home shows the meeting that is on now with a **Record it** button and a notification when it starts. The recording takes the event title and the invite travels with it.
+- **Player and Notes by Email**: The meeting page plays the recording (mic and system audio in sync, click a line to jump) and can email the notes to the attendees.
 - **Modern UI**: Built with React, Material-UI, and Emotion for a sleek, dark-themed interface.
 
 ## Technology Stack

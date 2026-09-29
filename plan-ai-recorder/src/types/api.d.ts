@@ -1000,7 +1000,11 @@ export interface paths {
          *     Updates the user to indicate they have completed voice enrollment.
          */
         post: operations["SaveVoiceProfile"];
-        delete?: never;
+        /**
+         * @description Delete the voice profile. A voice print is biometric data, so the user
+         *     can remove it at any time; speaker names then stop being matched by voice.
+         */
+        delete: operations["DeleteVoiceProfile"];
         options?: never;
         head?: never;
         patch?: never;
@@ -1063,16 +1067,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/sentry-error": {
+    "/api/session/mobile-exchange": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get: operations["GetSentryError"];
+        get?: never;
         put?: never;
-        post?: never;
+        /**
+         * @description Mobile Microsoft sign-in, last step. The app sends the one-time code it
+         *     got through the deep link plus the PKCE verifier it kept in memory, and
+         *     gets a Firebase custom token. A code caught by another app is useless
+         *     without the verifier.
+         */
+        post: operations["ExchangeMobileCode"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2433,26 +2443,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/audio/transcribe-chunk": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * @description Transcribe a raw audio chunk uploaded by the Electron recorder.
-         *     The Groq API key lives exclusively on the server — it is never sent to the client.
-         */
-        post: operations["TranscribeChunk"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/asana/auth": {
         parameters: {
             query?: never;
@@ -2809,6 +2799,85 @@ export interface paths {
         /** @description Updates workspace settings like API keys and token limits. */
         put: operations["UpdateWorkspaceSettings"];
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/workspaces/audit-log": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description Who did what in the workspace, newest first. Owners and admins only.
+         *     Pass `nextCursor` back as `cursor` to read older entries.
+         */
+        get: operations["GetAuditLog"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/workspaces/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description Everything in the workspace as one JSON file (meetings, tasks, files,
+         *     documents, chats, audit log). Keys and tokens are not included. Owner only.
+         */
+        get: operations["ExportWorkspaceData"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/workspaces/transfer-ownership": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Makes another member the owner. The current owner becomes an admin. */
+        post: operations["TransferOwnership"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/workspaces/delete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description Deletes the workspace and all its data: meetings with their audio,
+         *     files, vectors, documents, chats and members. It cannot be undone. The
+         *     owner types the workspace name to confirm. A paid subscription must be
+         *     cancelled first, so billing never outlives the data.
+         */
+        post: operations["DeleteWorkspace"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3505,6 +3574,8 @@ export interface components {
             content: string;
             status: string;
             isPublic: boolean;
+            /** @description Secret for the public link (/doc/public/<shareToken>). Null when not shared. */
+            shareToken: string | null;
             contextIds: string[];
             transcriptIds: string[];
             prompt: string | null;
@@ -4070,6 +4141,14 @@ export interface components {
             /** Format: double */
             status: number;
         };
+        "ApiResponse__deleted-boolean__": {
+            message?: string;
+            data: {
+                deleted: boolean;
+            } | null;
+            /** Format: double */
+            status: number;
+        };
         "ApiResponse__code-string__": {
             message?: string;
             data: {
@@ -4116,13 +4195,11 @@ export interface components {
         BrandTheme: components["schemas"]["DefaultSelection_Prisma._36_BrandThemePayload_"];
         PublicPresentationResponse: {
             id: string;
-            userId: string;
             templateId: string | null;
             themeId: string | null;
             theme: components["schemas"]["BrandTheme"] | null;
             title: string;
             slidesJson: components["schemas"]["TsoaJsonObject"] | null;
-            contextIds: string[];
             status: string;
             /** Format: date-time */
             createdAt: string;
@@ -4186,6 +4263,8 @@ export interface components {
             contextIds: string[];
             status: string;
             isPublic: boolean;
+            /** @description Secret for the public link (/p/<shareToken>). Null when not shared. */
+            shareToken: string | null;
             /** Format: date-time */
             createdAt: string;
             /** Format: date-time */
@@ -4828,14 +4907,6 @@ export interface components {
         PortalResponse: {
             url: string;
         };
-        "ApiResponse__text-string__": {
-            message?: string;
-            data: {
-                text: string;
-            } | null;
-            /** Format: double */
-            status: number;
-        };
         AsanaAuthorizationResponse: {
             authorizationUrl: string;
         };
@@ -5150,6 +5221,10 @@ export interface components {
              * @description Days meeting audio is kept before it is deleted. Null keeps it forever.
              */
             audioRetentionDays?: number | null;
+            /** @description Sign-in rules. Empty list, false and null mean no rule. */
+            allowedEmailDomains?: string[];
+            requireMfa?: boolean;
+            requiredSignInProvider?: string | null;
         };
         /** @enum {string} */
         "_36_Enums.UserPersona": "PROJECT_MANAGER" | "SOFTWARE_ENGINEER" | "DESIGNER" | "PRODUCT_MANAGER" | "EXECUTIVE" | "OTHER";
@@ -5201,6 +5276,35 @@ export interface components {
              *     leave unchanged. Transcripts, summaries and tasks are never deleted.
              */
             audioRetentionDays?: number | null;
+            /**
+             * @description Only accounts with an email in these domains can use the workspace, e.g.
+             *     ["acme.com"]. Empty list removes the rule; omit to leave unchanged.
+             */
+            allowedEmailDomains?: string[];
+            /** @description Members must sign in with a second factor. Omit to leave unchanged. */
+            requireMfa?: boolean;
+            /**
+             * @description Firebase sign-in provider every member must use: "google.com",
+             *     "microsoft.com", "apple.com", "password", or an SSO provider id such as
+             *     "saml.acme" / "oidc.acme". Null removes the rule; omit to leave unchanged.
+             */
+            requiredSignInProvider?: string | null;
+        };
+        AuditLogEntryResponse: {
+            id: string;
+            action: string;
+            actorUserId: string | null;
+            actorEmail: string | null;
+            targetType: string | null;
+            targetId: string | null;
+            metadata: components["schemas"]["TsoaJsonObject"] | null;
+            ip: string | null;
+            userAgent: string | null;
+            createdAt: string;
+        };
+        AuditLogResponse: {
+            entries: components["schemas"]["AuditLogEntryResponse"][];
+            nextCursor: string | null;
         };
         CreateMcpTokenResponse: {
             /** @description The raw token — shown ONCE, never retrievable again */
@@ -5236,6 +5340,8 @@ export interface components {
             themeId: string | null;
             status: string;
             isPublic: boolean;
+            /** @description Secret for the public link (/diagram/public/<shareToken>). Null when not shared. */
+            shareToken?: string | null;
             createdAt: string;
             updatedAt: string;
             theme?: {
@@ -7497,6 +7603,26 @@ export interface operations {
             };
         };
     };
+    DeleteVoiceProfile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse__deleted-boolean__"];
+                };
+            };
+        };
+    };
     CompleteHomeTour: {
         parameters: {
             query?: never;
@@ -7581,21 +7707,30 @@ export interface operations {
             };
         };
     };
-    GetSentryError: {
+    ExchangeMobileCode: {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": {
+                    codeVerifier: string;
+                    code: string;
+                };
+            };
+        };
         responses: {
-            /** @description No content */
-            204: {
+            /** @description Ok */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ApiResponse__customToken-string__"];
+                };
             };
         };
     };
@@ -9758,35 +9893,6 @@ export interface operations {
             };
         };
     };
-    TranscribeChunk: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "multipart/form-data": {
-                    /** Format: binary */
-                    mic?: string;
-                    /** Format: binary */
-                    system?: string;
-                };
-            };
-        };
-        responses: {
-            /** @description Ok */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiResponse__text-string__"];
-                };
-            };
-        };
-    };
     GetAuthorizationUrl: {
         parameters: {
             query?: {
@@ -10315,6 +10421,108 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["UpdateWorkspaceSettingsRequest"];
+            };
+        };
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        message: string;
+                        success: boolean;
+                    };
+                };
+            };
+        };
+    };
+    GetAuditLog: {
+        parameters: {
+            query?: {
+                limit?: number;
+                cursor?: string;
+                action?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuditLogResponse"];
+                };
+            };
+        };
+    };
+    ExportWorkspaceData: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TsoaJsonObject"];
+                };
+            };
+        };
+    };
+    TransferOwnership: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    memberId: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        message: string;
+                        success: boolean;
+                    };
+                };
+            };
+        };
+    };
+    DeleteWorkspace: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    confirmName: string;
+                };
             };
         };
         responses: {

@@ -12,16 +12,33 @@ import {
   Tray,
   dialog,
   powerMonitor,
+  protocol,
+  safeStorage,
+  webContents as allWebContents,
 } from "electron";
 import * as path from "path";
 import { join } from "path";
 import { fileURLToPath } from "url";
-import { readFileSync, existsSync, unlinkSync, copyFileSync, chmodSync, writeFileSync } from "fs";
+import {
+  readFileSync,
+  existsSync,
+  unlinkSync,
+  copyFileSync,
+  chmodSync,
+  writeFileSync,
+  mkdirSync,
+  readdirSync,
+} from "fs";
 import { promises as fsPromises } from "fs";
 import { createServer, IncomingMessage, ServerResponse } from "http";
 import { spawn, ChildProcess, execFile } from "child_process";
+import { createCipheriv, createDecipheriv, randomBytes, timingSafeEqual } from "crypto";
 import { autoUpdater } from "electron-updater";
 import * as Sentry from "@sentry/electron/main";
+
+// Content-Security-Policy of the production renderer, built from the env in
+// electron.vite.config.ts. Sent as a header on every app:// HTML response.
+declare const __RENDERER_CSP__: string;
 
 // Initialize Sentry only in production if DSN is provided
 const sentryDsn = import.meta.env.VITE_SENTRY_DSN;
@@ -38,13 +55,279 @@ const PROTOCOL = app.isPackaged ? BASE_PROTOCOL : `${BASE_PROTOCOL}-dev`;
 const isHouseGroup = BASE_PROTOCOL === "housegroup-recorder";
 
 nativeTheme.themeSource = isHouseGroup ? "light" : "dark";
-// Force-disable CORS and Web Security policies at the deepest chromium level for WebAuthn/Passkeys
-app.commandLine.appendSwitch('disable-site-isolation-trials');
-app.commandLine.appendSwitch('disable-web-security');
-app.commandLine.appendSwitch('disable-features', 'CrossOriginOpenerPolicy,CrossOriginEmbedderPolicy,IsolateOrigins,site-per-process');
-// Prevent Windows from immediately dropping wss:// WebSocket connections due to self-signed corporate proxy setups
-app.commandLine.appendSwitch('ignore-certificate-errors');
-app.commandLine.appendSwitch('allow-insecure-localhost');
+
+// ─── Renderer origin ─────────────────────────────────────────────────────────
+// The packaged renderer is served from app://recorder instead of file://, so it
+// has a real origin: CORS, storage and permissions all key off it. The backend
+// CORS allowlist must contain APP_ORIGIN. In development the renderer comes
+// from the electron-vite dev server instead.
+const APP_SCHEME = "app";
+const APP_HOST = "recorder";
+const APP_ORIGIN = `${APP_SCHEME}://${APP_HOST}`;
+// Ignored in packaged builds: an environment variable must not be able to
+// load another page into the window that has the preload API.
+const DEV_RENDERER_URL = app.isPackaged ? undefined : process.env["ELECTRON_RENDERER_URL"];
+const DEV_RENDERER_ORIGIN = DEV_RENDERER_URL ? new URL(DEV_RENDERER_URL).origin : null;
+
+// Same idea as the fuses in electron-builder.config.js: a release build must
+// not be drivable from outside. A debugging port would give any local program
+// the renderer and its preload API.
+if (
+  app.isPackaged &&
+  (app.commandLine.hasSwitch("remote-debugging-port") ||
+    app.commandLine.hasSwitch("remote-debugging-pipe"))
+) {
+  console.error("[main] Remote debugging is not allowed in a packaged build. Exiting.");
+  app.exit(1);
+}
+
+// Must run before the app is ready. Sentry registers its own scheme first and
+// merges it with this list.
+protocol.registerSchemesAsPrivileged([
+  {
+    scheme: APP_SCHEME,
+    privileges: {
+      standard: true,
+      secure: true,
+      supportFetchAPI: true,
+      corsEnabled: true,
+      stream: true,
+    },
+  },
+]);
+
+/**
+ * True when `value` (a URL or an origin) belongs to the renderer. Node's URL
+ * gives "null" as the origin of custom schemes, so scheme and host are
+ * compared directly.
+ */
+function isRendererUrl(value: string | null | undefined): boolean {
+  if (!value) return false;
+  let url: URL;
+  try {
+    url = new URL(value);
+  } catch {
+    return false;
+  }
+  if (url.protocol === `${APP_SCHEME}:` && url.host === APP_HOST) return true;
+  return DEV_RENDERER_ORIGIN !== null && url.origin === DEV_RENDERER_ORIGIN;
+}
+
+// What the renderer uses: microphone and system audio (media, display-capture),
+// "copy" buttons, meeting notifications and fullscreen.
+const RENDERER_PERMISSIONS = new Set<string>([
+  "media",
+  "display-capture",
+  "clipboard-sanitized-write",
+  "notifications",
+  "fullscreen",
+]);
+
+// Only these schemes may be handed to the OS. Anything else (file:, smb:,
+// custom app schemes) could launch a local program.
+const EXTERNAL_PROTOCOLS = new Set(["https:", "http:", "mailto:"]);
+
+function openExternalSafely(rawUrl: string): void {
+  let url: URL;
+  try {
+    url = new URL(rawUrl);
+  } catch {
+    console.warn("[external] Refused to open a malformed URL");
+    return;
+  }
+  if (!EXTERNAL_PROTOCOLS.has(url.protocol)) {
+    console.warn(`[external] Refused to open a ${url.protocol} URL`);
+    return;
+  }
+  shell.openExternal(url.toString()).catch((err) => {
+    console.error("[external] openExternal failed:", err);
+  });
+}
+
+const MIME_TYPES: Record<string, string> = {
+  ".html": "text/html; charset=utf-8",
+  ".js": "text/javascript; charset=utf-8",
+  ".mjs": "text/javascript; charset=utf-8",
+  ".css": "text/css; charset=utf-8",
+  ".json": "application/json; charset=utf-8",
+  ".map": "application/json; charset=utf-8",
+  ".txt": "text/plain; charset=utf-8",
+  ".svg": "image/svg+xml",
+  ".png": "image/png",
+  ".jpg": "image/jpeg",
+  ".jpeg": "image/jpeg",
+  ".gif": "image/gif",
+  ".webp": "image/webp",
+  ".ico": "image/x-icon",
+  ".woff": "font/woff",
+  ".woff2": "font/woff2",
+  ".ttf": "font/ttf",
+  ".wasm": "application/wasm",
+};
+
+/** Serves the built renderer (dist-electron/renderer) on app://recorder/. */
+function registerAppProtocol(): void {
+  const root = path.resolve(__dirname, "../renderer");
+  protocol.handle(APP_SCHEME, async (request) => {
+    let url: URL;
+    try {
+      url = new URL(request.url);
+    } catch {
+      return new Response(null, { status: 400 });
+    }
+    if (url.host !== APP_HOST) return new Response(null, { status: 404 });
+
+    let pathname: string;
+    try {
+      pathname = decodeURIComponent(url.pathname);
+    } catch {
+      return new Response(null, { status: 400 });
+    }
+    if (pathname.includes("\0")) return new Response(null, { status: 400 });
+    if (pathname === "/" || pathname === "") pathname = "/index.html";
+
+    // Refuse anything that resolves outside the renderer folder.
+    const file = path.resolve(root, `.${pathname}`);
+    if (!file.startsWith(root + path.sep)) return new Response(null, { status: 404 });
+
+    try {
+      const body = await fsPromises.readFile(file);
+      const ext = path.extname(file).toLowerCase();
+      const headers: Record<string, string> = {
+        "Content-Type": MIME_TYPES[ext] ?? "application/octet-stream",
+        "X-Content-Type-Options": "nosniff",
+      };
+      if (ext === ".html") headers["Content-Security-Policy"] = __RENDERER_CSP__;
+      return new Response(new Uint8Array(body), { status: 200, headers });
+    } catch {
+      return new Response(null, { status: 404 });
+    }
+  });
+}
+
+// ─── One-time move of renderer storage from file:// to app://recorder ────────
+// Up to 4.4 the renderer ran from file://. Storage is kept per origin, so the
+// move to app://recorder would sign every user out and hide the unsaved
+// meetings kept for crash recovery. Before the first app:// load, this copies
+// localStorage and the Firebase session (IndexedDB) to the new origin, then
+// clears the old copy. It runs once; a failure is retried on the next launch.
+const STORAGE_MIGRATION_MARKER = "storage-migrated-to-app-origin";
+const STORAGE_MIGRATION_PAGE = "storage-migration.html";
+
+// Runs in a file:// page. Reads localStorage and the rows Firebase Auth keeps
+// in IndexedDB ({ fbase_key, value }).
+const READ_LEGACY_STORAGE_JS = `(async () => {
+  const local = {};
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key !== null) local[key] = localStorage.getItem(key);
+  }
+  const auth = await new Promise((resolve) => {
+    let request;
+    try {
+      request = indexedDB.open("firebaseLocalStorageDb");
+    } catch (e) {
+      resolve([]);
+      return;
+    }
+    // The database does not exist: abort instead of creating it.
+    request.onupgradeneeded = () => request.transaction.abort();
+    request.onerror = () => resolve([]);
+    request.onblocked = () => resolve([]);
+    request.onsuccess = () => {
+      const db = request.result;
+      if (!db.objectStoreNames.contains("firebaseLocalStorage")) {
+        db.close();
+        resolve([]);
+        return;
+      }
+      const all = db.transaction("firebaseLocalStorage", "readonly").objectStore("firebaseLocalStorage").getAll();
+      all.onsuccess = () => { db.close(); resolve(all.result || []); };
+      all.onerror = () => { db.close(); resolve([]); };
+    };
+  });
+  return { local, auth };
+})()`;
+
+// Runs in an app:// page. Keys already present are left alone. The Firebase
+// user goes into localStorage under its own key: on start, Firebase Auth finds
+// it there and moves it into its IndexedDB store.
+const writeStorageJs = (data: string) => `((data) => {
+  let written = 0;
+  for (const [key, value] of Object.entries(data.local || {})) {
+    if (typeof value === "string" && localStorage.getItem(key) === null) {
+      localStorage.setItem(key, value);
+      written++;
+    }
+  }
+  for (const row of data.auth || []) {
+    if (row && typeof row.fbase_key === "string" && localStorage.getItem(row.fbase_key) === null) {
+      localStorage.setItem(row.fbase_key, JSON.stringify(row.value));
+      written++;
+    }
+  }
+  return written;
+})(${data})`;
+
+const CLEAR_LEGACY_STORAGE_JS = `(async () => {
+  localStorage.clear();
+  await new Promise((resolve) => {
+    try {
+      const request = indexedDB.deleteDatabase("firebaseLocalStorageDb");
+      request.onsuccess = request.onerror = request.onblocked = () => resolve(null);
+    } catch (e) {
+      resolve(null);
+    }
+  });
+  return true;
+})()`;
+
+let storageMigrationRunning = false;
+
+async function migrateFileOriginStorage(): Promise<void> {
+  const marker = path.join(app.getPath("userData"), STORAGE_MIGRATION_MARKER);
+  if (existsSync(marker)) return;
+  storageMigrationRunning = true;
+
+  const hiddenWindow = () =>
+    new BrowserWindow({
+      show: false,
+      webPreferences: { sandbox: true, contextIsolation: true, nodeIntegration: false },
+    });
+  let reader: BrowserWindow | null = null;
+  let writer: BrowserWindow | null = null;
+  try {
+    reader = hiddenWindow();
+    await reader.loadFile(join(__dirname, "../renderer", STORAGE_MIGRATION_PAGE));
+    const legacy = (await reader.webContents.executeJavaScript(READ_LEGACY_STORAGE_JS)) as {
+      local: Record<string, string>;
+      auth: unknown[];
+    };
+    const entries = Object.keys(legacy.local ?? {}).length + (legacy.auth?.length ?? 0);
+
+    if (entries > 0) {
+      writer = hiddenWindow();
+      await writer.loadURL(`${APP_ORIGIN}/${STORAGE_MIGRATION_PAGE}`);
+      const written = await writer.webContents.executeJavaScript(
+        writeStorageJs(JSON.stringify(legacy)),
+      );
+      // localStorage reaches disk with a delay. Flush before the old copy goes,
+      // or a crash right now would lose both.
+      session.defaultSession.flushStorageData();
+      // The old copy goes only once the new one is in place.
+      await reader.webContents.executeJavaScript(CLEAR_LEGACY_STORAGE_JS);
+      console.log(`[storage-migration] Copied ${written} of ${entries} entries to ${APP_ORIGIN}`);
+    }
+    session.defaultSession.flushStorageData();
+    writeFileSync(marker, new Date().toISOString(), { mode: 0o600 });
+  } catch (err) {
+    console.error("[storage-migration] Failed, will retry on next launch:", err);
+  } finally {
+    reader?.destroy();
+    writer?.destroy();
+    storageMigrationRunning = false;
+  }
+}
 
 const AUTH_CALLBACK_PORT = 4321;
 
@@ -54,22 +337,89 @@ let pendingAuthCode: string | null = null;
 let tray: Tray | null = null;
 let systemAudioProcess: ChildProcess | null = null;
 
+// ─── Desktop login state ─────────────────────────────────────────────────────
+// Every login the recorder starts gets a random state. The web page sends it
+// back with the one-time code, and a callback is accepted only when its state
+// matches the pending one. Without it, any page could push its own code to the
+// recorder and sign it into someone else's account (login CSRF).
+const AUTH_STATE_TTL_MS = 10 * 60 * 1000;
+let pendingAuthState: { value: string; createdAt: number } | null = null;
+let pendingAuthUrl: string | null = null;
+
+function isAuthStatePending(): boolean {
+  return (
+    pendingAuthState !== null && Date.now() - pendingAuthState.createdAt <= AUTH_STATE_TTL_MS
+  );
+}
+
+function stateMatches(state: string | null): boolean {
+  if (!state || !isAuthStatePending()) return false;
+  const expected = Buffer.from(pendingAuthState!.value);
+  const received = Buffer.from(state);
+  return expected.length === received.length && timingSafeEqual(expected, received);
+}
+
+/** Checks the state and burns it on success, so a callback works once. */
+function consumeAuthState(state: string | null): boolean {
+  if (!stateMatches(state)) return false;
+  pendingAuthState = null;
+  pendingAuthUrl = null;
+  return true;
+}
+
+/** Starts a login: new state, and the web URL that carries it. */
+function beginDesktopAuth(): string {
+  const state = randomBytes(32).toString("base64url");
+  pendingAuthState = { value: state, createdAt: Date.now() };
+
+  const webAppUrl = (import.meta.env.VITE_PLAN_AI_WEB_URL ?? "http://localhost:3000").replace(
+    /\/+$/,
+    "",
+  );
+  // /auth/desktop keeps the state in the tab's sessionStorage while the user
+  // goes through /login, then sends it back with the code.
+  const url = new URL(`${webAppUrl}/auth/desktop`);
+  url.searchParams.set("desktop_auth", "true");
+  url.searchParams.set("state", state);
+  if (!app.isPackaged) {
+    url.searchParams.set("local_port", String(AUTH_CALLBACK_PORT));
+  }
+  pendingAuthUrl = url.toString();
+  return pendingAuthUrl;
+}
+
 /**
- * Starts a lightweight HTTP server that receives the auth token from the web browser.
- * This is more reliable than OS-level custom protocol dispatch in Electron dev mode,
- * where the app is not a proper macOS bundle.
+ * Development only. Receives the login code from the web page over
+ * http://127.0.0.1:4321, because custom protocol dispatch is unreliable when
+ * the app is not a real macOS bundle. Packaged builds use the deep link.
  *
- * Flow: DesktopCallback.tsx → GET http://localhost:4321/auth?token=... → here → renderer
+ * Flow: DesktopCallback.tsx, then GET /auth?code=...&state=..., then renderer.
  */
 function startAuthCallbackServer(): void {
+  const allowedHosts = new Set([`127.0.0.1:${AUTH_CALLBACK_PORT}`, `localhost:${AUTH_CALLBACK_PORT}`]);
+
   const server = createServer((req: IncomingMessage, res: ServerResponse) => {
-    const url = new URL(req.url ?? "/", `http://localhost:${AUTH_CALLBACK_PORT}`);
+    // A rebinding DNS name pointing at 127.0.0.1 would send another Host.
+    if (!allowedHosts.has(req.headers.host ?? "")) {
+      res.writeHead(421);
+      res.end();
+      return;
+    }
+    const url = new URL(req.url ?? "/", `http://127.0.0.1:${AUTH_CALLBACK_PORT}`);
+    res.setHeader("Cache-Control", "no-store");
+    res.setHeader("Referrer-Policy", "no-referrer");
 
     if (url.pathname === "/auth-cancel") {
-      console.log("[auth-server] cancellation received");
-      res.setHeader("Access-Control-Allow-Origin", "*");
-      res.writeHead(200);
+      res.writeHead(204);
       res.end();
+      // Only the page that holds the pending state can cancel the login.
+      if (!stateMatches(url.searchParams.get("state"))) {
+        console.warn("[auth-server] cancellation ignored: state does not match");
+        return;
+      }
+      console.log("[auth-server] cancellation received");
+      pendingAuthState = null;
+      pendingAuthUrl = null;
       if (authWindow) {
         authWindow.close();
       }
@@ -78,11 +428,17 @@ function startAuthCallbackServer(): void {
       }
     } else if (url.pathname === "/auth") {
       const code = url.searchParams.get("code");
-      console.log("[auth-server] code received:", !!code);
+      const accepted = !!code && handleAuthCallback(code, url.searchParams.get("state"));
+      console.log("[auth-server] callback received, accepted:", accepted);
 
-      // CORS headers so the web app (different origin) can call this
-      res.setHeader("Access-Control-Allow-Origin", "*");
       res.setHeader("Content-Type", "text/html; charset=utf-8");
+      if (!accepted) {
+        res.writeHead(400);
+        res.end(
+          "<html><body style=\"font-family: sans-serif; padding: 2rem\"><h2>Sign-in link not valid</h2><p>Start the sign-in again from Plan AI Recorder.</p></body></html>",
+        );
+        return;
+      }
       res.writeHead(200);
       res.end(
         `<html>
@@ -109,8 +465,6 @@ function startAuthCallbackServer(): void {
 </body>
 </html>`,
       );
-
-      if (code) handleAuthCode(code);
       // Keep server alive in case multiple attempts needed
     } else {
       res.writeHead(404);
@@ -123,7 +477,7 @@ function startAuthCallbackServer(): void {
   });
 
   server.listen(AUTH_CALLBACK_PORT, "127.0.0.1", () => {
-    console.log(`[auth-server] Listening on http://localhost:${AUTH_CALLBACK_PORT}`);
+    console.log(`[auth-server] Listening on http://127.0.0.1:${AUTH_CALLBACK_PORT}`);
   });
 }
 
@@ -172,33 +526,47 @@ function setupSession(): void {
       headers["Cross-Origin-Opener-Policy"] = ["unsafe-none"];
       headers["Cross-Origin-Embedder-Policy"] = ["unsafe-none"];
 
-      // Add secure CSP to prevent the "unsafe-eval" warning and allow Firebase Auth to work properly
-      const cspKey = Object.keys(headers).find(k => k.toLowerCase() === "content-security-policy") || "Content-Security-Policy";
-      if (!headers[cspKey] || headers[cspKey].length === 0) {
-        headers[cspKey] = ["default-src 'self' 'unsafe-inline' data: https: wss: ws:; script-src 'self' 'unsafe-inline' https: blob:; worker-src 'self' blob:; connect-src * 'unsafe-inline' ws: wss:;"];
-      }
-
+      // The renderer's Content-Security-Policy is sent by the app:// handler
+      // (and a meta tag in index.html). Nothing is injected into other
+      // responses: the auth window shows the web app and Apple pages with
+      // their own policies.
       callback({ responseHeaders: headers });
     });
 
-    // Spoof Origin & Referer headers for outgoing backend API calls to bypass Railway CORS rejecting file://
-    sess.webRequest.onBeforeSendHeaders((details, callback) => {
-      const { requestHeaders, url } = details;
-      if (url.includes("plan-ai-backend") || url.includes("up.railway.app")) {
-        requestHeaders["Origin"] = "https://plan-ai.blueberrybytes.com";
-        requestHeaders["Referer"] = "https://plan-ai.blueberrybytes.com/";
+    // Permissions go to the renderer only. The auth window shows remote pages
+    // in this same session and gets none of them.
+    sess.setPermissionRequestHandler((_contents, permission, callback, details) => {
+      const granted =
+        RENDERER_PERMISSIONS.has(permission) && isRendererUrl(details.requestingUrl);
+      if (!granted) {
+        console.warn(`[permissions] Denied "${permission}" request`);
       }
-      callback({ requestHeaders });
+      callback(granted);
+    });
+    sess.setPermissionCheckHandler((_contents, permission, requestingOrigin) => {
+      return RENDERER_PERMISSIONS.has(permission) && isRendererUrl(requestingOrigin);
     });
 
     // Required in Electron 31+ to allow getDisplayMedia to actually trigger the OS-level Screen Recording prompt
     sess.setDisplayMediaRequestHandler((request, callback) => {
+      const requester = request.frame ? allWebContents.fromFrame(request.frame) : undefined;
+      const fromMainWindow =
+        !!requester &&
+        !!mainWindow &&
+        !mainWindow.isDestroyed() &&
+        requester.id === mainWindow.webContents.id &&
+        isRendererUrl(request.securityOrigin);
+      if (!fromMainWindow) {
+        console.warn("[setDisplayMediaRequestHandler] Denied a request from outside the main window");
+        callback({});
+        return;
+      }
       desktopCapturer.getSources({ types: ["screen"] }).then((sources) => {
         // Automatically accept the first screen just to satisfy the API and trigger the macOS prompt
         callback({ video: sources[0] });
       }).catch((err) => {
         console.error("[setDisplayMediaRequestHandler] Failed to get sources:", err);
-        callback(null as any); // Null rejects the prompt silently
+        callback({}); // No stream rejects the request
       });
     });
   };
@@ -209,53 +577,73 @@ function setupSession(): void {
   app.on("session-created", configureSession);
 }
 
-function handleAuthCode(code: string): void {
-  console.log("[auth] code received, sending to renderer, mainWindow:", !!mainWindow);
+/**
+ * Delivers a login code to the renderer, but only when `state` matches the
+ * login this app started. Returns whether the callback was accepted. The code
+ * itself is never logged.
+ */
+function handleAuthCallback(code: string, state: string | null): boolean {
+  if (!consumeAuthState(state)) {
+    console.warn(
+      `[auth] Rejected a login callback: ${state ? "state does not match" : "no state"} (pending login: ${isAuthStatePending()})`,
+    );
+    // Tell the login screen, so it does not wait forever. Only when a login was
+    // started (still valid or expired but not cleared): a stray link must not
+    // change the UI.
+    if (pendingAuthState !== null && mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send("desktop-auth-rejected");
+    }
+    return false;
+  }
+
+  console.log("[auth] Login callback accepted, sending the code to the renderer");
   if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.webContents.send("desktop-auth-code", code);
     mainWindow.show();
     mainWindow.focus();
   } else {
-    // If the window isn't created yet (Cold Boot from Deep Link), buffer it
+    // The window was closed (macOS keeps the app alive). Deliver on next load.
     pendingAuthCode = code;
   }
   if (authWindow) {
     authWindow.close();
-    authWindow = null;
+  }
+  return true;
+}
+
+/** Callback URLs: "<protocol>://auth?code=..&state=.." or the dev server's /auth. */
+function isAuthCallbackUrl(rawUrl: string): boolean {
+  if (rawUrl.startsWith(`${PROTOCOL}://`)) return true;
+  try {
+    const url = new URL(rawUrl);
+    return (
+      url.protocol === "http:" &&
+      (url.hostname === "localhost" || url.hostname === "127.0.0.1") &&
+      url.port === String(AUTH_CALLBACK_PORT) &&
+      url.pathname === "/auth"
+    );
+  } catch {
+    return false;
   }
 }
 
 function handleProtocolUrl(rawUrl: string) {
-  // If we get "blueberrybytes-recorder://auth?code=XYZ" (or the dynamic protocol)
-  // Try to parse it properly (URLSearchParams handles URL decoding perfectly!)
+  // "blueberrybytes-recorder://auth?code=XYZ&state=ABC" (or the brand's
+  // protocol), or the dev callback URL caught inside the Apple auth window.
   try {
-    // 1. We replace the custom scheme with a fake HTTP domain just so the JS `URL` parser accepts it natively
-    const fakeUri = rawUrl.replace(`${PROTOCOL}://`, "http://localhost/");
-    const url = new URL(fakeUri);
-
-    // 2. Extract the short-lived OTP Auth Code via standard search parameters
-    const code = url.searchParams.get("code");
-
-    if (code) {
-      console.log("[protocol] Successfully parsed OTP auth code:", code);
-      pendingAuthCode = code;
-
-      if (mainWindow && !mainWindow.isDestroyed()) {
-        console.log("[protocol] Dispatching code to React AuthProvider...");
-        mainWindow.webContents.send("desktop-auth-code", pendingAuthCode);
-        pendingAuthCode = null; // Clear it to prevent multi-fires
-      }
-
-      // Close the internal auth window if it was used for Apple Login
-      if (authWindow) {
-        console.log("[protocol] Closing internal auth window...");
-        authWindow.close();
-      }
-    } else {
-      console.warn("[protocol] URL intercepted, but 'code' query parameter missing.", rawUrl);
+    if (!isAuthCallbackUrl(rawUrl)) {
+      console.warn("[protocol] Ignored a URL that is not a login callback");
+      return;
     }
+    const url = new URL(rawUrl);
+    const code = url.searchParams.get("code");
+    if (!code) {
+      console.warn("[protocol] Login callback without a code");
+      return;
+    }
+    handleAuthCallback(code, url.searchParams.get("state"));
   } catch (err) {
-    console.error("[protocol] Failed to parse custom Protocol URL:", rawUrl, err);
+    console.error("[protocol] Failed to parse the login callback URL:", err);
   }
 }
 
@@ -272,15 +660,29 @@ function createWindow(): void {
       preload: join(__dirname, "../preload/index.js"),
       contextIsolation: true,
       nodeIntegration: false,
-      sandbox: false,
+      sandbox: true,
+      webviewTag: false,
     },
   });
 
-  if (process.env["ELECTRON_RENDERER_URL"]) {
-    mainWindow.loadURL(process.env["ELECTRON_RENDERER_URL"]);
+  if (DEV_RENDERER_URL) {
+    mainWindow.loadURL(DEV_RENDERER_URL);
   } else {
-    mainWindow.loadFile(join(__dirname, "../renderer/index.html"));
+    mainWindow.loadURL(`${APP_ORIGIN}/index.html`);
   }
+
+  // The window only ever shows the renderer. Links that try to navigate it
+  // (a markdown link, a stray href) open in the system browser instead.
+  mainWindow.webContents.on("will-navigate", (event) => {
+    if (isRendererUrl(event.url)) return;
+    event.preventDefault();
+    openExternalSafely(event.url);
+  });
+  mainWindow.webContents.on("will-redirect", (event) => {
+    if (isRendererUrl(event.url)) return;
+    event.preventDefault();
+    console.warn("[main] Blocked a redirect away from the renderer");
+  });
 
   // Once the React app is securely mounted, blast any pending deep-link payloads
   mainWindow.webContents.on("did-finish-load", () => {
@@ -293,7 +695,7 @@ function createWindow(): void {
 
   // Intercept any new window creation natively (like window.open(url, "_blank")) and open it in Safari/Chrome.
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-    shell.openExternal(url);
+    openExternalSafely(url);
     return { action: "deny" };
   });
 
@@ -407,7 +809,8 @@ if (!gotTheLock) {
 } else {
   // Windows/Linux: protocol URL arrives in the second-instance argv
   app.on("second-instance", (_event, argv) => {
-    console.log("[lock] second-instance fired, argv:", argv);
+    // argv may hold a login callback with its one-time code: never log it.
+    console.log("[lock] second-instance fired, args:", argv.length);
     const url = argv.find((arg) => arg.startsWith(`${PROTOCOL}://`));
     if (url) handleProtocolUrl(url);
     if (mainWindow) {
@@ -416,10 +819,13 @@ if (!gotTheLock) {
     }
   });
 
-  app.whenReady().then(() => {
+  app.whenReady().then(async () => {
     setupProtocol();
+    registerAppProtocol();
     setupSession();
-    startAuthCallbackServer();
+    prepareRecoveryRoot();
+    if (!app.isPackaged) startAuthCallbackServer();
+    if (!DEV_RENDERER_URL) await migrateFileOriginStorage();
     createWindow();
     setupMenu();
     startMicActivityPolling();
@@ -431,6 +837,9 @@ if (!gotTheLock) {
   });
 
   app.on("window-all-closed", () => {
+    // The storage migration opens and closes hidden windows before the main
+    // window exists. That must not quit the app.
+    if (storageMigrationRunning || BrowserWindow.getAllWindows().length > 0) return;
     if (process.platform !== "darwin") app.quit();
   });
 }
@@ -502,9 +911,17 @@ function startMicActivityPolling() {
 
 // macOS: protocol URL arrives via open-url (fires in the FIRST instance directly)
 app.on("open-url", (event, url) => {
-  console.log("[protocol] open-url fired:", url);
+  // The URL carries a one-time login code: log the scheme only.
+  console.log("[protocol] open-url fired:", url.split(":")[0]);
   event.preventDefault();
   handleProtocolUrl(url);
+});
+
+// No window may embed a <webview>: it would get its own, unchecked preferences.
+app.on("web-contents-created", (_event, contents) => {
+  contents.on("will-attach-webview", (event) => {
+    event.preventDefault();
+  });
 });
 
 ipcMain.handle("clear-auth-session", async () => {
@@ -513,9 +930,12 @@ ipcMain.handle("clear-auth-session", async () => {
     const cookiesBefore = await session.defaultSession.cookies.get({});
     console.log(`[Desktop Auth] [SESSION WIPE] Cookies present before wipe: ${cookiesBefore.length}`);
 
-    // Aggressively target cookies and all Chromium storage to completely burn the Apple Session
-    await session.defaultSession.clearStorageData({
-      storages: ['cookies', 'localstorage', 'indexdb', 'cachestorage', 'serviceworkers']
+    // Burn the third-party sign-in sessions (Apple, Google, Microsoft) but keep
+    // the app's own storage: it holds unsaved meetings and settings. Firebase's
+    // own session is cleared by signOut() in the renderer.
+    await session.defaultSession.clearData({
+      dataTypes: ["cookies", "localStorage", "indexedDB", "cache", "serviceWorkers"],
+      excludeOrigins: [APP_ORIGIN],
     });
     console.log("[Desktop Auth] [SESSION WIPE] clearStorageData() succeeded!");
 
@@ -536,15 +956,40 @@ ipcMain.handle("clear-auth-session", async () => {
   }
 });
 
-ipcMain.handle("open-desktop-auth", (_event, _provider?: string) => {
-  const webAppUrlEnv = import.meta.env.VITE_PLAN_AI_WEB_URL ?? "http://localhost:3000";
-  const webAppUrl = webAppUrlEnv.replace(/\/+$/, "");
-  let authUrl = `${webAppUrl}/login?desktop_auth=true`;
-
-  if (!app.isPackaged) {
-    authUrl += `&local_port=${AUTH_CALLBACK_PORT}`;
+/**
+ * Hosts the Apple sign-in in the internal auth window may show: the web app,
+ * the Firebase auth handler and Apple's pages. "about:blank" is how Firebase
+ * opens its popup before navigating it.
+ */
+function isAppleAuthFlowUrl(rawUrl: string): boolean {
+  if (rawUrl === "" || rawUrl === "about:blank") return true;
+  let url: URL;
+  try {
+    url = new URL(rawUrl);
+  } catch {
+    return false;
   }
+  if (url.protocol !== "https:" && !(url.protocol === "http:" && !app.isPackaged)) return false;
+  const webAppHost = (() => {
+    try {
+      return new URL(import.meta.env.VITE_PLAN_AI_WEB_URL ?? "http://localhost:3000").host;
+    } catch {
+      return "";
+    }
+  })();
+  const firebaseAuthDomain = import.meta.env.VITE_FIREBASE_AUTH_DOMAIN ?? "";
+  return (
+    url.host === webAppHost ||
+    (firebaseAuthDomain !== "" && url.hostname === firebaseAuthDomain) ||
+    url.hostname === "apple.com" ||
+    url.hostname.endsWith(".apple.com")
+  );
+}
 
+// The web URL of the login in progress, for the "Copy Auth Link" button.
+ipcMain.handle("get-desktop-auth-url", () => (isAuthStatePending() ? pendingAuthUrl : null));
+
+ipcMain.handle("open-desktop-auth", (_event, _provider?: string) => {
   // APPLE REQUIREMENT (App Store Guideline 4):
   // "Sign in with Apple should always be completed without leaving the app"
   if (_provider === "apple") {
@@ -552,6 +997,7 @@ ipcMain.handle("open-desktop-auth", (_event, _provider?: string) => {
       authWindow.focus();
       return;
     }
+    const authUrl = beginDesktopAuth();
 
     console.log("[Desktop Auth] Spawning internal BrowserWindow for Apple Auth compliance.");
     authWindow = new BrowserWindow({
@@ -564,6 +1010,8 @@ ipcMain.handle("open-desktop-auth", (_event, _provider?: string) => {
       webPreferences: {
         nodeIntegration: false,
         contextIsolation: true,
+        sandbox: true,
+        webviewTag: false,
       },
     });
 
@@ -581,12 +1029,47 @@ ipcMain.handle("open-desktop-auth", (_event, _provider?: string) => {
 
     // CRUCIAL FOR APPLE COMPLIANCE:
     // Firebase signInWithPopup() opens the popup with 'about:blank' initially before
-    // navigating to the firebaseapp.com handler. Restricting by URL blocks it silently.
-    // Allow ALL popups inside authWindow — this stays in-app and satisfies Guideline 4.
+    // navigating to the firebaseapp.com handler, so about:blank must stay allowed.
+    // Popups stay in-app (Guideline 4) but only for the hosts of the Apple flow.
     authWindow.webContents.setWindowOpenHandler(({ url }) => {
-      console.log("[Internal Auth Window] Popup requested for:", url);
-      return { action: "allow" };
+      if (isAppleAuthFlowUrl(url)) {
+        return {
+          action: "allow",
+          overrideBrowserWindowOptions: {
+            webPreferences: {
+              nodeIntegration: false,
+              contextIsolation: true,
+              sandbox: true,
+              webviewTag: false,
+            },
+          },
+        };
+      }
+      console.warn("[Internal Auth Window] Popup outside the Apple sign-in flow sent to the browser");
+      openExternalSafely(url);
+      return { action: "deny" };
     });
+
+    // Callback URLs end the flow. Other navigations must stay on the web app,
+    // Firebase or Apple; anything else goes to the system browser.
+    const guardAuthNavigation = (
+      event: Electron.Event,
+      url: string,
+      onCallback: () => void,
+    ) => {
+      if (isAuthCallbackUrl(url)) {
+        event.preventDefault();
+        console.log("[Internal Auth Window] Intercepted the login callback");
+        handleProtocolUrl(url);
+        onCallback();
+        return;
+      }
+      if (!isAppleAuthFlowUrl(url)) {
+        event.preventDefault();
+        console.warn("[Internal Auth Window] Blocked a navigation outside the Apple sign-in flow");
+        openExternalSafely(url);
+      }
+    };
 
     // When the child popup is created (the Firebase/Apple auth page):
     // 1. Spoof User-Agent so Google/Apple don't reject the embedded browser
@@ -599,34 +1082,30 @@ ipcMain.handle("open-desktop-auth", (_event, _provider?: string) => {
         .replace(/plan-ai-recorder\/\S+\s?/, "");
       childWindow.webContents.setUserAgent(childUserAgent);
 
-      // Catch redirect-based callbacks in the child popup
-      const interceptChildUrl = (event: Electron.Event, url: string) => {
-        if (
-          url.startsWith(`${PROTOCOL}://`) ||
-          url.includes(`localhost:${AUTH_CALLBACK_PORT}/auth`)
-        ) {
-          event.preventDefault();
-          console.log("[Child Auth Window] Intercepted callback:", url);
-          handleProtocolUrl(url);
-          childWindow.destroy();
-        }
-      };
+      // The popup never needs a popup of its own.
+      childWindow.webContents.setWindowOpenHandler(({ url }) => {
+        openExternalSafely(url);
+        return { action: "deny" };
+      });
 
-      childWindow.webContents.on("will-redirect", interceptChildUrl);
-      childWindow.webContents.on("will-navigate", interceptChildUrl);
+      const destroyChild = () => {
+        if (!childWindow.isDestroyed()) childWindow.destroy();
+      };
+      childWindow.webContents.on("will-redirect", (event) =>
+        guardAuthNavigation(event, event.url, destroyChild),
+      );
+      childWindow.webContents.on("will-navigate", (event) =>
+        guardAuthNavigation(event, event.url, destroyChild),
+      );
     });
 
     // Intercept redirects back to our custom Protocol or Localhost
-    authWindow.webContents.on("will-redirect", (event, url) => {
-      if (
-        url.startsWith(`${PROTOCOL}://`) ||
-        url.includes(`localhost:${AUTH_CALLBACK_PORT}/auth`)
-      ) {
-        event.preventDefault();
-        console.log("[Internal Auth Window] Intercepted redirect:", url);
-        handleProtocolUrl(url);
-      }
-    });
+    authWindow.webContents.on("will-redirect", (event) =>
+      guardAuthNavigation(event, event.url, () => undefined),
+    );
+    authWindow.webContents.on("will-navigate", (event) =>
+      guardAuthNavigation(event, event.url, () => undefined),
+    );
 
     authWindow.on("closed", () => {
       authWindow = null;
@@ -643,13 +1122,13 @@ ipcMain.handle("open-desktop-auth", (_event, _provider?: string) => {
     // GOOGLE / MICROSOFT:
     // It is perfectly acceptable and explicitly allowed by Apple to bounce Google/MS to the external system browser.
     console.log("[Desktop Auth] Opening external system browser for OAuth Provider:", _provider);
-    shell.openExternal(authUrl);
+    openExternalSafely(beginDesktopAuth());
   }
 });
 
-// IPC: Open any generic URL in the native default browser
-ipcMain.handle("open-external-url", (_event, url: string) => {
-  if (url) shell.openExternal(url);
+// IPC: Open a URL in the default browser. Only https, http and mailto.
+ipcMain.handle("open-external-url", (_event, url: unknown) => {
+  if (typeof url === "string" && url) openExternalSafely(url);
 });
 
 // IPC: Fetch deep system diagnostics for the Admin Debug Panel
@@ -906,11 +1385,104 @@ ipcMain.handle("chunk-system-audio", async () => {
   });
 });
 
+// ─── Encryption of local recovery data ───────────────────────────────────────
+// Unsaved transcripts (renderer localStorage) and the recovery audio below are
+// sealed with AES-256-GCM. The 32-byte key is random per install and is kept
+// on disk wrapped by safeStorage (Keychain on macOS, DPAPI on Windows, the
+// secret service on Linux). If safeStorage is not available, data is written
+// in plain text as before, so crash recovery keeps working.
+const LOCAL_DATA_KEY_FILE = "local-data.key";
+const SEALED_TEXT_PREFIX = "plan-enc:v1:";
+const GCM_IV_BYTES = 12;
+const GCM_TAG_BYTES = 16;
+let localDataKeyCache: Buffer | null | undefined;
+
+function localDataKey(): Buffer | null {
+  if (localDataKeyCache !== undefined) return localDataKeyCache;
+  if (!app.isReady()) return null;
+  localDataKeyCache = null;
+  try {
+    if (!safeStorage.isEncryptionAvailable()) {
+      console.warn("[local-data] safeStorage is not available, recovery data stays unencrypted");
+      return null;
+    }
+    const file = path.join(app.getPath("userData"), LOCAL_DATA_KEY_FILE);
+    if (existsSync(file)) {
+      // A key that cannot be unwrapped is left in place. The keychain may just
+      // be locked, and a new key would make older data unreadable for good.
+      const key = Buffer.from(safeStorage.decryptString(readFileSync(file)), "base64");
+      if (key.length !== 32) throw new Error("stored key has the wrong length");
+      localDataKeyCache = key;
+      return key;
+    }
+    const key = randomBytes(32);
+    writeFileSync(file, safeStorage.encryptString(key.toString("base64")), { mode: 0o600 });
+    localDataKeyCache = key;
+    return key;
+  } catch (err) {
+    console.error("[local-data] Could not load the encryption key:", err);
+    return null;
+  }
+}
+
+/** iv (12 bytes), then the GCM tag (16), then the ciphertext. */
+function sealBytes(key: Buffer, plain: Buffer): Buffer {
+  const iv = randomBytes(GCM_IV_BYTES);
+  const cipher = createCipheriv("aes-256-gcm", key, iv);
+  const body = Buffer.concat([cipher.update(plain), cipher.final()]);
+  return Buffer.concat([iv, cipher.getAuthTag(), body]);
+}
+
+function openBytes(key: Buffer, sealed: Buffer): Buffer | null {
+  if (sealed.length < GCM_IV_BYTES + GCM_TAG_BYTES) return null;
+  try {
+    const decipher = createDecipheriv("aes-256-gcm", key, sealed.subarray(0, GCM_IV_BYTES));
+    decipher.setAuthTag(sealed.subarray(GCM_IV_BYTES, GCM_IV_BYTES + GCM_TAG_BYTES));
+    return Buffer.concat([
+      decipher.update(sealed.subarray(GCM_IV_BYTES + GCM_TAG_BYTES)),
+      decipher.final(),
+    ]);
+  } catch {
+    return null;
+  }
+}
+
+// Synchronous on purpose: the renderer's crash-recovery store is localStorage,
+// which is synchronous. A transcript is a few hundred KB at most.
+ipcMain.on("local-data-seal", (event, text: unknown) => {
+  const key =
+    typeof text === "string" && isRendererUrl(event.senderFrame?.url) ? localDataKey() : null;
+  event.returnValue = key
+    ? SEALED_TEXT_PREFIX + sealBytes(key, Buffer.from(text as string, "utf8")).toString("base64")
+    : null;
+});
+
+ipcMain.on("local-data-open", (event, sealed: unknown) => {
+  if (
+    typeof sealed !== "string" ||
+    !sealed.startsWith(SEALED_TEXT_PREFIX) ||
+    !isRendererUrl(event.senderFrame?.url)
+  ) {
+    event.returnValue = null;
+    return;
+  }
+  const key = localDataKey();
+  const plain = key
+    ? openBytes(key, Buffer.from(sealed.slice(SEALED_TEXT_PREFIX.length), "base64"))
+    : null;
+  event.returnValue = plain ? plain.toString("utf8") : null;
+});
+
 // ─── Crash-safe copy of the recording's audio ────────────────────────────────
 // The renderer keeps the recording in memory until it uploads it, so a crash
 // used to leave only the live transcript text to recover. Each MediaRecorder
 // chunk is also appended here, one folder per recording session, and deleted
 // once the backend confirms the save (or the user discards the recovery).
+//
+// With a local data key, each chunk is sealed on its own and stored as a
+// frame: a 4-byte big-endian length, then the sealed bytes. A crash can only
+// tear the last frame, and reading stops there. "<track>.webm" files are the
+// plain-text copies written by older versions or without a key.
 const RECOVERY_SESSION_ID = /^[a-zA-Z0-9-]{8,64}$/;
 const RECOVERY_TRACKS = new Set(["mic", "sys"]);
 const recoveryAppendChains = new Map<string, Promise<void>>();
@@ -923,10 +1495,39 @@ function recoveryDir(sessionId: string): string | null {
   return RECOVERY_SESSION_ID.test(sessionId) ? path.join(recoveryRoot(), sessionId) : null;
 }
 
-function recoveryFile(sessionId: string, track: string): string | null {
+function recoveryFiles(
+  sessionId: string,
+  track: string,
+): { plain: string; sealed: string } | null {
   const dir = recoveryDir(sessionId);
   if (!dir || !RECOVERY_TRACKS.has(track)) return null;
-  return path.join(dir, `${track}.webm`);
+  return { plain: path.join(dir, `${track}.webm`), sealed: path.join(dir, `${track}.enc`) };
+}
+
+/**
+ * Owner-only access for the recovery folder, including folders and files
+ * written by older versions with the default modes. Best effort.
+ */
+function prepareRecoveryRoot(): void {
+  if (process.platform === "win32") return;
+  try {
+    const root = recoveryRoot();
+    mkdirSync(root, { recursive: true, mode: 0o700 });
+    chmodSync(root, 0o700);
+    for (const name of readdirSync(root)) {
+      const dir = path.join(root, name);
+      try {
+        chmodSync(dir, 0o700);
+        for (const file of readdirSync(dir)) {
+          chmodSync(path.join(dir, file), 0o600);
+        }
+      } catch {
+        /* not a session folder, or gone meanwhile */
+      }
+    }
+  } catch (err) {
+    console.warn("[recovery] Could not restrict the recovery folder:", err);
+  }
 }
 
 async function fileSize(file: string): Promise<number> {
@@ -937,24 +1538,62 @@ async function fileSize(file: string): Promise<number> {
   }
 }
 
+async function readRecoveryTrack(files: { plain: string; sealed: string }): Promise<Uint8Array | null> {
+  const sealed = await fsPromises.readFile(files.sealed).catch(() => null);
+  if (sealed) {
+    const key = localDataKey();
+    if (!key) return null;
+    const parts: Buffer[] = [];
+    let offset = 0;
+    while (offset + 4 <= sealed.length) {
+      const length = sealed.readUInt32BE(offset);
+      const end = offset + 4 + length;
+      if (end > sealed.length) break; // torn last write
+      const plain = openBytes(key, sealed.subarray(offset + 4, end));
+      if (!plain) break;
+      parts.push(plain);
+      offset = end;
+    }
+    return parts.length > 0 ? new Uint8Array(Buffer.concat(parts)) : null;
+  }
+  try {
+    return new Uint8Array(await fsPromises.readFile(files.plain));
+  } catch {
+    return null;
+  }
+}
+
 ipcMain.handle(
   "recovery-audio-append",
-  async (_event, sessionId: string, track: string, data: Uint8Array) => {
-    const file = recoveryFile(sessionId, track);
-    if (!file || !(data instanceof Uint8Array)) return false;
+  async (event, sessionId: string, track: string, data: Uint8Array) => {
+    const files = recoveryFiles(sessionId, track);
+    if (!files || !(data instanceof Uint8Array) || !isRendererUrl(event.senderFrame?.url)) {
+      return false;
+    }
     // Appends for one file run in order: IPC handlers run concurrently and a
     // reordered chunk would corrupt the WebM stream.
-    const previous = recoveryAppendChains.get(file) ?? Promise.resolve();
+    const previous = recoveryAppendChains.get(files.plain) ?? Promise.resolve();
     const next = previous.then(async () => {
-      await fsPromises.mkdir(path.dirname(file), { recursive: true });
-      await fsPromises.appendFile(file, Buffer.from(data));
+      await fsPromises.mkdir(path.dirname(files.plain), { recursive: true, mode: 0o700 });
+      const key = localDataKey();
+      // A track keeps the format it started with, so one file never mixes both.
+      if (key && !existsSync(files.plain)) {
+        const frame = sealBytes(key, Buffer.from(data));
+        const length = Buffer.alloc(4);
+        length.writeUInt32BE(frame.length);
+        await fsPromises.appendFile(files.sealed, Buffer.concat([length, frame]), { mode: 0o600 });
+      } else {
+        await fsPromises.appendFile(files.plain, Buffer.from(data), { mode: 0o600 });
+      }
     });
     const settled = next.catch((err) => {
-      console.error(`[recovery] append failed for ${file}:`, err);
+      console.error(`[recovery] append failed for ${files.plain}:`, err);
     });
-    recoveryAppendChains.set(file, settled);
+    recoveryAppendChains.set(files.plain, settled);
     void settled.then(() => {
-      if (recoveryAppendChains.get(file) === settled) recoveryAppendChains.delete(file);
+      if (recoveryAppendChains.get(files.plain) === settled) {
+        recoveryAppendChains.delete(files.plain);
+      }
     });
     try {
       await next;
@@ -966,21 +1605,20 @@ ipcMain.handle(
 );
 
 ipcMain.handle("recovery-audio-info", async (_event, sessionId: string) => {
-  const mic = recoveryFile(sessionId, "mic");
-  const sys = recoveryFile(sessionId, "sys");
+  const mic = recoveryFiles(sessionId, "mic");
+  const sys = recoveryFiles(sessionId, "sys");
   if (!mic || !sys) return { micBytes: 0, sysBytes: 0 };
-  return { micBytes: await fileSize(mic), sysBytes: await fileSize(sys) };
+  // Sealed sizes include 32 bytes per chunk; close enough for the size checks.
+  const size = async (files: { plain: string; sealed: string }) =>
+    (await fileSize(files.sealed)) || (await fileSize(files.plain));
+  return { micBytes: await size(mic), sysBytes: await size(sys) };
 });
 
-ipcMain.handle("recovery-audio-read", async (_event, sessionId: string) => {
+ipcMain.handle("recovery-audio-read", async (event, sessionId: string) => {
+  if (!isRendererUrl(event.senderFrame?.url)) return { mic: null, sys: null };
   const read = async (track: string): Promise<Uint8Array | null> => {
-    const file = recoveryFile(sessionId, track);
-    if (!file) return null;
-    try {
-      return new Uint8Array(await fsPromises.readFile(file));
-    } catch {
-      return null;
-    }
+    const files = recoveryFiles(sessionId, track);
+    return files ? readRecoveryTrack(files) : null;
   };
   return { mic: await read("mic"), sys: await read("sys") };
 });
@@ -995,6 +1633,12 @@ ipcMain.handle("recovery-audio-delete", async (_event, sessionId: string) => {
 // Deletes every session folder except the ones still listed as recoverable
 // (orphans from saves whose cleanup failed, or recoveries the user discarded).
 ipcMain.handle("recovery-audio-prune", async (_event, keepSessionIds: string[]) => {
+  // A key file that cannot be opened now (keychain locked or denied) means the
+  // renderer could not read every record: deleting audio would lose meetings.
+  if (existsSync(path.join(app.getPath("userData"), LOCAL_DATA_KEY_FILE)) && !localDataKey()) {
+    console.warn("[recovery] Local data key unavailable, skipping the audio prune");
+    return 0;
+  }
   const keep = new Set(Array.isArray(keepSessionIds) ? keepSessionIds : []);
   let entries: string[] = [];
   try {
@@ -1043,6 +1687,11 @@ ipcMain.handle("stop-system-audio", async () => {
 });
 
 ipcMain.on("simulate-main-crash", () => {
+  // Development only: in a release build any page script could kill the app.
+  if (app.isPackaged) {
+    console.warn("[IPC main] simulate-main-crash ignored in a packaged build");
+    return;
+  }
   console.log("[IPC main] Received simulate-main-crash. Crashing process natively via process.crash()...");
   process.crash();
 });

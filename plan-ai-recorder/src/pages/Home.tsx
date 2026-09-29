@@ -49,6 +49,7 @@ import {
 import {
   loadUnsavedMeetings,
   clearUnsavedTranscript,
+  listUnsavedSessionIds,
   type UnsavedTranscript,
 } from "../utils/unsavedTranscript";
 import {
@@ -241,9 +242,12 @@ const Home: React.FC = () => {
         if (m.sessionId) deleteRecoveryAudio(m.sessionId);
       }
       // Audio folders with no record left (saved meetings whose cleanup failed).
-      pruneRecoveryAudio(
-        worthRecovering.map((m) => m.sessionId).filter((id): id is string => !!id),
-      );
+      // Every stored record keeps its audio, also the ones that cannot be read
+      // right now (keychain locked): deleting their audio would lose it for good.
+      pruneRecoveryAudio([
+        ...worthRecovering.map((m) => m.sessionId).filter((id): id is string => !!id),
+        ...listUnsavedSessionIds(),
+      ]);
       if (!cancelled) setUnsavedMeetings(worthRecovering);
     })();
     return () => {

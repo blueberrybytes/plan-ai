@@ -79,7 +79,31 @@ const Login: React.FC = () => {
     return unsubscribe;
   }, []);
 
+  // The browser came back with a login this window did not start, or an
+  // out-of-date web page dropped the login state. Nothing was signed in.
+  useEffect(() => {
+    const unsubscribe = window.electron.onDesktopAuthRejected?.(() => {
+      setWaitingProvider(null);
+      setError("Sign-in could not be verified. Start it again from this window.");
+    });
+    return unsubscribe;
+  }, []);
+
+  // The link carries this login's state, so it only works for the login in
+  // progress.
+  const copyAuthLink = async () => {
+    const authUrl = await window.electron.getDesktopAuthUrl?.();
+    if (!authUrl) {
+      setError("This sign-in has expired. Start it again.");
+      setWaitingProvider(null);
+      return;
+    }
+    await navigator.clipboard.writeText(authUrl);
+  };
+
+  // The debug panel is for development builds only.
   const showBug =
+    import.meta.env.DEV &&
     String(import.meta.env.VITE_LOGIN_BUG).toLowerCase() === "true";
 
   return (
@@ -153,11 +177,7 @@ const Login: React.FC = () => {
                 Opened the wrong browser? <br/>
                 <Button 
                   size="small" 
-                  onClick={() => {
-                    const baseUrl = import.meta.env.VITE_PLAN_AI_WEB_URL || "http://localhost:3000";
-                    const authUrl = `${baseUrl.replace(/\/+$/, "")}/login?desktop_auth=true`;
-                    navigator.clipboard.writeText(authUrl);
-                  }}
+                  onClick={() => void copyAuthLink()}
                   sx={{ p: 0, minWidth: 'auto', textTransform: 'none', mt: 0.5 }}
                 >
                   Copy Auth Link

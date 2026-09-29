@@ -295,48 +295,6 @@ export const createPlanAiApi = (
       );
     },
 
-    async transcribeChunk(chunks: {
-      mic?: Blob;
-      system?: Blob;
-    }): Promise<string> {
-      const req = async (force: boolean) => {
-        const token = await getToken(force);
-        if (!token) throw new Error("No auth token available");
-
-        const form = new FormData();
-        if (chunks.mic) {
-          form.append("mic", chunks.mic, "mic.webm");
-        }
-        if (chunks.system) {
-          const isMacNative =
-            chunks.system.type.includes("mp4") ||
-            chunks.system.type.includes("m4a");
-          form.append(
-            "system",
-            chunks.system,
-            isMacNative ? "system.m4a" : "system.webm",
-          );
-        }
-
-        const headers: Record<string, string> = {
-          Authorization: `Bearer ${token}`,
-        };
-        const wsId = getWorkspaceId();
-        if (wsId) headers["X-Workspace-Id"] = wsId;
-
-        return safeFetch(`${BASE_URL}/api/audio/transcribe-chunk`, {
-          method: "POST",
-          headers,
-          body: form,
-        });
-      };
-
-      const res = await req(false);
-      return handleResponseWithRetry<{ text: string }>(res, () =>
-        req(true),
-      ).then((d) => d.text);
-    },
-
     async startAudioStream(
       language?: string,
       contextIds?: string[],

@@ -30,6 +30,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 import type { Transcript, Task } from "../services/planAiApi";
 import ReactMarkdown from "react-markdown";
+import { markdownComponents } from "../utils/markdownComponents";
 import { parseSpeakerBlocks } from "../utils/speakerBlocks";
 import RecordingAudioPlayer, {
   channelOfUtterance,
@@ -40,6 +41,7 @@ import PostMeetingTasksPanel from "../components/PostMeetingTasksPanel";
 import SendNotesDialog from "../components/SendNotesDialog";
 import CalendarInviteInfo from "../components/CalendarInviteInfo";
 import SyncBadges from "../components/SyncBadges";
+import MermaidDiagram from "../components/MermaidDiagram";
 import SpeakerInsightsTab, {
   type SpeakerInsight,
 } from "../components/SpeakerInsightsTab";
@@ -78,32 +80,21 @@ const MermaidImgRenderer = ({ tasks }: { tasks: Task[] }) => {
     }
   });
 
-  try {
-    // Standard UTF-8 safe Base64 encoding. mermaid.ink handles standard Base64.
-    const encoded = btoa(unescape(encodeURIComponent(code)));
-
-    return (
-      <Box
-        sx={{
-          width: "100%",
-          overflow: "auto",
-          p: 4,
-          bgcolor: "#ffffff",
-          borderRadius: 2,
-          display: "flex",
-          justifyContent: "center",
-        }}
-      >
-        <img
-          src={`https://mermaid.ink/svg/${encoded}`}
-          alt="Architecture Map"
-          style={{ maxWidth: "100%" }}
-        />
-      </Box>
-    );
-  } catch (e) {
-    return <Alert severity="error">Failed to encode diagram.</Alert>;
-  }
+  return (
+    <Box
+      sx={{
+        width: "100%",
+        overflow: "auto",
+        p: 4,
+        bgcolor: "#ffffff",
+        borderRadius: 2,
+        display: "flex",
+        justifyContent: "center",
+      }}
+    >
+      <MermaidDiagram code={code} />
+    </Box>
+  );
 };
 
 /**
@@ -197,7 +188,7 @@ const ChatMessageItem = ({
             msg.role === "USER" ? "primary.contrastText" : "text.secondary",
         }}
       >
-        <ReactMarkdown>{msg.content}</ReactMarkdown>
+        <ReactMarkdown components={markdownComponents}>{msg.content}</ReactMarkdown>
       </Box>
 
       <IconButton
@@ -1119,7 +1110,7 @@ const TranscriptView: React.FC = () => {
                                   "& p": { margin: 0 },
                                 }}
                               >
-                                <ReactMarkdown>
+                                <ReactMarkdown components={markdownComponents}>
                                   {selectedTask.acceptanceCriteria}
                                 </ReactMarkdown>
                               </Box>

@@ -24,6 +24,8 @@ declare global {
       getAppVersion: () => Promise<string>;
       /** Opens the Plan AI web app /auth/desktop page in the system browser */
       openDesktopAuth: (provider?: string) => Promise<void>;
+      /** Web URL of the login in progress (it carries the login state), or null */
+      getDesktopAuthUrl?: () => Promise<string | null>;
       /** Clears Chromium defaultSession storage so Apple/Google Logins don't infinitely auto-connect */
       clearAuthSession: () => Promise<boolean>;
       /** Opens a generic URL in the system default browser */
@@ -38,6 +40,8 @@ declare global {
       openSystemPreferences: (pane: "microphone" | "screen") => Promise<void>;
       /** Registers a listener for the custom-protocol auth token; returns an unsubscribe fn */
       onDesktopAuthCode: (callback: (code: string) => void) => () => void;
+      /** Registers a listener for a login callback refused because its state did not match */
+      onDesktopAuthRejected?: (callback: () => void) => () => void;
       /** Registers a listener for if the user manually closes the desktop auth modal */
       onDesktopAuthCancelled: (callback: () => void) => () => void;
       /**
@@ -61,6 +65,16 @@ declare global {
         /** Deletes every session folder not listed. Returns how many were removed. */
         prune: (keepSessionIds: string[]) => Promise<number>;
       };
+      /**
+       * Encrypts crash-recovery text with the local data key kept by the main
+       * process. Both return null when encryption is unavailable (or, for
+       * open, when the text cannot be decrypted). Optional: an older main
+       * process may not have it.
+       */
+      localData?: {
+        seal: (text: string) => string | null;
+        open: (sealed: string) => string | null;
+      };
       /** Save a string content to file natively bypassing browser restrictions */
       saveFile: (content: string, defaultPath: string) => Promise<boolean>;
       /** Register listener for Mac App Store update notifications */
@@ -69,7 +83,7 @@ declare global {
       onOtaUpdateAvailable: (callback: (info: { version: string; [key: string]: any }) => void) => () => void;
       /** Register listener for OTA update download completed */
       onOtaUpdateDownloaded: (callback: (info: { version: string; [key: string]: any }) => void) => () => void;
-      /** Trigger a native main process crash (for Sentry testing) */
+      /** Trigger a native main process crash (for Sentry testing). Ignored in packaged builds. */
       simulateMainCrash: () => void;
       /** Auto-Updater: Restart and install the downloaded update */
       quitAndInstall: () => Promise<void>;

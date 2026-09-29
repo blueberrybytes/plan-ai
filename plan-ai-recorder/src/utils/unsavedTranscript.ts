@@ -11,6 +11,11 @@
  * Records used to share one key, so starting a new recording overwrote a
  * meeting that was never recovered. Each session now has its own key. The old
  * single key is still read, so copies written by older versions are not lost.
+ *
+ * Records are encrypted by the main process (AES-256-GCM, key kept in the OS
+ * keychain through safeStorage) before they reach localStorage. Plain-text
+ * records from older versions are still read, and sealed on the next load.
+ * If encryption is unavailable, records are stored in plain text as before.
  */
 
 import type { CalendarEvent } from "./recorderConfig";
@@ -20,6 +25,8 @@ export type RecordingBookmark = components["schemas"]["RecordingBookmark"];
 
 const LEGACY_KEY = "planai_unsaved_transcript";
 const KEY_PREFIX = "planai_unsaved_meeting:";
+// Must match SEALED_TEXT_PREFIX in electron/main.ts.
+const SEALED_PREFIX = "plan-enc:v1:";
 
 export interface UnsavedTranscript {
   content: string;
@@ -44,15 +51,36 @@ export interface UnsavedSession {
   calendarEvent?: CalendarEvent;
 }
 
+/** Encrypted when the main process can, plain JSON otherwise. */
+function seal(json: string): string {
+  try {
+    return window.electron?.localData?.seal(json) ?? json;
+  } catch {
+    return json;
+  }
+}
+
+/** The JSON behind a stored value, or null when it cannot be decrypted. */
+function unseal(raw: string): string | null {
+  if (!raw.startsWith(SEALED_PREFIX)) return raw;
+  try {
+    return window.electron?.localData?.open(raw) ?? null;
+  } catch {
+    return null;
+  }
+}
+
 function write(key: string, record: UnsavedTranscript): void {
   try {
-    localStorage.setItem(key, JSON.stringify(record));
+    localStorage.setItem(key, seal(JSON.stringify(record)));
   } catch {
     /* localStorage full/unavailable — non-fatal */
   }
 }
 
-function parse(raw: string | null): UnsavedTranscript | null {
+function parse(stored: string | null): UnsavedTranscript | null {
+  if (!stored) return null;
+  const raw = unseal(stored);
   if (!raw) return null;
   try {
     const parsed = JSON.parse(raw) as Partial<UnsavedTranscript>;
@@ -116,24 +144,54 @@ export function updateUnsavedMeeting(
 /** Every meeting that was never confirmed as saved, oldest first. */
 export function loadUnsavedMeetings(): UnsavedTranscript[] {
   const found: UnsavedTranscript[] = [];
+  // Plain-text records (older versions) are sealed once read. Done after the
+  // scan: writing while iterating localStorage.key(i) could skip entries.
+  const toSeal: Array<[string, UnsavedTranscript]> = [];
   try {
-    const legacy = parse(localStorage.getItem(LEGACY_KEY));
-    if (legacy && legacy.content.trim()) found.push(legacy);
+    const legacyRaw = localStorage.getItem(LEGACY_KEY);
+    const legacy = parse(legacyRaw);
+    if (legacy && legacy.content.trim()) {
+      found.push(legacy);
+      if (legacyRaw && !legacyRaw.startsWith(SEALED_PREFIX)) toSeal.push([LEGACY_KEY, legacy]);
+    }
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
       if (!key || !key.startsWith(KEY_PREFIX)) continue;
-      const record = parse(localStorage.getItem(key));
+      const raw = localStorage.getItem(key);
+      const record = parse(raw);
       if (record) {
         found.push({
           ...record,
           sessionId: record.sessionId ?? key.slice(KEY_PREFIX.length),
         });
+        if (raw && !raw.startsWith(SEALED_PREFIX)) toSeal.push([key, record]);
       }
+    }
+    if (window.electron?.localData) {
+      for (const [key, record] of toSeal) write(key, record);
     }
   } catch {
     /* localStorage unavailable */
   }
   return found.sort((a, b) => (a.startedAt ?? a.savedAt) - (b.startedAt ?? b.savedAt));
+}
+
+/**
+ * Session ids of every stored record, readable or not. A sealed record that
+ * cannot be opened right now (keychain locked or denied) still owns its audio
+ * folder, so pruning must keep it.
+ */
+export function listUnsavedSessionIds(): string[] {
+  const ids: string[] = [];
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith(KEY_PREFIX)) ids.push(key.slice(KEY_PREFIX.length));
+    }
+  } catch {
+    /* localStorage unavailable */
+  }
+  return ids;
 }
 
 /** Clears one meeting's record, or the legacy record when no id is given. */

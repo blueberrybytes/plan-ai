@@ -505,16 +505,19 @@ const Debug: React.FC = () => {
               >
                 Crash Renderer Process
               </Button>
-              <Button
-                variant="contained"
-                color="warning"
-                onClick={() => {
-                  // Trigger native IPC crash simulating C++/Node failure
-                  window.electron.simulateMainCrash();
-                }}
-              >
-                Crash Main Process
-              </Button>
+              {/* The main process ignores this in packaged builds. */}
+              {import.meta.env.DEV && (
+                <Button
+                  variant="contained"
+                  color="warning"
+                  onClick={() => {
+                    // Trigger native IPC crash simulating C++/Node failure
+                    window.electron.simulateMainCrash();
+                  }}
+                >
+                  Crash Main Process
+                </Button>
+              )}
             </Stack>
           </Paper>
         )}
