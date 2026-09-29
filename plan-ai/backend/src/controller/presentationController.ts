@@ -6,6 +6,7 @@ import { type AuthenticatedRequest } from "../middleware/authMiddleware";
 import { type TsoaJsonObject } from "./controllerTypes";
 import { slideGenerationService } from "../services/slideGenerationService";
 import { mergeProjectAndContextIds } from "../services/projectContextResolver";
+import { signSlideImages } from "../utils/slideImages";
 
 interface GeneratePresentationRequest {
   templateId?: string;
@@ -72,6 +73,8 @@ interface PresentationResponse {
   contextIds: string[];
   status: string;
   isPublic: boolean;
+  /** Secret for the public link (/p/<shareToken>). Null when not shared. */
+  shareToken: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -356,7 +359,7 @@ export class PresentationController extends BaseWorkspaceController {
   ): Promise<PresentationResponse[]> {
     const { user, workspaceId } = await this.getAuthorizedWorkspaceAccess(request);
     const presentations = await slideGenerationService.listPresentations(user.id, workspaceId);
-    return presentations.map((p) => this.mapPresentationResponse(p));
+    return Promise.all(presentations.map((p) => this.mapPresentationResponse(p)));
   }
 
   @Get("{presentationId}")
@@ -418,9 +421,10 @@ export class PresentationController extends BaseWorkspaceController {
     return this.mapPresentationResponse(presentation);
   }
 
-  private mapPresentationResponse(
+  // Slide images are private files: the response carries signed links.
+  private async mapPresentationResponse(
     presentation: Presentation & { template?: SlideTemplate | null; theme?: BrandTheme | null },
-  ): PresentationResponse {
+  ): Promise<PresentationResponse> {
     return {
       id: presentation.id,
       userId: presentation.userId,
@@ -449,10 +453,11 @@ export class PresentationController extends BaseWorkspaceController {
           }
         : undefined,
       title: presentation.title,
-      slidesJson: presentation.slidesJson as TsoaJsonObject | null,
+      slidesJson: (await signSlideImages(presentation.slidesJson)) as TsoaJsonObject | null,
       contextIds: presentation.contextIds,
       status: presentation.status,
       isPublic: presentation.isPublic,
+      shareToken: presentation.shareToken,
       createdAt: presentation.createdAt,
       updatedAt: presentation.updatedAt,
     };

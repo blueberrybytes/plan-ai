@@ -74,12 +74,13 @@ import type {
   AsanaIntegrationMetadata,
 } from "./integrationMetadataTypes";
 import { getPersonaInstructions } from "./personaService";
-import { mcpClientService } from "./mcpClientService";
+import { mcpClientService, repoNameForContexts } from "./mcpClientService";
 import { ladybugService } from "./ladybugService";
 import { taskRefinementQueue } from "../queue/taskRefinementQueue";
 import { generateProjectDigest } from "./projectDigestService";
 import { twentyIntegrationService } from "./twentyIntegrationService";
 import { readableUrl } from "../firebase/privateStorage";
+import { deepgramPrivacyOptions } from "../utils/deepgramPrivacy";
 
 /**
  * Which Twenty company a meeting note is filed under.
@@ -543,6 +544,7 @@ export class ProjectTranscriptService {
         }
 
         const dgOptions = {
+          ...deepgramPrivacyOptions(),
           diarize: true,
           model: "nova-3",
           smart_format: true,
@@ -1776,7 +1778,15 @@ export class ProjectTranscriptService {
       (contextPrompt ? `Relevant context:\n${contextPrompt}\n\n` : "") + dynamicContext;
 
     // Step 1: Optional Agentic Investigation via MCP
-    const tools = agenticInvestigation ? mcpClientService.getAiTools() : undefined;
+    // Runs on meeting text with nobody watching: no web tools, and codebase
+    // tools only for this project's own repo.
+    const tools = agenticInvestigation
+      ? mcpClientService.getAiTools(
+          await repoNameForContexts(contextIds ?? [], workspaceId),
+          workspaceId,
+          { web: false },
+        )
+      : undefined;
     if (tools) {
       try {
         logger.info(`Starting Two-Step Agentic Investigation for Transcript using fast model`);
@@ -3030,7 +3040,7 @@ ${transcriptForLLM}`;
       repoInvestigation.status !== "success"
     ) {
       if (repoInvestigation.status === "no_repo") {
-        tools = mcpClientService.getAiTools();
+        tools = mcpClientService.getAiTools(undefined, workspaceId, { web: false });
         if (tools) toolSource = "mcp";
       } else {
         await onProgress?.({

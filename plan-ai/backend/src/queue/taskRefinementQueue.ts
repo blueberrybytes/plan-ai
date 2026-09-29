@@ -19,7 +19,9 @@ export interface TaskRefinementJobPayload {
 export const taskRefinementQueue = new Queue<TaskRefinementJobPayload>("TaskRefinementQueue", {
   connection: queueConnection,
   defaultJobOptions: {
-    removeOnComplete: { count: 100 },
-    removeOnFail: { count: 50 },
+    // Job data holds meeting content. Finished jobs go at once; failed ones stay
+    // a week for debugging, then Redis drops them.
+    removeOnComplete: true,
+    removeOnFail: { age: 7 * 24 * 3600, count: 50 },
   },
 });

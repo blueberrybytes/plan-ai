@@ -13,13 +13,15 @@ import {
 } from "ai";
 import { mcpClientService } from "../services/mcpClientService";
 import { logger } from "../utils/logger";
-import { authenticateUser, AuthenticatedRequest } from "../middleware/authMiddleware";
+import { authenticateUser } from "../middleware/authMiddleware";
+import { requireWorkspaceMember, type WorkspaceRequest } from "../middleware/workspaceMiddleware";
 import { aiUsageService } from "../services/aiUsageService";
 import prisma from "../prisma/prismaClient";
 import {
   requireActiveSubscription,
   SubscriptionRequiredError,
 } from "../services/subscriptionGuard";
+import { extractUrls } from "../utils/urlAllowlist";
 
 const router = Router();
 
@@ -31,35 +33,57 @@ const router = Router();
 router.post(
   "/api/gitnexus/chat",
   authenticateUser,
-  async (req: AuthenticatedRequest, res: Response) => {
+  requireWorkspaceMember,
+  async (req: WorkspaceRequest, res: Response) => {
     if (process.env.USE_GITNEXUS !== "true") {
       res.status(503).json({ error: "GitNexus is not enabled on this server." });
       return;
     }
 
-    const workspaceHeader = req.headers["x-workspace-id"];
-    const wsId = Array.isArray(workspaceHeader) ? workspaceHeader[0] : workspaceHeader;
-    if (wsId) {
-      try {
-        await requireActiveSubscription(wsId);
-      } catch (err) {
-        if (err instanceof SubscriptionRequiredError) {
-          res.status(err.status).json({ code: err.code, message: err.message, reason: err.reason });
-          return;
-        }
-        throw err;
+    const wsId = req.workspaceAccess!.workspaceId;
+    try {
+      await requireActiveSubscription(wsId);
+    } catch (err) {
+      if (err instanceof SubscriptionRequiredError) {
+        res.status(err.status).json({ code: err.code, message: err.message, reason: err.reason });
+        return;
       }
+      throw err;
     }
 
-    // Extract which repo to scope tool calls to (sent by GitNexusChatDialog)
-    const repoFullName: string | undefined = req.body.repoFullName;
-    // Extract organizationId for memory scoped to the org
-    const organizationId: string | undefined = req.body.organizationId;
+    // Extract which repo to scope tool calls to (sent by GitNexusChatDialog).
+    // Only repos connected to a context of this workspace can be queried.
+    const repoFullName: string | undefined =
+      typeof req.body.repoFullName === "string" ? req.body.repoFullName : undefined;
+    if (repoFullName) {
+      const linked = await prisma.context.findFirst({
+        where: {
+          workspaceId: wsId,
+          metadata: { path: ["githubRepoFullName"], equals: repoFullName },
+        },
+        select: { id: true },
+      });
+      if (!linked) {
+        res.status(403).json({ error: "This repository is not connected to your workspace." });
+        return;
+      }
+    }
+    // Memories are scoped to the workspace the caller is a member of. The
+    // organizationId in the body is ignored: it used to be trusted as sent.
+    const organizationId = wsId;
 
     // Convert "owner/repo" to just "repo" name for GitNexus lookup
     const repoName = repoFullName ? repoFullName.split("/").pop() : undefined;
 
-    const tools = mcpClientService.getAiTools(repoName, organizationId);
+    // fetch_url only for links the user typed in this conversation.
+    const userTexts: string[] = [];
+    for (const m of Array.isArray(req.body.messages) ? req.body.messages : []) {
+      if (m?.role !== "user" || !Array.isArray(m.parts)) continue;
+      for (const part of m.parts) if (part?.type === "text") userTexts.push(String(part.text));
+    }
+    const tools = mcpClientService.getAiTools(repoName, organizationId, {
+      allowedUrls: new Set(userTexts.flatMap((text) => extractUrls(text))),
+    });
     if (!tools) {
       res.status(503).json({ error: "GitNexus MCP server is not available." });
       return;

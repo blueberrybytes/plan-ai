@@ -6,6 +6,7 @@ import { PrismaClient } from "@prisma/client";
 import { logger } from "../utils/logger";
 import { getFileUrl } from "./telegramService";
 import { decryptSecret } from "../utils/secretCrypto";
+import { deepgramPrivacyOptions } from "../utils/deepgramPrivacy";
 
 const prisma = new PrismaClient();
 
@@ -125,6 +126,7 @@ export const transcribeVoiceNote = async (
 
   const attempt = async (language: string): Promise<string | null> => {
     const result = await deepgram.listen.prerecorded.transcribeFile(audio, {
+      ...deepgramPrivacyOptions(),
       model: "nova-3",
       smart_format: true,
       language,

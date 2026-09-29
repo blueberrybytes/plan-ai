@@ -8,10 +8,12 @@ import prisma from "../../prisma/prismaClient";
 export const collectContextKeyterms = async (
   contextIds: string[],
   limit = 100,
+  /** When given, only contexts of this workspace are read. */
+  workspaceId?: string,
 ): Promise<string[]> => {
   if (contextIds.length === 0) return [];
   const contexts = await prisma.context.findMany({
-    where: { id: { in: contextIds } },
+    where: { id: { in: contextIds }, ...(workspaceId ? { workspaceId } : {}) },
     select: { keywords: true },
   });
   const all = new Set<string>();

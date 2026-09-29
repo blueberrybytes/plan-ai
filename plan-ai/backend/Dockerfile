@@ -5,29 +5,21 @@ RUN apt-get update && apt-get install -y \
     ffmpeg \
     && rm -rf /var/lib/apt/lists/*
 
-ARG PORT
-ARG DATABASE_URL
-ARG OPENAI_API_KEY
-ARG FIREBASE_STORAGE_BUCKET
-ARG LINKEDIN_CLIENT_ID
-ARG LINKEDIN_CLIENT_SECRET
-ARG LINKEDIN_REDIRECT_URI
-
-ENV PORT=$PORT
-ENV DATABASE_URL=$DATABASE_URL
-ENV OPENAI_API_KEY=$OPENAI_API_KEY
-ENV FIREBASE_STORAGE_BUCKET=$FIREBASE_STORAGE_BUCKET
-ENV LINKEDIN_CLIENT_ID=$LINKEDIN_CLIENT_ID
-ENV LINKEDIN_CLIENT_SECRET=$LINKEDIN_CLIENT_SECRET
-ENV LINKEDIN_REDIRECT_URI=$LINKEDIN_REDIRECT_URI
+# Secrets are not build arguments: they would be written into the image
+# layers. Railway (or docker run -e) gives them to the container at runtime.
 
 WORKDIR /app
+RUN chown node:node /app
 
-COPY package.json yarn.lock ./
+# Build and run as the unprivileged "node" user of the base image, so a
+# compromised process cannot change the image or bind low ports.
+USER node
+
+COPY --chown=node:node package.json yarn.lock ./
 
 RUN yarn install
 
-COPY . .
+COPY --chown=node:node . .
 
 RUN npx prisma generate
 

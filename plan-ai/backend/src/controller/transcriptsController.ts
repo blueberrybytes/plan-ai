@@ -117,6 +117,7 @@ const importedAudioType = (fileName?: string): { ext: string; contentType: strin
 import { DocDocumentResponse } from "./docController";
 import { TranscriptMetadata, type PostMeetingTaskKind } from "../services/transcriptMetadataTypes";
 import { logger } from "../utils/logger";
+import { recordAudit } from "../services/auditLogService";
 
 interface TranscriptContextSummary {
   id: string;
@@ -1101,6 +1102,15 @@ export class TranscriptsController extends BaseWorkspaceController {
       if (err instanceof AudioInUseError) throw { status: 409, message: err.message };
       throw err;
     }
+    await recordAudit({
+      workspaceId,
+      actor: user,
+      action: "meeting.audio_deleted",
+      targetType: "transcript",
+      targetId: id,
+      metadata: { title: transcript.title },
+      request,
+    });
     return { status: 200, data: { success: true } };
   }
 

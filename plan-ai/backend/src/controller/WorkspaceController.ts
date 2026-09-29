@@ -1,5 +1,5 @@
 import { BaseWorkspaceController } from "./BaseWorkspaceController";
-import { Get, Post, Put, Delete, Body, Route, Security, Request, Tags, Path } from "tsoa";
+import { Get, Post, Put, Delete, Body, Route, Security, Request, Tags, Path, Query } from "tsoa";
 import {
   PrismaClient,
   WorkspaceRole,
@@ -14,6 +14,12 @@ import { validateOpenRouterKey, validateDeepgramKey } from "../services/keyValid
 import { setUserRole } from "../firebase/firebaseAdmin";
 import { encryptWorkspaceKeys } from "../utils/workspaceSecrets";
 import { isEncryptedSecret } from "../utils/secretCrypto";
+import { listAudit, recordAudit } from "../services/auditLogService";
+import { deleteWorkspaceData } from "../services/dataDeletionService";
+import { exportWorkspace } from "../services/workspaceExportService";
+import type { TsoaJsonObject } from "./controllerTypes";
+import { revokeMcpTokensForMember } from "../services/mcpTokenService";
+import { checkWorkspacePolicy, type WorkspacePolicy } from "../services/workspaceAccess";
 
 const prisma = new PrismaClient();
 
@@ -33,6 +39,10 @@ export interface WorkspaceResponse {
   defaultThemeId?: string | null;
   /** Days meeting audio is kept before it is deleted. Null keeps it forever. */
   audioRetentionDays?: number | null;
+  /** Sign-in rules. Empty list, false and null mean no rule. */
+  allowedEmailDomains?: string[];
+  requireMfa?: boolean;
+  requiredSignInProvider?: string | null;
 }
 
 export interface UpdateWorkspaceSettingsRequest {
@@ -50,6 +60,37 @@ export interface UpdateWorkspaceSettingsRequest {
    * leave unchanged. Transcripts, summaries and tasks are never deleted.
    */
   audioRetentionDays?: number | null;
+  /**
+   * Only accounts with an email in these domains can use the workspace, e.g.
+   * ["acme.com"]. Empty list removes the rule; omit to leave unchanged.
+   */
+  allowedEmailDomains?: string[];
+  /** Members must sign in with a second factor. Omit to leave unchanged. */
+  requireMfa?: boolean;
+  /**
+   * Firebase sign-in provider every member must use: "google.com",
+   * "microsoft.com", "apple.com", "password", or an SSO provider id such as
+   * "saml.acme" / "oidc.acme". Null removes the rule; omit to leave unchanged.
+   */
+  requiredSignInProvider?: string | null;
+}
+
+export interface AuditLogEntryResponse {
+  id: string;
+  action: string;
+  actorUserId: string | null;
+  actorEmail: string | null;
+  targetType: string | null;
+  targetId: string | null;
+  metadata: TsoaJsonObject | null;
+  ip: string | null;
+  userAgent: string | null;
+  createdAt: string;
+}
+
+export interface AuditLogResponse {
+  entries: AuditLogEntryResponse[];
+  nextCursor: string | null;
 }
 
 export interface InviteMemberRequest {
@@ -139,6 +180,9 @@ export class WorkspaceController extends BaseWorkspaceController {
         m.role === "OWNER" ? (m.workspace.openaiKey ? "••••••••••••••••" : undefined) : undefined,
       defaultThemeId: m.workspace.defaultThemeId,
       audioRetentionDays: m.workspace.audioRetentionDays,
+      allowedEmailDomains: m.workspace.allowedEmailDomains,
+      requireMfa: m.workspace.requireMfa,
+      requiredSignInProvider: m.workspace.requiredSignInProvider,
     }));
   }
 
@@ -304,6 +348,21 @@ export class WorkspaceController extends BaseWorkspaceController {
       throw { status: 400, message: "Invalid email address." };
     }
 
+    if (
+      workspace &&
+      checkWorkspacePolicy(
+        { ...workspace, requireMfa: false, requiredSignInProvider: null },
+        invitedUserEmail,
+        undefined,
+      )
+    ) {
+      this.setStatus(400);
+      throw {
+        status: 400,
+        message: `This workspace only allows accounts from ${workspace.allowedEmailDomains.join(", ")}.`,
+      };
+    }
+
     const workspaceName = workspace ? workspace.name : "Workspace";
     const invitedUser = await prisma.user.findUnique({ where: { email: invitedUserEmail } });
 
@@ -336,6 +395,15 @@ export class WorkspaceController extends BaseWorkspaceController {
       });
 
       await sendWorkspaceInvitationEmail(invitedUserEmail, user.email, workspaceName);
+      await recordAudit({
+        workspaceId,
+        actor: user,
+        action: "member.invited",
+        targetType: "email",
+        targetId: invitedUserEmail,
+        metadata: { role: body.role },
+        request,
+      });
 
       return { success: true, message: "Invitation email sent successfully." };
     }
@@ -370,6 +438,15 @@ export class WorkspaceController extends BaseWorkspaceController {
     }
 
     await sendWorkspaceInvitationEmail(invitedUserEmail, user.email, workspaceName);
+    await recordAudit({
+      workspaceId,
+      actor: user,
+      action: "member.added",
+      targetType: "user",
+      targetId: invitedUser.id,
+      metadata: { email: invitedUserEmail, role: body.role },
+      request,
+    });
 
     return { success: true, message: "User successfully invited and added to workspace." };
   }
@@ -384,7 +461,11 @@ export class WorkspaceController extends BaseWorkspaceController {
     @Path() memberId: string,
     @Body() body: UpdateMemberRequest,
   ): Promise<{ success: boolean; message: string }> {
-    const { workspaceId, role: requesterRole } = await this.getAuthorizedWorkspaceAccess(request);
+    const {
+      user: requester,
+      workspaceId,
+      role: requesterRole,
+    } = await this.getAuthorizedWorkspaceAccess(request);
 
     if (requesterRole !== "OWNER" && requesterRole !== "ADMIN") {
       this.setStatus(403);
@@ -419,6 +500,12 @@ export class WorkspaceController extends BaseWorkspaceController {
       throw { status: 403, message: "Cannot assign OWNER role via update endpoint." };
     }
 
+    // Same rule as invitations: only the owner makes admins.
+    if (body.role === "ADMIN" && targetMember.role !== "ADMIN" && requesterRole !== "OWNER") {
+      this.setStatus(403);
+      throw { status: 403, message: "Only the workspace owner can make someone an admin." };
+    }
+
     // Construct update payload dynamically
     const updateData: {
       role?: WorkspaceRole;
@@ -434,6 +521,18 @@ export class WorkspaceController extends BaseWorkspaceController {
       data: updateData,
     });
 
+    if (updateData.role && updateData.role !== targetMember.role) {
+      await recordAudit({
+        workspaceId,
+        actor: requester,
+        action: "member.role_changed",
+        targetType: "user",
+        targetId: targetMember.userId,
+        metadata: { email: targetMember.user.email, from: targetMember.role, to: updateData.role },
+        request,
+      });
+    }
+
     return { success: true, message: "Workspace member updated successfully." };
   }
 
@@ -447,7 +546,11 @@ export class WorkspaceController extends BaseWorkspaceController {
     @Request() request: AuthenticatedRequest,
     @Path() memberId: string,
   ): Promise<{ success: boolean; message: string }> {
-    const { workspaceId, role: requesterRole } = await this.getAuthorizedWorkspaceAccess(request);
+    const {
+      user: requester,
+      workspaceId,
+      role: requesterRole,
+    } = await this.getAuthorizedWorkspaceAccess(request);
 
     if (requesterRole !== "OWNER" && requesterRole !== "ADMIN") {
       this.setStatus(403);
@@ -456,6 +559,7 @@ export class WorkspaceController extends BaseWorkspaceController {
 
     const targetMember = await prisma.workspaceMember.findUnique({
       where: { id: memberId },
+      include: { user: { select: { email: true } } },
     });
 
     if (!targetMember || targetMember.workspaceId !== workspaceId) {
@@ -475,6 +579,17 @@ export class WorkspaceController extends BaseWorkspaceController {
     }
 
     await prisma.workspaceMember.delete({ where: { id: memberId } });
+    // Their MCP tokens for this workspace die with the membership.
+    const revokedTokens = await revokeMcpTokensForMember(targetMember.userId, workspaceId);
+    await recordAudit({
+      workspaceId,
+      actor: requester,
+      action: "member.removed",
+      targetType: "user",
+      targetId: targetMember.userId,
+      metadata: { email: targetMember.user.email, role: targetMember.role, revokedTokens },
+      request,
+    });
 
     return { success: true, message: "Member removed from workspace." };
   }
@@ -488,7 +603,11 @@ export class WorkspaceController extends BaseWorkspaceController {
     @Request() request: AuthenticatedRequest,
     @Path() invitationId: string,
   ): Promise<{ success: boolean; message: string }> {
-    const { workspaceId, role: requesterRole } = await this.getAuthorizedWorkspaceAccess(request);
+    const {
+      user: requester,
+      workspaceId,
+      role: requesterRole,
+    } = await this.getAuthorizedWorkspaceAccess(request);
 
     if (requesterRole !== "OWNER" && requesterRole !== "ADMIN") {
       this.setStatus(403);
@@ -505,6 +624,14 @@ export class WorkspaceController extends BaseWorkspaceController {
     }
 
     await prisma.workspaceInvitation.delete({ where: { id: invitationId } });
+    await recordAudit({
+      workspaceId,
+      actor: requester,
+      action: "member.invitation_cancelled",
+      targetType: "email",
+      targetId: invitation.email,
+      request,
+    });
 
     return { success: true, message: "Invitation cancelled." };
   }
@@ -518,7 +645,11 @@ export class WorkspaceController extends BaseWorkspaceController {
     @Request() request: AuthenticatedRequest,
     @Body() body: UpdateWorkspaceSettingsRequest,
   ): Promise<{ success: boolean; message: string }> {
-    const { workspaceId, role: requesterRole } = await this.getAuthorizedWorkspaceAccess(request);
+    const {
+      user: requester,
+      workspaceId,
+      role: requesterRole,
+    } = await this.getAuthorizedWorkspaceAccess(request);
 
     if (requesterRole !== "OWNER") {
       this.setStatus(403);
@@ -596,12 +727,246 @@ export class WorkspaceController extends BaseWorkspaceController {
         : { disconnect: true };
     }
 
+    const signInRules = await this.validatedSignInRules(workspaceId, body, request);
+    Object.assign(updateData, signInRules);
+
     // Validation above needs the plain keys; only the stored copy is encrypted.
     await prisma.workspace.update({
       where: { id: workspaceId },
       data: encryptWorkspaceKeys(updateData),
     });
 
+    // Which settings changed, never the values of the keys.
+    const changed: Record<string, string | number | boolean | string[] | null> = {};
+    for (const key of ["openRouterKey", "deepgramKey", "openaiKey"] as const) {
+      if (key in updateData) changed[key] = updateData[key] ? "set" : "cleared";
+    }
+    if (body.monthlyTokenLimit !== undefined) changed.monthlyTokenLimit = body.monthlyTokenLimit;
+    if (body.audioRetentionDays !== undefined) changed.audioRetentionDays = body.audioRetentionDays;
+    if (body.defaultThemeId !== undefined) changed.defaultThemeId = body.defaultThemeId;
+    Object.assign(changed, signInRules);
+    await recordAudit({
+      workspaceId,
+      actor: requester,
+      action: "settings.updated",
+      targetType: "workspace",
+      targetId: workspaceId,
+      metadata: changed,
+      request,
+    });
+
     return { success: true, message: "Workspace settings updated." };
+  }
+
+  /**
+   * Who did what in the workspace, newest first. Owners and admins only.
+   * Pass `nextCursor` back as `cursor` to read older entries.
+   */
+  @Get("/audit-log")
+  @Security("ClientLevel")
+  public async getAuditLog(
+    @Request() request: AuthenticatedRequest,
+    @Query() limit?: number,
+    @Query() cursor?: string,
+    @Query() action?: string,
+  ): Promise<AuditLogResponse> {
+    const { workspaceId, role } = await this.getAuthorizedWorkspaceAccess(request);
+    if (role !== "OWNER" && role !== "ADMIN") {
+      this.setStatus(403);
+      throw { status: 403, message: "Only workspace owners and admins can read the audit log." };
+    }
+    const page = await listAudit(workspaceId, { limit, cursor, action });
+    return {
+      entries: page.entries.map((e) => ({
+        ...e,
+        metadata: (e.metadata ?? null) as TsoaJsonObject | null,
+        createdAt: e.createdAt.toISOString(),
+      })),
+      nextCursor: page.nextCursor,
+    };
+  }
+
+  /**
+   * Everything in the workspace as one JSON file (meetings, tasks, files,
+   * documents, chats, audit log). Keys and tokens are not included. Owner only.
+   */
+  @Get("/export")
+  @Security("ClientLevel")
+  public async exportWorkspaceData(
+    @Request() request: AuthenticatedRequest,
+  ): Promise<TsoaJsonObject> {
+    const { user, workspaceId, role } = await this.getAuthorizedWorkspaceAccess(request);
+    if (role !== "OWNER") {
+      this.setStatus(403);
+      throw { status: 403, message: "Only the workspace owner can export its data." };
+    }
+    await recordAudit({ workspaceId, actor: user, action: "workspace.exported", request });
+    return (await exportWorkspace(workspaceId)) as TsoaJsonObject;
+  }
+
+  /**
+   * Makes another member the owner. The current owner becomes an admin.
+   */
+  @Post("/transfer-ownership")
+  @Security("ClientLevel")
+  public async transferOwnership(
+    @Request() request: AuthenticatedRequest,
+    @Body() body: { memberId: string },
+  ): Promise<{ success: boolean; message: string }> {
+    const { user, workspaceId, role } = await this.getAuthorizedWorkspaceAccess(request);
+    if (role !== "OWNER") {
+      this.setStatus(403);
+      throw { status: 403, message: "Only the workspace owner can transfer ownership." };
+    }
+    const target = await prisma.workspaceMember.findUnique({
+      where: { id: body?.memberId ?? "" },
+      include: { user: { select: { email: true } } },
+    });
+    if (!target || target.workspaceId !== workspaceId || target.userId === user.id) {
+      this.setStatus(404);
+      throw { status: 404, message: "Member not found in this workspace." };
+    }
+    await prisma.$transaction([
+      prisma.workspaceMember.update({ where: { id: target.id }, data: { role: "OWNER" } }),
+      prisma.workspaceMember.update({
+        where: { workspaceId_userId: { workspaceId, userId: user.id } },
+        data: { role: "ADMIN" },
+      }),
+    ]);
+    await recordAudit({
+      workspaceId,
+      actor: user,
+      action: "workspace.ownership_transferred",
+      targetType: "user",
+      targetId: target.userId,
+      metadata: { email: target.user.email },
+      request,
+    });
+    return { success: true, message: "Ownership transferred." };
+  }
+
+  /**
+   * Deletes the workspace and all its data: meetings with their audio,
+   * files, vectors, documents, chats and members. It cannot be undone. The
+   * owner types the workspace name to confirm. A paid subscription must be
+   * cancelled first, so billing never outlives the data.
+   */
+  @Post("/delete")
+  @Security("ClientLevel")
+  public async deleteWorkspace(
+    @Request() request: AuthenticatedRequest,
+    @Body() body: { confirmName: string },
+  ): Promise<{ success: boolean; message: string }> {
+    const { user, workspaceId, role } = await this.getAuthorizedWorkspaceAccess(request);
+    if (role !== "OWNER") {
+      this.setStatus(403);
+      throw { status: 403, message: "Only the workspace owner can delete it." };
+    }
+    const workspace = await prisma.workspace.findUniqueOrThrow({
+      where: { id: workspaceId },
+      select: { name: true, subscriptionStatus: true, subscriptionCancelAtPeriodEnd: true },
+    });
+    // Without any workspace the user could not use the app, and only
+    // platform admins can create one.
+    const ownWorkspaces = await prisma.workspaceMember.count({ where: { userId: user.id } });
+    if (ownWorkspaces <= 1) {
+      this.setStatus(409);
+      throw {
+        status: 409,
+        message:
+          "This is your only workspace. Delete your account instead, or join another workspace first.",
+      };
+    }
+    if ((body?.confirmName ?? "").trim() !== workspace.name.trim()) {
+      this.setStatus(400);
+      throw { status: 400, message: "Type the workspace name exactly to confirm." };
+    }
+    const billing = workspace.subscriptionStatus;
+    if (
+      (billing === "ACTIVE" || billing === "TRIALING" || billing === "PAST_DUE") &&
+      !workspace.subscriptionCancelAtPeriodEnd
+    ) {
+      this.setStatus(409);
+      throw {
+        status: 409,
+        message: "Cancel the subscription in Billing before deleting the workspace.",
+      };
+    }
+    // Written before the delete: the entry has no foreign key and stays.
+    await recordAudit({
+      workspaceId,
+      actor: user,
+      action: "workspace.deleted",
+      targetType: "workspace",
+      targetId: workspaceId,
+      metadata: { name: workspace.name },
+      request,
+    });
+    await deleteWorkspaceData(workspaceId);
+    return { success: true, message: "Workspace deleted." };
+  }
+
+  /**
+   * Checks the sign-in rules in a settings update. The owner saving them must
+   * meet them with their current sign-in, or they would lock themselves out.
+   */
+  private async validatedSignInRules(
+    workspaceId: string,
+    body: UpdateWorkspaceSettingsRequest,
+    request: AuthenticatedRequest,
+  ): Promise<Partial<WorkspacePolicy>> {
+    const rules: Partial<WorkspacePolicy> = {};
+    const bad = (message: string) => {
+      this.setStatus(400);
+      return { status: 400, message };
+    };
+
+    if (body.allowedEmailDomains !== undefined) {
+      if (!Array.isArray(body.allowedEmailDomains) || body.allowedEmailDomains.length > 20) {
+        throw bad("Give at most 20 email domains.");
+      }
+      const domains = Array.from(
+        new Set(
+          body.allowedEmailDomains.map((d) => String(d).trim().toLowerCase().replace(/^@/, "")),
+        ),
+      ).filter(Boolean);
+      if (domains.some((d) => !/^[a-z0-9-]+(\.[a-z0-9-]+)+$/.test(d))) {
+        throw bad("Email domains look like acme.com, without @ or spaces.");
+      }
+      rules.allowedEmailDomains = domains;
+    }
+    if (body.requireMfa !== undefined) {
+      if (typeof body.requireMfa !== "boolean") throw bad("requireMfa must be true or false.");
+      rules.requireMfa = body.requireMfa;
+    }
+    if (body.requiredSignInProvider !== undefined) {
+      const provider = body.requiredSignInProvider?.trim() || null;
+      if (
+        provider &&
+        !/^(password|google\.com|microsoft\.com|apple\.com|(saml|oidc)\.[a-z0-9_-]+)$/i.test(
+          provider,
+        )
+      ) {
+        throw bad("Unknown sign-in provider.");
+      }
+      rules.requiredSignInProvider = provider;
+    }
+    if (Object.keys(rules).length === 0) return rules;
+
+    const current = await prisma.workspace.findUniqueOrThrow({
+      where: { id: workspaceId },
+      select: { allowedEmailDomains: true, requireMfa: true, requiredSignInProvider: true },
+    });
+    const lockout = checkWorkspacePolicy(
+      { ...current, ...rules },
+      request.user?.email,
+      request.user,
+    );
+    if (lockout) {
+      throw bad(
+        `These rules would lock you out: ${lockout.message} Sign in the required way first, then save them.`,
+      );
+    }
+    return rules;
   }
 }

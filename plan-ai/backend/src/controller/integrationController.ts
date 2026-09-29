@@ -11,6 +11,7 @@ import type {
   AsanaIntegrationMetadata,
 } from "../services/integrationMetadataTypes";
 import { calendarService } from "../services/calendarService";
+import { recordAudit } from "../services/auditLogService";
 
 interface IntegrationSummaryResponse {
   id: string;
@@ -103,7 +104,7 @@ export class IntegrationController extends BaseWorkspaceController {
 
     // Workspace-level integrations require ADMIN/OWNER to disconnect
     if (integrationService.isWorkspaceProvider(providerEnum)) {
-      const { workspaceId } = await this.requireAdminOrOwner(request);
+      const { user, workspaceId } = await this.requireAdminOrOwner(request);
       const success = await integrationService.deleteIntegrationForContext(
         workspaceId,
         "",
@@ -114,6 +115,14 @@ export class IntegrationController extends BaseWorkspaceController {
         this.setStatus(404);
         return { status: 404, data: null, message: "Integration not found" };
       }
+      await recordAudit({
+        workspaceId,
+        actor: user,
+        action: "integration.disconnected",
+        targetType: "integration",
+        targetId: providerEnum,
+        request,
+      });
     } else {
       // User-level integrations (GitHub, calendars) — user can disconnect their own
       const { user, workspaceId } = await this.getAuthorizedWorkspaceAccess(request);

@@ -10,6 +10,7 @@ import { encryptTokens, withDecryptedTokens } from "../utils/integrationSecrets"
 import type { JiraMyselfResponse, JiraSearchResponse, JiraBoardResponse } from "./jiraTypes";
 import type { JiraIntegrationMetadata } from "./integrationMetadataTypes";
 import type { TaskMetadata } from "./taskMetadataTypes";
+import { safeFetch } from "../utils/ssrfGuard";
 
 type JiraTokenResponse = {
   access_token: string;
@@ -331,7 +332,8 @@ class JiraIntegrationService {
     const cleanUrl = siteUrl.trim().replace(/\/$/, "");
     const basicAuth = Buffer.from(`${email.trim()}:${apiToken.trim()}`).toString("base64");
 
-    const response = await fetch(`${cleanUrl}/rest/api/3/myself`, {
+    // A site URL the user typed: never the server's own network.
+    const response = await safeFetch(`${cleanUrl}/rest/api/3/myself`, {
       headers: {
         Authorization: `Basic ${basicAuth}`,
         Accept: "application/json",
@@ -442,12 +444,12 @@ class JiraIntegrationService {
     let latestBoards: string[] = [];
 
     const [searchRes, projectRes, boardRes] = await Promise.allSettled([
-      fetch(`${cleanUrl}/rest/api/3/search/jql?jql=assignee=currentUser()&maxResults=50`, {
+      safeFetch(`${cleanUrl}/rest/api/3/search/jql?jql=assignee=currentUser()&maxResults=50`, {
         headers,
         signal: AbortSignal.timeout(15000),
       }),
-      fetch(`${cleanUrl}/rest/api/3/project`, { headers, signal: AbortSignal.timeout(15000) }),
-      fetch(`${cleanUrl}/rest/agile/1.0/board?maxResults=5`, {
+      safeFetch(`${cleanUrl}/rest/api/3/project`, { headers, signal: AbortSignal.timeout(15000) }),
+      safeFetch(`${cleanUrl}/rest/agile/1.0/board?maxResults=5`, {
         headers,
         signal: AbortSignal.timeout(15000),
       }),
@@ -558,7 +560,7 @@ class JiraIntegrationService {
       : `https://api.atlassian.com/ex/jira/${integration.accountId}`;
     if (!siteUrl) throw new Error("Jira site URL is unavailable");
 
-    const response = await fetch(`${siteUrl.replace(/\/$/, "")}/rest/api/3/project`, {
+    const response = await safeFetch(`${siteUrl.replace(/\/$/, "")}/rest/api/3/project`, {
       headers,
       signal: AbortSignal.timeout(15000),
     });
@@ -614,7 +616,7 @@ class JiraIntegrationService {
     }
 
     const url = `${cleanUrl}/rest/api/3/issuetype/project?projectId=${encodeURIComponent(projectId)}`;
-    const response = await fetch(url, { headers, signal: AbortSignal.timeout(15000) });
+    const response = await safeFetch(url, { headers, signal: AbortSignal.timeout(15000) });
     if (!response.ok) {
       logger.warn("Failed to fetch Jira issue types — caching empty list", {
         status: response.status,
@@ -842,7 +844,7 @@ class JiraIntegrationService {
       if (!issueType) {
         throw new Error(`No Jira issue types available for project ${projectId}`);
       }
-      const response = await fetch(`${cleanUrl}/rest/api/3/issue`, {
+      const response = await safeFetch(`${cleanUrl}/rest/api/3/issue`, {
         method: "POST",
         headers,
         body: JSON.stringify(buildPayload(issueType)),

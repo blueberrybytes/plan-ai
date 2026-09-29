@@ -1,5 +1,6 @@
-import { Controller, Get, Route, Tags, Query } from "tsoa";
-import axios from "axios";
+import { Controller, Get, Route, Tags, Query, Request, Security } from "tsoa";
+import type { AuthenticatedRequest } from "../middleware/authMiddleware";
+import { assertSafeUrl, safeAxios } from "../utils/ssrfGuard";
 import sharp from "sharp";
 import { logger } from "../utils/logger";
 
@@ -33,38 +34,23 @@ export class ProxyController extends Controller {
    * blockages during PPTX/Diagram PDF exports on Railway deployed frontends.
    */
   @Get("image")
-  public async proxyGCSImage(@Query() url: string): Promise<ProxyImageResponse> {
+  @Security("ClientLevel")
+  public async proxyGCSImage(
+    @Request() _request: AuthenticatedRequest,
+    @Query() url: string,
+  ): Promise<ProxyImageResponse> {
     const cleanUrl = url.trim().replace(/^"|"$/g, "");
-    if (!cleanUrl.startsWith("http")) {
-      this.setStatus(400);
-      throw new Error("Invalid URL. Must be an HTTP(s) resource.");
-    }
-
-    // Basic SSRF protection: deny internal/local IPs and localhost
+    // safeAxios refuses the server's own network (localhost, metadata,
+    // private ranges, the Railway private network) at connect time and on
+    // every redirect. The old hostname list missed most of those.
     try {
-      const parsedUrl = new URL(cleanUrl);
-      const hostname = parsedUrl.hostname.toLowerCase();
-      if (
-        hostname === "localhost" ||
-        hostname.startsWith("127.") ||
-        hostname.startsWith("10.") ||
-        hostname.startsWith("192.168.") ||
-        hostname.endsWith(".local")
-      ) {
-        this.setStatus(403);
-        throw new Error("Proxy access to local or internal networks is forbidden.");
-      }
+      assertSafeUrl(cleanUrl);
     } catch (e) {
-      logger.error(
-        "[ProxyController] Invalid URL format",
-        e instanceof Error ? e.message : String(e),
-      );
-      this.setStatus(400);
-      throw new Error("Invalid URL format.");
+      throw { status: 400, message: e instanceof Error ? e.message : "Invalid URL." };
     }
 
     try {
-      const response = await axios.get(cleanUrl, {
+      const response = await safeAxios.get(cleanUrl, {
         responseType: "arraybuffer",
         timeout: 15_000,
         maxContentLength: MAX_UPSTREAM_BYTES,
@@ -80,6 +66,14 @@ export class ProxyController extends Controller {
           ? contentTypeHeader
           : String(contentTypeHeader || "image/png");
       const rawBuffer = Buffer.from(response.data, "binary");
+
+      // An image proxy, not a way to read any page through our server.
+      if (
+        !upstreamMime.toLowerCase().startsWith("image/") &&
+        !looksLikeSvg(upstreamMime, rawBuffer)
+      ) {
+        throw { status: 415, message: "The address did not return an image." };
+      }
 
       // PPTX (pptxgenjs) + most rasterizers can't render SVG natively. If the
       // upstream sent SVG, rasterize it to a 512px-wide PNG so the export
@@ -113,10 +107,11 @@ export class ProxyController extends Controller {
         base64: rawBuffer.toString("base64"),
       };
     } catch (err) {
+      if ((err as { status?: number })?.status === 415) throw err;
       const msg = err instanceof Error ? err.message : String(err);
-      console.error("[ProxyController] Failed to proxy image", msg);
-      this.setStatus(500);
-      throw new Error("Failed to dynamically fetch and process image: " + msg);
+      logger.warn(`[ProxyController] Failed to proxy image: ${msg}`);
+      // Do not echo upstream or network details back to the caller.
+      throw { status: 502, message: "Could not fetch the image." };
     }
   }
 }

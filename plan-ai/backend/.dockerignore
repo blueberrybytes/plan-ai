@@ -1,0 +1,11 @@
+# Never send local secrets or build output into the image. Railway builds from
+# git, where .env does not exist, but a local or self-hosted build would copy it.
+.env
+.env.*
+!.env.template
+node_modules
+dist
+coverage
+.gitnexus
+*.log
+tmp

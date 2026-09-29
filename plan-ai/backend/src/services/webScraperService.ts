@@ -1,4 +1,7 @@
-import axios from "axios";
+import { safeAxios } from "../utils/ssrfGuard";
+
+// A page or sitemap larger than this is not read.
+const MAX_PAGE_BYTES = 10 * 1024 * 1024;
 import { JSDOM, VirtualConsole } from "jsdom";
 import { Readability } from "@mozilla/readability";
 import { parseStringPromise } from "xml2js";
@@ -16,7 +19,9 @@ export class WebScraperService {
    */
   public async scrapeUrl(url: string): Promise<ScrapedPage | null> {
     try {
-      const response = await axios.get(url, {
+      // Any URL a user or the model gives: never the server's own network.
+      const response = await safeAxios.get(url, {
+        maxContentLength: MAX_PAGE_BYTES,
         headers: {
           "User-Agent":
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
@@ -56,7 +61,10 @@ export class WebScraperService {
     try {
       const parsedUrl = new URL(baseUrl);
       const sitemapUrl = `${parsedUrl.origin}/sitemap.xml`;
-      const response = await axios.get(sitemapUrl, { timeout: 5000 });
+      const response = await safeAxios.get(sitemapUrl, {
+        timeout: 5000,
+        maxContentLength: MAX_PAGE_BYTES,
+      });
       const data = await parseStringPromise(response.data);
 
       const urls: string[] = [];
@@ -83,7 +91,11 @@ export class WebScraperService {
    */
   private async getDeepLinks(baseUrl: string): Promise<string[]> {
     try {
-      const response = await axios.get(baseUrl, { timeout: 10000, responseType: "arraybuffer" });
+      const response = await safeAxios.get(baseUrl, {
+        timeout: 10000,
+        responseType: "arraybuffer",
+        maxContentLength: MAX_PAGE_BYTES,
+      });
       const dom = new JSDOM(response.data, { url: baseUrl });
       const document = dom.window.document;
       const links = document.querySelectorAll("a");

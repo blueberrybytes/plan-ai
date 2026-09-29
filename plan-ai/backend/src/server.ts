@@ -14,7 +14,6 @@ import EnvUtils from "./utils/EnvUtils";
 import { logger } from "./utils/logger";
 import { RegisterRoutes } from "./routes/routes";
 import chatRouter from "./routes/chatRouter";
-import chatStreamingRouter from "./routes/chatStreamingRouter";
 import gitnexusRouter from "./routes/gitnexusRouter";
 import { mcpRouter } from "./routes/mcpRouter";
 import { initializeContextVectorStore } from "./vector/contextFileVectorService";
@@ -57,11 +56,20 @@ app.set("trust proxy", 1);
 app.use(helmet());
 
 // CORS — in production set CORS_ORIGINS="https://plan-ai.blueberrybytes.com,https://other.domain"
-// When unset (local dev), all origins are allowed.
+// The desktop recorder serves its UI from app://recorder, so that origin is
+// always allowed. When CORS_ORIGINS is unset: local dev allows every origin,
+// production allows only APP_URL (it used to reflect any origin there too).
+const RECORDER_ORIGIN = "app://recorder";
 const corsOriginsEnv = EnvUtils.get("CORS_ORIGINS", "");
+const isProduction = process.env.NODE_ENV === "production";
 const corsOrigin: cors.CorsOptions["origin"] = corsOriginsEnv
-  ? corsOriginsEnv.split(",").map((s) => s.trim())
-  : true; // true = reflect request origin (allow all, safe for local dev)
+  ? [...corsOriginsEnv.split(",").map((s) => s.trim()), RECORDER_ORIGIN]
+  : isProduction
+    ? [EnvUtils.get("APP_URL", "").replace(/\/+$/, ""), RECORDER_ORIGIN].filter(Boolean)
+    : true;
+if (isProduction && !corsOriginsEnv) {
+  console.warn("[CORS] CORS_ORIGINS is not set: only APP_URL and the recorder are allowed.");
+}
 
 app.use(
   cors({
@@ -79,7 +87,8 @@ app.use(
     credentials: true,
   }),
 );
-app.use(bodyParser.urlencoded({ limit: "50mb", extended: true }));
+// No form posts carry files here (those are multipart), so 1 MB is plenty.
+app.use(bodyParser.urlencoded({ limit: "1mb", extended: true }));
 app.use(
   bodyParser.json({
     limit: "50mb",
@@ -148,21 +157,44 @@ const aiLimiter = rateLimit({
 app.use("/api/", apiLimiter);
 app.use("/api/chat", aiLimiter);
 app.use("/api/presentations/generate", aiLimiter);
-app.use("/api/documents/generate", aiLimiter);
-app.use("/api/diagrams/generate", aiLimiter);
+// Document and diagram generation are POST /api/documents and /api/diagrams.
+// The old "/generate" paths matched no route.
+const postOnly =
+  (limiter: RequestHandler): RequestHandler =>
+  (req, res, next) =>
+    req.method === "POST" ? limiter(req, res, next) : next();
+app.use("/api/documents", postOnly(aiLimiter));
+app.use("/api/diagrams", postOnly(aiLimiter));
+// The MCP endpoint and the queue dashboard are outside /api.
+app.use("/mcp", apiLimiter);
+app.use(
+  "/admin",
+  rateLimit({
+    // Brute force on the dashboard password. The dashboard polls every few
+    // seconds, so only failed requests (wrong password) count.
+    windowMs: 15 * 60 * 1000,
+    max: 30,
+    skipSuccessfulRequests: true,
+    standardHeaders: true,
+    legacyHeaders: false,
+    handler: rateLimitHandler,
+  }),
+);
 
 // Register TSOA routes (with role-based access control and increased upload limits)
 RegisterRoutes(app, {
   multer: multer({
     limits: {
       fileSize: 524288000, // 500MB
+      // No route takes more than two files (mic + system audio). Uploads are
+      // held in memory, so an unbounded count could exhaust it.
+      files: 4,
     },
   }),
 });
 
 // Register manual routes
 app.use("/api/chat", chatRouter);
-app.use("/api/chat-streaming", chatStreamingRouter);
 app.use(gitnexusRouter);
 
 // Microsoft Mobile OAuth (not TSOA — these must redirect, not return JSON)
@@ -172,25 +204,30 @@ app.get("/api/auth/microsoft/mobile-callback", microsoftMobileCallback);
 // Plan AI MCP Server — outside /api to avoid TSOA middleware
 app.use("/mcp", mcpRouter);
 
-// Swagger Documentation
-app.get("/api-docs/json", (req, res) => {
-  res.sendFile(path.join(__dirname, "swagger", "swagger.json"), {
-    headers: {
-      "Content-Type": "application/json",
-    },
+// API docs and the database schema describe every endpoint and table. Useful
+// in development, a map for attackers in production unless turned on.
+const exposeApiDocs = !isProduction || process.env.EXPOSE_API_DOCS === "true";
+if (exposeApiDocs) {
+  // Swagger Documentation
+  app.get("/api-docs/json", (req, res) => {
+    res.sendFile(path.join(__dirname, "swagger", "swagger.json"), {
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
   });
-});
 
-// Swagger documentation route
-const swaggerServeHandlers = swaggerUi.serve as unknown as RequestHandler[];
-const swaggerSetupHandler = swaggerUi.setup(swaggerDocument) as unknown as RequestHandler;
-app.use("/api-docs", ...swaggerServeHandlers, swaggerSetupHandler);
+  // Swagger documentation route
+  const swaggerServeHandlers = swaggerUi.serve as unknown as RequestHandler[];
+  const swaggerSetupHandler = swaggerUi.setup(swaggerDocument) as unknown as RequestHandler;
+  app.use("/api-docs", ...swaggerServeHandlers, swaggerSetupHandler);
 
-app.get("/prisma-schema", (req, res) => {
-  const schemaPath = path.join(__dirname, "../prisma/schema.prisma");
-  res.setHeader("Content-Type", "text/plain");
-  res.sendFile(schemaPath);
-});
+  app.get("/prisma-schema", (req, res) => {
+    const schemaPath = path.join(__dirname, "../prisma/schema.prisma");
+    res.setHeader("Content-Type", "text/plain");
+    res.sendFile(schemaPath);
+  });
+}
 
 // Setup Bull Board UI
 const serverAdapter = new ExpressAdapter();
@@ -208,16 +245,22 @@ createBullBoard({
   serverAdapter: serverAdapter,
 });
 
-const basicAuthMiddleware = basicAuth({
-  users: {
-    // EnvUtils.get THROWS on undefined vars unless a default is passed — the
-    // old `|| "admin"` fallbacks were dead code (the throw fired first).
-    [EnvUtils.get("BULL_BOARD_USER", "admin")]: EnvUtils.get("BULL_BOARD_PASSWORD", "admin"),
-  },
-  challenge: true,
-});
-
-app.use("/admin/queues", basicAuthMiddleware, serverAdapter.getRouter());
+// The dashboard shows job payloads (meeting transcripts) and can retry or
+// delete jobs. It is only mounted with real credentials: the old fallback
+// was admin/admin.
+const bullBoardUser = EnvUtils.get("BULL_BOARD_USER", "");
+const bullBoardPassword = EnvUtils.get("BULL_BOARD_PASSWORD", "");
+if (bullBoardUser && bullBoardPassword.length >= 16 && bullBoardPassword !== "admin") {
+  const basicAuthMiddleware = basicAuth({
+    users: { [bullBoardUser]: bullBoardPassword },
+    challenge: true,
+  });
+  app.use("/admin/queues", basicAuthMiddleware, serverAdapter.getRouter());
+} else {
+  console.warn(
+    "[BullBoard] Not mounted: set BULL_BOARD_USER and a BULL_BOARD_PASSWORD of 16+ characters.",
+  );
+}
 
 // True 404 logger — MUST stay after every route mount (TSOA, chat, swagger,
 // Bull Board). It used to sit before Bull Board, which made every normal
@@ -294,9 +337,14 @@ app.use((err: unknown, req: express.Request, res: express.Response, next: expres
     "status" in err &&
     "message" in err
   ) {
-    const errObj = err as { status: number; message: string };
+    const errObj = err as { status: number; message: string; code?: unknown };
     console.warn(`[Controller Error] ${errObj.status}: ${errObj.message}`);
-    res.status(errObj.status).json({ message: errObj.message });
+    // `code` tells the apps what to do, e.g. "mfa_required" for a workspace
+    // that needs two-step verification.
+    res.status(errObj.status).json({
+      message: errObj.message,
+      ...(typeof errObj.code === "string" ? { code: errObj.code } : {}),
+    });
     return;
   }
 

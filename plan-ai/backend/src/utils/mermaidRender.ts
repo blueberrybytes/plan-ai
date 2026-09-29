@@ -8,7 +8,10 @@ import { logger } from "../utils/logger";
  * pulling a headless browser into the backend.
  */
 
-const MERMAID_INK = "https://mermaid.ink";
+// A third party sees the diagram code. Only the Telegram prospect flow uses
+// this (never meeting notes). MERMAID_INK_URL points it at a self-hosted
+// mermaid.ink, or "off" disables rendering (the diagram is then skipped).
+const MERMAID_INK = (process.env.MERMAID_INK_URL || "https://mermaid.ink").replace(/\/+$/, "");
 const RENDER_TIMEOUT_MS = 15_000;
 
 /** Refuse anything larger than this from the third-party renderer. */
@@ -83,6 +86,7 @@ export const renderMermaidToPng = async (
   code: string,
   theme?: MermaidTheme | null,
 ): Promise<Buffer | null> => {
+  if (process.env.MERMAID_INK_URL === "off") return null;
   try {
     const themed = applyMermaidTheme(code, theme);
     // base64url, NOT base64: the payload sits in a URL *path segment*, and

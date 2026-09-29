@@ -4,6 +4,7 @@ import pdfParse from "pdf-parse";
 import * as xlsx from "xlsx";
 import officeparser from "officeparser";
 import WordExtractor from "word-extractor";
+import { assertZipWithinLimits } from "./zipGuard";
 
 export type SupportedUploadMimeType =
   | "application/pdf"
@@ -95,6 +96,13 @@ function extractTextFromExcel(buffer: Buffer): string {
   return extractedText.trim();
 }
 
+// Office formats that are zip archives (the legacy .doc/.xls/.ppt are not).
+const ZIP_BASED_TYPES = new Set<string>([
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+]);
+
 export async function extractTextFromUpload(file: Express.Multer.File): Promise<string> {
   return extractTextFromBuffer(file.buffer, file.mimetype);
 }
@@ -122,6 +130,8 @@ export async function extractTextFromBuffer(buffer: Buffer, mimetype: string): P
     const parsed = await pdfParse(buffer);
     return parsed.text.trim();
   }
+
+  if (ZIP_BASED_TYPES.has(mimetype)) assertZipWithinLimits(buffer);
 
   if (
     mimetype === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ||

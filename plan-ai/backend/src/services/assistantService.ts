@@ -22,6 +22,8 @@ import { contextService } from "./contextService";
 import { queryContexts } from "../vector/contextFileVectorService";
 import { resolveAssistantDateRange } from "./assistantDateUtils";
 import { withSignedFileParts } from "./chatAttachments";
+import { extractUrls, normalizeUrl } from "../utils/urlAllowlist";
+import { recordAudit } from "./auditLogService";
 
 export class AssistantChatService {
   public async handleAssistantStream(
@@ -45,6 +47,19 @@ export class AssistantChatService {
       }
 
       const personaInstructions = await getPersonaInstructions(userId, workspaceId);
+
+      // The web tool may only open links the user typed in this chat or that a
+      // web search returned. Text inside a meeting, a document or a fetched
+      // page can try to make the model open an attacker's URL with data in it
+      // (prompt injection); such a URL is in neither list.
+      const allowedWebUrls = new Set<string>();
+      for (const m of messages) {
+        if (m.role !== "user" || !Array.isArray(m.parts)) continue;
+        for (const part of m.parts) {
+          if (part.type !== "text") continue;
+          for (const url of extractUrls(part.text)) allowedWebUrls.add(url);
+        }
+      }
 
       // Load the active project (and its 1:1 Context) when scoped. We use this
       // to (a) inject a focus instruction into the system prompt, (b) RAG-pull
@@ -1073,7 +1088,11 @@ ${planAiKnowledge}
             inputSchema: z.object({
               query: z.string().describe("The search query."),
             }),
-            execute: async ({ query }) => ({ results: await searchWeb(query) }),
+            execute: async ({ query }) => {
+              const results = await searchWeb(query);
+              for (const r of results) allowedWebUrls.add(normalizeUrl(r.url));
+              return { results };
+            },
           }),
           fetchWebPage: tool({
             description:
@@ -1083,6 +1102,12 @@ ${planAiKnowledge}
               url: z.string().describe("The https URL to read."),
             }),
             execute: async ({ url }) => {
+              if (!allowedWebUrls.has(normalizeUrl(url))) {
+                return {
+                  error:
+                    "I can only open links the user shared in this chat or that came from a web search.",
+                };
+              }
               const page = await fetchWebPage(url);
               return page ?? { error: "Could not read that page (unreachable or not http/https)." };
             },
@@ -1099,7 +1124,20 @@ ${planAiKnowledge}
                 .enum(["BACKLOG", "IN_PROGRESS", "BLOCKED", "COMPLETED", "ARCHIVED"])
                 .describe("The new status."),
             }),
-            execute: async ({ taskId, status }) => updateTaskStatus(workspaceId, taskId, status),
+            execute: async ({ taskId, status }) => {
+              const result = await updateTaskStatus(workspaceId, taskId, status);
+              // Recorded as the assistant's doing: text in a meeting or a page
+              // could have asked for it.
+              await recordAudit({
+                workspaceId,
+                actor: { id: userId },
+                action: "assistant.task_status_changed",
+                targetType: "task",
+                targetId: taskId,
+                metadata: { status },
+              });
+              return result;
+            },
           }),
           assignTask: tool({
             description:
@@ -1111,7 +1149,18 @@ ${planAiKnowledge}
                 .string()
                 .describe("Member email to assign to. Empty string clears the assignee."),
             }),
-            execute: async ({ taskId, email }) => assignTask(workspaceId, taskId, email || null),
+            execute: async ({ taskId, email }) => {
+              const result = await assignTask(workspaceId, taskId, email || null);
+              await recordAudit({
+                workspaceId,
+                actor: { id: userId },
+                action: "assistant.task_assigned",
+                targetType: "task",
+                targetId: taskId,
+                metadata: { assignee: email || null },
+              });
+              return result;
+            },
           }),
 
           // ─── External action: sync tasks to a task tool ─────────────────────

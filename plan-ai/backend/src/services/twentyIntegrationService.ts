@@ -12,6 +12,9 @@ import type {
   TwentyPersonItem,
   PushTranscriptToTwentyResponse,
 } from "./twentyTypes";
+import { newShareToken } from "../utils/shareToken";
+import { safeFetch } from "../utils/ssrfGuard";
+import { recordAudit } from "./auditLogService";
 
 /**
  * Twenty CRM integration.
@@ -256,7 +259,8 @@ class TwentyIntegrationService {
     path: string,
     options: RequestInit = {},
   ): Promise<T> {
-    const response = await fetch(`${baseUrl}/rest${path}`, {
+    // The base URL is whatever the user typed: never the server's own network.
+    const response = await safeFetch(`${baseUrl}/rest${path}`, {
       ...options,
       headers: {
         Authorization: `Bearer ${apiKey}`,
@@ -286,7 +290,7 @@ class TwentyIntegrationService {
     query: string,
     variables?: Record<string, unknown>,
   ): Promise<T> {
-    const response = await fetch(`${baseUrl}/metadata`, {
+    const response = await safeFetch(`${baseUrl}/metadata`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${apiKey}`,
@@ -493,10 +497,36 @@ class TwentyIntegrationService {
    * account, so the document is made public right before the link goes in.
    * Only a document of this workspace, found by the id in its link.
    */
-  private async shareLinkedDoc(workspaceId: string, publicDocPath: string): Promise<void> {
+  private async shareLinkedDoc(
+    workspaceId: string,
+    publicDocPath: string,
+  ): Promise<string | undefined> {
     const id = publicDocPath.match(/\/doc\/public\/([^/?#]+)/)?.[1];
-    if (!id) return;
-    await prisma.docDocument.updateMany({ where: { id, workspaceId }, data: { isPublic: true } });
+    if (!id) return undefined;
+    const doc = await prisma.docDocument.findFirst({
+      where: { id, workspaceId },
+      select: { isPublic: true, shareToken: true },
+    });
+    if (!doc) return undefined;
+    // The link carries the share token. A document shared before tokens
+    // existed keeps its old id link.
+    let key = doc.shareToken ?? id;
+    if (!doc.isPublic) {
+      key = newShareToken();
+      await prisma.docDocument.update({
+        where: { id },
+        data: { isPublic: true, shareToken: key },
+      });
+      await recordAudit({
+        workspaceId,
+        action: "document.shared",
+        targetType: "document",
+        targetId: id,
+        metadata: { reason: "twenty_crm_note" },
+      });
+    }
+    const base = EnvUtils.get("APP_URL", "http://localhost:3000").replace(/\/+$/, "");
+    return `${base}/doc/public/${key}`;
   }
 
   private resolvePublicDocUrl(transcript: Transcript): string | undefined {
@@ -537,10 +567,9 @@ class TwentyIntegrationService {
     // note — in that case the canonical push owns the body, not us.
     if (!noteRef?.noteId || noteRef.role === "SECONDARY") return;
 
-    const base = EnvUtils.get("APP_URL", "http://localhost:3000").replace(/\/+$/, "");
-    const url = /^https?:\/\//i.test(publicDocPath)
-      ? publicDocPath
-      : `${base}${publicDocPath.startsWith("/") ? publicDocPath : `/${publicDocPath}`}`;
+    // Shares the document (if it was not yet) and gives the link with its token.
+    const url = await this.shareLinkedDoc(workspaceId, publicDocPath);
+    if (!url) return;
 
     const fetched = await this.fetchTwenty<unknown>(
       integration.baseUrl,
@@ -551,7 +580,6 @@ class TwentyIntegrationService {
     const body = note?.bodyV2?.markdown ?? "";
     if (body.includes(url)) return;
 
-    await this.shareLinkedDoc(workspaceId, publicDocPath);
     await this.fetchTwenty<unknown>(
       integration.baseUrl,
       integration.apiKey,
@@ -729,7 +757,7 @@ class TwentyIntegrationService {
 
     // No Authorization header here on purpose — the presigned URL carries its
     // own signature, and some storage backends reject the extra header.
-    const put = await fetch(uploadUrl, {
+    const put = await safeFetch(uploadUrl, {
       method: "PUT",
       headers: { "Content-Type": contentType },
       body: bytes,
@@ -923,8 +951,8 @@ class TwentyIntegrationService {
     // manual push of an older meeting. When it doesn't (the automatic push runs
     // before the document is generated) `appendDocLinkToNote` patches it in
     // later, so the link lands either way.
-    const docUrl = this.resolvePublicDocUrl(transcript);
-    if (docUrl) await this.shareLinkedDoc(workspaceId, docUrl);
+    const docPath = this.resolvePublicDocUrl(transcript);
+    const docUrl = docPath ? await this.shareLinkedDoc(workspaceId, docPath) : undefined;
     const markdown = this.buildNoteMarkdown(transcript, docUrl);
     const personIds = args.personIds ?? [];
 

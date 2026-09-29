@@ -282,10 +282,19 @@ export const syncSubscriptionToWorkspace = async (
     data.tier = "FREE";
   }
 
-  await prisma.workspace.update({
+  // updateMany, not update: a workspace deleted by its owner still gets the
+  // final "subscription ended" event, and a throw here would make Stripe
+  // retry that webhook for days.
+  const { count } = await prisma.workspace.updateMany({
     where: { id: workspaceId },
-    data,
+    data: data as Prisma.WorkspaceUpdateManyMutationInput,
   });
+  if (count === 0) {
+    logger.info(
+      `[stripe] Subscription ${subscription.id} is for a deleted workspace ${workspaceId}`,
+    );
+    return;
+  }
 
   logger.info(
     `[stripe] Synced subscription ${subscription.id} (${subscription.status}) → workspace ${workspaceId}`,

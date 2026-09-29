@@ -22,11 +22,13 @@ import {
 } from "../utils/aiModelUtils";
 import prisma from "../prisma/prismaClient";
 import { authenticateUser, AuthenticatedRequest } from "../middleware/authMiddleware";
+import { requireWorkspaceMember } from "../middleware/workspaceMiddleware";
 import { queryContexts } from "../vector/contextFileVectorService";
 import { logger } from "../utils/logger";
 import { assistantChatService } from "../services/assistantService";
 import { aiUsageService } from "../services/aiUsageService";
-import { mcpClientService } from "../services/mcpClientService";
+import { mcpClientService, repoNameForContexts } from "../services/mcpClientService";
+import { extractUrls } from "../utils/urlAllowlist";
 import { MERMAID_SYNTAX_RULES } from "../prompts/mermaidRules";
 import {
   requireActiveSubscription,
@@ -85,6 +87,7 @@ async function extractAttachmentText(
 router.post(
   "/threads/:threadId/stream",
   authenticateUser,
+  requireWorkspaceMember,
   async (req: AuthenticatedRequest, res) => {
     const { threadId } = req.params;
     const { content, modelKey, attachments } = req.body as {
@@ -226,28 +229,18 @@ router.post(
           logger.warn("Failed to enrich chat context with attached transcripts", err);
         }
 
-        // 2b. Check for MCP tools availability (memory, search, codebase)
+        // 2b. MCP tools: codebase only for this thread's own indexed repo,
+        // memory scoped to the workspace, fetch_url only for links the user
+        // typed in this thread.
         if (mcpClientService.isAvailable) {
-          // Check if we should pass repo context for codebase queries
-          const contextsWithGithub = await prisma.context.findMany({
-            where: {
-              id: { in: thread.contextIds },
-              metadata: { path: ["gitnexusReady"], equals: true },
-            },
-            select: { id: true },
+          const repo = await repoNameForContexts(thread.contextIds, workspaceId);
+          const userTexts = [
+            ...thread.messages.filter((m) => m.role === "USER").map((m) => m.content),
+            content,
+          ];
+          gitnexusTools = mcpClientService.getAiTools(repo, workspaceId, {
+            allowedUrls: new Set(userTexts.flatMap((text) => extractUrls(text))),
           });
-
-          if (contextsWithGithub.length > 0) {
-            gitnexusTools = mcpClientService.getAiTools();
-          } else {
-            // Even if no GitHub repo is attached, we still want fetch_url and memory tools!
-            const allTools = mcpClientService.getAiTools();
-            if (allTools) {
-              // Only pick the non-gitnexus tools if no repo is attached
-              const { query_codebase: _qc, get_symbol_context: _gsc, ...generalTools } = allTools;
-              gitnexusTools = generalTools;
-            }
-          }
         }
       }
 
@@ -545,130 +538,139 @@ ${contextText}
 );
 
 // POST /api/chat/assistant/stream
-router.post("/assistant/stream", authenticateUser, async (req: AuthenticatedRequest, res) => {
-  console.log("[ChatRouter] Assistant Stream requested");
-  try {
-    if (!req.user) {
-      return res.status(401).json({ message: "Unauthorized" });
-    }
-
-    const user = await prisma.user.findUnique({
-      where: { firebaseUid: req.user.uid },
-    });
-
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
-
-    const { messages, projectId } = req.body as { messages: unknown; projectId?: string };
-
-    console.log("[ChatRouter] Assistant Stream requested with DB user:", user.id);
-
-    if (!messages || !Array.isArray(messages)) {
-      return res.status(400).json({ message: "Invalid messages format" });
-    }
-
-    const workspaceId = req.headers["x-workspace-id"] as string;
-    if (!workspaceId) {
-      return res.status(400).json({ message: "Missing x-workspace-id header" });
-    }
-
+router.post(
+  "/assistant/stream",
+  authenticateUser,
+  requireWorkspaceMember,
+  async (req: AuthenticatedRequest, res) => {
+    console.log("[ChatRouter] Assistant Stream requested");
     try {
-      await requireActiveSubscription(workspaceId);
-    } catch (err) {
-      if (err instanceof SubscriptionRequiredError) {
-        return res
-          .status(err.status)
-          .json({ code: err.code, message: err.message, reason: err.reason });
+      if (!req.user) {
+        return res.status(401).json({ message: "Unauthorized" });
       }
-      throw err;
-    }
 
-    try {
-      await checkUsageLimit(workspaceId, "llm");
-    } catch (err) {
-      if (err instanceof UsageLimitExceededError) {
-        return res.status(err.status).json({
-          code: err.code,
-          message: err.message,
-          limitType: err.limitType,
-          used: err.used,
-          allowed: err.allowed,
-        });
+      const user = await prisma.user.findUnique({
+        where: { firebaseUid: req.user.uid },
+      });
+
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
       }
-      throw err;
-    }
 
-    const { modelKey } = req.query;
-    const result = await assistantChatService.handleAssistantStream(
-      messages,
-      user.id,
-      workspaceId,
-      modelKey as string,
-      projectId,
-    );
+      const { messages, projectId } = req.body as { messages: unknown; projectId?: string };
 
-    res.setHeader("Content-Type", "text/plain; charset=utf-8");
-    console.log("[ChatRouter] Starting stream iteration for assistant/stream");
-    // Reasoning is OPT-IN via ?reasoning=1 so the legacy web renderer (which
-    // doesn't parse <think>) is untouched; mobile passes the flag and shows the
-    // thinking in a collapsible panel. Same <think> wrapping as the other chat.
-    const emitReasoning = req.query.reasoning === "1";
-    let inThink = false;
-    for await (const part of result.fullStream) {
-      if (emitReasoning && part.type === "reasoning-delta") {
-        if (!inThink) {
-          res.write("<think>");
-          inThink = true;
-        }
-        const p = part as { textDelta?: string; delta?: string; text?: string };
-        const content = p.textDelta ?? p.delta ?? p.text ?? "";
-        if (content) res.write(content);
-      } else if (part.type === "text-delta") {
-        if (inThink) {
-          res.write("</think>\n\n");
-          inThink = false;
-        }
-        const p = part as { textDelta?: string; delta?: string; text?: string };
-        const content = p.textDelta ?? p.delta ?? p.text ?? "";
-        if (content) res.write(content);
-      } else if (part.type === "tool-call" && part.toolName === "requestDocumentGeneration") {
-        // TypeScript knows part.input is correctly typed here because of the toolName check
-        const input = part.input as { purpose?: string; recordingId?: string; contextId?: string };
-        res.write(
-          `\n\n[UI:CONFIRM_DOC purpose="${input.purpose || ""}" recordingId="${input.recordingId || ""}" contextId="${input.contextId || ""}"]\n\n`,
-        );
-      } else if (part.type === "tool-call" && part.toolName === "navigate") {
-        // The model just decided to take the user somewhere — emit a marker
-        // the frontend parses and routes to. Without this, the model says
-        // "I've navigated you to X" but nothing actually happens.
-        const input = part.input as { path?: string };
-        if (input.path) {
-          res.write(`\n\n[UI:NAVIGATE path="${input.path}"]\n\n`);
-        }
+      console.log("[ChatRouter] Assistant Stream requested with DB user:", user.id);
+
+      if (!messages || !Array.isArray(messages)) {
+        return res.status(400).json({ message: "Invalid messages format" });
       }
-    }
-    console.log("[ChatRouter] Finished streaming text, ending response.");
-    res.end();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  } catch (error: any) {
-    logger.error("Assistant Streaming error", error);
-    let msg = error instanceof Error ? error.message : "Assistant Streaming failed";
 
-    if (error?.responseBody) {
+      const workspaceId = req.headers["x-workspace-id"] as string;
+      if (!workspaceId) {
+        return res.status(400).json({ message: "Missing x-workspace-id header" });
+      }
+
       try {
-        const parsed = JSON.parse(error.responseBody);
-        if (parsed?.error?.message) {
-          msg = parsed.error.message;
+        await requireActiveSubscription(workspaceId);
+      } catch (err) {
+        if (err instanceof SubscriptionRequiredError) {
+          return res
+            .status(err.status)
+            .json({ code: err.code, message: err.message, reason: err.reason });
         }
-      } catch (e) {
-        // ignore
+        throw err;
       }
-    }
 
-    return res.status(500).json({ message: msg });
-  }
-});
+      try {
+        await checkUsageLimit(workspaceId, "llm");
+      } catch (err) {
+        if (err instanceof UsageLimitExceededError) {
+          return res.status(err.status).json({
+            code: err.code,
+            message: err.message,
+            limitType: err.limitType,
+            used: err.used,
+            allowed: err.allowed,
+          });
+        }
+        throw err;
+      }
+
+      const { modelKey } = req.query;
+      const result = await assistantChatService.handleAssistantStream(
+        messages,
+        user.id,
+        workspaceId,
+        modelKey as string,
+        projectId,
+      );
+
+      res.setHeader("Content-Type", "text/plain; charset=utf-8");
+      console.log("[ChatRouter] Starting stream iteration for assistant/stream");
+      // Reasoning is OPT-IN via ?reasoning=1 so the legacy web renderer (which
+      // doesn't parse <think>) is untouched; mobile passes the flag and shows the
+      // thinking in a collapsible panel. Same <think> wrapping as the other chat.
+      const emitReasoning = req.query.reasoning === "1";
+      let inThink = false;
+      for await (const part of result.fullStream) {
+        if (emitReasoning && part.type === "reasoning-delta") {
+          if (!inThink) {
+            res.write("<think>");
+            inThink = true;
+          }
+          const p = part as { textDelta?: string; delta?: string; text?: string };
+          const content = p.textDelta ?? p.delta ?? p.text ?? "";
+          if (content) res.write(content);
+        } else if (part.type === "text-delta") {
+          if (inThink) {
+            res.write("</think>\n\n");
+            inThink = false;
+          }
+          const p = part as { textDelta?: string; delta?: string; text?: string };
+          const content = p.textDelta ?? p.delta ?? p.text ?? "";
+          if (content) res.write(content);
+        } else if (part.type === "tool-call" && part.toolName === "requestDocumentGeneration") {
+          // TypeScript knows part.input is correctly typed here because of the toolName check
+          const input = part.input as {
+            purpose?: string;
+            recordingId?: string;
+            contextId?: string;
+          };
+          res.write(
+            `\n\n[UI:CONFIRM_DOC purpose="${input.purpose || ""}" recordingId="${input.recordingId || ""}" contextId="${input.contextId || ""}"]\n\n`,
+          );
+        } else if (part.type === "tool-call" && part.toolName === "navigate") {
+          // The model just decided to take the user somewhere — emit a marker
+          // the frontend parses and routes to. Without this, the model says
+          // "I've navigated you to X" but nothing actually happens.
+          const input = part.input as { path?: string };
+          if (input.path) {
+            res.write(`\n\n[UI:NAVIGATE path="${input.path}"]\n\n`);
+          }
+        }
+      }
+      console.log("[ChatRouter] Finished streaming text, ending response.");
+      res.end();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (error: any) {
+      logger.error("Assistant Streaming error", error);
+      let msg = error instanceof Error ? error.message : "Assistant Streaming failed";
+
+      if (error?.responseBody) {
+        try {
+          const parsed = JSON.parse(error.responseBody);
+          if (parsed?.error?.message) {
+            msg = parsed.error.message;
+          }
+        } catch (e) {
+          // ignore
+        }
+      }
+
+      return res.status(500).json({ message: msg });
+    }
+  },
+);
 
 // POST /api/chat/assistant/stream-ui
 //
@@ -677,55 +679,60 @@ router.post("/assistant/stream", authenticateUser, async (req: AuthenticatedRequ
 // The frontend consumes this with `useChat`, which renders tool confirmation
 // cards and the "Thinking" panel natively. Added alongside the old
 // /assistant/stream so the migration doesn't break the current chat.
-router.post("/assistant/stream-ui", authenticateUser, async (req: AuthenticatedRequest, res) => {
-  try {
-    if (!req.user) return res.status(401).json({ message: "Unauthorized" });
-
-    const user = await prisma.user.findUnique({ where: { firebaseUid: req.user.uid } });
-    if (!user) return res.status(404).json({ message: "User not found" });
-
-    const workspaceHeader = req.headers["x-workspace-id"];
-    const workspaceId = Array.isArray(workspaceHeader) ? workspaceHeader[0] : workspaceHeader;
-    if (!workspaceId) return res.status(400).json({ message: "Missing x-workspace-id header" });
-
+router.post(
+  "/assistant/stream-ui",
+  authenticateUser,
+  requireWorkspaceMember,
+  async (req: AuthenticatedRequest, res) => {
     try {
-      await requireActiveSubscription(workspaceId);
-      await checkUsageLimit(workspaceId, "llm");
-    } catch (err) {
-      if (err instanceof SubscriptionRequiredError)
-        return res.status(err.status).json({ code: err.code, message: err.message });
-      if (err instanceof UsageLimitExceededError)
-        return res.status(429).json({ message: err.message });
-      throw err;
+      if (!req.user) return res.status(401).json({ message: "Unauthorized" });
+
+      const user = await prisma.user.findUnique({ where: { firebaseUid: req.user.uid } });
+      if (!user) return res.status(404).json({ message: "User not found" });
+
+      const workspaceHeader = req.headers["x-workspace-id"];
+      const workspaceId = Array.isArray(workspaceHeader) ? workspaceHeader[0] : workspaceHeader;
+      if (!workspaceId) return res.status(400).json({ message: "Missing x-workspace-id header" });
+
+      try {
+        await requireActiveSubscription(workspaceId);
+        await checkUsageLimit(workspaceId, "llm");
+      } catch (err) {
+        if (err instanceof SubscriptionRequiredError)
+          return res.status(err.status).json({ code: err.code, message: err.message });
+        if (err instanceof UsageLimitExceededError)
+          return res.status(429).json({ message: err.message });
+        throw err;
+      }
+
+      const projectId =
+        (req.body.projectId as string) || (req.query.projectId as string) || undefined;
+      const modelKey = req.query.modelKey as string;
+
+      const result = await assistantChatService.handleAssistantStream(
+        req.body.messages,
+        user.id,
+        workspaceId,
+        modelKey,
+        projectId,
+      );
+
+      pipeUIMessageStreamToResponse({
+        response: res,
+        stream: createUIMessageStream({
+          execute: async ({ writer }) => {
+            // sendReasoning surfaces the model's thinking as reasoning parts the
+            // frontend renders in a collapsible panel.
+            await writer.merge(result.toUIMessageStream({ sendReasoning: true }));
+          },
+        }),
+      });
+    } catch (error) {
+      logger.error("Assistant UI stream error", error);
+      if (!res.headersSent) res.status(500).json({ message: "Assistant stream failed" });
     }
-
-    const projectId =
-      (req.body.projectId as string) || (req.query.projectId as string) || undefined;
-    const modelKey = req.query.modelKey as string;
-
-    const result = await assistantChatService.handleAssistantStream(
-      req.body.messages,
-      user.id,
-      workspaceId,
-      modelKey,
-      projectId,
-    );
-
-    pipeUIMessageStreamToResponse({
-      response: res,
-      stream: createUIMessageStream({
-        execute: async ({ writer }) => {
-          // sendReasoning surfaces the model's thinking as reasoning parts the
-          // frontend renders in a collapsible panel.
-          await writer.merge(result.toUIMessageStream({ sendReasoning: true }));
-        },
-      }),
-    });
-  } catch (error) {
-    logger.error("Assistant UI stream error", error);
-    if (!res.headersSent) res.status(500).json({ message: "Assistant stream failed" });
-  }
-});
+  },
+);
 
 // POST /api/chat/assistant/actions/task-sync
 //
@@ -737,6 +744,7 @@ router.post("/assistant/stream-ui", authenticateUser, async (req: AuthenticatedR
 router.post(
   "/assistant/actions/task-sync",
   authenticateUser,
+  requireWorkspaceMember,
   async (req: AuthenticatedRequest, res) => {
     if (!req.user) return res.status(401).json({ message: "Unauthorized" });
 

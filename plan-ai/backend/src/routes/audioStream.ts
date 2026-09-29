@@ -1,7 +1,8 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { WebSocketServer, WebSocket as WSWebSocket } from "ws";
 import { IncomingMessage, Server } from "http";
-import { firebaseAdmin } from "../firebase/firebaseAdmin";
+import { signInInfoFromToken, verifyFirebaseIdToken } from "../middleware/authMiddleware";
+import { resolveWorkspaceAccess } from "../services/workspaceAccess";
 import prisma from "../prisma/prismaClient";
 import { logger } from "../utils/logger";
 import EnvUtils from "../utils/EnvUtils";
@@ -22,6 +23,7 @@ import type {
 import { aiUsageService } from "../services/aiUsageService";
 import { checkSubscription } from "../services/subscriptionGuard";
 import { checkUsageLimit, UsageLimitExceededError } from "../services/usageLimitGuard";
+import { deepgramPrivacyOptions } from "../utils/deepgramPrivacy";
 
 export function setupAudioStream(server: Server) {
   const wss = new WebSocketServer({ noServer: true });
@@ -243,36 +245,43 @@ export function setupAudioStream(server: Server) {
         return;
       }
 
-      console.log("[DEBUG WS] verifying Firebase token");
-      const decodedToken = await firebaseAdmin.auth().verifyIdToken(token);
-
-      console.log("[DEBUG WS] firebase verified, fetching db user");
-      const userEmail = decodedToken.email ?? "";
-      const dbUser = await prisma.user.findUnique({ where: { email: userEmail } });
+      const decodedToken = await verifyFirebaseIdToken(token);
+      // By Firebase UID, never by email: the email in a token is not proof of
+      // identity unless Firebase verified it.
+      const dbUser = await prisma.user.findUnique({ where: { firebaseUid: decodedToken.uid } });
       if (!dbUser) throw new Error("User not found in DB");
 
       currentUserId = dbUser.id;
 
-      const workspaceIdParam = url.searchParams.get("workspaceId");
+      // The stream runs on this workspace's Deepgram key and bills its usage,
+      // so the id in the URL must be one the user belongs to, under the
+      // workspace's sign-in rules. Old clients send no id: use their first
+      // workspace, with the same checks.
+      let workspaceIdParam = url.searchParams.get("workspaceId");
+      if (!workspaceIdParam) {
+        const membership = await prisma.workspaceMember.findFirst({ where: { userId: dbUser.id } });
+        workspaceIdParam = membership?.workspaceId ?? null;
+      }
       if (workspaceIdParam) {
-        // The stream runs on this workspace's Deepgram key and bills its
-        // usage, so the id in the URL must be one the user belongs to.
-        const member = await prisma.workspaceMember.findUnique({
-          where: { workspaceId_userId: { workspaceId: workspaceIdParam, userId: dbUser.id } },
-          select: { id: true },
-        });
-        if (!member) {
-          ws.send(JSON.stringify({ type: "error", message: "Forbidden: not a workspace member" }));
+        try {
+          await resolveWorkspaceAccess({
+            firebaseUid: decodedToken.uid,
+            workspaceId: workspaceIdParam,
+            signIn: signInInfoFromToken(decodedToken),
+            request: req,
+          });
+        } catch (accessErr) {
+          const message = (accessErr as { message?: string })?.message ?? "Forbidden";
+          ws.send(JSON.stringify({ type: "error", message }));
           ws.close(1008);
           return;
         }
         currentWorkspaceId = workspaceIdParam;
       } else {
-        const membership = await prisma.workspaceMember.findFirst({ where: { userId: dbUser.id } });
-        currentWorkspaceId = membership?.workspaceId || "placeholder";
+        currentWorkspaceId = "placeholder";
       }
 
-      logger.info(`WebSocket User Authenticated: ${userEmail}`);
+      logger.info(`WebSocket user authenticated: ${dbUser.id}`);
 
       let workspaceRecord = null;
       if (currentWorkspaceId && currentWorkspaceId !== "placeholder") {
@@ -367,13 +376,19 @@ export function setupAudioStream(server: Server) {
       // files mustn't break the WS handshake.
       const DEEPGRAM_KEYTERM_LIMIT = 100;
       const keyterms = contextIdsParam
-        ? await collectContextKeyterms(contextIdsParam.split(","), DEEPGRAM_KEYTERM_LIMIT)
+        ? await collectContextKeyterms(
+            contextIdsParam.split(","),
+            DEEPGRAM_KEYTERM_LIMIT,
+            // The ids come from the URL: read only this workspace's contexts.
+            currentWorkspaceId || "none",
+          )
         : [];
       if (keyterms.length > 0) {
         console.log(`[DEBUG WS] Loaded ${keyterms.length} keyterms from contexts.`);
       }
 
       dgConfig = {
+        ...deepgramPrivacyOptions(),
         model: "nova-3",
         language: language === "multi" ? "multi" : language,
         smart_format: true,

@@ -1,6 +1,8 @@
 import { Prisma, Transcript, TranscriptSource } from "@prisma/client";
 import prisma from "../prisma/prismaClient";
 import { deleteStoredObject } from "../firebase/privateStorage";
+import { deleteTranscriptArtifacts } from "./dataDeletionService";
+import { recordAudit } from "./auditLogService";
 
 export interface TranscriptListResult {
   transcripts: (Transcript & { project?: { id: string; title: string } | null })[];
@@ -264,9 +266,9 @@ export class TranscriptCrudService {
   }
 
   /**
-   * Deletes a meeting and its audio files. The files go first: a row deleted
-   * with its files still in the bucket leaves them there for good, since
-   * nothing points at them any more.
+   * Deletes a meeting, its audio files and its search vectors. Those go
+   * first: a row deleted with its files still in the bucket leaves them there
+   * for good, and vectors left in Qdrant keep the meeting searchable in chat.
    */
   public async deleteTranscriptForWorkspace(
     workspaceId: string,
@@ -283,7 +285,16 @@ export class TranscriptCrudService {
     for (const ref of [transcript.rawMicUrl, transcript.rawSysUrl]) {
       if (ref) await deleteStoredObject(ref);
     }
+    await deleteTranscriptArtifacts([{ id: transcript.id, rawMicUrl: null, rawSysUrl: null }]);
     await prisma.transcript.delete({ where: { id: transcriptId } });
+    await recordAudit({
+      workspaceId,
+      actor: { id: actor.userId },
+      action: "meeting.deleted",
+      targetType: "transcript",
+      targetId: transcriptId,
+      metadata: { title: transcript.title },
+    });
   }
 
   private async assertProjectBelongsToWorkspace(workspaceId: string, projectId: string) {

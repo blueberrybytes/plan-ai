@@ -62,17 +62,32 @@ function fsDataDir(): string | undefined {
   return EnvUtils.get("LADYBUG_DATA_DIR", "") || undefined;
 }
 
+const GITNEXUS_VERSION = EnvUtils.get("LADYBUG_GITNEXUS_VERSION", "1.6.12");
+
 async function runGitnexus(
   args: string[],
   cwd: string,
   timeout = QUERY_TIMEOUT_MS,
 ): Promise<string> {
-  const { stdout } = await execFileAsync("npx", ["--yes", "gitnexus", ...args], {
-    cwd,
-    timeout,
-    maxBuffer: MAX_BUFFER,
-    env: { ...process.env, CI: "true" }, // never let the CLI prompt interactively
-  });
+  // Pinned: an unpinned `npx --yes gitnexus` runs whatever the registry serves
+  // that day, inside the API process. It gets only the variables it needs,
+  // never the server's keys and database URL.
+  const { stdout } = await execFileAsync(
+    "npx",
+    ["--yes", `gitnexus@${GITNEXUS_VERSION}`, ...args],
+    {
+      cwd,
+      timeout,
+      maxBuffer: MAX_BUFFER,
+      env: {
+        PATH: process.env.PATH ?? "",
+        HOME: process.env.HOME ?? "",
+        TMPDIR: process.env.TMPDIR ?? "/tmp",
+        NODE_ENV: process.env.NODE_ENV ?? "production",
+        CI: "true", // never let the CLI prompt interactively
+      },
+    },
+  );
   return stdout;
 }
 

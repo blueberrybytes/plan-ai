@@ -2140,6 +2140,11 @@
 					"isPublic": {
 						"type": "boolean"
 					},
+					"shareToken": {
+						"type": "string",
+						"nullable": true,
+						"description": "Secret for the public link (/doc/public/<shareToken>). Null when not shared."
+					},
 					"contextIds": {
 						"items": {
 							"type": "string"
@@ -2204,6 +2209,7 @@
 					"content",
 					"status",
 					"isPublic",
+					"shareToken",
 					"contextIds",
 					"transcriptIds",
 					"prompt",
@@ -3882,6 +3888,34 @@
 				],
 				"type": "object"
 			},
+			"ApiResponse__deleted-boolean__": {
+				"properties": {
+					"message": {
+						"type": "string"
+					},
+					"data": {
+						"properties": {
+							"deleted": {
+								"type": "boolean"
+							}
+						},
+						"required": [
+							"deleted"
+						],
+						"type": "object",
+						"nullable": true
+					},
+					"status": {
+						"type": "number",
+						"format": "double"
+					}
+				},
+				"required": [
+					"data",
+					"status"
+				],
+				"type": "object"
+			},
 			"ApiResponse__code-string__": {
 				"properties": {
 					"message": {
@@ -4041,9 +4075,6 @@
 					"id": {
 						"type": "string"
 					},
-					"userId": {
-						"type": "string"
-					},
 					"templateId": {
 						"type": "string",
 						"nullable": true
@@ -4071,12 +4102,6 @@
 						],
 						"nullable": true
 					},
-					"contextIds": {
-						"items": {
-							"type": "string"
-						},
-						"type": "array"
-					},
 					"status": {
 						"type": "string"
 					},
@@ -4091,13 +4116,11 @@
 				},
 				"required": [
 					"id",
-					"userId",
 					"templateId",
 					"themeId",
 					"theme",
 					"title",
 					"slidesJson",
-					"contextIds",
 					"status",
 					"createdAt",
 					"updatedAt"
@@ -4337,6 +4360,11 @@
 					"isPublic": {
 						"type": "boolean"
 					},
+					"shareToken": {
+						"type": "string",
+						"nullable": true,
+						"description": "Secret for the public link (/p/<shareToken>). Null when not shared."
+					},
 					"createdAt": {
 						"type": "string",
 						"format": "date-time"
@@ -4357,6 +4385,7 @@
 					"contextIds",
 					"status",
 					"isPublic",
+					"shareToken",
 					"createdAt",
 					"updatedAt"
 				],
@@ -6682,34 +6711,6 @@
 				"type": "object",
 				"additionalProperties": false
 			},
-			"ApiResponse__text-string__": {
-				"properties": {
-					"message": {
-						"type": "string"
-					},
-					"data": {
-						"properties": {
-							"text": {
-								"type": "string"
-							}
-						},
-						"required": [
-							"text"
-						],
-						"type": "object",
-						"nullable": true
-					},
-					"status": {
-						"type": "number",
-						"format": "double"
-					}
-				},
-				"required": [
-					"data",
-					"status"
-				],
-				"type": "object"
-			},
 			"AsanaAuthorizationResponse": {
 				"properties": {
 					"authorizationUrl": {
@@ -7819,6 +7820,20 @@
 						"format": "double",
 						"nullable": true,
 						"description": "Days meeting audio is kept before it is deleted. Null keeps it forever."
+					},
+					"allowedEmailDomains": {
+						"items": {
+							"type": "string"
+						},
+						"type": "array",
+						"description": "Sign-in rules. Empty list, false and null mean no rule."
+					},
+					"requireMfa": {
+						"type": "boolean"
+					},
+					"requiredSignInProvider": {
+						"type": "string",
+						"nullable": true
 					}
 				},
 				"required": [
@@ -8006,8 +8021,103 @@
 						"format": "double",
 						"nullable": true,
 						"description": "Days to keep meeting audio (1 to 3650). Null keeps it forever; omit to\nleave unchanged. Transcripts, summaries and tasks are never deleted."
+					},
+					"allowedEmailDomains": {
+						"items": {
+							"type": "string"
+						},
+						"type": "array",
+						"description": "Only accounts with an email in these domains can use the workspace, e.g.\n[\"acme.com\"]. Empty list removes the rule; omit to leave unchanged."
+					},
+					"requireMfa": {
+						"type": "boolean",
+						"description": "Members must sign in with a second factor. Omit to leave unchanged."
+					},
+					"requiredSignInProvider": {
+						"type": "string",
+						"nullable": true,
+						"description": "Firebase sign-in provider every member must use: \"google.com\",\n\"microsoft.com\", \"apple.com\", \"password\", or an SSO provider id such as\n\"saml.acme\" / \"oidc.acme\". Null removes the rule; omit to leave unchanged."
 					}
 				},
+				"type": "object",
+				"additionalProperties": false
+			},
+			"AuditLogEntryResponse": {
+				"properties": {
+					"id": {
+						"type": "string"
+					},
+					"action": {
+						"type": "string"
+					},
+					"actorUserId": {
+						"type": "string",
+						"nullable": true
+					},
+					"actorEmail": {
+						"type": "string",
+						"nullable": true
+					},
+					"targetType": {
+						"type": "string",
+						"nullable": true
+					},
+					"targetId": {
+						"type": "string",
+						"nullable": true
+					},
+					"metadata": {
+						"allOf": [
+							{
+								"$ref": "#/components/schemas/TsoaJsonObject"
+							}
+						],
+						"nullable": true
+					},
+					"ip": {
+						"type": "string",
+						"nullable": true
+					},
+					"userAgent": {
+						"type": "string",
+						"nullable": true
+					},
+					"createdAt": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"id",
+					"action",
+					"actorUserId",
+					"actorEmail",
+					"targetType",
+					"targetId",
+					"metadata",
+					"ip",
+					"userAgent",
+					"createdAt"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"AuditLogResponse": {
+				"properties": {
+					"entries": {
+						"items": {
+							"$ref": "#/components/schemas/AuditLogEntryResponse"
+						},
+						"type": "array"
+					},
+					"nextCursor": {
+						"type": "string",
+						"nullable": true
+					}
+				},
+				"required": [
+					"entries",
+					"nextCursor"
+				],
 				"type": "object",
 				"additionalProperties": false
 			},
@@ -8133,6 +8243,11 @@
 					},
 					"isPublic": {
 						"type": "boolean"
+					},
+					"shareToken": {
+						"type": "string",
+						"nullable": true,
+						"description": "Secret for the public link (/diagram/public/<shareToken>). Null when not shared."
 					},
 					"createdAt": {
 						"type": "string"
@@ -11934,6 +12049,31 @@
 						}
 					}
 				}
+			},
+			"delete": {
+				"operationId": "DeleteVoiceProfile",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiResponse__deleted-boolean__"
+								}
+							}
+						}
+					}
+				},
+				"description": "Delete the voice profile. A voice print is biometric data, so the user\ncan remove it at any time; speaker names then stop being matched by voice.",
+				"tags": [
+					"Session"
+				],
+				"security": [
+					{
+						"BearerAuth": []
+					}
+				],
+				"parameters": []
 			}
 		},
 		"/api/session/me/home-tour": {
@@ -12051,16 +12191,49 @@
 				}
 			}
 		},
-		"/api/sentry-error": {
-			"get": {
-				"operationId": "GetSentryError",
+		"/api/session/mobile-exchange": {
+			"post": {
+				"operationId": "ExchangeMobileCode",
 				"responses": {
-					"204": {
-						"description": "No content"
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiResponse__customToken-string__"
+								}
+							}
+						}
 					}
 				},
+				"description": "Mobile Microsoft sign-in, last step. The app sends the one-time code it\ngot through the deep link plus the PKCE verifier it kept in memory, and\ngets a Firebase custom token. A code caught by another app is useless\nwithout the verifier.",
+				"tags": [
+					"Session"
+				],
 				"security": [],
-				"parameters": []
+				"parameters": [],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"properties": {
+									"codeVerifier": {
+										"type": "string"
+									},
+									"code": {
+										"type": "string"
+									}
+								},
+								"required": [
+									"codeVerifier",
+									"code"
+								],
+								"type": "object"
+							}
+						}
+					}
+				}
 			}
 		},
 		"/api/public/prototypes/{id}": {
@@ -12176,7 +12349,11 @@
 				"tags": [
 					"Proxy"
 				],
-				"security": [],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
 				"parameters": [
 					{
 						"in": "query",
@@ -15545,53 +15722,6 @@
 				"parameters": []
 			}
 		},
-		"/api/audio/transcribe-chunk": {
-			"post": {
-				"operationId": "TranscribeChunk",
-				"responses": {
-					"200": {
-						"description": "Ok",
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/ApiResponse__text-string__"
-								}
-							}
-						}
-					}
-				},
-				"description": "Transcribe a raw audio chunk uploaded by the Electron recorder.\nThe Groq API key lives exclusively on the server — it is never sent to the client.",
-				"tags": [
-					"Audio"
-				],
-				"security": [
-					{
-						"ClientLevel": []
-					}
-				],
-				"parameters": [],
-				"requestBody": {
-					"required": false,
-					"content": {
-						"multipart/form-data": {
-							"schema": {
-								"type": "object",
-								"properties": {
-									"mic": {
-										"type": "string",
-										"format": "binary"
-									},
-									"system": {
-										"type": "string",
-										"format": "binary"
-									}
-								}
-							}
-						}
-					}
-				}
-			}
-		},
 		"/api/asana/auth": {
 			"get": {
 				"operationId": "GetAuthorizationUrl",
@@ -16479,6 +16609,200 @@
 						"application/json": {
 							"schema": {
 								"$ref": "#/components/schemas/UpdateWorkspaceSettingsRequest"
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/workspaces/audit-log": {
+			"get": {
+				"operationId": "GetAuditLog",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/AuditLogResponse"
+								}
+							}
+						}
+					}
+				},
+				"description": "Who did what in the workspace, newest first. Owners and admins only.\nPass `nextCursor` back as `cursor` to read older entries.",
+				"tags": [
+					"Workspaces"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": [
+					{
+						"in": "query",
+						"name": "limit",
+						"required": false,
+						"schema": {
+							"format": "double",
+							"type": "number"
+						}
+					},
+					{
+						"in": "query",
+						"name": "cursor",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"in": "query",
+						"name": "action",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					}
+				]
+			}
+		},
+		"/api/workspaces/export": {
+			"get": {
+				"operationId": "ExportWorkspaceData",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/TsoaJsonObject"
+								}
+							}
+						}
+					}
+				},
+				"description": "Everything in the workspace as one JSON file (meetings, tasks, files,\ndocuments, chats, audit log). Keys and tokens are not included. Owner only.",
+				"tags": [
+					"Workspaces"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": []
+			}
+		},
+		"/api/workspaces/transfer-ownership": {
+			"post": {
+				"operationId": "TransferOwnership",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"message": {
+											"type": "string"
+										},
+										"success": {
+											"type": "boolean"
+										}
+									},
+									"required": [
+										"message",
+										"success"
+									],
+									"type": "object"
+								}
+							}
+						}
+					}
+				},
+				"description": "Makes another member the owner. The current owner becomes an admin.",
+				"tags": [
+					"Workspaces"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": [],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"properties": {
+									"memberId": {
+										"type": "string"
+									}
+								},
+								"required": [
+									"memberId"
+								],
+								"type": "object"
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/workspaces/delete": {
+			"post": {
+				"operationId": "DeleteWorkspace",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"message": {
+											"type": "string"
+										},
+										"success": {
+											"type": "boolean"
+										}
+									},
+									"required": [
+										"message",
+										"success"
+									],
+									"type": "object"
+								}
+							}
+						}
+					}
+				},
+				"description": "Deletes the workspace and all its data: meetings with their audio,\nfiles, vectors, documents, chats and members. It cannot be undone. The\nowner types the workspace name to confirm. A paid subscription must be\ncancelled first, so billing never outlives the data.",
+				"tags": [
+					"Workspaces"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": [],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"properties": {
+									"confirmName": {
+										"type": "string"
+									}
+								},
+								"required": [
+									"confirmName"
+								],
+								"type": "object"
 							}
 						}
 					}

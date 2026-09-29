@@ -22,6 +22,7 @@ import {
 } from "./telegramAgentService";
 import { generatePrototypes } from "./prototypeGenerationService";
 import { berryStrings, resolveLang, type BerryStrings } from "./telegramI18n";
+import { newShareToken } from "../utils/shareToken";
 
 const prisma = new PrismaClient();
 
@@ -217,7 +218,7 @@ const deliverPrototype = async (
         t.prototypesReady,
         prototypes.map((p) => ({
           label: t.openPrototypeLabel,
-          url: `${APP_URL}/prototype/public/${p.id}`,
+          url: `${APP_URL}/prototype/public/${p.shareToken ?? p.id}`,
         })),
       );
       return true;
@@ -466,8 +467,9 @@ export const handleIncomingMessage = async (message: TelegramMessage): Promise<v
       // Publish so the doc can be opened from the phone as a web page. Set here
       // rather than via `CreateDocInput.isPublic` (declared but never written by
       // startGeneration); doing it explicitly also keeps publishing Telegram-only.
+      const docShareToken = newShareToken();
       await prisma.docDocument
-        .update({ where: { id: doc.id }, data: { isPublic: true } })
+        .update({ where: { id: doc.id }, data: { isPublic: true, shareToken: docShareToken } })
         .catch((err) => logger.warn(`[telegram] could not publish doc ${doc.id}`, err));
 
       const generated = await awaitGeneratedDoc(doc.id);
@@ -500,7 +502,7 @@ export const handleIncomingMessage = async (message: TelegramMessage): Promise<v
           t.docCaption,
         );
         await telegram.sendMessageWithLink(chatId, t.viewOnline, [
-          { label: t.viewProposalLabel, url: `${APP_URL}/doc/public/${doc.id}` },
+          { label: t.viewProposalLabel, url: `${APP_URL}/doc/public/${docShareToken}` },
         ]);
         docSent = true;
       }

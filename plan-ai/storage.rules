@@ -1,75 +1,46 @@
 rules_version = '2';
 
-// Craft rules based on data in your Firestore database
-// allow write: if firestore.get(
-//    /databases/(default)/documents/users/$(request.auth.uid)).data.isAdmin;
+// The backend reads and writes the bucket with the Admin SDK, which skips
+// these rules. They only govern what the apps do with the Firebase client
+// SDK, and the apps upload three things: the avatar, a brand theme logo and
+// an image pasted into a slide. Everything else is closed. Recordings,
+// context files, chat attachments and voice profiles are private and only
+// ever read through signed links the backend creates.
 service firebase.storage {
   match /b/{bucket}/o {
+    function isImageUnder(maxBytes) {
+      return request.resource.size < maxBytes
+        && request.resource.contentType.matches('image/(png|jpeg|webp|gif)');
+    }
+
     match /{allPaths=**} {
       allow read, write: if false;
     }
+
+    // Profile picture, shown next to the user's name.
     match /users/{userId}/profile/{fileName} {
-      allow read: if true; // Public read access for profile images
-      allow write: if request.auth != null && request.auth.uid == userId;
-    }
-    match /content-images/{userId}/{contentId}/{imageId} {
-      // Public read access for content images
       allow read: if true;
-      
-      // Allow write only if the authenticated user matches the userId in the path
-      allow write: if request.auth != null && request.auth.uid == userId;
-      
-      // Validate uploads (only images allowed for content)
-      allow create: if request.resource.size < 5 * 1024 * 1024 && // 5MB max
-                     request.resource.contentType.matches('image/.*');
-    }
-    match /companies/{companyId}/logo/{fileName} {
-      allow read: if true; // Public read access for logos
-      allow write: if request.auth != null && exists(/databases/$(database)/documents/companies/$(companyId)) && 
-                    get(/databases/$(database)/documents/companies/$(companyId)).data.userId == request.auth.uid;
-      
-      // Validate uploads (only images allowed for logos)
-      allow create: if request.resource.size < 5 * 1024 * 1024 && // 5MB max
-                     request.resource.contentType.matches('image/.*');
+      allow create, update: if request.auth != null && request.auth.uid == userId
+        && isImageUnder(5 * 1024 * 1024);
+      allow delete: if request.auth != null && request.auth.uid == userId;
     }
 
-    // New storage location for company logos, organized by authenticated user ID and company ID
-    match /company-logos/{userId}/{companyId}/{fileName} {
-      // Public read access for company logos
-      allow read: if true;
-
-      // Only the authenticated user matching userId and owner of the company can write/delete
-      allow write: if request.auth != null &&
-                    request.auth.uid == userId &&
-                    exists(/databases/$(database)/documents/companies/$(companyId)) &&
-                    get(/databases/$(database)/documents/companies/$(companyId)).data.userId == request.auth.uid;
-
-      // Validate uploads (images only, up to 5MB)
-      allow create: if request.resource.size < 5 * 1024 * 1024 &&
-                     request.resource.contentType.matches('image/.*');
-    }
-     match /contexts/{userId}/{contextId}/{allPaths=**} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
-    }
-    
-    match /presentations/{userId}/{presentationId}/{imageId} {
-      allow read: if true;
-      allow write: if request.auth != null && request.auth.uid == userId;
-    }
-    
+    // Brand theme logo, shown on shared documents and decks. SVG is allowed
+    // here only: it is served from the storage domain, not the app's.
     match /themes/{userId}/logos/{imageId} {
       allow read: if true;
-      allow write: if request.auth != null && request.auth.uid == userId;
+      allow create, update: if request.auth != null && request.auth.uid == userId
+        && (isImageUnder(5 * 1024 * 1024)
+          || (request.resource.size < 1024 * 1024
+            && request.resource.contentType == 'image/svg+xml'));
+      allow delete: if request.auth != null && request.auth.uid == userId;
     }
-    
-    match /packages/{allPaths=**} {
-      allow read: if true;
-      allow write: if request.auth != null;
-    }
-    
-    match /public/{allPaths=**} {
-      allow read;
-      allow write: if request.auth != null;
+
+    // Image a member pastes into a slide. The file name is random; the app
+    // reads it back once to get its download link.
+    match /presentations/{presentationId}/manual_edits/{fileName} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null && isImageUnder(10 * 1024 * 1024);
     }
   }
 }

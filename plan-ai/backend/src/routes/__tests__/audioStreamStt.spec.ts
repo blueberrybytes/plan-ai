@@ -17,11 +17,21 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("../../firebase/firebaseAdmin", () => ({
-  firebaseAdmin: { auth: () => ({ verifyIdToken: async () => ({ email: "ana@example.com" }) }) },
+  firebaseAdmin: {
+    auth: () => ({
+      verifyIdToken: async () => ({
+        uid: "fuid_1",
+        email: "ana@example.com",
+        auth_time: Math.floor(Date.now() / 1000),
+        firebase: { sign_in_provider: "google.com" },
+      }),
+      getUser: async () => ({ disabled: false, tokensValidAfterTime: undefined }),
+    }),
+  },
 }));
 vi.mock("../../prisma/prismaClient", () => ({
   default: {
-    user: { findUnique: async () => ({ id: "user_1" }) },
+    user: { findUnique: async () => ({ id: "user_1", email: "ana@example.com", role: "CLIENT" }) },
     workspace: { findUnique: async () => mocks.workspace },
     workspaceMember: {
       findFirst: async () => null,
@@ -33,7 +43,15 @@ vi.mock("../../prisma/prismaClient", () => ({
       }) =>
         where.workspaceId_userId.workspaceId === "ws_1" &&
         where.workspaceId_userId.userId === "user_1"
-          ? { id: "m1" }
+          ? {
+              id: "m1",
+              role: "MEMBER",
+              workspace: {
+                allowedEmailDomains: [],
+                requireMfa: false,
+                requiredSignInProvider: null,
+              },
+            }
           : null,
     },
     context: { findMany: async () => [] },
@@ -182,7 +200,7 @@ describe("recorder audio stream with Deepgram (default)", () => {
     mocks.workspace = { id: "ws_other", deepgramKey: "a".repeat(40), isCourtesy: false };
     const { ws, waitFor } = connect("token=t&workspaceId=ws_other&language=es");
     const err = await waitFor((m) => m.type === "error");
-    expect(String(err.message)).toContain("not a workspace member");
+    expect(String(err.message)).toContain("Not a member of this workspace");
     expect(mocks.createDeepgram).not.toHaveBeenCalled();
     ws.close();
   });

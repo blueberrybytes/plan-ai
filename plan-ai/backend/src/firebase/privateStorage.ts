@@ -190,6 +190,21 @@ export const deleteStoredObject = async (ref: string): Promise<boolean> => {
   return true;
 };
 
+/**
+ * Deletes one object, whatever form the reference has: a gs:// URI, a
+ * storage.googleapis.com URL, or a plain object path ("contexts/...", as
+ * context files are stored).
+ */
+export const deleteObjectRef = async (ref: string): Promise<void> => {
+  const path =
+    ref.startsWith("gs://") || ref.startsWith("https://")
+      ? objectPathOf(ref)
+      : ref.replace(/^\/+/, "");
+  if (!path) return;
+  const bucket = await getBucket();
+  await bucket.file(path).delete({ ignoreNotFound: true });
+};
+
 /** Deletes every object under a prefix. */
 export const deletePrefix = async (prefix: string): Promise<void> => {
   const bucket = await getBucket();

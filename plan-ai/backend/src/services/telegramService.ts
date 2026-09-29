@@ -1,3 +1,4 @@
+import { timingSafeEqual } from "crypto";
 import { logger } from "../utils/logger";
 
 /**
@@ -178,5 +179,9 @@ export const verifyWebhookSecret = (headerValue: unknown): boolean => {
     logger.error("[telegram] TELEGRAM_WEBHOOK_SECRET not set — rejecting all webhook traffic");
     return false;
   }
-  return typeof headerValue === "string" && headerValue === expected;
+  if (typeof headerValue !== "string") return false;
+  // Constant-time: a plain === leaks how many leading characters matched.
+  const a = Buffer.from(headerValue);
+  const b = Buffer.from(expected);
+  return a.length === b.length && timingSafeEqual(a, b);
 };

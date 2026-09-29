@@ -8,6 +8,7 @@ import {
   sanitizePrototypeHtml,
 } from "../utils/htmlSanitize";
 import { berryStrings, resolveLang } from "./telegramI18n";
+import { newShareToken, publicLinkWhere } from "../utils/shareToken";
 
 const prisma = new PrismaClient();
 
@@ -153,6 +154,8 @@ const generateHtml = async (
 export interface GeneratedPrototype {
   id: string;
   variant: string;
+  /** Secret for the public link. */
+  shareToken: string | null;
 }
 
 /**
@@ -185,9 +188,10 @@ export const generatePrototypes = async (
           // Published on creation: the whole point is a link the prospect opens.
           // Only prototypes made for a lead reach this code path.
           isPublic: true,
+          shareToken: newShareToken(),
           transcriptId: transcriptId ?? null,
         },
-        select: { id: true, variant: true },
+        select: { id: true, variant: true, shareToken: true },
       });
     }),
   );
@@ -201,12 +205,12 @@ export const generatePrototypes = async (
 export const findPublicPrototype = async (
   id: string,
 ): Promise<{ id: string; title: string; html: string; variant: string } | null> => {
-  const prototype = await prisma.prototype.findUnique({
-    where: { id },
+  const prototype = await prisma.prototype.findFirst({
+    where: publicLinkWhere(id),
     select: { id: true, title: true, html: true, variant: true, isPublic: true },
   });
 
-  if (!prototype?.isPublic) return null;
+  if (!prototype) return null;
 
   return {
     id: prototype.id,

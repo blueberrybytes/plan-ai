@@ -1,4 +1,4 @@
-import axios from "axios";
+import { safeAxios } from "../utils/ssrfGuard";
 import * as cheerio from "cheerio";
 import { generateText, Output } from "ai";
 import { z } from "zod";
@@ -95,7 +95,7 @@ export class WebsiteThemeAnalyzerService {
    */
   private async fetchExternalCss(href: string): Promise<string> {
     try {
-      const res = await axios.get(href, {
+      const res = await safeAxios.get(href, {
         timeout: 5000,
         headers: {
           "User-Agent": "Mozilla/5.0 (compatible; PlanAI/1.0; +https://plan-ai.blueberrybytes.com)",
@@ -116,7 +116,7 @@ export class WebsiteThemeAnalyzerService {
     // 1. Fetch HTML
     let html = "";
     try {
-      const response = await axios.get(url, {
+      const response = await safeAxios.get(url, {
         headers: {
           "User-Agent":
             "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",

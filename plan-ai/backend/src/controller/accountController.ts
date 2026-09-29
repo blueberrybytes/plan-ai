@@ -3,6 +3,8 @@ import { AuthenticatedRequest } from "../middleware/authMiddleware";
 import prisma from "../prisma/prismaClient";
 import { firebaseAdmin } from "../firebase/firebaseAdmin";
 import { logger } from "../utils/logger";
+import { AccountDeletionBlockedError, deleteUserData } from "../services/dataDeletionService";
+import { recordAudit } from "../services/auditLogService";
 import { ApiResponse, type TsoaJsonObject } from "./controllerTypes";
 import { customThemeService } from "../services/customThemeService";
 import type { CustomTheme, Prisma } from "@prisma/client";
@@ -179,7 +181,7 @@ export class AccountController extends Controller {
 
       // Check permissions - only admins can delete other users
       const requestingUserId = request.user?.uid;
-      const isAdmin = request.user?.authRole === "ADMIN";
+      const isAdmin = (request.user?.role ?? request.user?.authRole) === "ADMIN";
 
       if (!isAdmin && requestingUserId !== userToDelete.firebaseUid) {
         return {
@@ -189,12 +191,14 @@ export class AccountController extends Controller {
         };
       }
 
-      // Start a transaction to delete all related records
-      await prisma.$transaction(async (tx) => {
-        // 8. Finally delete the user
-        await tx.user.delete({
-          where: { id: userId },
-        });
+      await deleteUserData(userId);
+      await recordAudit({
+        actor: { id: null, email: request.user?.email ?? null },
+        action: "user.deleted_by_platform_admin",
+        targetType: "user",
+        targetId: userId,
+        metadata: { email: userToDelete.email },
+        request,
       });
 
       // Delete the user from Firebase Auth
@@ -212,6 +216,9 @@ export class AccountController extends Controller {
         message: "User and all associated data deleted successfully",
       };
     } catch (error) {
+      if (error instanceof AccountDeletionBlockedError) {
+        return { status: 409, data: false, message: error.message };
+      }
       logger.error("Error deleting user:", error);
       return {
         status: 500,
@@ -257,12 +264,15 @@ export class AccountController extends Controller {
 
       const userId = userToDelete.id;
 
-      // Start a transaction to delete all related records
-      await prisma.$transaction(async (tx) => {
-        // 8. Finally delete the user
-        await tx.user.delete({
-          where: { id: userId },
-        });
+      // Meetings, files, vectors, voice profile and chat attachments, plus
+      // every workspace where they are the only member.
+      await deleteUserData(userId);
+      await recordAudit({
+        actor: { id: userId, email: userToDelete.email },
+        action: "user.deleted_self",
+        targetType: "user",
+        targetId: userId,
+        request,
       });
 
       // Delete the user from Firebase Auth
@@ -280,6 +290,9 @@ export class AccountController extends Controller {
         message: "Your account and all associated data deleted successfully",
       };
     } catch (error) {
+      if (error instanceof AccountDeletionBlockedError) {
+        return { status: 409, data: false, message: error.message };
+      }
       logger.error("Error deleting user account:", error);
       return {
         status: 500,

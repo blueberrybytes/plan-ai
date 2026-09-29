@@ -51,6 +51,8 @@ import { docGenerationService } from "../services/docGenerationService";
 import { generateProjectDigest } from "../services/projectDigestService";
 import { deleteContextFileFromFirebaseStorage } from "../firebase/firebaseStorage";
 import { removeContextVectors } from "../vector/contextFileVectorService";
+import { deleteProjectArtifacts } from "../services/dataDeletionService";
+import { recordAudit } from "../services/auditLogService";
 
 interface ProjectResponse {
   id: string;
@@ -1232,8 +1234,21 @@ export class ProjectsModelController extends BaseWorkspaceController {
     @Request() request: AuthenticatedRequest,
     @Path() projectId: string,
   ): Promise<ApiResponse<null>> {
-    const { user, workspaceId } = await this.getAuthorizedWorkspaceAccess(request);
+    const { user, workspaceId, role } = await this.getAuthorizedWorkspaceAccess(request);
     const project = await this.getProjectForWorkspace(request, projectId, workspaceId);
+
+    // Deleting a project deletes all its meetings, so it takes the same rights
+    // as deleting a meeting someone else recorded.
+    if (project.userId !== user.id && role !== "OWNER" && role !== "ADMIN") {
+      this.setStatus(403);
+      throw {
+        status: 403,
+        message: "Only the person who created the project or a workspace admin can delete it.",
+      };
+    }
+
+    // Meetings cascade with the project; their audio and vectors do not.
+    await deleteProjectArtifacts(projectId);
 
     // Clean up the 1:1 paired Context first — Firebase Storage files and Qdrant
     // vectors are NOT cascaded by Prisma. Without this, deleting a Project
@@ -1247,7 +1262,8 @@ export class ProjectsModelController extends BaseWorkspaceController {
         );
         for (const path of storagePaths) {
           try {
-            await deleteContextFileFromFirebaseStorage(path, user.id);
+            // Any member's upload: access to the project was checked above.
+            await deleteContextFileFromFirebaseStorage(path);
           } catch (error) {
             logger.warn("Failed to remove project file from storage", error);
           }
@@ -1268,6 +1284,15 @@ export class ProjectsModelController extends BaseWorkspaceController {
     // The Project row still exists — delete it now. Cascade rules handle any
     // remaining child rows (tasks, transcripts, etc).
     await prisma.project.delete({ where: { id: projectId } });
+    await recordAudit({
+      workspaceId,
+      actor: user,
+      action: "project.deleted",
+      targetType: "project",
+      targetId: projectId,
+      metadata: { title: project.title },
+      request,
+    });
 
     return {
       status: 200,

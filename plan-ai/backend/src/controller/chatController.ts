@@ -15,6 +15,7 @@ import {
 import { uploadChatAttachmentToFirebaseStorage } from "../firebase/firebaseStorage";
 import { DISPLAY_URL_TTL_MS, signedUrlForPath } from "../firebase/privateStorage";
 import { toDisplayAttachments } from "../services/chatAttachments";
+import { deleteChatThreadArtifacts } from "../services/dataDeletionService";
 import {
   resolveProjectIdsToContextIds,
   resolveContextIdsToProjectIds,
@@ -38,7 +39,8 @@ import {
   DEFAULT_AI_MODEL,
   FAST_AI_MODEL,
 } from "../utils/aiModelUtils";
-import { mcpClientService } from "../services/mcpClientService";
+import { mcpClientService, repoNameForContexts } from "../services/mcpClientService";
+import { extractUrls } from "../utils/urlAllowlist";
 import { aiUsageService } from "../services/aiUsageService";
 
 export interface ChatAttachment {
@@ -546,9 +548,15 @@ export class ChatController extends BaseWorkspaceController {
   ): Promise<ApiResponse<{ success: boolean }>> {
     const { user, workspaceId } = await this.getAuthorizedWorkspaceAccess(request);
 
-    await prisma.chatThread.deleteMany({
+    const thread = await prisma.chatThread.findFirst({
       where: { id: threadId, userId: user.id, workspaceId },
+      select: { id: true, userId: true },
     });
+    if (thread) {
+      // Attachments live in the bucket, not in the rows the delete cascades.
+      await deleteChatThreadArtifacts([thread]);
+      await prisma.chatThread.delete({ where: { id: thread.id } });
+    }
     return { status: 200, data: { success: true } };
   }
 
@@ -591,26 +599,16 @@ export class ChatController extends BaseWorkspaceController {
 
     const gitnexusTools = await (async () => {
       if (!mcpClientService.isAvailable) return undefined;
-      const allTools = mcpClientService.getAiTools();
-      if (!allTools) return undefined;
-
-      if (thread.contextIds.length > 0) {
-        const contextsWithGithub = await prisma.context.findMany({
-          where: {
-            id: { in: thread.contextIds },
-            metadata: { path: ["gitnexusReady"], equals: true },
-          },
-          select: { id: true },
-        });
-
-        if (contextsWithGithub.length > 0) {
-          return allTools;
-        }
-      }
-
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { query_codebase: _qc, get_symbol_context: _gsc, ...generalTools } = allTools;
-      return generalTools;
+      // Codebase tools only for this thread's own indexed repo; memory scoped
+      // to the workspace; fetch_url only for links the user typed here.
+      const repo = await repoNameForContexts(thread.contextIds, workspaceId);
+      const allowedUrls = new Set(
+        [
+          ...thread.messages.filter((m) => m.role === "USER").map((m) => m.content),
+          body.content,
+        ].flatMap((text) => extractUrls(text)),
+      );
+      return mcpClientService.getAiTools(repo, workspaceId, { allowedUrls });
     })();
 
     const hasGitnexus = Boolean(gitnexusTools);

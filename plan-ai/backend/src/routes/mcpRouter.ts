@@ -4,7 +4,7 @@ import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { isInitializeRequest } from "@modelcontextprotocol/sdk/types.js";
 import { createPlanAiMcpServer } from "../mcp/planAiMcpServer";
-import { validateMcpToken } from "../services/mcpTokenService";
+import { isMcpTokenActive, validateMcpToken } from "../services/mcpTokenService";
 
 const mcpRouter = Router();
 
@@ -32,6 +32,17 @@ const jsonRpcError = (code: number, message: string) => ({
 //   claude mcp add --transport http plan-ai https://.../mcp --header "Authorization: Bearer <token>"
 
 const httpTransports = new Map<string, StreamableHTTPServerTransport>();
+// Token behind each open session, re-checked on every request.
+const sessionTokens = new Map<string, string>();
+
+/** False (and the session closed) once its token was revoked or the member removed. */
+async function sessionStillAllowed(sessionId: string, close: () => unknown): Promise<boolean> {
+  const tokenId = sessionTokens.get(sessionId);
+  if (tokenId && (await isMcpTokenActive(tokenId))) return true;
+  sessionTokens.delete(sessionId);
+  await Promise.resolve(close()).catch(() => undefined);
+  return false;
+}
 
 mcpRouter.post("/", async (req: Request, res: Response) => {
   const sessionId = req.headers["mcp-session-id"] as string | undefined;
@@ -40,6 +51,10 @@ mcpRouter.post("/", async (req: Request, res: Response) => {
   if (sessionId) {
     const existing = httpTransports.get(sessionId);
     if (existing) {
+      if (!(await sessionStillAllowed(sessionId, () => existing.close()))) {
+        res.status(401).json(jsonRpcError(-32001, "The token was revoked"));
+        return;
+      }
       await existing.handleRequest(req, res, req.body);
       return;
     }
@@ -59,10 +74,14 @@ mcpRouter.post("/", async (req: Request, res: Response) => {
       sessionIdGenerator: () => randomUUID(),
       onsessioninitialized: (sid) => {
         httpTransports.set(sid, transport);
+        sessionTokens.set(sid, authCtx.tokenId);
       },
     });
     transport.onclose = () => {
-      if (transport.sessionId) httpTransports.delete(transport.sessionId);
+      if (transport.sessionId) {
+        httpTransports.delete(transport.sessionId);
+        sessionTokens.delete(transport.sessionId);
+      }
     };
 
     const server = createPlanAiMcpServer(authCtx.userId, authCtx.workspaceId);
@@ -82,6 +101,10 @@ const handleSessionRequest = async (req: Request, res: Response) => {
   const transport = sessionId ? httpTransports.get(sessionId) : undefined;
   if (!transport) {
     res.status(400).json(jsonRpcError(-32000, "Invalid or missing mcp-session-id"));
+    return;
+  }
+  if (!(await sessionStillAllowed(sessionId!, () => transport.close()))) {
+    res.status(401).json(jsonRpcError(-32001, "The token was revoked"));
     return;
   }
   await transport.handleRequest(req, res);
@@ -111,6 +134,7 @@ mcpRouter.get("/sse", async (req: Request, res: Response) => {
   const server = createPlanAiMcpServer(authCtx.userId, authCtx.workspaceId);
   const transport = new SSEServerTransport("/mcp/messages", res);
   sseSessions.set(transport.sessionId, transport);
+  sessionTokens.set(transport.sessionId, authCtx.tokenId);
 
   // Heartbeat: the SDK's SSE transport sends no keep-alive, so idle proxies
   // (Railway / Cloudflare) close the stream after a short idle period →
@@ -127,6 +151,7 @@ mcpRouter.get("/sse", async (req: Request, res: Response) => {
   req.on("close", () => {
     clearInterval(heartbeat);
     sseSessions.delete(transport.sessionId);
+    sessionTokens.delete(transport.sessionId);
   });
   await server.connect(transport);
 });
@@ -140,6 +165,10 @@ mcpRouter.post("/messages", async (req: Request, res: Response) => {
   const transport = sseSessions.get(sessionId);
   if (!transport) {
     res.status(404).json({ error: "Session not found or expired" });
+    return;
+  }
+  if (!(await sessionStillAllowed(sessionId, () => transport.close()))) {
+    res.status(401).json({ error: "The token was revoked" });
     return;
   }
   await transport.handlePostMessage(req, res, req.body);

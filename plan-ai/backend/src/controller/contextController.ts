@@ -305,7 +305,8 @@ export class ContextController extends BaseWorkspaceController {
 
     for (const path of storagePaths) {
       try {
-        await deleteContextFileFromFirebaseStorage(path, user.id);
+        // Any member's upload: workspace access to the context was checked.
+        await deleteContextFileFromFirebaseStorage(path);
       } catch (error) {
         console.error("Failed to remove context file from storage", error);
       }
@@ -436,7 +437,8 @@ export class ContextController extends BaseWorkspaceController {
     const file = await contextService.removeFileFromContext(workspaceId, contextId, fileId);
 
     try {
-      await deleteContextFileFromFirebaseStorage(file.bucketPath, user.id);
+      // Any member's upload: removeFileFromContext checked the workspace.
+      await deleteContextFileFromFirebaseStorage(file.bucketPath);
     } catch (error) {
       console.error("Failed to remove context file from storage", error);
     }
@@ -463,11 +465,14 @@ export class ContextController extends BaseWorkspaceController {
   ): Promise<ApiResponse<ContextResponse>> {
     const { user, workspaceId } = await this.getPaidWorkspaceAccess(request);
 
-    const file = await prisma.contextFile.findUnique({
-      where: { id: fileId },
+    // The context must belong to the caller's workspace. The file alone was
+    // checked before, so a known id from another workspace could be requeued
+    // on this workspace's keys.
+    const file = await prisma.contextFile.findFirst({
+      where: { id: fileId, contextId, context: { workspaceId } },
     });
 
-    if (!file || file.contextId !== contextId) {
+    if (!file) {
       this.setStatus(404);
       throw { status: 404, message: "File not found in this context" };
     }

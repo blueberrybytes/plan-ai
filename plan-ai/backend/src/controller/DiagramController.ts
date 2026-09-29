@@ -17,6 +17,9 @@ import type { DiagramType } from "@prisma/client";
 import { AuthenticatedRequest } from "../middleware/authMiddleware";
 import { diagramGenerationService } from "../services/diagramGenerationService";
 import { mergeProjectAndContextIds } from "../services/projectContextResolver";
+import { publicLinkWhere, shareTokenUpdate } from "../utils/shareToken";
+import { assertThemeInWorkspace } from "../services/brandThemeAccess";
+import { recordAudit } from "../services/auditLogService";
 
 export interface CreateDiagramRequest {
   title: string;
@@ -53,6 +56,8 @@ export interface DiagramResponse {
   themeId: string | null;
   status: string;
   isPublic: boolean;
+  /** Secret for the public link (/diagram/public/<shareToken>). Null when not shared. */
+  shareToken?: string | null;
   createdAt: string;
   updatedAt: string;
   theme?: {
@@ -190,7 +195,7 @@ export class DiagramController extends BaseWorkspaceController {
     @Path() diagramId: string,
     @Body() body: UpdateDiagramRequest,
   ): Promise<DiagramResponse> {
-    const { workspaceId } = await this.getAuthorizedWorkspaceAccess(request);
+    const { user, workspaceId } = await this.getAuthorizedWorkspaceAccess(request);
 
     const current = await prisma.diagram.findFirst({
       where: { id: diagramId, workspaceId },
@@ -201,6 +206,7 @@ export class DiagramController extends BaseWorkspaceController {
       throw new Error("Diagram not found");
     }
 
+    await assertThemeInWorkspace(body.themeId, workspaceId);
     const updated = await prisma.diagram.update({
       where: { id: diagramId },
       data: {
@@ -209,11 +215,23 @@ export class DiagramController extends BaseWorkspaceController {
         themeId: body.themeId,
         status: body.status,
         isPublic: body.isPublic,
+        ...shareTokenUpdate(current.isPublic, body.isPublic),
       },
       include: {
         theme: true,
       },
     });
+    if (body.isPublic !== undefined && body.isPublic !== current.isPublic) {
+      await recordAudit({
+        workspaceId,
+        actor: user,
+        action: body.isPublic ? "diagram.shared" : "diagram.unshared",
+        targetType: "diagram",
+        targetId: diagramId,
+        metadata: { title: updated.title },
+        request,
+      });
+    }
 
     return {
       ...updated,
@@ -298,21 +316,29 @@ export class DiagramController extends BaseWorkspaceController {
 export class PublicDiagramController extends Controller {
   @Get("{diagramId}")
   public async getPublicDiagram(@Path() diagramId: string): Promise<DiagramResponse> {
-    const diagram = await prisma.diagram.findUnique({
-      where: { id: diagramId },
+    const diagram = await prisma.diagram.findFirst({
+      where: publicLinkWhere(diagramId),
       include: {
         theme: true,
       },
     });
 
-    if (!diagram || !diagram.isPublic) {
+    if (!diagram) {
       this.setStatus(404);
       throw new Error("Diagram not found or not public");
     }
 
+    // Only what the public page shows: no owner, workspace, prompt or token.
     return {
-      ...diagram,
+      id: diagram.id,
+      title: diagram.title,
+      prompt: "",
+      mermaidCode: diagram.mermaidCode,
+      type: diagram.type,
+      themeId: diagram.themeId,
+      status: diagram.status,
       isPublic: diagram.isPublic,
+      theme: diagram.theme ?? undefined,
       createdAt: diagram.createdAt.toISOString(),
       updatedAt: diagram.updatedAt.toISOString(),
     };

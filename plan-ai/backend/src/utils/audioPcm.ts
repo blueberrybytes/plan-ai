@@ -44,6 +44,18 @@ export function resolveFfmpegPath(): string {
   return cachedFfmpegPath;
 }
 
+/**
+ * The input is a file a user uploaded. Only audio containers are opened, and
+ * only as a local file: a playlist (HLS) or concat list disguised as audio
+ * could otherwise make ffmpeg read other files on the server or fetch URLs.
+ */
+const SAFE_INPUT_OPTIONS = [
+  "-protocol_whitelist",
+  "file",
+  "-format_whitelist",
+  "mov,matroska,webm,wav,mp3,ogg,aac,flac,caf,amr,asf",
+];
+
 function runFfmpegToBuffer(args: string[]): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     const ff = spawn(resolveFfmpegPath(), args, { stdio: ["ignore", "pipe", "pipe"] });
@@ -75,6 +87,7 @@ export async function decodeUrlToMonoPcm(url: string, sampleRate = 16000): Promi
       "-hide_banner",
       "-loglevel",
       "error",
+      ...SAFE_INPUT_OPTIONS,
       "-i",
       tmp,
       "-ac",
@@ -154,6 +167,7 @@ export async function transcodeToWav16kMono(input: Buffer): Promise<Buffer> {
       "-hide_banner",
       "-loglevel",
       "error",
+      ...SAFE_INPUT_OPTIONS,
       "-i",
       tmp,
       "-ac",

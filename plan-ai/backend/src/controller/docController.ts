@@ -43,6 +43,8 @@ export interface DocDocumentResponse {
   content: string;
   status: string;
   isPublic: boolean;
+  /** Secret for the public link (/doc/public/<shareToken>). Null when not shared. */
+  shareToken: string | null;
   contextIds: string[];
   transcriptIds: string[];
   prompt: string | null;

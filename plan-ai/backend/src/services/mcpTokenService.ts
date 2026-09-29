@@ -1,5 +1,6 @@
 import crypto from "crypto";
 import prisma from "../prisma/prismaClient";
+import { checkWorkspacePolicy } from "./workspaceAccess";
 
 const TOKEN_PREFIX = "PAI_sk_";
 const TOKEN_BYTES = 32;
@@ -87,6 +88,7 @@ export async function validateMcpToken(
   });
 
   if (!token) return null;
+  if (!(await tokenOwnerStillAllowed(token.userId, token.workspaceId))) return null;
 
   // Update lastUsedAt asynchronously — never block the request
   prisma.mcpToken
@@ -99,6 +101,49 @@ export async function validateMcpToken(
     });
 
   return { userId: token.userId, workspaceId: token.workspaceId, tokenId: token.id };
+}
+
+/**
+ * A token only works while its owner is still a member of the workspace and
+ * meets its email-domain rule. MFA and SSO rules apply to interactive
+ * sign-ins; a token is created from such a session.
+ */
+async function tokenOwnerStillAllowed(userId: string, workspaceId: string): Promise<boolean> {
+  const membership = await prisma.workspaceMember.findUnique({
+    where: { workspaceId_userId: { workspaceId, userId } },
+    select: {
+      user: { select: { email: true } },
+      workspace: { select: { allowedEmailDomains: true } },
+    },
+  });
+  if (!membership) return false;
+  const domainRule = {
+    allowedEmailDomains: membership.workspace.allowedEmailDomains,
+    requireMfa: false,
+    requiredSignInProvider: null,
+  };
+  return checkWorkspacePolicy(domainRule, membership.user.email, undefined) === null;
+}
+
+/**
+ * For MCP sessions that stay open: checked on every request, so revoking a
+ * token or removing the member ends an open session too.
+ */
+export async function isMcpTokenActive(tokenId: string): Promise<boolean> {
+  const token = await prisma.mcpToken.findUnique({
+    where: { id: tokenId },
+    select: { userId: true, workspaceId: true },
+  });
+  return !!token && (await tokenOwnerStillAllowed(token.userId, token.workspaceId));
+}
+
+/** Deletes a member's tokens for one workspace. Called when they are removed. */
+export async function revokeMcpTokensForMember(
+  userId: string,
+  workspaceId: string,
+): Promise<number> {
+  const { count } = await prisma.mcpToken.deleteMany({ where: { userId, workspaceId } });
+  return count;
 }
 
 /**

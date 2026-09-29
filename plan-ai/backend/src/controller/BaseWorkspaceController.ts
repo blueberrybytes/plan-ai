@@ -1,6 +1,6 @@
 import { Controller } from "tsoa";
 import { AuthenticatedRequest } from "../middleware/authMiddleware";
-import prisma from "../prisma/prismaClient";
+import { resolveWorkspaceAccess, workspaceIdFromHeaders } from "../services/workspaceAccess";
 import { requireActiveSubscription } from "../services/subscriptionGuard";
 import { checkUsageLimit } from "../services/usageLimitGuard";
 
@@ -11,37 +11,18 @@ export abstract class BaseWorkspaceController extends Controller {
       throw { status: 401, message: "Unauthorized" };
     }
 
-    const workspaceId = request.headers["x-workspace-id"] as string;
-    if (!workspaceId) {
-      this.setStatus(400);
-      throw { status: 400, message: "Missing x-workspace-id header" };
+    try {
+      return await resolveWorkspaceAccess({
+        firebaseUid: request.user.uid,
+        workspaceId: workspaceIdFromHeaders(request.headers),
+        signIn: request.user,
+        request,
+      });
+    } catch (err) {
+      const status = (err as { status?: number })?.status;
+      if (status) this.setStatus(status);
+      throw err;
     }
-
-    const { uid } = request.user;
-    const user = await prisma.user.findUnique({
-      where: { firebaseUid: uid },
-    });
-
-    if (!user) {
-      this.setStatus(404);
-      throw { status: 404, message: "User not found" };
-    }
-
-    // Global admins can access any workspace without being a member
-    if (user.role === "ADMIN") {
-      return { user, workspaceId, role: "OWNER" as const };
-    }
-
-    const membership = await prisma.workspaceMember.findUnique({
-      where: { workspaceId_userId: { workspaceId, userId: user.id } },
-    });
-
-    if (!membership) {
-      this.setStatus(403);
-      throw { status: 403, message: "Forbidden: Not a member of this workspace" };
-    }
-
-    return { user, workspaceId, role: membership.role };
   }
 
   /**

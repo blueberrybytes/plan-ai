@@ -61,7 +61,8 @@ export class AiTaskCoachService {
     const providerOptions = getFallbackProviderOptions(defaultModel);
 
     // Step 1: Optional Agentic Investigation via MCP
-    const tools = mcpClientService.getAiTools();
+    // Task text can come from a meeting: no web tools.
+    const tools = mcpClientService.getAiTools(undefined, input.workspaceId, { web: false });
     let investigationContext = "";
     if (tools) {
       try {

@@ -56,7 +56,7 @@ beforeEach(() => {
   db.workspaceIntegration.findUnique.mockResolvedValue({
     status: "CONNECTED",
     accessToken: "key-123",
-    metadata: { authType: "API_KEY", baseUrl: "https://crm.housegroup.media" },
+    metadata: { authType: "API_KEY", baseUrl: "https://crm.example.com" },
   });
   db.meetingCrmNote.update.mockResolvedValue({});
   db.transcript.update.mockResolvedValue({});
@@ -173,7 +173,7 @@ describe("pushMeetingNote", () => {
     db.meetingCrmNote.create.mockRejectedValue(new MockKnownRequestError("P2002"));
     db.meetingCrmNote.findUnique.mockResolvedValue({
       noteId: "note-alex",
-      url: "https://crm.housegroup.media/object/note/note-alex",
+      url: "https://crm.example.com/object/note/note-alex",
       canonicalTranscriptId: "t-alex",
       startedAt: iso("2026-08-11T10:32:00Z"),
       endedAt: iso("2026-08-11T11:00:00Z"),

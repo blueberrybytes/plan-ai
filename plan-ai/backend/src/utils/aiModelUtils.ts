@@ -93,6 +93,21 @@ export const FALLBACK_MODELS = [
   "anthropic/claude-sonnet-5", // different provider again; 1M context
 ];
 
+/**
+ * OpenRouter routing rules that keep meeting content private: only providers
+ * that do not store prompts to train on them (`data_collection: "deny"`).
+ * OPENROUTER_ZDR=true narrows it to zero-data-retention endpoints.
+ * OPENROUTER_DATA_COLLECTION=allow removes the rule (not recommended).
+ */
+export function privacyProviderPrefs(): { data_collection?: "deny"; zdr?: boolean } {
+  return {
+    ...(process.env.OPENROUTER_DATA_COLLECTION === "allow"
+      ? {}
+      : { data_collection: "deny" as const }),
+    ...(process.env.OPENROUTER_ZDR === "true" ? { zdr: true } : {}),
+  };
+}
+
 export class MissingApiKeyError extends Error {
   constructor() {
     super(
@@ -118,14 +133,17 @@ export function getConfiguredModel(modelKey?: string, apiKey?: string) {
     apiKey: apiKey || EnvUtils.get("OPENROUTER_API_KEY"),
   });
 
-  return openrouter(primaryModel, fallbacks.length > 0 ? { models: fallbacks } : undefined);
+  return openrouter(primaryModel, {
+    ...(fallbacks.length > 0 ? { models: fallbacks } : {}),
+    provider: privacyProviderPrefs(),
+  });
 }
 
 /**
  * Helper to fetch a Workspace's OpenRouter API key and return a configured model.
  * Fallbacks are always enabled — see FALLBACK_MODELS for the curated safe list.
  */
-async function resolveWorkspaceApiKey(workspaceId: string): Promise<string> {
+export async function resolveWorkspaceApiKey(workspaceId: string): Promise<string> {
   let apiKey: string | undefined = undefined;
   let isCourtesy = false;
 
@@ -340,7 +358,7 @@ export async function getCachedContextModel(workspaceId: string) {
   const apiKey = await resolveWorkspaceApiKey(workspaceId);
   const openrouter = createOpenRouter({ apiKey });
   return openrouter(CACHED_CONTEXT_MODEL, {
-    provider: { allow_fallbacks: false },
+    provider: { ...privacyProviderPrefs(), allow_fallbacks: false },
   });
 }
 
@@ -351,7 +369,7 @@ export async function getCachedContextModel(workspaceId: string) {
 export function getCachedContextProviderOptions() {
   return {
     openrouter: {
-      provider: { allow_fallbacks: false },
+      provider: { ...privacyProviderPrefs(), allow_fallbacks: false },
       usage: { include: true },
     },
   };
@@ -369,6 +387,7 @@ export function getFallbackProviderOptions(modelKey?: string) {
   return {
     openrouter: {
       ...(fallbacks.length > 0 ? { models: fallbacks } : {}),
+      provider: privacyProviderPrefs(),
       usage: { include: true },
     },
   };
@@ -411,7 +430,7 @@ export function getCachedStructuredProviderOptions(modelKey?: string) {
   return {
     openrouter: {
       ...base.openrouter,
-      provider: { allow_fallbacks: false },
+      provider: { ...privacyProviderPrefs(), allow_fallbacks: false },
     },
   };
 }

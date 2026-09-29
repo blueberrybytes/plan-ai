@@ -16,7 +16,7 @@ const { db } = vi.hoisted(() => ({
   db: {
     workspaceIntegration: { findUnique: vi.fn() },
     transcript: { findUnique: vi.fn(), update: vi.fn() },
-    docDocument: { updateMany: vi.fn() },
+    docDocument: { findFirst: vi.fn(), update: vi.fn() },
   },
 }));
 
@@ -95,29 +95,49 @@ describe("appendDocLinkToNote", () => {
     metadata: { twenty: { noteId: "note-1", role: "CANONICAL", ...over } },
   });
 
-  it("patches the note with an absolute url", async () => {
+  it("shares a private document with a new token and links to that", async () => {
     db.transcript.findUnique.mockResolvedValue(noteMetadata());
+    db.docDocument.findFirst.mockResolvedValue({ isPublic: false, shareToken: null });
     const calls = mockTwenty("**Fecha:** 2026-08-11");
 
     await twentyIntegrationService.appendDocLinkToNote("ws-1", "t-1", PUBLIC_PATH);
 
+    // Documents are private until shared; a link in the CRM is a share.
+    const update = db.docDocument.update.mock.calls[0]?.[0];
+    expect(update.where).toEqual({ id: "doc-42" });
+    expect(update.data.isPublic).toBe(true);
+    const token = update.data.shareToken as string;
+    expect(token.length).toBeGreaterThanOrEqual(32);
+
     const patch = calls.find((c) => c.method === "PATCH");
     const markdown = (patch?.body as { bodyV2: { markdown: string } }).bodyV2.markdown;
-    // A relative path is meaningless to whoever opens the CRM.
-    expect(markdown).toContain(`(${EXPECTED_URL})`);
+    // A relative path is meaningless to whoever opens the CRM, and the
+    // record id is not a secret: the link carries the token.
+    expect(markdown).toContain(`(https://plan-ai.example.com/doc/public/${token})`);
+    expect(markdown).not.toContain("doc-42");
     expect(markdown).toContain("**Fecha:** 2026-08-11");
-    // Documents are private until shared; a link in the CRM is a share.
-    expect(db.docDocument.updateMany).toHaveBeenCalledWith({
-      where: { id: "doc-42", workspaceId: "ws-1" },
-      data: { isPublic: true },
-    });
+  });
+
+  it("keeps the old id link of a document shared before tokens existed", async () => {
+    db.transcript.findUnique.mockResolvedValue(noteMetadata());
+    db.docDocument.findFirst.mockResolvedValue({ isPublic: true, shareToken: null });
+    const calls = mockTwenty("Resumen");
+
+    await twentyIntegrationService.appendDocLinkToNote("ws-1", "t-1", PUBLIC_PATH);
+
+    const patch = calls.find((c) => c.method === "PATCH");
+    expect(JSON.stringify(patch?.body)).toContain(EXPECTED_URL);
+    expect(db.docDocument.update).not.toHaveBeenCalled();
   });
 
   it("does not append the same link twice", async () => {
     db.transcript.findUnique.mockResolvedValue(noteMetadata());
+    db.docDocument.findFirst.mockResolvedValue({ isPublic: true, shareToken: "tok-1" });
     // Document generation can be retried; a stacked duplicate link is visible
     // to the client and looks broken.
-    const calls = mockTwenty(`Resumen\n\n[Ver acta completa en Plan AI](${EXPECTED_URL})`);
+    const calls = mockTwenty(
+      "Resumen\n\n[Ver acta completa en Plan AI](https://plan-ai.example.com/doc/public/tok-1)",
+    );
 
     await twentyIntegrationService.appendDocLinkToNote("ws-1", "t-1", PUBLIC_PATH);
 
@@ -133,7 +153,7 @@ describe("appendDocLinkToNote", () => {
     await twentyIntegrationService.appendDocLinkToNote("ws-1", "t-1", PUBLIC_PATH);
 
     expect(calls).toEqual([]);
-    expect(db.docDocument.updateMany).not.toHaveBeenCalled();
+    expect(db.docDocument.update).not.toHaveBeenCalled();
   });
 
   it("does nothing when the meeting was never pushed", async () => {
@@ -153,6 +173,6 @@ describe("appendDocLinkToNote", () => {
 
     expect(calls).toEqual([]);
     // Nothing went to the CRM, so the document stays private.
-    expect(db.docDocument.updateMany).not.toHaveBeenCalled();
+    expect(db.docDocument.update).not.toHaveBeenCalled();
   });
 });

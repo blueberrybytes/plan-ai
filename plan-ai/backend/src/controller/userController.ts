@@ -10,9 +10,12 @@ import {
   Response,
   Post,
   Delete,
+  Request,
 } from "tsoa";
 import prisma from "../prisma/prismaClient";
 import { logger } from "../utils/logger";
+import { recordAudit } from "../services/auditLogService";
+import type { AuthenticatedRequest } from "../middleware/authMiddleware";
 import { Role } from "@prisma/client";
 import { ApiResponse, GenericResponse } from "./controllerTypes";
 import { firebaseAdmin, setUserRole } from "../firebase/firebaseAdmin";
@@ -123,6 +126,7 @@ export class UserController extends Controller {
   public async updateUserRole(
     @Path("userId") userId: string,
     @Body() body: UpdateUserRoleRequest,
+    @Request() request: AuthenticatedRequest,
   ): Promise<ApiResponse<UserDetailResponse>> {
     try {
       if (!Object.values(Role).includes(body.role)) {
@@ -150,6 +154,15 @@ export class UserController extends Controller {
       const updatedUser = await prisma.user.update({
         where: { id: userId },
         data: { role: body.role },
+      });
+      // Platform-level change (no workspace): who made someone a global admin.
+      await recordAudit({
+        actor: { id: null, email: request.user?.email ?? null },
+        action: "user.global_role_changed",
+        targetType: "user",
+        targetId: userId,
+        metadata: { email: user.email, from: user.role, to: body.role },
+        request,
       });
 
       // Update role in Firebase custom claims to keep them in sync
@@ -360,7 +373,9 @@ export class UserController extends Controller {
           isGoogleAccount,
           isAppleAccount,
           isMicrosoftAccount,
-          role: Role.ADMIN,
+          // A regular account. Syncing an orphan used to make it a global
+          // admin, with access to every workspace.
+          role: Role.CLIENT,
         },
       });
 
@@ -393,7 +408,7 @@ export class UserController extends Controller {
 
       // Synchronize role explicitly on Firebase side just in case
       try {
-        await setUserRole(firebaseUid, Role.ADMIN);
+        await setUserRole(firebaseUid, Role.CLIENT);
       } catch (e) {
         logger.warn(`Could not set Firebase claims for newly synced orphan ${firebaseUid}`, e);
       }

@@ -1,9 +1,10 @@
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
-import { tool } from "ai";
+import { tool, type ToolSet } from "ai";
 import { z } from "zod";
 import { logger } from "../utils/logger";
 import * as Sentry from "@sentry/node"; // needed for circuit-breaker warn (logger.warn doesn't auto-capture)
+import { normalizeUrl } from "../utils/urlAllowlist";
 
 const MCP_TOOL_TIMEOUT_MS = 30_000; // 30 seconds — impact queries on large repos need more time
 const MCP_CONNECT_TIMEOUT_MS = 5_000;
@@ -197,11 +198,44 @@ export class McpClientService {
    * Returns a map of Vercel AI SDK tools that proxy to the GitNexus MCP Server.
    * If the MCP server is unavailable, returns undefined so generation succeeds normally.
    */
-  public getAiTools(repo?: string, organizationId?: string) {
+  /**
+   * The model's tools. Scoping rules, so one customer never reaches another's
+   * data and injected text cannot send data out:
+   * - codebase tools only with a `repo`: without one GitNexus answers from
+   *   every indexed repository;
+   * - `web: false` drops fetch_url and search_web, for pipelines that run on
+   *   meeting text with nobody watching;
+   * - `allowedUrls` limits fetch_url to links the user typed, plus the ones a
+   *   search in this conversation returned.
+   */
+  public getAiTools(
+    repo?: string,
+    organizationId?: string,
+    options: { web?: boolean; allowedUrls?: Set<string> } = {},
+  ): ToolSet | undefined {
     if (!this.isAvailable || !this.client) {
       return undefined;
     }
+    const all = this.buildAiTools(repo, organizationId, options.allowedUrls);
+    const {
+      query_codebase,
+      get_symbol_context,
+      get_impact_analysis,
+      get_execution_flows,
+      fetch_url,
+      search_web,
+      ...rest
+    } = all;
+    return {
+      ...(repo
+        ? { query_codebase, get_symbol_context, get_impact_analysis, get_execution_flows }
+        : {}),
+      ...(options.web === false ? {} : { fetch_url, search_web }),
+      ...rest,
+    };
+  }
 
+  private buildAiTools(repo?: string, organizationId?: string, allowedUrls?: Set<string>) {
     return {
       query_codebase: tool({
         description:
@@ -318,6 +352,9 @@ export class McpClientService {
           url: z.string().url().describe("The full URL to fetch"),
         }),
         execute: async ({ url }) => {
+          if (allowedUrls && !allowedUrls.has(normalizeUrl(url))) {
+            return "I can only open links the user shared or that came from a web search.";
+          }
           try {
             // Lazy import to avoid circular dependencies if any
             const { webScraperService } = await import("./webScraperService");
@@ -327,7 +364,7 @@ export class McpClientService {
             }
             return `Title: ${result.title}\n\nContent:\n${result.content}`;
           } catch (e) {
-            logger.error(`Error scraping URL ${url}:`, e);
+            logger.error("Error scraping a URL", e);
             return "Error scraping URL.";
           }
         },
@@ -339,7 +376,7 @@ export class McpClientService {
           query: z.string().describe("The search query (e.g. 'BlueberryBytes competitors')"),
         }),
         execute: async ({ query }) => {
-          console.log(`Searching web for "${query}"`);
+          // The query can quote a meeting, so it is not logged.
           try {
             // Lazy import
             const axios = (await import("axios")).default;
@@ -375,6 +412,7 @@ export class McpClientService {
 
               if (title && snippet) {
                 results.push(`Title: ${title}\nURL: ${url}\nSnippet: ${snippet}\n`);
+                if (url) allowedUrls?.add(normalizeUrl(url));
               }
             });
 
@@ -384,7 +422,7 @@ export class McpClientService {
 
             return results.join("\n---\n");
           } catch (e) {
-            logger.error(`Error searching web for "${query}":`, e);
+            logger.error("Error searching the web", e);
             return "Error searching the web. The search engine might be blocking the request temporarily.";
           }
         },
@@ -434,3 +472,28 @@ export class McpClientService {
 }
 
 export const mcpClientService = McpClientService.getInstance();
+
+/**
+ * The GitNexus repo name for these contexts: the first one with an indexed
+ * GitHub repository, restricted to the workspace when one is given.
+ */
+export async function repoNameForContexts(
+  contextIds: string[],
+  workspaceId?: string,
+): Promise<string | undefined> {
+  if (contextIds.length === 0) return undefined;
+  const { default: prisma } = await import("../prisma/prismaClient");
+  const contexts = await prisma.context.findMany({
+    where: {
+      id: { in: contextIds },
+      ...(workspaceId ? { workspaceId } : {}),
+      metadata: { path: ["gitnexusReady"], equals: true },
+    },
+    select: { metadata: true },
+  });
+  for (const c of contexts) {
+    const full = (c.metadata as Record<string, unknown> | null)?.githubRepoFullName;
+    if (typeof full === "string" && full.includes("/")) return full.split("/").pop();
+  }
+  return undefined;
+}

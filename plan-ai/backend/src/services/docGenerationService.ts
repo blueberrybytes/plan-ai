@@ -13,9 +13,12 @@ import { mergeProjectAndContextIds } from "./projectContextResolver";
 import { logger } from "../utils/logger";
 import { aiUsageService } from "./aiUsageService";
 import { getPersonaInstructions } from "./personaService";
-import { mcpClientService } from "./mcpClientService";
+import { mcpClientService, repoNameForContexts } from "./mcpClientService";
 import { MERMAID_SYNTAX_RULES } from "../prompts/mermaidRules";
 import type { TranscriptMetadata } from "./transcriptMetadataTypes";
+import { publicLinkWhere, shareTokenUpdate } from "../utils/shareToken";
+import { assertThemeInWorkspace } from "./brandThemeAccess";
+import { recordAudit } from "./auditLogService";
 
 export interface CreateDocInput {
   title: string;
@@ -211,8 +214,13 @@ export class DocGenerationService {
     // customer's own key was fine. `workspaceId` was already in scope.
     const model = await getWorkspaceModel(workspaceId, DOC_MODEL);
 
-    // Step 1: Optional Agentic Investigation via MCP
-    const tools = mcpClientService.getAiTools();
+    // Step 1: Optional Agentic Investigation via MCP. It reads meeting text
+    // with nobody watching, so no web tools: injected text could send data out.
+    const tools = mcpClientService.getAiTools(
+      await repoNameForContexts(input.contextIds ?? [], workspaceId),
+      workspaceId,
+      { web: false },
+    );
 
     if (tools) {
       try {
@@ -446,7 +454,7 @@ ${userPrompt}`;
     // Only documents someone shared. A private one answers like a missing
     // one, so the endpoint doesn't confirm that an id exists.
     const doc = await prisma.docDocument.findFirst({
-      where: { id, isPublic: true },
+      where: publicLinkWhere(id),
       include: { theme: true, project: { select: { id: true, title: true } } },
     });
     if (!doc) throw { status: 404, message: "Document not found" };
@@ -461,12 +469,27 @@ ${userPrompt}`;
   ): Promise<
     DocDocument & { theme: BrandTheme | null; project: { id: string; title: string } | null }
   > {
-    await this.findById(userId, workspaceId, id);
+    const existing = await this.findById(userId, workspaceId, id);
+    await assertThemeInWorkspace(input.themeId, workspaceId);
     const updated = await prisma.docDocument.update({
       where: { id },
-      data: { ...input, updatedAt: new Date() },
+      data: {
+        ...input,
+        ...shareTokenUpdate(existing.isPublic, input.isPublic),
+        updatedAt: new Date(),
+      },
       include: { theme: true, project: { select: { id: true, title: true } } },
     });
+    if (input.isPublic !== undefined && input.isPublic !== existing.isPublic) {
+      await recordAudit({
+        workspaceId,
+        actor: { id: userId },
+        action: input.isPublic ? "document.shared" : "document.unshared",
+        targetType: "document",
+        targetId: id,
+        metadata: { title: updated.title },
+      });
+    }
     return updated;
   }
 

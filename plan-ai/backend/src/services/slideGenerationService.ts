@@ -20,6 +20,10 @@ import { MERMAID_SYNTAX_RULES } from "../prompts/mermaidRules";
 import { imageGenerationService } from "./imageGenerationService";
 import { aiUsageService } from "./aiUsageService";
 import { getPersonaInstructions } from "./personaService";
+import { publicLinkWhere, shareTokenUpdate } from "../utils/shareToken";
+import { assertThemeInWorkspace } from "./brandThemeAccess";
+import { unsignSlideImages } from "../utils/slideImages";
+import { recordAudit } from "./auditLogService";
 
 // Schema for the Pass 1 Outline strategy
 const SlideOutlineSchema = z.object({
@@ -589,7 +593,7 @@ CRITICAL PRESENTATION RULE: Slides must be easily readable. Do NOT write long pa
   ): Promise<PresentationWithRelations> {
     // Only presentations someone shared; a private one answers like a missing one.
     const presentation = await prisma.presentation.findFirst({
-      where: { id: presentationId, isPublic: true },
+      where: publicLinkWhere(presentationId),
       include: { template: true, theme: true },
     });
 
@@ -641,12 +645,30 @@ CRITICAL PRESENTATION RULE: Slides must be easily readable. Do NOT write long pa
       isPublic?: boolean;
     },
   ): Promise<PresentationWithRelations> {
-    await this.getPresentationById(userId, workspaceId, presentationId);
+    const existing = await this.getPresentationById(userId, workspaceId, presentationId);
+    await assertThemeInWorkspace(data.themeId, workspaceId);
     const updated = await prisma.presentation.update({
       where: { id: presentationId },
-      data,
+      data: {
+        ...data,
+        // The client got signed links; store the references again.
+        ...(data.slidesJson !== undefined
+          ? { slidesJson: await unsignSlideImages(data.slidesJson) }
+          : {}),
+        ...shareTokenUpdate(existing.isPublic, data.isPublic),
+      },
       include: { template: true, theme: true },
     });
+    if (data.isPublic !== undefined && data.isPublic !== existing.isPublic) {
+      await recordAudit({
+        workspaceId,
+        actor: { id: userId },
+        action: data.isPublic ? "presentation.shared" : "presentation.unshared",
+        targetType: "presentation",
+        targetId: presentationId,
+        metadata: { title: updated.title },
+      });
+    }
     logger.info(`Updated presentation ${presentationId}`);
     return updated;
   }

@@ -1,13 +1,36 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { Route, Tags, Response, Post, UploadedFile, Security, Get, Request, Body } from "tsoa";
+import {
+  Route,
+  Tags,
+  Response,
+  Post,
+  Delete,
+  UploadedFile,
+  Security,
+  Get,
+  Request,
+  Body,
+} from "tsoa";
 import { Request as ExpressRequest, Response as ExpressResponse } from "express";
 import { ApiResponse, GenericResponse } from "./controllerTypes";
 import { Role } from "@prisma/client";
 import { firebaseAdmin, setUserRole } from "../firebase/firebaseAdmin";
 import prisma from "../prisma/prismaClient";
-import { AuthenticatedRequest } from "../middleware/authMiddleware";
+import {
+  AuthenticatedRequest,
+  signInClaims,
+  verifyFirebaseIdToken,
+} from "../middleware/authMiddleware";
+import { acceptPendingInvitations } from "../services/invitationService";
 import crypto from "crypto";
-import { DISPLAY_URL_TTL_MS, readableUrl, uploadPrivateFile } from "../firebase/privateStorage";
+import { createOAuthState, readOAuthState } from "../utils/oauthState";
+import {
+  DISPLAY_URL_TTL_MS,
+  deletePrefix,
+  deleteStoredObject,
+  readableUrl,
+  uploadPrivateFile,
+} from "../firebase/privateStorage";
 import { logger } from "../utils/logger";
 
 const MS_CLIENT_ID = process.env.MICROSOFT_CLIENT_ID ?? "";
@@ -68,8 +91,6 @@ export class SessionController {
     @Body() body: { uuid: string; token: string },
   ): Promise<ApiResponse<UserResponse>> {
     try {
-      console.log(`Login attempt for uid: ${body.uuid}, token length: ${body.token?.length || 0}`);
-
       if (!body.token) {
         throw {
           status: 400,
@@ -80,10 +101,11 @@ export class SessionController {
       // Verify the Firebase token
       let decodedToken;
       try {
-        decodedToken = await firebaseAdmin.auth().verifyIdToken(body.token);
-        console.log("Token verification successful. Firebase UID:", decodedToken.uid);
+        decodedToken = await verifyFirebaseIdToken(body.token);
       } catch (tokenError: any) {
-        console.error("Firebase token verification failed:", tokenError.message);
+        logger.warn(
+          `[Session] Firebase token rejected: ${tokenError?.code ?? tokenError?.message}`,
+        );
         throw {
           status: 401,
           message: tokenError.message,
@@ -96,10 +118,16 @@ export class SessionController {
       const name = decodedToken.name || decodedToken.display_name || null;
       const avatarUrl = decodedToken.picture || null;
 
-      console.log(
-        `\n\n[SESSION DEBUG] Full Firebase JWT Payload for UID ${firebaseUid}:`,
-        JSON.stringify(decodedToken.firebase, null, 2),
-      );
+      // Google and Apple only hand out verified addresses. Any other sign-in
+      // (password, Microsoft) counts only when Firebase marks the email
+      // verified. An unverified email must never take over an existing
+      // account or claim someone's invitation.
+      const signInProvider = decodedToken.firebase?.sign_in_provider ?? "";
+      const emailTrusted =
+        !!email &&
+        (decodedToken.email_verified === true ||
+          signInProvider === "google.com" ||
+          signInProvider === "apple.com");
 
       // Extract Google ID and determine account type
       const googleIdRaw = decodedToken.firebase?.identities?.["google.com"]?.[0];
@@ -116,10 +144,6 @@ export class SessionController {
       const microsoftId = microsoftIdRaw && microsoftIdRaw.trim() !== "" ? microsoftIdRaw : null;
       const isMicrosoftAccount = microsoftId !== null;
 
-      console.log(
-        `User details - Email: ${email}, Name: ${name}, Google ID: ${googleId || "N/A"}, Apple ID: ${appleId || "N/A"}, Microsoft ID: ${microsoftId || "N/A"}`,
-      );
-
       // Check if user exists in the database by Firebase UID
       let user = await prisma.user.findFirst({
         where: { firebaseUid: firebaseUid },
@@ -128,14 +152,20 @@ export class SessionController {
       // If not found by Firebase UID, try looking up by email
       // This handles cases where the user was created another way but with the same email
       if (!user && email) {
-        console.log("User not found by Firebase UID, trying to find by email...");
         user = await prisma.user.findFirst({
           where: { email: email },
         });
+        if (user && !emailTrusted) {
+          throw {
+            status: 409,
+            message:
+              "An account with this email already exists. Verify your email address, or sign in the way you did before.",
+          };
+        }
 
         // If found by email, update the Firebase UID
         if (user) {
-          console.log("User found by email, updating Firebase UID...");
+          logger.info(`[Session] Linking user ${user.id} to a new Firebase UID`);
           user = await prisma.user.update({
             where: { id: user.id },
             data: {
@@ -150,11 +180,8 @@ export class SessionController {
               isMicrosoftAccount: isMicrosoftAccount || user.isMicrosoftAccount,
             },
           });
-          console.log("Firebase UID updated successfully");
         }
       }
-
-      console.log(`User exists in database: ${!!user}`);
 
       if (user) {
         // Aggressively sync OAuth identities on every login to catch users who link new providers
@@ -178,22 +205,13 @@ export class SessionController {
 
       // If user doesn't exist, create a new one
       if (!user) {
-        console.log("Creating new user in database...");
         try {
-          // Check if there are any valid (non-expired) pending Workspace Invitations for this email
-          const pendingInvitations = await prisma.workspaceInvitation.findMany({
-            where: {
-              email: email,
-              status: "PENDING",
-              OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
-            },
-          });
-
           const initialRole = Role.CLIENT;
 
+          // The primary key is generated here. It used to be taken from the
+          // request body, so a client could pick its own user id.
           user = await prisma.user.create({
             data: {
-              id: body.uuid,
               firebaseUid: firebaseUid,
               email: email,
               name: name,
@@ -207,36 +225,8 @@ export class SessionController {
               role: initialRole, // All new users are CLIENT; invited users also get added to workspace(s) below
             },
           });
-          console.log("User created successfully in database with ID:", user.id);
-
-          if (pendingInvitations.length > 0) {
-            console.log(
-              `Found ${pendingInvitations.length} pending invitations for user. Assigning workspaces and granting CLIENT role.`,
-            );
-
-            // Add user to all workspaces they were invited to
-            for (const invite of pendingInvitations) {
-              await prisma.workspaceMember.create({
-                data: {
-                  userId: user.id,
-                  workspaceId: invite.workspaceId,
-                  role: invite.role,
-                  personas: invite.personas,
-                  personaNotes: invite.personaNotes,
-                },
-              });
-
-              // Mark invite as ACCEPTED
-              await prisma.workspaceInvitation.update({
-                where: { id: invite.id },
-                data: { status: "ACCEPTED" },
-              });
-            }
-          }
-
           // Set the role in Firebase custom claims
           await setUserRole(firebaseUid, initialRole);
-          console.log(`Role set in Firebase custom claims to ${initialRole}`);
         } catch (dbError: any) {
           if (dbError?.code === "P2002") {
             console.log("Race condition: User already created by another request. Fetching...");
@@ -258,6 +248,12 @@ export class SessionController {
             };
           }
         }
+      }
+
+      // Invitations are accepted on any login once the email is trusted, so an
+      // invite sent before the address was verified is picked up later.
+      if (emailTrusted) {
+        await acceptPendingInvitations(user, email);
       }
 
       // Removed automatic Personal Workspace and Default Blueberry Bytes Theme creation.
@@ -290,7 +286,7 @@ export class SessionController {
         data: userResponse,
       };
     } catch (error: any) {
-      console.error("Error on login:", error);
+      if (!error?.status || error.status >= 500) logger.error("[Session] Login failed", error);
       throw {
         status: error.status || 500,
         message: error.message || "Internal Server Error",
@@ -444,6 +440,28 @@ export class SessionController {
   }
 
   /**
+   * Delete the voice profile. A voice print is biometric data, so the user
+   * can remove it at any time; speaker names then stop being matched by voice.
+   */
+  @Delete("me/voice-profile")
+  @Security("BearerAuth")
+  public async deleteVoiceProfile(
+    @Request() request: AuthenticatedRequest,
+  ): Promise<ApiResponse<{ deleted: boolean }>> {
+    if (!request.user) throw { status: 401, message: "Unauthorized" };
+    const user = await prisma.user.findFirst({ where: { firebaseUid: request.user.uid } });
+    if (!user) throw { status: 404, message: "User not found" };
+
+    if (user.voiceProfileUrl) await deleteStoredObject(user.voiceProfileUrl);
+    await deletePrefix(`voice-profiles/${user.id}/`);
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { hasVoiceProfile: false, voiceProfileUrl: null },
+    });
+    return { status: 200, data: { deleted: true } };
+  }
+
+  /**
    * Mark home tour as completed.
    */
   @Post("me/home-tour")
@@ -530,6 +548,8 @@ export class SessionController {
         data: {
           code: authCode,
           userId: dbUser.id,
+          signInProvider: request.user?.signInProvider?.slice(0, 64) ?? null,
+          secondFactor: request.user?.secondFactor?.slice(0, 32) ?? null,
           expiresAt: new Date(Date.now() + 60 * 1000),
         },
       });
@@ -555,23 +575,16 @@ export class SessionController {
     @Body() body: { code: string },
   ): Promise<ApiResponse<{ customToken: string }>> {
     try {
-      console.log(`[sessionController] Exchanging OTP code: "${body.code}"`);
-
       // Find the code and eagerly delete it to prevent replay attacks
       const authRecord = await prisma.desktopAuthCode.findUnique({
         where: { code: body.code },
         include: { user: true },
       });
 
-      console.log(`[sessionController] Prisma lookup result:`, authRecord ? "FOUND" : "NOT FOUND");
-
-      if (!authRecord) {
+      // A mobile code is only valid with its PKCE verifier (mobile-exchange).
+      if (!authRecord || authRecord.codeChallenge) {
         throw new Error("Invalid or expired authorization code.");
       }
-
-      console.log(
-        `[sessionController] Code expires at: ${authRecord.expiresAt.toISOString()}, Current time: ${new Date().toISOString()}`,
-      );
 
       // Immediately burn the code
       await prisma.desktopAuthCode.delete({
@@ -584,25 +597,76 @@ export class SessionController {
       }
 
       // Generate the massive Firebase Custom JWT and hand it over!
-      const customToken = await firebaseAdmin.auth().createCustomToken(authRecord.user.firebaseUid);
-
-      console.log(
-        `[sessionController] Successfully minted token for user ${authRecord.user.firebaseUid}. Returning.`,
-      );
+      const customToken = await firebaseAdmin
+        .auth()
+        .createCustomToken(authRecord.user.firebaseUid, signInClaims(authRecord));
 
       return {
         status: 200,
         data: { customToken },
       };
     } catch (error: any) {
-      console.error("[sessionController] Exchange failed:", error.message || error);
+      logger.warn(`[Session] Desktop code exchange failed: ${error?.message}`);
       throw {
         status: error.status || 401,
         message: error.message || "Failed to exchange desktop auth code",
       };
     }
   }
+
+  /**
+   * Mobile Microsoft sign-in, last step. The app sends the one-time code it
+   * got through the deep link plus the PKCE verifier it kept in memory, and
+   * gets a Firebase custom token. A code caught by another app is useless
+   * without the verifier.
+   */
+  @Post("mobile-exchange")
+  public async exchangeMobileCode(
+    @Body() body: { code: string; codeVerifier: string },
+  ): Promise<ApiResponse<{ customToken: string }>> {
+    const invalid = { status: 401, message: "Invalid or expired authorization code." };
+    if (typeof body?.code !== "string" || typeof body?.codeVerifier !== "string") throw invalid;
+
+    const authRecord = await prisma.desktopAuthCode.findUnique({
+      where: { code: body.code },
+      include: { user: true },
+    });
+    if (!authRecord || !authRecord.codeChallenge) throw invalid;
+    // Burn it before anything else, so a wrong verifier cannot be retried.
+    await prisma.desktopAuthCode.delete({ where: { id: authRecord.id } });
+    if (authRecord.expiresAt.getTime() < Date.now()) throw invalid;
+    if (!pkceMatches(body.codeVerifier, authRecord.codeChallenge)) throw invalid;
+
+    const customToken = await firebaseAdmin
+      .auth()
+      .createCustomToken(authRecord.user.firebaseUid, signInClaims(authRecord));
+    return { status: 200, data: { customToken } };
+  }
 }
+
+/** True when base64url(SHA-256(verifier)) equals the stored challenge. */
+export const pkceMatches = (verifier: string, challenge: string): boolean => {
+  if (!/^[A-Za-z0-9._~-]{43,128}$/.test(verifier)) return false;
+  const computed = Buffer.from(crypto.createHash("sha256").update(verifier).digest("base64url"));
+  const expected = Buffer.from(challenge);
+  return computed.length === expected.length && crypto.timingSafeEqual(computed, expected);
+};
+
+const MICROSOFT_MOBILE_STATE_PURPOSE = "microsoft-mobile-login";
+const MOBILE_CODE_TTL_MS = 2 * 60_000;
+const oauthStateSecret = () => process.env.OAUTH_STATE_SECRET || MS_CLIENT_SECRET;
+
+/**
+ * The email to trust from Microsoft Graph. `mail` can be set to any address
+ * by the admin of any Entra tenant (the "nOAuth" issue), so it is never used.
+ * A userPrincipalName can only use a domain the tenant has verified. Guest
+ * UPNs ("...#EXT#@tenant") do not name the person's own address.
+ */
+export const trustedMicrosoftEmail = (msUser: { userPrincipalName?: string }): string | null => {
+  const upn = (msUser.userPrincipalName ?? "").trim().toLowerCase();
+  if (!upn || upn.includes("#ext#")) return null;
+  return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(upn) ? upn : null;
+};
 
 // ─────────────────────────────────────────────────────────────────
 // Microsoft Mobile OAuth — Raw Express handlers (not TSOA-managed)
@@ -627,10 +691,25 @@ export async function microsoftMobileStart(
     return;
   }
 
-  // Store the mobile redirect_uri in a short-lived state token (prevents CSRF)
-  const state = Buffer.from(
-    JSON.stringify({ redirect_uri, nonce: crypto.randomBytes(16).toString("hex") }),
-  ).toString("base64url");
+  // The app keeps a PKCE verifier and a random app state in memory. The
+  // challenge goes into the signed state so the callback can bind the
+  // one-time code to it; the app state comes back in the deep link so the
+  // app can refuse a sign-in it did not start.
+  const codeChallenge = req.query["code_challenge"];
+  const appState = req.query["app_state"];
+  if (typeof codeChallenge !== "string" || !/^[A-Za-z0-9_-]{43}$/.test(codeChallenge)) {
+    res.status(400).json({ error: "Missing or invalid code_challenge. Update the app." });
+    return;
+  }
+  if (typeof appState !== "string" || !/^[A-Za-z0-9_-]{16,128}$/.test(appState)) {
+    res.status(400).json({ error: "Missing or invalid app_state. Update the app." });
+    return;
+  }
+  const state = createOAuthState(
+    MICROSOFT_MOBILE_STATE_PURPOSE,
+    { redirect_uri, codeChallenge, appState },
+    oauthStateSecret(),
+  );
   const backendCallback = `${BACKEND_URL}/api/auth/microsoft/mobile-callback`;
 
   const params = new URLSearchParams({
@@ -653,20 +732,25 @@ export async function microsoftMobileCallback(
 ): Promise<void> {
   const { code, state, error: msError } = req.query as Record<string, string>;
 
-  let redirect_uri: string;
-  try {
-    const decoded = JSON.parse(Buffer.from(state, "base64url").toString());
-    redirect_uri = decoded.redirect_uri;
-    if (!ALLOWED_MOBILE_REDIRECT_PREFIXES.some((p) => redirect_uri.startsWith(p)))
-      throw new Error("bad_redirect");
-  } catch {
-    res.status(400).send("Invalid state parameter");
+  const decoded = readOAuthState<{ redirect_uri: string; codeChallenge: string; appState: string }>(
+    MICROSOFT_MOBILE_STATE_PURPOSE,
+    state,
+    oauthStateSecret(),
+  );
+  const redirect_uri = decoded?.redirect_uri;
+  if (
+    !decoded ||
+    !redirect_uri ||
+    !ALLOWED_MOBILE_REDIRECT_PREFIXES.some((p) => redirect_uri.startsWith(p))
+  ) {
+    res.status(400).send("Invalid or expired state parameter");
     return;
   }
+  const withAppState = (params: Record<string, string>) =>
+    `${redirect_uri}?${new URLSearchParams({ ...params, state: decoded.appState }).toString()}`;
 
   if (msError || !code) {
-    const errorMsg = encodeURIComponent(msError || "Microsoft login failed");
-    res.redirect(`${redirect_uri}?error=${errorMsg}`);
+    res.redirect(withAppState({ error: "Microsoft sign-in was cancelled or failed." }));
     return;
   }
 
@@ -707,7 +791,12 @@ export async function microsoftMobileCallback(
       userPrincipalName?: string;
       displayName?: string;
     };
-    const email = msUser.mail || msUser.userPrincipalName || "";
+    const email = trustedMicrosoftEmail(msUser);
+    if (!email) {
+      throw new Error(
+        "This Microsoft account has no verified sign-in address. Use another sign-in method.",
+      );
+    }
     const microsoftUid = `microsoft:${msUser.id}`;
 
     // Find or create Firebase user for this Microsoft account
@@ -754,14 +843,26 @@ export async function microsoftMobileCallback(
       });
     }
 
-    // Mint a Firebase Custom Token for the mobile app to sign in with
-    const customToken = await firebaseAdmin.auth().createCustomToken(firebaseUserRecord.uid);
-
-    // Redirect back to the mobile app deep link with the token
-    res.redirect(`${redirect_uri}?token=${encodeURIComponent(customToken)}`);
+    // Hand the app a one-time code, not the token itself. The app exchanges
+    // it with its PKCE verifier through POST /api/session/mobile-exchange.
+    const dbUser = await prisma.user.findFirstOrThrow({
+      where: { firebaseUid: firebaseUserRecord.uid },
+    });
+    const oneTimeCode = crypto.randomBytes(32).toString("hex");
+    await prisma.desktopAuthCode.create({
+      data: {
+        code: oneTimeCode,
+        userId: dbUser.id,
+        codeChallenge: decoded.codeChallenge,
+        signInProvider: "microsoft.com",
+        expiresAt: new Date(Date.now() + MOBILE_CODE_TTL_MS),
+      },
+    });
+    res.redirect(withAppState({ code: oneTimeCode }));
   } catch (err: any) {
-    console.error("[Microsoft Mobile OAuth] Callback error:", err.message || err);
-    const errorMsg = encodeURIComponent(err.message || "Microsoft login failed");
-    res.redirect(`${redirect_uri}?error=${errorMsg}`);
+    logger.error("[Microsoft Mobile OAuth] Callback error", err);
+    const known =
+      typeof err?.message === "string" && err.message.startsWith("This Microsoft account");
+    res.redirect(withAppState({ error: known ? err.message : "Microsoft sign-in failed." }));
   }
 }

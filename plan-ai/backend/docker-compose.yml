@@ -1,3 +1,6 @@
+# Ports are published on 127.0.0.1 only: Docker writes its own firewall
+# rules, so a port published on 0.0.0.0 is open to the network even behind
+# ufw. Put a TLS proxy in front of anything that must be reached from outside.
 services:
   db:
     image: postgres:16
@@ -5,10 +8,12 @@ services:
     environment:
       POSTGRES_USER: planai
       POSTGRES_DB: planai_db
-      POSTGRES_PASSWORD: planai123
+      # Development default. A private install sets its own in the .env
+      # next to this file, and DATABASE_URL must match it.
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-planai123}
     ports:
       # 5433 on the host: 5432 is often taken by another project's Postgres.
-      - "5433:5432"
+      - "127.0.0.1:5433:5432"
     volumes:
       - plan-ai-db-data:/var/lib/postgresql/data
     healthcheck:
@@ -24,11 +29,12 @@ services:
       # Qdrant reports anonymous usage to its servers by default. A private
       # install must not phone home.
       QDRANT__TELEMETRY_DISABLED: "true"
-      # Use env var if provided, fall back to test value
-      # QDRANT__SERVICE__API_KEY: planai123
+      # A private install must turn on the API key: uncomment this line, and
+      # set the same QDRANT_API_KEY in the backend .env.
+      # QDRANT__SERVICE__API_KEY: ${QDRANT_API_KEY:?set QDRANT_API_KEY}
     ports:
-      - "6333:6333" # REST
-      - "6334:6334" # gRPC (optional)
+      - "127.0.0.1:6333:6333" # REST
+      - "127.0.0.1:6334:6334" # gRPC (optional)
     volumes:
       - qdrant-storage:/qdrant/storage
     healthcheck:
@@ -45,8 +51,10 @@ services:
   redis:
     image: redis:7-alpine
     container_name: plan-ai-redis
+    # With REDIS_PASSWORD set, Redis requires it (put it in REDIS_URL too).
+    command: ["sh", "-c", "exec redis-server ${REDIS_PASSWORD:+--requirepass $REDIS_PASSWORD}"]
     ports:
-      - "6379:6379"
+      - "127.0.0.1:6379:6379"
     volumes:
       - plan-ai-redis-data:/data
     healthcheck:
@@ -75,7 +83,7 @@ services:
       # and the first sentence of the next meeting pays for the reload.
       WHISPER__TTL: -1
     ports:
-      - "8010:8000"
+      - "127.0.0.1:8010:8000"
     volumes:
       - whisper-models:/home/ubuntu/.cache/huggingface/hub
     healthcheck:
@@ -102,7 +110,7 @@ services:
       SENTRY_DSN: ""
     ports:
       # 8002 on the host: `yarn dev:voice` uses 8001 during development.
-      - "8002:8000"
+      - "127.0.0.1:8002:8000"
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:8000/health || exit 1"]
       interval: 15s
@@ -121,7 +129,7 @@ services:
       # Keep models loaded; reloading a 30B model costs seconds per request.
       OLLAMA_KEEP_ALIVE: "-1"
     ports:
-      - "11434:11434"
+      - "127.0.0.1:11434:11434"
     volumes:
       - ollama-models:/root/.ollama
     healthcheck:
