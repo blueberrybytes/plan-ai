@@ -110,7 +110,7 @@ export default function ProjectDetailsScreen() {
         style={[styles.card, { backgroundColor: theme.colors.surface, borderLeftColor: pColor, borderLeftWidth: 4 }]} 
         mode="elevated" 
         elevation={1}
-        onPress={() => router.push({ pathname: `/task/${task.id}` as any, params: { taskStr: JSON.stringify(task) } })}
+        onPress={() => router.push({ pathname: `/task/${task.id}` as any, params: { projectId: task.projectId } })}
       >
         <Card.Content>
           <Text variant="titleMedium" style={{ fontWeight: 'bold', color: theme.colors.onSurface, marginBottom: 8, textDecorationLine: task.status === 'COMPLETED' ? 'line-through' : 'none' }}>

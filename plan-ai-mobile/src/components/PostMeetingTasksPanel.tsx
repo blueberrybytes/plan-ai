@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { View, Linking } from "react-native";
+import { View } from "react-native";
 import {
   Text,
   Surface,
@@ -10,6 +10,7 @@ import {
 } from "react-native-paper";
 import { useAuth } from "@/context/AuthContext";
 import type { components } from "@/types/api";
+import { openWebUrl, webAppLink } from "@/utils/openWebUrl";
 
 type PostMeetingTaskKind = components["schemas"]["PostMeetingTaskKind"];
 type PostMeetingTaskStatus = components["schemas"]["PostMeetingTaskStatus"];
@@ -97,8 +98,8 @@ export const PostMeetingTasksPanel: React.FC<Props> = ({
   };
 
   const openResource = (url: string) => {
-    const fullUrl = url.startsWith("/") ? `${WEB_APP_URL.replace(/\/+$/, "")}${url}` : url;
-    Linking.openURL(fullUrl).catch(() => {
+    const fullUrl = url.startsWith("/") ? webAppLink(WEB_APP_URL, url) : url;
+    openWebUrl(fullUrl).catch(() => {
       /* swallow — user can copy from the failure message */
     });
   };

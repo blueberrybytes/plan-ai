@@ -1,26 +1,56 @@
-import React, { useMemo } from 'react';
-import { View, StyleSheet, ScrollView, Platform, Linking } from 'react-native';
-import { Text, useTheme, Card, IconButton, Chip, Divider } from 'react-native-paper';
+import React, { useEffect, useState } from 'react';
+import { View, StyleSheet, ScrollView, Platform } from 'react-native';
+import { Text, useTheme, Card, IconButton, Chip, Divider, ActivityIndicator } from 'react-native-paper';
 import { useLocalSearchParams, router } from 'expo-router';
 import Markdown from 'react-native-markdown-display';
 import { Task } from '../../services/planAiApi';
+import { useAuth } from '../../context/AuthContext';
+import { onMarkdownLinkPress, openWebUrl, webAppLink } from '../../utils/openWebUrl';
 
 const WEB_APP_URL = process.env.EXPO_PUBLIC_PLAN_AI_WEB_URL ?? 'https://plan-ai.blueberrybytes.com';
 
 export default function TaskDetailsScreen() {
-  const params = useLocalSearchParams();
+  const { id, projectId } = useLocalSearchParams<{ id: string; projectId?: string }>();
   const theme = useTheme();
+  const { api } = useAuth();
 
-  const task: Task | null = useMemo(() => {
-    try {
-      if (typeof params.taskStr === 'string') {
-        return JSON.parse(params.taskStr);
-      }
-    } catch (e) {
-      console.error('Failed to parse task string', e);
+  // The task always comes from the API. This screen used to render a task
+  // passed as JSON in the route params, which a deep link could fill with
+  // anything.
+  const [task, setTask] = useState<Task | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    setTask(null);
+    if (typeof id !== 'string' || typeof projectId !== 'string') {
+      setIsLoading(false);
+      return;
     }
-    return null;
-  }, [params.taskStr]);
+    setIsLoading(true);
+    api
+      .getProjectTask(projectId, id)
+      .then((t) => {
+        if (!cancelled) setTask(t);
+      })
+      .catch((e) => {
+        console.warn('Failed to load task', e);
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [api, id, projectId]);
+
+  if (isLoading) {
+    return (
+      <View style={[styles.container, { backgroundColor: theme.colors.background, justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" />
+      </View>
+    );
+  }
 
   if (!task) {
     return (
@@ -36,10 +66,12 @@ export default function TaskDetailsScreen() {
   const generatedAssets = [
     { path: metadata?.docUrl, label: 'Document', icon: 'file-document-outline' },
     { path: metadata?.slidesUrl, label: 'Slides', icon: 'presentation' },
-  ].filter(
-    (asset): asset is { path: string; label: string; icon: string } =>
-      typeof asset.path === 'string' && asset.path.length > 0,
-  );
+  ]
+    .map((asset) => ({ ...asset, link: webAppLink(WEB_APP_URL, asset.path) }))
+    .filter(
+      (asset): asset is { path: string; link: string; label: string; icon: string } =>
+        asset.link !== null,
+    );
 
   const dueDateStr = task.dueDate 
     ? new Date(task.dueDate).toLocaleDateString(undefined, { weekday: 'short', month: 'long', day: 'numeric', year: 'numeric' })
@@ -124,6 +156,7 @@ export default function TaskDetailsScreen() {
                   Render through react-native-markdown-display so bullets
                   show as proper • instead of literal `-`. */}
               <Markdown
+                onLinkPress={onMarkdownLinkPress}
                 style={{
                   body: { color: theme.colors.onSurfaceVariant, fontSize: 14, lineHeight: 22 },
                   bullet_list: { marginLeft: 0 },
@@ -174,7 +207,7 @@ export default function TaskDetailsScreen() {
                 {(task.metadata as Record<string, Record<string, string>> | null)?.jira ? (
                   <Chip
                     icon="jira"
-                    onPress={() => Linking.openURL((task.metadata as Record<string, Record<string, string>>).jira.url)}
+                    onPress={() => void openWebUrl((task.metadata as Record<string, Record<string, string>>).jira.url)}
                   >
                     {(task.metadata as Record<string, Record<string, string>>).jira.issueKey || 'Jira'}
                   </Chip>
@@ -182,7 +215,7 @@ export default function TaskDetailsScreen() {
                 {(task.metadata as Record<string, Record<string, string>> | null)?.linear ? (
                   <Chip
                     icon="ray-start-arrow"
-                    onPress={() => Linking.openURL((task.metadata as Record<string, Record<string, string>>).linear.url)}
+                    onPress={() => void openWebUrl((task.metadata as Record<string, Record<string, string>>).linear.url)}
                   >
                     {(task.metadata as Record<string, Record<string, string>>).linear.identifier || 'Linear'}
                   </Chip>
@@ -190,7 +223,7 @@ export default function TaskDetailsScreen() {
                 {(task.metadata as Record<string, Record<string, string>> | null)?.trello ? (
                   <Chip
                     icon="trello"
-                    onPress={() => Linking.openURL((task.metadata as Record<string, Record<string, string>>).trello.url)}
+                    onPress={() => void openWebUrl((task.metadata as Record<string, Record<string, string>>).trello.url)}
                   >
                     {(task.metadata as Record<string, Record<string, string>>).trello.shortLink || 'Trello'}
                   </Chip>
@@ -198,7 +231,7 @@ export default function TaskDetailsScreen() {
                 {(task.metadata as Record<string, Record<string, string>> | null)?.notion ? (
                   <Chip
                     icon="notebook-outline"
-                    onPress={() => Linking.openURL((task.metadata as Record<string, Record<string, string>>).notion.url)}
+                    onPress={() => void openWebUrl((task.metadata as Record<string, Record<string, string>>).notion.url)}
                   >
                     Notion
                   </Chip>
@@ -206,7 +239,7 @@ export default function TaskDetailsScreen() {
                 {(task.metadata as Record<string, Record<string, string>> | null)?.asana ? (
                   <Chip
                     icon="checkbox-marked-circle-outline"
-                    onPress={() => Linking.openURL((task.metadata as Record<string, Record<string, string>>).asana.url)}
+                    onPress={() => void openWebUrl((task.metadata as Record<string, Record<string, string>>).asana.url)}
                   >
                     Asana
                   </Chip>
@@ -225,7 +258,7 @@ export default function TaskDetailsScreen() {
               </Text>
               <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
                 {generatedAssets.map((asset) => (
-                  <Chip key={asset.path} icon={asset.icon} onPress={() => Linking.openURL(`${WEB_APP_URL}${asset.path}`)}>
+                  <Chip key={asset.path} icon={asset.icon} onPress={() => void openWebUrl(asset.link)}>
                     {asset.label}
                   </Chip>
                 ))}

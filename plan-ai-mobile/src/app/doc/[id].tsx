@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, StyleSheet, ScrollView, Platform } from 'react-native';
 import { Text, IconButton, useTheme, ActivityIndicator } from 'react-native-paper';
 import Markdown from 'react-native-markdown-display';
+import { onMarkdownLinkPress } from '../../utils/openWebUrl';
 import MermaidViewer from '../../components/MermaidViewer';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useAuth } from '../../context/AuthContext';
@@ -78,6 +79,7 @@ export default function DocDetailScreen() {
       ) : (
         <ScrollView style={styles.scrollArea}>
           <Markdown
+            onLinkPress={onMarkdownLinkPress}
             rules={{
               fence: (node: any, children, parent, styles) => {
                 if (node.sourceInfo === 'mermaid') {

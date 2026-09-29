@@ -31,6 +31,7 @@ import {
   ProgressBar,
 } from "react-native-paper";
 import Markdown from "react-native-markdown-display";
+import { onMarkdownLinkPress } from "../utils/openWebUrl";
 import { useRouter, useFocusEffect, useNavigation } from "expo-router";
 import { usePreventRemove } from "@react-navigation/native";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -2007,6 +2008,7 @@ export default function RecordScreen() {
             </View>
             {liveSummary ? (
               <Markdown
+                onLinkPress={onMarkdownLinkPress}
                 style={{
                   body: {
                     color: theme.colors.onSurface,
@@ -2085,6 +2087,7 @@ export default function RecordScreen() {
                   }}
                 >
                   <Markdown
+                    onLinkPress={onMarkdownLinkPress}
                     style={{
                       body: {
                         color: theme.colors.onSurface,

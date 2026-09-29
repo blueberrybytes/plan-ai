@@ -94,8 +94,10 @@ export default function ProfileScreen() {
     try {
       const logs = getLogSink();
       const logsStr = JSON.stringify(logs, null, 2);
+      // Cache, not Documents. The file is only for sharing, so it should not
+      // pile up in Documents or go into a backup.
       const fileUri =
-        FileSystem.documentDirectory + `plan-ai-debug-logs-${Date.now()}.json`;
+        FileSystem.cacheDirectory + `plan-ai-debug-logs-${Date.now()}.json`;
       await FileSystem.writeAsStringAsync(fileUri, logsStr, {
         encoding: FileSystem.EncodingType.UTF8,
       });

@@ -18,6 +18,11 @@ export default ({ config }: ConfigContext): ExpoConfig => {
   // ----------------------------------
 
   const isProduction = process.env.APP_ENV === "production";
+  // Plain HTTP is only for a dev build that talks to a local backend
+  // (http://localhost:8080 or a LAN address). Production never allows it.
+  // Debug builds allow it anyway through android/app/src/debug, for Metro.
+  const apiUrl = process.env.EXPO_PUBLIC_PLAN_AI_API_URL ?? "http://localhost:8080";
+  const allowCleartext = !isProduction && apiUrl.startsWith("http://");
   const appVersion = "4.4.0";
   const bundleIdentifier = "com.blueberrybytes.planai";
 
@@ -63,6 +68,9 @@ export default ({ config }: ConfigContext): ExpoConfig => {
         foregroundImage: "./assets/images/bbb_android_icon.png",
       },
       predictiveBackGestureEnabled: false,
+      // Recordings and the auth cache live in the app's files. Neither may
+      // end up in a Google Drive backup.
+      allowBackup: false,
       package: bundleIdentifier,
       googleServicesFile: "./google-services.json",
     },
@@ -89,7 +97,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
             useFrameworks: "static",
           },
           android: {
-            usesCleartextTraffic: true,
+            usesCleartextTraffic: allowCleartext,
           },
         },
       ],
@@ -120,6 +128,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       "./plugins/with-rnfb-fix.js",
       "./plugins/with-adi-registration.js",
       "./plugins/with-notifee-microphone-service.js",
+      "./plugins/with-no-backup-folders.js",
     ],
     experiments: {
       typedRoutes: true,

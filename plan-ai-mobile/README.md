@@ -1,3 +1,20 @@
+# Plan AI Mobile
+
+The Plan AI app for iOS and Android. It records meetings in the room with the phone's microphone and sends them to the Plan AI backend, which writes the transcript, the notes and the tasks.
+
+## Features
+
+- **Recording that survives interruptions**: audio is saved to `Documents/recordings/<id>/` as it is recorded (16 kHz WAV), with a manifest per session. Phone calls, a closed app or a full disk pause the recording instead of losing it (`recordingService.ts`, `audioCapture.ts`, `recordingSessions.ts`).
+- **Upload outbox**: recordings upload in 8 MB parts to `/api/transcripts/recorder-upload/parts` and resume where they stopped, also after being offline (`recordingUploader.ts`).
+- **Pause and resume**, with automatic pause after 15 minutes without speech.
+- **Marks** with an optional note, a consent message to share with the people in the room, and the calendar meeting that is on now when a calendar is connected.
+- **Import audio**: m4a, mp4, aac, mp3, wav, ogg, opus, webm, flac and caf files are uploaded as they are.
+- **Meeting page**: player with tappable transcript lines, marks, and delete audio.
+
+Run it from the repository root with `yarn dev:mobile`. The Expo notes below cover the rest of the setup.
+
+---
+
 # Welcome to your Expo app 👋
 
 This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).

@@ -29,6 +29,7 @@ import * as Clipboard from "expo-clipboard";
 import * as FileSystem from "expo-file-system/legacy";
 import * as Sharing from "expo-sharing";
 import MermaidViewer from "../../components/MermaidViewer";
+import { onMarkdownLinkPress, openWebUrl } from "../../utils/openWebUrl";
 import { PostMeetingTasksPanel } from "../../components/PostMeetingTasksPanel";
 import { TwentyPushCard } from "../../components/TwentyPushCard";
 import SpeakerInsightsTab, {
@@ -200,7 +201,9 @@ export default function TranscriptViewScreen() {
     setMenuVisible(false);
     try {
       const fileName = `Transcript_${transcript?.id || "download"}.txt`;
-      const fileUri = `${FileSystem.documentDirectory}${fileName}`;
+      // Cache, not Documents. The copy is only for the share sheet, so the
+      // meeting text should not pile up in Documents or go into a backup.
+      const fileUri = `${FileSystem.cacheDirectory}${fileName}`;
       await FileSystem.writeAsStringAsync(fileUri, getShareableText(), {
         encoding: FileSystem.EncodingType.UTF8,
       });
@@ -327,6 +330,7 @@ export default function TranscriptViewScreen() {
     return (
       <View style={{ paddingBottom: 40 }}>
         <Markdown
+          onLinkPress={onMarkdownLinkPress}
           rules={{
             fence: (node: any, children, parent, styles) => {
               if (node.sourceInfo === "mermaid") {
@@ -486,20 +490,17 @@ export default function TranscriptViewScreen() {
     // Fallback for basic transcripts without utterances
     const rawText =
       transcript?.transcript || "No transcript content available.";
-    console.log("🛑 Raw Transcript Text evaluating:", rawText);
     const blocks = rawText.split(/\n+/).filter(Boolean);
 
     // Check if the text has speaker labels in either desktop or mobile format
     const hasLabels = blocks.some(
       (b) => /^\[(.*?)\]\s*(.*)/.test(b) || /^(.{1,40}?):\s*(.*)/.test(b),
     );
-    console.log("🛑 Has Labels:", hasLabels);
 
     if (hasLabels) {
       return (
         <View style={{ paddingBottom: 40, gap: 16 }}>
           {blocks.map((block, i) => {
-            console.log(`🧐 Block [${i}]:`, block);
             let speaker = "Unknown";
             let text = block;
 
@@ -1038,7 +1039,7 @@ export default function TranscriptViewScreen() {
                       mode="outlined"
                       onPress={
                         status?.url
-                          ? () => status.url && Linking.openURL(status.url)
+                          ? () => void openWebUrl(status.url)
                           : undefined
                       }
                       style={{

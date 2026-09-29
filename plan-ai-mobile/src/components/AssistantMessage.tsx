@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { View, Pressable, Platform } from "react-native";
 import { Text, useTheme, Card, Button, ActivityIndicator } from "react-native-paper";
 import Markdown from "react-native-markdown-display";
+import { onMarkdownLinkPress } from "../utils/openWebUrl";
 import { planAiApi } from "../context/AuthContext";
 import type { AssistantUIMessage, TaskSyncOutput } from "../services/assistantChat";
 
@@ -189,7 +190,7 @@ const AssistantMessage: React.FC<Props> = ({ message, streaming, markdownStyles 
         }
         if (part.type === "text") {
           return (
-            <Markdown key={i} style={markdownStyles}>
+            <Markdown key={i} style={markdownStyles} onLinkPress={onMarkdownLinkPress}>
               {part.text}
             </Markdown>
           );

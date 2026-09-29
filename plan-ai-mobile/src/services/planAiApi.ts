@@ -195,7 +195,7 @@ export const createPlanAiApi = (
 
     async getDocument(id: string): Promise<DocDocumentResponse> {
       const req = async (force: boolean) =>
-        safeFetch(`${BASE_URL}/api/documents/${id}`, {
+        safeFetch(`${BASE_URL}/api/documents/${encodeURIComponent(id)}`, {
           headers: await getAuthHeaders(force),
         });
 
@@ -229,7 +229,7 @@ export const createPlanAiApi = (
 
     async listProjectTasks(projectId: string): Promise<Task[]> {
       const req = async (force: boolean) =>
-        safeFetch(`${BASE_URL}/api/projects/${projectId}/tasks?pageSize=200`, {
+        safeFetch(`${BASE_URL}/api/projects/${encodeURIComponent(projectId)}/tasks?pageSize=200`, {
           headers: await getAuthHeaders(force),
         });
 
@@ -254,7 +254,7 @@ export const createPlanAiApi = (
       },
     ): Promise<Task> {
       const req = async (force: boolean) =>
-        safeFetch(`${BASE_URL}/api/projects/${projectId}/tasks`, {
+        safeFetch(`${BASE_URL}/api/projects/${encodeURIComponent(projectId)}/tasks`, {
           method: "POST",
           headers: await getAuthHeaders(force),
           body: JSON.stringify(payload),
@@ -276,7 +276,7 @@ export const createPlanAiApi = (
       }
     ): Promise<any> {
       const req = async (force: boolean) =>
-        safeFetch(`${BASE_URL}/api/projects/${projectId}/tasks/refine`, {
+        safeFetch(`${BASE_URL}/api/projects/${encodeURIComponent(projectId)}/tasks/refine`, {
           method: "POST",
           headers: await getAuthHeaders(force),
           body: JSON.stringify(payload),
@@ -292,10 +292,20 @@ export const createPlanAiApi = (
       payload: Partial<Pick<Task, "status" | "priority" | "dueDate" | "title">>,
     ): Promise<Task> {
       const req = async (force: boolean) =>
-        safeFetch(`${BASE_URL}/api/projects/${projectId}/tasks/${taskId}`, {
+        safeFetch(`${BASE_URL}/api/projects/${encodeURIComponent(projectId)}/tasks/${encodeURIComponent(taskId)}`, {
           method: "PUT",
           headers: await getAuthHeaders(force),
           body: JSON.stringify(payload),
+        });
+
+      const res = await req(false);
+      return handleResponseWithRetry<Task>(res, () => req(true));
+    },
+
+    async getProjectTask(projectId: string, taskId: string): Promise<Task> {
+      const req = async (force: boolean) =>
+        safeFetch(`${BASE_URL}/api/projects/${encodeURIComponent(projectId)}/tasks/${encodeURIComponent(taskId)}`, {
+          headers: await getAuthHeaders(force),
         });
 
       const res = await req(false);
@@ -316,7 +326,7 @@ export const createPlanAiApi = (
 
     async getContext(id: string): Promise<Context> {
       const req = async (force: boolean) =>
-        safeFetch(`${BASE_URL}/api/contexts/${id}`, {
+        safeFetch(`${BASE_URL}/api/contexts/${encodeURIComponent(id)}`, {
           headers: await getAuthHeaders(force),
         });
 
@@ -343,7 +353,7 @@ export const createPlanAiApi = (
         const wsId = getWorkspaceId();
         if (wsId) headers["X-Workspace-Id"] = wsId;
 
-        return safeFetch(`${BASE_URL}/api/contexts/${contextId}/files`, {
+        return safeFetch(`${BASE_URL}/api/contexts/${encodeURIComponent(contextId)}/files`, {
           method: "POST",
           headers,
           body: formData,
@@ -356,7 +366,7 @@ export const createPlanAiApi = (
 
     async deleteContextFile(contextId: string, fileId: string): Promise<Context> {
       const req = async (force: boolean) =>
-        safeFetch(`${BASE_URL}/api/contexts/${contextId}/files/${fileId}`, {
+        safeFetch(`${BASE_URL}/api/contexts/${encodeURIComponent(contextId)}/files/${encodeURIComponent(fileId)}`, {
           method: "DELETE",
           headers: await getAuthHeaders(force),
         });
@@ -430,36 +440,6 @@ export const createPlanAiApi = (
 
       const res = await req(false);
       return handleResponseWithRetry<UserIntegrationSummary[]>(res, () => req(true));
-    },
-
-    async transcribeChunk(chunks: { mic?: Blob; system?: Blob }): Promise<string> {
-      const req = async (force: boolean) => {
-        const token = await getToken(force);
-        if (!token) throw new Error("No auth token available");
-
-        const form = new FormData();
-        if (chunks.mic) {
-          form.append("mic", chunks.mic, "mic.webm");
-        }
-        if (chunks.system) {
-          const isMacNative =
-            chunks.system.type.includes("mp4") || chunks.system.type.includes("m4a");
-          form.append("system", chunks.system, isMacNative ? "system.m4a" : "system.webm");
-        }
-
-        const headers: Record<string, string> = { Authorization: `Bearer ${token}` };
-        const wsId = getWorkspaceId();
-        if (wsId) headers["X-Workspace-Id"] = wsId;
-
-        return safeFetch(`${BASE_URL}/api/audio/transcribe-chunk`, {
-          method: "POST",
-          headers,
-          body: form,
-        });
-      };
-
-      const res = await req(false);
-      return handleResponseWithRetry<{ text: string }>(res, () => req(true)).then((d) => d.text);
     },
 
     async startAudioStream(
@@ -735,7 +715,7 @@ export const createPlanAiApi = (
 
     async getTranscript(id: string): Promise<Transcript> {
       const req = async (force: boolean) =>
-        safeFetch(`${BASE_URL}/api/transcripts/${id}`, {
+        safeFetch(`${BASE_URL}/api/transcripts/${encodeURIComponent(id)}`, {
           headers: await getAuthHeaders(force),
         });
 
@@ -780,7 +760,7 @@ export const createPlanAiApi = (
 
     async updateTranscript(id: string, payload: { title?: string }): Promise<Transcript> {
       const req = async (force: boolean) =>
-        safeFetch(`${BASE_URL}/api/transcripts/${id}`, {
+        safeFetch(`${BASE_URL}/api/transcripts/${encodeURIComponent(id)}`, {
           method: "PUT",
           headers: await getAuthHeaders(force),
           body: JSON.stringify(payload),
@@ -801,7 +781,7 @@ export const createPlanAiApi = (
     ): Promise<Transcript> {
       const body: UpdateSpeakerNamesBody = { overrides };
       const req = async (force: boolean) =>
-        safeFetch(`${BASE_URL}/api/transcripts/${id}/speakers`, {
+        safeFetch(`${BASE_URL}/api/transcripts/${encodeURIComponent(id)}/speakers`, {
           method: "PUT",
           headers: await getAuthHeaders(force),
           body: JSON.stringify(body),
@@ -813,7 +793,7 @@ export const createPlanAiApi = (
 
     async deleteTranscript(id: string): Promise<void> {
       const req = async (force: boolean) =>
-        safeFetch(`${BASE_URL}/api/transcripts/${id}`, {
+        safeFetch(`${BASE_URL}/api/transcripts/${encodeURIComponent(id)}`, {
           method: "DELETE",
           headers: await getAuthHeaders(force),
         });
@@ -824,7 +804,7 @@ export const createPlanAiApi = (
 
     async reprocessTranscript(id: string): Promise<Transcript> {
       const req = async (force: boolean) =>
-        safeFetch(`${BASE_URL}/api/transcripts/${id}/reprocess`, {
+        safeFetch(`${BASE_URL}/api/transcripts/${encodeURIComponent(id)}/reprocess`, {
           method: "POST",
           headers: await getAuthHeaders(force),
         });
@@ -839,7 +819,7 @@ export const createPlanAiApi = (
     ): Promise<{ success: boolean }> {
       const req = async (force: boolean) =>
         safeFetch(
-          `${BASE_URL}/api/transcripts/${transcriptId}/post-meeting-tasks/${kind}/retry`,
+          `${BASE_URL}/api/transcripts/${encodeURIComponent(transcriptId)}/post-meeting-tasks/${encodeURIComponent(kind)}/retry`,
           {
             method: "POST",
             headers: await getAuthHeaders(force),
@@ -890,7 +870,7 @@ export const createPlanAiApi = (
       transcriptId: string,
     ): Promise<{ pushed: number; skipped: number; errors: string[] }> {
       const req = async (force: boolean) =>
-        safeFetch(`${BASE_URL}/api/tasks/auto-sync-transcript/${transcriptId}`, {
+        safeFetch(`${BASE_URL}/api/tasks/auto-sync-transcript/${encodeURIComponent(transcriptId)}`, {
           method: "POST",
           headers: await getAuthHeaders(force),
           body: JSON.stringify({}),
@@ -901,31 +881,6 @@ export const createPlanAiApi = (
         res,
         () => req(true),
       );
-    },
-
-    async transcribeAudio(fileUri: string): Promise<string> {
-      const req = async (force: boolean) => {
-        const formData = new FormData();
-        const safeUri = fileUri.startsWith("file://") ? fileUri : `file://${fileUri}`;
-        formData.append("mic", {
-          uri: safeUri,
-          name: "dictation.m4a",
-          type: "audio/m4a",
-        } as any);
-
-        const headers = await getAuthHeaders(force);
-        delete (headers as any)["Content-Type"]; // Allow React Native fetch to generate boundary
-
-        return safeFetch(`${BASE_URL}/api/audio/transcribe-chunk`, {
-          method: "POST",
-          headers,
-          body: formData,
-        });
-      };
-
-      const res = await req(false);
-      const data = await handleResponseWithRetry<{ text: string }>(res, () => req(true));
-      return data.text.replace(/^User:\s*/i, "").trim();
     },
 
     /**

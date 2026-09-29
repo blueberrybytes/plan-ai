@@ -3,6 +3,7 @@ import { View, StyleSheet, ScrollView, Platform, KeyboardAvoidingView, Alert } f
 import { Text, useTheme, TextInput, Button, IconButton, SegmentedButtons, ActivityIndicator, Chip, Surface, Portal, Dialog } from 'react-native-paper';
 import { useLocalSearchParams, router } from 'expo-router';
 import Markdown from 'react-native-markdown-display';
+import { onMarkdownLinkPress } from '../../../utils/openWebUrl';
 import { useAuth } from '../../../context/AuthContext';
 
 export default function CreateTaskScreen() {
@@ -229,6 +230,7 @@ export default function CreateTaskScreen() {
                       {/* AI returns AC as a markdown bullet list. Render
                           through markdown-display so bullets show properly. */}
                       <Markdown
+                        onLinkPress={onMarkdownLinkPress}
                         style={{
                           body: {
                             color: theme.colors.onSurfaceVariant,

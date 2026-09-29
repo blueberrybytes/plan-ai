@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from "react";
-import { View, Linking } from "react-native";
+import { View } from "react-native";
 import { Card, Text, Button, useTheme, ActivityIndicator } from "react-native-paper";
 import { useAuth } from "@/context/AuthContext";
 import type { TwentyCompanyItem } from "@/services/planAiApi";
 import { TwentyCompanyPicker } from "./TwentyCompanyPicker";
+import { openWebUrl } from "@/utils/openWebUrl";
 
 interface TwentyRef {
   noteId?: string;
@@ -92,7 +93,7 @@ export const TwentyPushCard: React.FC<Props> = ({ transcriptId, twenty, onPushed
                   mode="text"
                   compact
                   icon="open-in-new"
-                  onPress={() => void Linking.openURL(existingUrl)}
+                  onPress={() => void openWebUrl(existingUrl)}
                   style={{ alignSelf: "flex-start", marginTop: 4 }}
                 >
                   Open note

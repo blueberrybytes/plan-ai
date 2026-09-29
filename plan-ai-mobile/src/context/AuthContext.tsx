@@ -15,13 +15,18 @@ import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import { appleAuth } from '@invertase/react-native-apple-authentication';
 import * as WebBrowser from 'expo-web-browser';
 import { AppState, Platform } from 'react-native';
-import { File, Paths } from 'expo-file-system';
+import { Directory, File, Paths } from 'expo-file-system';
 import { createPlanAiApi, HttpError } from '../services/planAiApi';
+import type { components } from '../types/api';
+import { createPkcePair, queryParams, randomBase64Url } from '../utils/pkce';
 import * as Sentry from '@sentry/react-native';
 import { migrateLegacyRecordings } from '../services/recordingSessions';
 import { useOutboxProcessor } from '../services/recordingUploader';
 
 const BASE_URL = process.env.EXPO_PUBLIC_PLAN_AI_API_URL ?? 'http://localhost:8080';
+const MICROSOFT_REDIRECT_URI = 'planaimobile://auth/microsoft/callback';
+
+type CustomTokenResponse = components['schemas']['ApiResponse__customToken-string__'];
 
 let globalWorkspaceId: string | null = null;
 
@@ -70,7 +75,30 @@ interface AuthCache {
   activeWorkspaceId: string | null;
 }
 
-const authCacheFile = () => new File(Paths.document, 'auth_cache.json');
+/**
+ * The cache lives in Documents/private, which the app keeps out of iCloud and
+ * Google backups (plugins/with-no-backup-folders.js). Older versions kept it
+ * in Documents itself, which is backed up. That copy is moved once.
+ */
+let authCacheMoved = false;
+const authCacheFile = () => {
+  const dir = new Directory(Paths.document, 'private');
+  const file = new File(dir, 'auth_cache.json');
+  try {
+    if (!dir.exists) dir.create({ intermediates: true, idempotent: true });
+    if (!authCacheMoved) {
+      authCacheMoved = true;
+      const legacy = new File(Paths.document, 'auth_cache.json');
+      if (legacy.exists) {
+        if (file.exists) legacy.delete();
+        else legacy.move(file);
+      }
+    }
+  } catch {
+    // the cache only saves a round trip; never block on it
+  }
+  return file;
+};
 
 const readAuthCache = (uid: string): AuthCache | null => {
   try {
@@ -217,7 +245,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setUser(u);
 
       if (u) {
-        Sentry.setUser({ id: u.uid, email: u.email || undefined });
+        // Id only: native crash reports skip the JS beforeSend scrubbing.
+        Sentry.setUser({ id: u.uid });
       } else {
         Sentry.setUser(null);
       }
@@ -333,28 +362,45 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const signInWithMicrosoft = async () => {
     try {
-      // Backend starts the Microsoft OAuth flow and returns a redirect to MS login
-      // On completion, MS redirects to our backend callback, which mints a Firebase
-      // custom token and redirects back to the app via deep link.
-      const redirectUri = 'planaimobile://auth/microsoft/callback';
-      const startUrl = `${BASE_URL}/api/auth/microsoft/mobile-start?redirect_uri=${encodeURIComponent(redirectUri)}`;
+      // The backend runs the Microsoft OAuth flow and sends back a one-time
+      // code through the deep link. The code only works together with the
+      // PKCE verifier, which never leaves this function. The app state lets
+      // us refuse a deep link from a sign-in we did not start.
+      const { verifier, challenge } = await createPkcePair();
+      const appState = randomBase64Url(24);
+      const startUrl =
+        `${BASE_URL}/api/auth/microsoft/mobile-start` +
+        `?redirect_uri=${encodeURIComponent(MICROSOFT_REDIRECT_URI)}` +
+        `&code_challenge=${challenge}&app_state=${appState}`;
 
-      const result = await WebBrowser.openAuthSessionAsync(startUrl, redirectUri);
-
-      if (result.type === 'success' && result.url) {
-        // Extract the Firebase custom token from the deep link query params
-        const url = new URL(result.url);
-        const customToken = url.searchParams.get('token');
-        const errorMsg = url.searchParams.get('error');
-
-        if (errorMsg) throw new Error(decodeURIComponent(errorMsg));
-        if (!customToken) throw new Error('Microsoft Sign-In failed: no token returned.');
-
-        await signInWithCustomToken(getAuth(), customToken);
-      } else if (result.type === 'cancel') {
-        // User closed the browser — not an error
+      const result = await WebBrowser.openAuthSessionAsync(startUrl, MICROSOFT_REDIRECT_URI);
+      if (result.type !== 'success' || !result.url) {
+        // User closed the browser. Not an error.
         return;
       }
+      if (!result.url.startsWith(MICROSOFT_REDIRECT_URI)) {
+        throw new Error('Microsoft sign-in failed: unexpected redirect.');
+      }
+
+      const params = queryParams(result.url);
+      if (params.state !== appState) {
+        throw new Error('Microsoft sign-in failed: this sign-in was not started by the app.');
+      }
+      if (params.error) throw new Error(params.error);
+      if (!params.code) throw new Error('Microsoft sign-in failed: no code returned.');
+
+      const res = await fetch(`${BASE_URL}/api/session/mobile-exchange`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: params.code, codeVerifier: verifier }),
+      });
+      const body = (await res.json().catch(() => null)) as CustomTokenResponse | null;
+      const customToken = res.ok ? body?.data?.customToken : undefined;
+      if (!customToken) {
+        throw new Error(body?.message || 'Microsoft sign-in failed. Please try again.');
+      }
+
+      await signInWithCustomToken(getAuth(), customToken);
     } catch (error) {
       console.error('Microsoft Sign-In Error:', error);
       throw error;

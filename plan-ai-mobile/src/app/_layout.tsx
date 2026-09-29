@@ -17,19 +17,36 @@ import { initLoggerSink } from "../utils/loggerSink";
 
 initLoggerSink();
 
-Sentry.init({
-  dsn: "https://4f6a512d6a5fc4c92e48309d5c92b861@o4511196762734592.ingest.us.sentry.io/4511254670737408",
+// Sentry is off when the DSN is not set.
+const sentryDsn = process.env.EXPO_PUBLIC_SENTRY_DSN;
 
-  // Adds more context data to events (IP address, cookies, user, etc.)
-  // For more information, visit: https://docs.sentry.io/platforms/react-native/data-management/data-collected/
-  sendDefaultPii: true,
+Sentry.init({
+  dsn: sentryDsn,
+
+  // No IP address and no request data. Meetings are private.
+  sendDefaultPii: false,
 
   // Disable Sentry in local development
-  enabled: !__DEV__,
+  enabled: !__DEV__ && !!sentryDsn,
 
-  // Enable Logs
-  enableLogs: true,
+  // Console output is not sent: some of it holds meeting text. That is why
+  // there are no Sentry logs and no console breadcrumbs.
+  enableLogs: false,
   integrations: [Sentry.feedbackIntegration()],
+  beforeBreadcrumb: (breadcrumb) =>
+    breadcrumb.category === "console" ? null : breadcrumb,
+  beforeSend: (event) => {
+    if (event.request) {
+      delete event.request.data;
+      delete event.request.cookies;
+      delete event.request.headers;
+    }
+    // AuthContext sets the user with an email. Keep only the id.
+    if (event.user) {
+      event.user = event.user.id ? { id: event.user.id } : undefined;
+    }
+    return event;
+  },
 
   // uncomment the line below to enable Spotlight (https://spotlightjs.com)
   // spotlight: __DEV__,

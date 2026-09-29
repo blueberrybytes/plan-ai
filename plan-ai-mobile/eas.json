@@ -60,7 +60,6 @@
         "releaseStatus": "draft"
       },
       "ios": {
-        "appleId": "xaviermasle@gmail.com",
         "appleTeamId": "8NN84K7QKJ",
         "sku": "com.blueberrybytes.planai"
       }
