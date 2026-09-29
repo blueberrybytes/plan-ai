@@ -35,7 +35,7 @@ Banks, retailers, healthtech, gov-tech, anywhere with compliance + audit pressur
 **Typical team shape:** 20–500 engineers in squads of 5–15. Long sales cycle, but big seat counts.
 
 ::: tip Enterprise note
-SOC 2, SSO, audit logs, and on-prem deployment are on the [enterprise tier](/getting-started/introduction#pricing). Talk to us if you need procurement-ready paperwork.
+Plan AI has no SOC 2 report and no ISO 27001 certification. Each workspace has an audit log and sign-in rules set by the owner, including single sign-on with SAML or OIDC when Firebase Identity Platform is enabled. A private install runs the AI on your own servers. The [Security Overview](/security/overview) says what each of these depends on. Talk to us about contract terms.
 :::
 
 ## ❌ Not built for
@@ -83,7 +83,7 @@ We've written marketing copy that targets these three explicitly. If you recogni
 
 **2. The engineering manager** — James, 36, manages 3 squads at a 40-engineer Series B. Spends ~5h/week on "writing things down so people don't forget". Wants a tool his team will actually adopt (not another dashboard). **Wins when the trial proves itself in one sprint.**
 
-**3. The VP Engineering at enterprise** — Priya, 44, runs a 200-engineer fintech org. Doesn't write specs herself but her org bleeds hours doing it. Needs an answer when the CFO asks "what AI tooling are we deploying?" **Buys after seeing a peer's success and getting the SOC 2 paperwork.**
+**3. The VP Engineering at enterprise** — Priya, 44, runs a 200-engineer fintech org. Doesn't write specs herself but her org bleeds hours doing it. Needs an answer when the CFO asks "what AI tooling are we deploying?" **Buys after seeing a peer's success and getting a clear answer on where the meeting data goes.**
 
 ## Ready?
 

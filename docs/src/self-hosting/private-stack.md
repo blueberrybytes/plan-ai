@@ -83,14 +83,35 @@ The context window matters as much as the model. Ollama defaults to 4,096 tokens
 
 These are sizing guides, not measurements on the target hardware. Measure with real meetings before quoting a customer.
 
+## Locking the stack down
+
+The compose file publishes every port on 127.0.0.1 only. Docker writes its own firewall rules, so a port published on 0.0.0.0 would be open to the network even behind ufw. Put a TLS proxy in front of the backend and the web app, and keep the other ports closed.
+
+The defaults in the compose file are for development. A private install sets its own values in `plan-ai/backend/.env`, which compose reads as well:
+
+```bash
+POSTGRES_PASSWORD=...            # DATABASE_URL must use the same password
+REDIS_PASSWORD=...               # and REDIS_URL=redis://:<password>@localhost:6379
+QDRANT_API_KEY=...               # also uncomment QDRANT__SERVICE__API_KEY in docker-compose.yml
+VOICE_AI_API_KEY=...             # shared by the backend and the voice service
+SECRETS_ENCRYPTION_KEY=...       # openssl rand -base64 32, then run yarn secrets:encrypt
+API_ADMIN_KEY=                   # empty, or 32+ random characters
+CORS_ORIGINS=https://plan.example.com
+```
+
+`POSTGRES_PASSWORD` only takes effect when the database volume is first created. Qdrant's telemetry is off in the compose file. The queue dashboard stays off unless `BULL_BOARD_USER` and a `BULL_BOARD_PASSWORD` of 16 or more characters are set. An internal Jira or Twenty must be listed in `SSRF_ALLOWED_HOSTS`, because the backend refuses to fetch private addresses. All of these are described in [Environment Variables](/self-hosting/environment-variables).
+
 ## What still leaves the machine
 
 Being precise about this is part of the offer:
 
-- **Sign-in** goes through Firebase Authentication (Google). It sees accounts and emails, not meetings.
+- **Sign-in** goes through Firebase Authentication (Google), in the customer's own Firebase project. It sees accounts and emails, not meetings. The web app also loads Google Analytics for Firebase from the same project.
 - **Recordings and uploaded files** are stored in the Firebase Storage bucket set in `FIREBASE_STORAGE_BUCKET`. For a private deployment, use a bucket in the customer's own Google Cloud project and region.
 - **Integrations** (Jira, Linear, Notion, Twenty, Google Drive…) send what the customer chooses to sync, to the tools the customer connected.
-- **Error reporting**: the backend only reports to Sentry when `SENTRY_DSN` is set; leave it unset. The voice service in this stack has `SENTRY_DSN=""`.
+- **Error reporting** goes to Sentry only when `SENTRY_DSN` is set; leave it unset. The voice service in this stack has `SENTRY_DSN=""`.
+- **Email** goes through Resend only when `RESEND_API_KEY` is set. It carries the recipients and the content of the notes a user sends, and invitations.
+- **Diagram images** for the Telegram prospect flow go to `https://mermaid.ink` unless `MERMAID_INK_URL` is `off` or points to a mermaid.ink you host. Nothing else uses it.
+- **Web searches** made by the assistant go to DuckDuckGo with the search query.
 - **Slide images** are off in local mode, because their prompt is written from the meeting's content.
 
 Replacing Firebase with a self-hosted identity provider and object storage (Keycloak and MinIO, for example) is a separate project.

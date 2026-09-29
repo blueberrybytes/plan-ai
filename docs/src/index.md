@@ -34,12 +34,17 @@ features:
     link: /security/overview
     icon: 🔗
   - title: No Bots in Your Calls
-    details: Native recorders for macOS, Windows, iOS and Android. No bot joins the call and nobody else sees the recorder. Works with Zoom, Meet, Teams and in-person meetings.
+    details: Native recorders for macOS, Windows, iOS and Android. No bot joins the call. Works with Zoom, Meet, Teams and in-person meetings, and knows which meeting you are in from your Google or Outlook calendar.
+    link: /features/calendar
     icon: 🎙️
   - title: Your Own AI Keys
-    details: On the cloud version, bring your own OpenRouter and Deepgram keys. The AI runs under your accounts and your agreements with those providers.
+    details: On the cloud version, bring your own OpenRouter and Deepgram keys. The AI runs under your accounts and your agreements with those providers. Keys are never sent back to the browser.
     link: /security/byok-architecture
     icon: 🔑
+  - title: You Decide How Long Audio Stays
+    details: Delete a meeting's audio and keep its notes, or have the workspace delete audio automatically after 7 to 365 days. Pause any time, and tell people you are recording with one message.
+    link: /features/recordings
+    icon: 🗑️
   - title: Code-Aware Tickets and Specs
     details: Plan AI reads your repo graph before writing a ticket. Tickets come with acceptance criteria and links to real files, and specs are ready to share with clients.
     icon: 🎫

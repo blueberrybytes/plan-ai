@@ -21,20 +21,21 @@ This is the most critical environment file. It handles database connections, API
 | `FRONTEND_URL` | The public URL of the frontend app (for CORS). | `http://localhost:3000` |
 | `BACKEND_URL` | The public URL of this API (for webhooks). | `https://api.plan-ai.com` |
 | `APP_URL` | The main URL of the app. Used to build links that leave the product — emails, and the document link written into CRM notes — so a wrong value ships a broken link to your customers. | `https://plan-ai.blueberrybytes.com` |
-| `CORS_ORIGINS` | Comma-separated list of allowed CORS origins for production. Leave empty for local dev (allows all origins). | `https://plan-ai.blueberrybytes.com` |
-| `API_ADMIN_KEY` | Secret key for cron jobs or admin overrides. | `test123` |
-| `SECRETS_ENCRYPTION_KEY` | Encrypts the stored API keys and integration tokens (AES-256-GCM). 32 bytes, base64: `openssl rand -base64 32`. Keep a copy outside the server: without it the stored keys cannot be read, and every workspace has to enter its keys and reconnect its integrations again. After setting it, run `yarn secrets:encrypt` once to encrypt the values saved before. | `base64 key` |
+| `CORS_ORIGINS` | Comma-separated list of allowed CORS origins. Empty in local dev allows every origin. Empty in production (`NODE_ENV=production`) allows only `APP_URL`. The desktop recorder's origin, `app://recorder`, is always allowed. The calendar connection only sends users back to these domains (plus `APP_URL` and `FRONTEND_URL`). | `https://plan-ai.blueberrybytes.com` |
+| `API_ADMIN_KEY` | Service-to-service admin key, sent in the `x-admin-key` header. It grants global admin, so it must be long and random: keys under 32 characters are ignored. Leave it empty to turn it off. Generate one with `openssl rand -base64 48`. | empty |
+| `SECRETS_ENCRYPTION_KEY` | Encrypts the stored API keys and integration tokens (AES-256-GCM). 32 bytes, base64: `openssl rand -base64 32`. Keep a copy outside the server: without it the stored keys cannot be read, and every workspace has to enter its keys and reconnect its integrations again. After setting it and deploying, run `yarn secrets:encrypt` once to encrypt the values saved before (add `--dry-run` to only count them). Against a remote database, run `npx ts-node --transpile-only src/scripts/encryptSecrets.ts` from `plan-ai/backend` with `DATABASE_URL` and the key exported: the yarn script loads the local `.env`, which wins over the terminal. | `base64 key` |
 | `SECRETS_ENCRYPTION_KEY_PREVIOUS` | Only while rotating the key: the old value of `SECRETS_ENCRYPTION_KEY`. Values sealed with it are still read. Run `yarn secrets:encrypt` to rewrite them with the new key, then remove this variable. | `base64 key` |
 | `OAUTH_STATE_SECRET` | Signs the OAuth state of the Google Drive, OneDrive, Linear and Notion connections. Optional; the OAuth client secret is used when empty. | `base64 key` |
 | `LOG_LEVEL` | Logging verbosity (`info`, `debug`, `error`). | `info` |
 | **Databases** | | |
-| `DATABASE_URL` | PostgreSQL connection string. | `postgresql://planai:planai123@localhost/planai_db` |
-| `REDIS_URL` | Redis connection for BullMQ jobs. | `redis://localhost:6379` |
+| `DATABASE_URL` | PostgreSQL connection string. The password must match `POSTGRES_PASSWORD` when you use the compose file. | `postgresql://planai:PASSWORD@localhost:5433/planai_db?schema=public` |
+| `REDIS_URL` | Redis connection for BullMQ jobs. Include the password when `REDIS_PASSWORD` is set. | `redis://:PASSWORD@localhost:6379` |
 | `QDRANT_URL` | Vector Database connection. | `http://127.0.0.1:6333` |
+| `QDRANT_API_KEY` | Qdrant API key. Must match the key the Qdrant server was started with. Leave it unset only when Qdrant has no key. | `random string` |
 | `QDRANT_CONTEXT_COLLECTION` | The name of the collection for contexts. | `context_files` |
 | **BullMQ Dashboard** | | |
-| `BULL_BOARD_USER` | Basic auth username for the queue dashboard. | `admin` |
-| `BULL_BOARD_PASSWORD` | Basic auth password for the queue dashboard. | `admin` |
+| `BULL_BOARD_USER` | Basic auth username for the queue dashboard at `/admin/queues`. | `ops` |
+| `BULL_BOARD_PASSWORD` | Basic auth password for the queue dashboard. The dashboard shows job data, which includes meeting text, so it is only mounted when both variables are set and the password has 16 or more characters. Otherwise it is off. | `16+ random characters` |
 | **AI Providers** | | |
 | `OPENROUTER_API_KEY` | System-level OpenRouter fallback key. | `sk-or-v1-xxxx` |
 | `DEEPGRAM_API_KEY` | System-level Deepgram fallback key. | `xxxx` |
@@ -57,6 +58,16 @@ This is the most critical environment file. It handles database connections, API
 | `GROQ_API_KEY` | Optional Groq key. | `gsk_xxxx` |
 | `VOICE_AI_URL` | Internal URL for the Python Voice API. | `http://localhost:8001` |
 | `VOICE_AI_API_KEY` | Shared secret between the backend and voice-ai service. Leave empty for local dev. | `your-secret-key` |
+| **Security and privacy** | | |
+| `PLATFORM_ADMIN_SUPPORT_ACCESS` | Platform admins (users with the global `ADMIN` role) have no access to customer workspaces. `true` gives them access for support, and every access is written to that workspace's audit log. Default `false`. | `false` |
+| `SSRF_ALLOWED_HOSTS` | Server-side fetches of URLs a user can influence (website import, the image proxy, the assistant's web tool, a self-hosted Jira or Twenty) cannot reach private networks. List here the internal hosts that must stay reachable, comma-separated. | `jira.corp.internal,twenty.corp.internal` |
+| `SSRF_ALLOW_PRIVATE_NETWORKS` | `true` turns the private network check off completely. Prefer `SSRF_ALLOWED_HOSTS`. Default `false`. | `false` |
+| `OPENROUTER_DATA_COLLECTION` | OpenRouter only routes to providers that do not collect prompts for training (`deny`, the default). `allow` removes that rule. | `deny` |
+| `OPENROUTER_ZDR` | `true` narrows OpenRouter to endpoints with zero data retention. Fewer models and providers qualify. Default `false`. | `true` |
+| `DEEPGRAM_MIP_OPT_OUT` | Deepgram requests opt out of Deepgram's Model Improvement Program by default. `false` opts in. Check Deepgram's pricing for the platform key before you change it. | `true` |
+| `EXPOSE_API_DOCS` | Swagger UI (`/api-docs`) and `/prisma-schema` are off in production unless this is `true`. | `false` |
+| `MERMAID_INK_URL` | Only the Telegram prospect flow draws diagram images on the server. By default it sends the diagram code to `https://mermaid.ink`. Set the URL of a self-hosted mermaid.ink, or `off` to skip the images. | `off` |
+| `SENTRY_DSN` | Backend error reports. Leave it unset to send nothing to Sentry. | `https://xxxx@sentry.io/xxx` |
 | **Integrations** | | |
 | `JIRA_CLIENT_ID` | OAuth Client ID for Jira integration. | `xxxx` |
 | `JIRA_CLIENT_SECRET` | OAuth Client Secret for Jira integration. | `xxxx` |
@@ -74,12 +85,13 @@ This is the most critical environment file. It handles database connections, API
 | `GOOGLE_CLIENT_ID` | Google OAuth ID (Drive integration). | `xxxx` |
 | `GOOGLE_CLIENT_SECRET` | Google OAuth Secret. | `xxxx` |
 | `GOOGLE_REDIRECT_URI` | Google OAuth callback URL. | `http://localhost:8080/api/google/callback` |
-| `GOOGLE_CALENDAR_REDIRECT_URI` | Google Calendar callback. It is a page of the web app, which confirms the connection with the user's session. Register it in the same OAuth client. Defaults to `APP_URL` + `/integrations/google-calendar`. | `http://localhost:3000/integrations/google-calendar` |
+| `GOOGLE_CALENDAR_REDIRECT_URI` | Google Calendar return address, a page of the web app that confirms the connection with the user's session. Leave it unset when the web runs on more than one domain: the user is sent back to the domain they started from, if it is in `CORS_ORIGINS`, `APP_URL` or `FRONTEND_URL`. Register `/integrations/google-calendar` on every domain in the OAuth client. Used as the fallback when the domain is unknown. | `http://localhost:3000/integrations/google-calendar` |
 | `MICROSOFT_CLIENT_ID` | Microsoft OAuth client ID (OneDrive integration). | `xxxx` |
 | `MICROSOFT_CLIENT_SECRET` | Microsoft OAuth client secret. | `xxxx` |
 | `MICROSOFT_TENANT_ID` | Microsoft Azure tenant ID. | `xxxx` |
 | `MICROSOFT_REDIRECT_URI` | Microsoft OAuth callback URL. | `http://localhost:8080/api/microsoft/callback` |
-| `MICROSOFT_CALENDAR_REDIRECT_URI` | Outlook Calendar callback, a page of the web app. Register it in the same app registration (platform "Web"). Defaults to `APP_URL` + `/integrations/outlook-calendar`. | `http://localhost:3000/integrations/outlook-calendar` |
+| `MICROSOFT_CALENDAR_REDIRECT_URI` | Outlook Calendar return address, a page of the web app. Same rules as `GOOGLE_CALENDAR_REDIRECT_URI`: register `/integrations/outlook-calendar` on every web domain, under the "Web" platform of the app registration. | `http://localhost:3000/integrations/outlook-calendar` |
+| `CALENDAR_STATE_SECRET` | Optional. Signs the OAuth state of the calendar connections. Falls back to the Google or Microsoft client secret. | `base64 key` |
 | `NOTION_CLIENT_ID` | Notion OAuth client ID. | `xxxx` |
 | `NOTION_CLIENT_SECRET` | Notion OAuth client secret. | `xxxx` |
 | `NOTION_REDIRECT_URI` | Notion OAuth callback URL. | `http://localhost:8080/api/notion/callback` |
@@ -105,6 +117,17 @@ This is the most critical environment file. It handles database connections, API
 ::: tip Twenty CRM needs no variables here
 Twenty is self-hosted per customer, so its instance URL and API key are stored per **workspace** and entered in the app under Settings → Integrations — not in this file. See [CRM Sync](/features/crm-twenty).
 :::
+
+## Docker Compose Variables (`plan-ai/backend/.env`)
+
+`plan-ai/backend/docker-compose.yml` reads these from the `.env` file next to it, which is the same file the backend uses. Every port in the compose file is published on 127.0.0.1 only. Docker writes its own firewall rules, so a port published on 0.0.0.0 would be open to the network even behind ufw.
+
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `POSTGRES_PASSWORD` | Password of the `planai` Postgres user. Without it the compose file uses the development default `planai123`, so a private install must set it. `DATABASE_URL` must use the same password. Postgres only reads it when the data volume is first created; to change it later, change the user's password inside Postgres. | `random string` |
+| `REDIS_PASSWORD` | With it set, Redis requires this password. Put it in `REDIS_URL` too. | `random string` |
+| `QDRANT_API_KEY` | Qdrant has no key in the compose file by default. A private install uncomments the `QDRANT__SERVICE__API_KEY` line of the `qdrant` service; compose then refuses to start until `QDRANT_API_KEY` is set. The backend reads the same variable. | `random string` |
+| `VOICE_AI_API_KEY` | The `voice` service of the private stack reads it too. Set it in a private install; the backend sends the same value. | `random string` |
 
 ## Frontend Variables (`plan-ai/frontend/.env`)
 

@@ -47,7 +47,7 @@ If your use case falls outside the Additional Use Grant — for example, you wan
 - Embed Plan AI in a competing product you sell
 - White-label and resell it
 - Use it as a hosted service for third parties
-- Get custom enterprise terms with a DPA, SOC 2 paperwork, and a procurement-ready contract
+- Agree custom contract terms for your company
 
 …reach out at **[hello@blueberrybytes.com](mailto:hello@blueberrybytes.com?subject=Plan%20AI%20commercial%20license)** and we'll work out a separate commercial agreement.
 

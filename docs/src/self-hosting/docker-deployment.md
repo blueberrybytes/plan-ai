@@ -8,7 +8,7 @@ Plan AI requires three stateful data stores:
 2.  **Redis** (Message Queues via BullMQ)
 3.  **Qdrant** (Vector Embeddings)
 
-If you are running locally or on a single VPS, we provide a `docker-compose.yml` file in the root directory to spin these up instantly.
+If you are running locally or on a single VPS, `plan-ai/backend/docker-compose.yml` starts these three. `yarn docker` runs it from the repository root.
 
 ```bash
 # Start all required databases
@@ -16,6 +16,8 @@ yarn docker
 ```
 
 Postgres is published on port 5433, not 5432, so it doesn't collide with another project's Postgres on the same machine. `DATABASE_URL` in `.env.template` already points there.
+
+Every port is published on 127.0.0.1 only, so the databases are not reachable from the network. The passwords in the compose file are development defaults. On a server, set `POSTGRES_PASSWORD`, `REDIS_PASSWORD` and `QDRANT_API_KEY` in `plan-ai/backend/.env` before the first start (see [Docker Compose Variables](/self-hosting/environment-variables#docker-compose-variables-plan-ai-backend-env)).
 
 The same file has an optional `whisper` service (port 8010) for self-hosted transcription. It's behind a Compose profile, so it only runs with `yarn docker:whisper`, and the backend only uses it with `STT_PROVIDER=whisper`. See [Speech-to-Text](/self-hosting/speech-to-text).
 

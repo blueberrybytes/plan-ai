@@ -9,7 +9,7 @@ Plan AI transcribes audio in three places: the live captions while a meeting is 
 
 It's a backend setting, not a workspace setting, on purpose. Picking the provider means picking where meeting audio is allowed to go, and that belongs to whoever runs the deployment.
 
-With `whisper`, no audio leaves your own infrastructure. This is the option for customers who can't send recordings to a third party.
+With `whisper`, no audio goes to Deepgram or to any other transcription provider. This is the option for customers who can't send recordings to a transcription provider. Recordings are still stored in the Firebase Storage bucket set in `FIREBASE_STORAGE_BUCKET`, which in a private install belongs to your own Google Cloud project (see [Private Deployment](/self-hosting/private-stack#what-still-leaves-the-machine)).
 
 ## How the Whisper provider works
 

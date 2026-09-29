@@ -1,0 +1,110 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+# A new push to a pull request cancels the older run. Every push to main runs
+# to the end, so each commit that Railway deploys has its own result.
+concurrency:
+  group: ci-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
+  cancel-in-progress: true
+
+env:
+  # The recorder's "prepare" script runs husky. CI needs no git hooks.
+  HUSKY: "0"
+
+jobs:
+  backend:
+    name: Backend (build and tests)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: plan-ai/backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: yarn
+          cache-dependency-path: plan-ai/backend/yarn.lock
+      - run: yarn install --frozen-lockfile
+      - run: npx prisma generate
+      - run: yarn build:ts
+      - run: yarn test
+
+  frontend:
+    name: Frontend (build)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: plan-ai/frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: yarn
+          cache-dependency-path: plan-ai/frontend/yarn.lock
+      - run: yarn install --frozen-lockfile
+      - run: yarn build:ts
+
+  frontend-tests:
+    name: Frontend (tests)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: plan-ai/frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: yarn
+          cache-dependency-path: plan-ai/frontend/yarn.lock
+      - run: yarn install --frozen-lockfile
+      - run: yarn test --watchAll=false
+
+  recorder:
+    name: Desktop recorder (typecheck)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: plan-ai-recorder
+    env:
+      # Only the type definitions are needed, not the Electron binary.
+      ELECTRON_SKIP_BINARY_DOWNLOAD: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: yarn
+          cache-dependency-path: plan-ai-recorder/yarn.lock
+      - run: yarn install --frozen-lockfile
+      - run: yarn typecheck
+
+  mobile:
+    name: Mobile app (typecheck)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: plan-ai-mobile
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: yarn
+          cache-dependency-path: plan-ai-mobile/yarn.lock
+      - run: yarn install --frozen-lockfile
+      - run: yarn typecheck

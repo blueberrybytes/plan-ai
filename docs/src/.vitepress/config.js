@@ -36,6 +36,7 @@ export default withMermaid(defineConfig({
           { text: 'Security Overview', link: '/security/overview' },
           { text: 'BYOK Architecture', link: '/security/byok-architecture' },
           { text: 'Where Your Files Live', link: '/security/data-storage' },
+          { text: 'Subprocessors', link: '/security/subprocessors' },
           { text: 'Setup OpenRouter', link: '/setup/openrouter' },
           { text: 'Setup Deepgram', link: '/setup/deepgram' },
           { text: 'Setup Mobile Firebase', link: '/setup/mobile-firebase' }
@@ -45,6 +46,7 @@ export default withMermaid(defineConfig({
         text: 'Platform Features',
         items: [
           { text: 'Recordings & Transcripts', link: '/features/recordings' },
+          { text: 'Calendar (Google and Outlook)', link: '/features/calendar' },
           { text: 'Contexts & Advanced RAG', link: '/features/contexts-rag' },
           { text: 'Plan Cortex', link: '/features/cortex' },
           { text: 'Task Sync (Jira, Linear, Trello, Notion, Asana)', link: '/features/task-sync' },

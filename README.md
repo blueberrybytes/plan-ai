@@ -16,6 +16,10 @@ Engineering meetings carry client code and plans that are not public yet, so Pla
 - Meeting documents and slides stay inside your workspace until you share them, and you can stop sharing at any moment.
 - On the cloud version you can bring your own OpenRouter and Deepgram keys, so the AI runs under your own accounts.
 - With a private install, transcription, speaker identification, the language model and search run on your own servers. No meeting content goes to an AI provider.
+- Stored API keys and integration tokens are encrypted in the database (AES-256-GCM) when the backend has `SECRETS_ENCRYPTION_KEY` set. Without it they are stored in plain text.
+- Each workspace keeps an audit log that owners and admins can read. Owners can set sign-in rules, export the whole workspace as JSON and delete it.
+- You decide how long audio is kept: delete a meeting's audio and keep its notes, or let the workspace delete audio automatically after 7 to 365 days.
+- The recorder pauses when you ask and after 15 minutes of silence, and gives you a message to tell the other people you are recording.
 
 Details in the [Security Overview](https://docs.plan-ai.blueberrybytes.com/security/overview).
 
@@ -75,6 +79,18 @@ This software has been developed by [BlueberryBytes](https://blueberrybytes.com)
 | :------------- | :------------------------------------------------------------------------------------------------- |
 | 🤖 **Android** | [Google Play — Plan AI](https://play.google.com/store/apps/details?id=com.blueberrybytes.planai)   |
 | 🍏 **iOS**     | [App Store — Plan AI Recorder](https://apps.apple.com/us/app/plan-ai-mobile-recorder/id6762671958) |
+
+## 🎙️ Recording
+
+- **Calendar:** connect Google Calendar or Outlook and the recorder shows the meeting that is on now, names the recording after it and uses the invite to spell people's names. Read-only.
+- **Pause and resume**, and automatic pause after long silences.
+- **Mark moments** during the meeting (Ctrl/Cmd+B on desktop) with an optional note. The AI gives them priority.
+- **Nothing is lost if the app crashes:** the audio is written to disk while you record and the app offers to recover the meeting.
+- **Listen back** from any line of the transcript, on web, desktop and mobile.
+- **Send the notes** (summary, key points, action items) to the people in the meeting, each in their own email.
+- **Import audio** on the phone (m4a, mp3, wav and more).
+
+Details in [Recordings](https://docs.plan-ai.blueberrybytes.com/features/recordings) and [Calendar](https://docs.plan-ai.blueberrybytes.com/features/calendar).
 
 ## 📸 Sneak Peek
 
@@ -254,7 +270,7 @@ You will need a few external services configured for the platform to work:
 1. **Firebase Project**: Used for user authentication. You'll need your Firebase client config for the frontend/apps, and a base64 encoded Firebase Admin SDK service account key placed in the `FIREBASE_SERVICE_KEY` environment variable for the backend.
    - For the **Mobile App**, you must download your `google-services.json` (Android) and `GoogleService-Info.plist` (iOS) from the Firebase Console and place them inside the `plan-ai-mobile/` directory. (Note: Do not commit these files to version control!)
 2. **OpenRouter API Key**: Used for LLM task extraction and intelligence.
-3. **Speech-to-text**: a Deepgram API key, or a Whisper server you run yourself (`STT_PROVIDER=whisper`). With Whisper, meeting audio never leaves your infrastructure. See [Speech-to-Text](docs/src/self-hosting/speech-to-text.md).
+3. **Speech-to-text**: a Deepgram API key, or a Whisper server you run yourself (`STT_PROVIDER=whisper`). With Whisper, no audio goes to Deepgram. Recordings are still stored in your Firebase Storage bucket. See [Speech-to-Text](docs/src/self-hosting/speech-to-text.md).
 4. **Python Microservice (Voice AI)**: For advanced speaker verification and biometrics. This is handled locally via a Python microservice using `SpeechBrain` and `uvicorn`. It runs as a Docker container.
 5. **Sentry (optional)**: Error tracking. The backend reads `SENTRY_DSN`, the web frontend reads `REACT_APP_SENTRY_DSN`, and the desktop recorder reads `VITE_SENTRY_DSN`. All three are commented out in the `.env.template` files — leave them unset to disable, and the apps run fine without it.
 6. **GitNexus (MCP)**: This monorepo utilizes `gitnexus` for semantic code intelligence. When using AI coding assistants (like Cline, Cursor, or Gemini), they leverage GitNexus tools (`gitnexus_query`, `gitnexus_impact`) to safely navigate the monorepo architecture and understand execution flows before modifying shared backend services.
@@ -420,13 +436,13 @@ const status = (item.metadata as Record<string, unknown>)?.processingStatus;
 
 ## 🔒 Security, Roles & Self-Hosting
 
-Plan AI is built with privacy in mind. When you self-host, your data remains completely under your control.
+When you self-host, the database, the queue, the search index and (with the private stack) the AI run on servers you control. Sign-in and file storage still use Firebase, in your own Google Cloud project. [Private Deployment](docs/src/self-hosting/private-stack.md) lists everything that can still leave the machine.
 
 - **BYOK (Bring Your Own Key):** API keys for Deepgram and OpenRouter are stored per `Workspace`, not globally. Courtesy workspaces (flagged `isCourtesy`) bypass the key requirement for managed/demo accounts.
 - **Self-hosted transcription:** `STT_PROVIDER=whisper` makes the backend transcribe on a Whisper server you run (live captions, the post-meeting pass and Telegram voice notes). No audio goes to Deepgram, and no Deepgram key is needed. Deepgram stays the default. See [Speech-to-Text](docs/src/self-hosting/speech-to-text.md).
 - **Private deployment:** with `LLM_PROVIDER=local` and `EMBEDDINGS_PROVIDER=local` on top of Whisper, no meeting audio or meeting text goes to an AI provider. `yarn docker:private` starts the whole stack. See [Private Deployment](docs/src/self-hosting/private-stack.md).
 - **Key masking:** API keys are masked as `••••••••••••••••` in all API responses. The backend ignores this placeholder on `PUT` requests to avoid overwriting real keys.
-- **Auto-Admin:** To make self-hosting easy, any new user who registers on your local instance is automatically granted the **`ADMIN`** role, bypassing the standard SaaS "Pending Approval" state.
+- **Roles:** a new account gets the `CLIENT` role. Platform admins (`ADMIN`) have no access to customer workspaces unless `PLATFORM_ADMIN_SUPPORT_ACCESS=true` is set, and then each access is written to that workspace's audit log. `yarn db:seed` creates a local admin for development only.
 - **Secrets:** All `.env` files and Google service accounts are strictly excluded from version control to prevent accidental leaks.
 
 ## 📄 License

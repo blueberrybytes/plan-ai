@@ -96,3 +96,5 @@ https://your-backend.example.com/mcp
 Tokens are workspace-scoped: a token can only reach the workspace it was created in, and only the data that workspace already contains.
 
 Revoke a token from the same settings page — it stops working immediately. Revoke and recreate whenever a machine is lost or a token has been pasted somewhere it shouldn't have been.
+
+Removing a member from the workspace revokes their tokens and ends their open MCP sessions.
