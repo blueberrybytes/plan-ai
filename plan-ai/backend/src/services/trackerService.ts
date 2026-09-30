@@ -412,8 +412,8 @@ export function aggregate(tracker: Pick<Tracker, "kind" | "aggregation">, entrie
   if (entries.length === 0) return null;
   if (tracker.kind === "CHECK") return 1;
   if (tracker.aggregation === "LAST") {
-    return [...entries].sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime()).at(-1)!
-      .value;
+    const sorted = [...entries].sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+    return sorted[sorted.length - 1].value;
   }
   const sum = entries.reduce((total, e) => total + e.value, 0);
   return tracker.aggregation === "AVERAGE" ? sum / entries.length : sum;
