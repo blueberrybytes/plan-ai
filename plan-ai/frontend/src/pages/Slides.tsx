@@ -37,6 +37,7 @@ import {
 } from "../store/apis/slideApi";
 import { useDispatch } from "react-redux";
 import { setToastMessage } from "../store/slices/app/appSlice";
+import { reportUnexpectedError } from "../utils/reportError";
 import { openSharedLink, shareAndGetLinkKey } from "../utils/openSharedLink";
 import { exportToPptx } from "../services/pptxExportService";
 import EditPresentationDialog from "../components/slides/EditPresentationDialog";
@@ -68,7 +69,8 @@ const Slides: React.FC = () => {
             updatePresentation({ id: pres.id, data: { isPublic: true } }).unwrap(),
           ),
       );
-    } catch {
+    } catch (error) {
+      reportUnexpectedError("share.openLink", error, { kind: "presentation", id: pres.id });
       dispatch(setToastMessage({ severity: "error", message: t("common.sharing.failed") }));
     }
   };

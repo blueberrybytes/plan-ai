@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { useDispatch } from "react-redux";
 import { useDeleteVoiceProfileMutation } from "../../store/apis/authApi";
 import { setToastMessage } from "../../store/slices/app/appSlice";
+import { reportUnexpectedError } from "../../utils/reportError";
 import ConfirmDeletionDialog from "../dialogs/ConfirmDeletionDialog";
 
 /** Lets the user delete their voice print (biometric data). Shown only when one exists. */
@@ -19,7 +20,8 @@ const VoiceProfileCard: React.FC = () => {
       const response = await deleteVoiceProfile().unwrap();
       if (response.data?.deleted === false) throw new Error("Voice profile not deleted");
       dispatch(setToastMessage({ severity: "success", message: t("voiceProfile.deleted") }));
-    } catch {
+    } catch (error) {
+      reportUnexpectedError("voiceProfile.delete", error);
       dispatch(setToastMessage({ severity: "error", message: t("voiceProfile.deleteFailed") }));
     } finally {
       setConfirmOpen(false);

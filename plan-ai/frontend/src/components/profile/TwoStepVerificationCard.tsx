@@ -20,6 +20,7 @@ import {
   withRecentLogin,
 } from "../../services/mfaService";
 import { setToastMessage } from "../../store/slices/app/appSlice";
+import { reportUnexpectedError } from "../../utils/reportError";
 import { useBrandIdentity } from "../../hooks/useBrandIdentity";
 import ConfirmDeletionDialog from "../dialogs/ConfirmDeletionDialog";
 
@@ -58,7 +59,12 @@ const TwoStepVerificationCard: React.FC = () => {
 
   if (!firebaseUser) return null;
 
-  const showError = (error: unknown) => setErrorKey(mfaErrorKey(error) ?? "mfa.errors.generic");
+  // Errors with their own message are expected. The generic message means an unknown error.
+  const showError = (error: unknown, step: string) => {
+    const key = mfaErrorKey(error);
+    if (!key) reportUnexpectedError("mfa.enrol", error, { step });
+    setErrorKey(key ?? "mfa.errors.generic");
+  };
 
   const handleStart = async () => {
     setErrorKey(null);
@@ -67,7 +73,7 @@ const TwoStepVerificationCard: React.FC = () => {
       setSecret(await withRecentLogin(firebaseUser, () => startTotpEnrollment(firebaseUser)));
       setCode("");
     } catch (error) {
-      showError(error);
+      showError(error, "start");
     } finally {
       setBusy(false);
     }
@@ -84,7 +90,7 @@ const TwoStepVerificationCard: React.FC = () => {
       setFactors(getTotpFactors(firebaseUser));
       dispatch(setToastMessage({ severity: "success", message: t("mfa.enrol.enabled") }));
     } catch (error) {
-      showError(error);
+      showError(error, "verify");
     } finally {
       setBusy(false);
     }
@@ -104,7 +110,7 @@ const TwoStepVerificationCard: React.FC = () => {
       dispatch(setToastMessage({ severity: "success", message: t("mfa.enrol.disabled") }));
     } catch (error) {
       setConfirmRemoveOpen(false);
-      showError(error);
+      showError(error, "remove");
     } finally {
       setBusy(false);
     }
@@ -118,7 +124,7 @@ const TwoStepVerificationCard: React.FC = () => {
       setErrorKey(null);
       dispatch(setToastMessage({ severity: "info", message: t("mfa.enrol.verificationSent") }));
     } catch (error) {
-      showError(error);
+      showError(error, "sendVerification");
     }
   };
 

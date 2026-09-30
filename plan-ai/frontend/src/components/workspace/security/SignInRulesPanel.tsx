@@ -24,6 +24,7 @@ import {
 } from "../../../store/apis/workspaceApi";
 import { setToastMessage } from "../../../store/slices/app/appSlice";
 import { apiErrorMessage } from "../../../utils/apiError";
+import { reportUnexpectedError } from "../../../utils/reportError";
 import {
   PROVIDER_OPTIONS,
   customProviderOf,
@@ -86,6 +87,7 @@ const SignInRulesPanel: React.FC<SignInRulesPanelProps> = ({ workspace, canEdit 
         setToastMessage({ severity: "success", message: t("workspaceSecurity.signInRules.saved") }),
       );
     } catch (error) {
+      reportUnexpectedError("workspace.signInRules", error, { workspaceId: workspace.id });
       // The backend refuses rules that would lock the owner out, and says why.
       setSaveError(apiErrorMessage(error, t("workspaceSecurity.signInRules.saveFailed")));
     }

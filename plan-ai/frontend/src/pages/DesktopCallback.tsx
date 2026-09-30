@@ -7,6 +7,7 @@ import { onAuthStateChanged } from "firebase/auth";
 import axios from "axios";
 import { useGetDesktopTokenMutation } from "../store/apis/authApi";
 import { useBrandIdentity } from "../hooks/useBrandIdentity";
+import { clientLogger } from "../utils/clientLogger";
 
 /**
  * /auth/desktop?state=...&local_port=4321 — opened by the Plan AI Recorder
@@ -139,6 +140,7 @@ const DesktopCallback: React.FC = () => {
         console.warn("[DesktopCallback] Postgres sync non-fatal error:", syncErr);
       }
 
+      let lastError: unknown = null;
       for (let i = 0; i < 10; i++) {
         try {
           // Unwrapping allows us to catch the RTK Query error properly
@@ -167,6 +169,7 @@ const DesktopCallback: React.FC = () => {
           }
           return; // Success! Loop ends.
         } catch (err) {
+          lastError = err;
           console.warn(
             `[DesktopCallback] Token fetch attempt ${i + 1} failed (waiting for backend DB sync). Retrying...`,
             err,
@@ -175,6 +178,21 @@ const DesktopCallback: React.FC = () => {
         }
       }
       console.log("[DesktopCallback] Failed to generate desktop auth token. Backend sync timeout.");
+      // Ten failures in a row is not an expected outcome, unless the browser is offline.
+      // Only the status of the last try is sent: never the code or the state.
+      if (navigator.onLine !== false) {
+        const lastStatus = (lastError as { status?: unknown } | null)?.status;
+        clientLogger.error(
+          "Desktop sign-in could not get a code",
+          lastError instanceof Error ? lastError : undefined,
+          {
+            feature: "desktopAuth",
+            attempts: 10,
+            status:
+              typeof lastStatus === "number" || typeof lastStatus === "string" ? lastStatus : null,
+          },
+        );
+      }
       setStatus("error");
       setErrorMsg("Failed to generate desktop auth token. Backend sync timeout.");
     };

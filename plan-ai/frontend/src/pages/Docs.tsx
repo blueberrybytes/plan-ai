@@ -38,6 +38,7 @@ import {
 } from "../store/apis/docApi";
 import { useDispatch } from "react-redux";
 import { setToastMessage } from "../store/slices/app/appSlice";
+import { reportUnexpectedError } from "../utils/reportError";
 import { openSharedLink, shareAndGetLinkKey } from "../utils/openSharedLink";
 import { useListProjectsQuery } from "../store/apis/projectApi";
 
@@ -67,7 +68,8 @@ const Docs: React.FC = () => {
             updateDoc({ id: doc.id, data: { isPublic: true } }).unwrap(),
           ),
       );
-    } catch {
+    } catch (error) {
+      reportUnexpectedError("share.openLink", error, { kind: "doc", id: doc.id });
       dispatch(setToastMessage({ severity: "error", message: t("common.sharing.failed") }));
     }
   };

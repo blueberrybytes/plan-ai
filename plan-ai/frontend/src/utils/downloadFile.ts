@@ -8,7 +8,9 @@ export const downloadTextFile = (filename: string, content: string, mimeType: st
   document.body.appendChild(link);
   link.click();
   link.remove();
-  URL.revokeObjectURL(url);
+  // Revoked later: some browsers cancel a large download when the link dies
+  // right after the click (a workspace export can be many MB).
+  setTimeout(() => URL.revokeObjectURL(url), 60_000);
 };
 
 /** A name that is safe in a file name, e.g. "Acme Team!" becomes "acme-team". */

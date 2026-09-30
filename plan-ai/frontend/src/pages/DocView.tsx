@@ -51,6 +51,7 @@ import type { DocDocumentResponse } from "../store/apis/docApi";
 import { useGetBrandThemesQuery } from "../store/apis/brandThemeApi";
 import { useDispatch } from "react-redux";
 import { setToastMessage } from "../store/slices/app/appSlice";
+import { reportUnexpectedError } from "../utils/reportError";
 import { openSharedLink, shareAndGetLinkKey } from "../utils/openSharedLink";
 import { splitMarkdownIntoChunks, MarkdownChunk } from "../utils/markdownParser";
 import HybridChunkEditor from "../components/docs/HybridChunkEditor";
@@ -233,7 +234,8 @@ const DocView: React.FC = () => {
             updateDoc({ id, data: { isPublic: true } }).unwrap(),
           ),
       );
-    } catch {
+    } catch (error) {
+      reportUnexpectedError("share.openLink", error, { kind: "doc", id: id });
       dispatch(setToastMessage({ severity: "error", message: t("common.sharing.failed") }));
     }
   };

@@ -35,6 +35,7 @@ import axios from "axios";
 import { User as UserType } from "../../types/UserTypes";
 import i18n from "../../i18n";
 import { mfaSignInErrorKey, signInWithMfa } from "../../services/mfaService";
+import { reportUnexpectedError } from "../../utils/reportError";
 
 // API imports
 import { ApiResponseUserResponse, projectApi } from "../apis/projectApi";
@@ -47,9 +48,19 @@ const getApiBaseUrl = () => {
   return url.replace(/\/+$/, "");
 };
 
+/**
+ * Message key for an error from the two-step verification step of a sign-in, or null.
+ * The generic key means an error we do not know, so it also goes to Sentry.
+ */
+const mfaSignInMessageKey = (error: unknown): string | null => {
+  const mfaKey = mfaSignInErrorKey(error);
+  if (mfaKey === "mfa.errors.generic") reportUnexpectedError("auth.mfaSignIn", error);
+  return mfaKey;
+};
+
 /** Sign-in error text: a translated message for two-step verification errors, else Firebase's. */
 const signInErrorMessage = (error: any): string => {
-  const mfaKey = mfaSignInErrorKey(error);
+  const mfaKey = mfaSignInMessageKey(error);
   return mfaKey ? i18n.t(mfaKey) : error?.message;
 };
 
@@ -368,7 +379,7 @@ function* loginEmailFunc(action: ReturnType<typeof loginEmail>): Generator<any, 
     }
 
     // Errors from the two-step verification step get their own message
-    const mfaKey = mfaSignInErrorKey(error);
+    const mfaKey = mfaSignInMessageKey(error);
     if (mfaKey) message = i18n.t(mfaKey);
 
     const appError: AppExceptionType = { message, cause };

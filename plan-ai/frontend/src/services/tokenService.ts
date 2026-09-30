@@ -2,6 +2,7 @@ import { auth } from "../firebase/firebase";
 import { Dispatch } from "@reduxjs/toolkit";
 import { setUser, logout } from "../store/slices/auth/authSlice";
 import { UserApp } from "../store/slices/auth/authTypes";
+import { reportUnexpectedError } from "../utils/reportError";
 
 // Define user information type for Redux store updates
 type UserInfo = UserApp;
@@ -50,7 +51,10 @@ export class TokenService {
    */
   static async getAuthHeaders(): Promise<Record<string, string>> {
     // Without a token the request gets a 401, which the caller already handles.
-    const token = await TokenService.getIdToken().catch(() => null);
+    const token = await TokenService.getIdToken().catch((error: unknown) => {
+      reportUnexpectedError("auth.readToken", error);
+      return null;
+    });
     return token ? { Authorization: `Bearer ${token}` } : {};
   }
 

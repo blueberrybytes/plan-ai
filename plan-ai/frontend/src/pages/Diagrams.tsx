@@ -25,6 +25,7 @@ import { useTranslation } from "react-i18next";
 import SidebarLayout from "../components/layout/SidebarLayout";
 import { openSharedLink, shareAndGetLinkKey } from "../utils/openSharedLink";
 import { setToastMessage } from "../store/slices/app/appSlice";
+import { reportUnexpectedError } from "../utils/reportError";
 import PageHeader from "../components/layout/PageHeader";
 import { detectMermaidType } from "../utils/mermaidUtils";
 import {
@@ -82,7 +83,8 @@ const Diagrams: React.FC = () => {
             updateDiagram({ id: d.id, body: { isPublic: true } }).unwrap(),
           ),
       );
-    } catch {
+    } catch (error) {
+      reportUnexpectedError("share.openLink", error, { kind: "diagram", id: d.id });
       dispatch(setToastMessage({ severity: "error", message: t("common.sharing.failed") }));
     }
   };

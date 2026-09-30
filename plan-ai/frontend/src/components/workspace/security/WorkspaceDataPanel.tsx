@@ -14,6 +14,7 @@ import {
 import { setToastMessage } from "../../../store/slices/app/appSlice";
 import type { ThunkDispatch, UnknownAction } from "@reduxjs/toolkit";
 import { apiErrorMessage } from "../../../utils/apiError";
+import { reportUnexpectedError } from "../../../utils/reportError";
 import { downloadTextFile, fileSafeName } from "../../../utils/downloadFile";
 import TransferOwnershipDialog from "./TransferOwnershipDialog";
 import DeleteWorkspaceDialog from "./DeleteWorkspaceDialog";
@@ -87,6 +88,8 @@ const WorkspaceDataPanel: React.FC<WorkspaceDataPanelProps> = ({ workspace }) =>
         setToastMessage({ severity: "success", message: t("workspaceSecurity.data.export.done") }),
       );
     } catch (error) {
+      // Also catches a failure to build or save the file, which is always unexpected.
+      reportUnexpectedError("workspace.export", error, { workspaceId: workspace.id });
       dispatch(
         setToastMessage({
           severity: "error",

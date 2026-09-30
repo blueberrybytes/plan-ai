@@ -19,6 +19,7 @@ import {
   type UpdateNoteRequest,
 } from "../../store/apis/notesApi";
 import { setToastMessage } from "../../store/slices/app/appSlice";
+import { reportUnexpectedError } from "../../utils/reportError";
 import ConfirmDeletionDialog from "../dialogs/ConfirmDeletionDialog";
 import NoteProjectSelect from "./NoteProjectSelect";
 import NoteShareDialog from "./NoteShareDialog";
@@ -64,6 +65,7 @@ const NoteToolbar: React.FC<NoteToolbarProps> = ({
       toast("success", t(doneKey));
       after?.();
     } catch (error) {
+      reportUnexpectedError("notes.action", error, { noteId: note.id, action: doneKey });
       // A 403 carries the reason, e.g. only the author or an admin can delete.
       toast("error", saveErrorMessage(error) ?? t("notes.toast.actionFailed"));
     }

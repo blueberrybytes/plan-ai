@@ -1,11 +1,12 @@
 import type { ThunkDispatch, UnknownAction } from "@reduxjs/toolkit";
 import { trackersApi } from "../../store/apis/trackersApi";
+import { reportUnexpectedError } from "../../utils/reportError";
 import { localToday } from "./trackerUtils";
 
 /**
  * Reads a note with AI without waiting for the answer. Used when the user
- * leaves a note they edited; errors are ignored, the user can still press
- * "Log to trackers" later.
+ * leaves a note they edited. The user is not told about errors, they can
+ * still press "Log to trackers" later. Unexpected ones go to Sentry.
  */
 export const extractInBackground = (
   dispatch: ThunkDispatch<unknown, unknown, UnknownAction>,
@@ -16,6 +17,8 @@ export const extractInBackground = (
   );
   request
     .unwrap()
-    .catch(() => undefined)
+    .catch((error: unknown) => {
+      reportUnexpectedError("trackers.extractInBackground", error, { noteId });
+    })
     .finally(() => request.reset());
 };

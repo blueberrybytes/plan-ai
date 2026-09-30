@@ -20,6 +20,7 @@ import {
 } from "../../store/apis/personalApi";
 import { setToastMessage } from "../../store/slices/app/appSlice";
 import { apiErrorCode, apiErrorMessage } from "../trackers/trackerUtils";
+import { reportUnexpectedError } from "../../utils/reportError";
 
 interface PersonalConsentDialogProps {
   open: boolean;
@@ -73,6 +74,7 @@ const PersonalConsentDialog: React.FC<PersonalConsentDialogProps> = ({
         void refetch();
         return;
       }
+      reportUnexpectedError("personal.enable", error);
       dispatch(
         setToastMessage({
           severity: "error",

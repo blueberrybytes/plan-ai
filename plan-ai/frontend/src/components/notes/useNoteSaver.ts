@@ -11,6 +11,7 @@ import {
   type UpdateNoteRequest,
 } from "../../store/apis/notesApi";
 import { setToastMessage } from "../../store/slices/app/appSlice";
+import { reportUnexpectedError } from "../../utils/reportError";
 import { NoteSaver, type ConflictEvent, type SaveStatus } from "./NoteSaver";
 import { conflictedCopyTitle, firstLine, newNoteId } from "./noteUtils";
 
@@ -50,6 +51,7 @@ export const useNoteSaver = ({
   // the note as it was when the editor opened.
   const initial = useRef({ note, exists });
   useEffect(() => {
+    const noteId = initial.current.note.id;
     const saver = new NoteSaver({
       note: initial.current.note,
       exists: initial.current.exists,
@@ -80,13 +82,15 @@ export const useNoteSaver = ({
         );
         handlers.current.onConflict?.(event);
       },
-      onError: (message) =>
+      onError: (message, error) => {
+        reportUnexpectedError("notes.save", error, { noteId });
         dispatch(
           setToastMessage({
             severity: "error",
             message: message ?? handlers.current.t("notes.toast.saveFailed"),
           }),
-        ),
+        );
+      },
     });
     saverRef.current = saver;
 
@@ -105,7 +109,7 @@ export const useNoteSaver = ({
       // dispose() started the last save; this waits for it.
       void saver.flush().then(
         () => handlers.current.onLeave?.(saver.isCreated),
-        () => undefined,
+        (error: unknown) => reportUnexpectedError("notes.leave", error, { noteId }),
       );
       if (saverRef.current === saver) saverRef.current = null;
     };

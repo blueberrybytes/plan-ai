@@ -36,6 +36,7 @@ import { useGetPresentationQuery, useUpdatePresentationMutation } from "../store
 import { openSharedLink, shareAndGetLinkKey } from "../utils/openSharedLink";
 import { useDispatch } from "react-redux";
 import { setToastMessage } from "../store/slices/app/appSlice";
+import { reportUnexpectedError } from "../utils/reportError";
 import { useGetBrandThemesQuery } from "../store/apis/brandThemeApi";
 import { exportToPptx } from "../services/pptxExportService";
 import EditSlideTextDialog from "../components/slides/EditSlideTextDialog";
@@ -338,7 +339,8 @@ const SlideView: React.FC = () => {
             updatePresentation({ id: presentationId, data: { isPublic: true } }).unwrap(),
           ),
       );
-    } catch {
+    } catch (error) {
+      reportUnexpectedError("share.openLink", error, { kind: "presentation", id: presentationId });
       showSharingError();
     }
   };

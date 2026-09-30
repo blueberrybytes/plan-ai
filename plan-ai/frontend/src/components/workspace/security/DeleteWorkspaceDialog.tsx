@@ -18,6 +18,7 @@ import { useDeleteWorkspaceMutation, workspaceApi } from "../../../store/apis/wo
 import { setActiveWorkspaceId, setToastMessage } from "../../../store/slices/app/appSlice";
 import type { ThunkDispatch, UnknownAction } from "@reduxjs/toolkit";
 import { apiErrorMessage } from "../../../utils/apiError";
+import { reportUnexpectedError } from "../../../utils/reportError";
 
 interface DeleteWorkspaceDialogProps {
   open: boolean;
@@ -53,6 +54,7 @@ const DeleteWorkspaceDialog: React.FC<DeleteWorkspaceDialogProps> = ({
     try {
       await deleteWorkspace({ confirmName: confirmName.trim() }).unwrap();
     } catch (err) {
+      reportUnexpectedError("workspace.delete", err, { workspaceId });
       setError(apiErrorMessage(err, t("workspaceSecurity.data.delete.failed")));
       return;
     }
@@ -67,8 +69,9 @@ const DeleteWorkspaceDialog: React.FC<DeleteWorkspaceDialogProps> = ({
         }),
       ).unwrap();
       nextWorkspaceId = workspaces.find((w) => w.id !== workspaceId)?.id ?? null;
-    } catch {
+    } catch (err) {
       // The switcher picks a workspace once the list loads again.
+      reportUnexpectedError("workspace.delete.reloadList", err, { workspaceId });
     }
     dispatch(setActiveWorkspaceId(nextWorkspaceId));
     dispatch(

@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import type { ThunkDispatch, UnknownAction } from "@reduxjs/toolkit";
 import { workspaceApi } from "../../store/apis/workspaceApi";
 import { setActiveWorkspaceId } from "../../store/slices/app/appSlice";
+import { reportUnexpectedError } from "../../utils/reportError";
 
 /**
  * Reloads the workspace list (the personal workspace may be new), makes the
@@ -23,8 +24,9 @@ export const useSwitchToPersonal = () => {
             subscribe: false,
           }),
         ).unwrap();
-      } catch {
+      } catch (error) {
         // The switcher loads the list again on its own.
+        reportUnexpectedError("personal.switch", error, { workspaceId });
       }
       dispatch(setActiveWorkspaceId(workspaceId));
       navigate("/trackers");

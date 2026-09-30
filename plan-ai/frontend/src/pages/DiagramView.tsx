@@ -37,6 +37,7 @@ import { useDispatch } from "react-redux";
 import { useTranslation } from "react-i18next";
 import { openSharedLink, shareAndGetLinkKey } from "../utils/openSharedLink";
 import { setToastMessage } from "../store/slices/app/appSlice";
+import { reportUnexpectedError } from "../utils/reportError";
 import {
   useGetDiagramQuery,
   useUpdateDiagramMutation,
@@ -179,7 +180,8 @@ const DiagramView: React.FC = () => {
             () => updateDiagram({ id: diagramId, body: { isPublic: true } }).unwrap(),
           ),
       );
-    } catch {
+    } catch (error) {
+      reportUnexpectedError("share.openLink", error, { kind: "diagram", id: diagramId });
       dispatch(setToastMessage({ severity: "error", message: t("common.sharing.failed") }));
     }
   };

@@ -52,6 +52,7 @@ import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import TwoStepVerificationCard from "../components/profile/TwoStepVerificationCard";
 import VoiceProfileCard from "../components/profile/VoiceProfileCard";
 import { apiErrorMessage } from "../utils/apiError";
+import { reportUnexpectedError } from "../utils/reportError";
 
 const AppThemeSelector: React.FC = () => {
   const { t } = useTranslation();
@@ -318,6 +319,7 @@ const Profile: React.FC = () => {
       dispatch(logout());
     } catch (error) {
       console.error("Error deleting account", error);
+      reportUnexpectedError("account.delete", error);
       setDeleteError(apiErrorMessage(error, t("profile.errors.deleteAccount")));
     }
   };

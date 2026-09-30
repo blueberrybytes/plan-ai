@@ -32,6 +32,7 @@ import {
   formatAuditTarget,
 } from "./auditLogFormat";
 import { downloadTextFile, fileSafeName } from "../../../utils/downloadFile";
+import { reportUnexpectedError } from "../../../utils/reportError";
 
 const PAGE_SIZE = 50;
 
@@ -63,7 +64,8 @@ const AuditLogPanel: React.FC<AuditLogPanelProps> = ({ workspaceName }) => {
         if (id !== requestId.current) return;
         setEntries((previous) => (cursor ? [...previous, ...page.entries] : page.entries));
         setNextCursor(page.nextCursor);
-      } catch {
+      } catch (error) {
+        reportUnexpectedError("workspace.auditLog", error);
         if (id === requestId.current) setHasError(true);
       }
     },

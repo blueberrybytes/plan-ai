@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { selectUser } from "../store/slices/auth/authSelector";
 import { TokenService } from "../services/tokenService";
+import { reportUnexpectedError } from "../utils/reportError";
 
 /**
  * Proactive Firebase token refresh.
@@ -42,6 +43,16 @@ export const useTokenRefresh = (): void => {
         token = await TokenService.getIdToken();
       } catch (error) {
         console.error("Could not read the current token:", error);
+        reportUnexpectedError("auth.readToken", error);
+        // Try again later (for example after the network is back), so the
+        // proactive refresh does not stop for the rest of the session.
+        if (!cancelled) {
+          refreshTimerRef.current = setTimeout(
+            () => void scheduleNextRefresh(),
+            MIN_REFRESH_DELAY_MS,
+          );
+        }
+        return;
       }
       if (cancelled || !token) return;
 
@@ -53,6 +64,7 @@ export const useTokenRefresh = (): void => {
           await TokenService.updateUserInStore(dispatch);
         } catch (error) {
           console.error("Failed to refresh token:", error);
+          reportUnexpectedError("auth.refreshToken", error);
         }
         if (!cancelled) void scheduleNextRefresh();
       }, delay);

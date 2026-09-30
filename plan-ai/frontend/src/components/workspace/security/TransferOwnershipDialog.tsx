@@ -20,6 +20,7 @@ import {
 } from "../../../store/apis/workspaceApi";
 import { setToastMessage } from "../../../store/slices/app/appSlice";
 import { apiErrorMessage } from "../../../utils/apiError";
+import { reportUnexpectedError } from "../../../utils/reportError";
 
 interface TransferOwnershipDialogProps {
   open: boolean;
@@ -59,6 +60,7 @@ const TransferOwnershipDialog: React.FC<TransferOwnershipDialogProps> = ({
       setMemberId("");
       onClose();
     } catch (err) {
+      reportUnexpectedError("workspace.transferOwnership", err, { memberId });
       setError(apiErrorMessage(err, t("workspaceSecurity.data.transfer.failed")));
     }
   };

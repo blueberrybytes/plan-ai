@@ -2,11 +2,13 @@ import { useCallback } from "react";
 import { useDispatch } from "react-redux";
 import { useTranslation } from "react-i18next";
 import { setToastMessage } from "../../store/slices/app/appSlice";
+import { reportUnexpectedError } from "../../utils/reportError";
 import { apiErrorMessage } from "./trackerUtils";
 
 /**
  * Shows an error toast. The API explains errors in English, so other
- * languages get the translated fallback text instead.
+ * languages get the translated fallback text instead. Unexpected errors
+ * also go to Sentry, with the fallback key as the only context.
  */
 export const useTrackerToast = () => {
   const dispatch = useDispatch();
@@ -14,6 +16,7 @@ export const useTrackerToast = () => {
 
   const error = useCallback(
     (cause: unknown, fallbackKey = "trackers.errors.generic") => {
+      reportUnexpectedError("trackers", cause, { messageKey: fallbackKey });
       const apiMessage = i18n.language?.startsWith("en") ? apiErrorMessage(cause) : null;
       dispatch(setToastMessage({ severity: "error", message: apiMessage ?? t(fallbackKey) }));
     },

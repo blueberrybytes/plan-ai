@@ -12,6 +12,7 @@ import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
 import { useSelector } from "react-redux";
 import { RootState } from "../store/store";
 import { TokenService } from "../services/tokenService";
+import { HttpStatusError, reportUnexpectedError } from "../utils/reportError";
 import MarkdownRenderer from "../components/common/MarkdownRenderer";
 import CsvRenderer from "../components/common/CsvRenderer";
 
@@ -91,7 +92,7 @@ const ProjectFileViewer: React.FC = () => {
           }),
         )
         .then((res) => {
-          if (!res.ok) throw new Error("Network response was not ok");
+          if (!res.ok) throw new HttpStatusError(res.status);
           return res.text();
         })
         .then((text) => {
@@ -107,7 +108,10 @@ const ProjectFileViewer: React.FC = () => {
           }
           setTextContent(text);
         })
-        .catch((err) => console.error("Failed to load text content:", err))
+        .catch((err) => {
+          console.error("Failed to load text content:", err);
+          reportUnexpectedError("projectFile.loadText", err, { contextId, fileId: file.id });
+        })
         .finally(() => setIsFetchingText(false));
     }
   }, [file, contextId, activeWorkspaceId]);

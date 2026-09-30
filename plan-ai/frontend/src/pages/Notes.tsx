@@ -15,6 +15,7 @@ import {
 } from "../components/notes/noteUtils";
 import { useLazyGetPeriodNoteQuery, type Note, type NoteScope } from "../store/apis/notesApi";
 import { setToastMessage } from "../store/slices/app/appSlice";
+import { reportUnexpectedError } from "../utils/reportError";
 
 /** Notes: a list on the left and the editor on the right (one at a time on a phone). */
 const Notes: React.FC = () => {
@@ -49,7 +50,8 @@ const Notes: React.FC = () => {
     try {
       const note = await loadPeriodNote({ period: "DAY", date: localDateKey() }).unwrap();
       select(note.id);
-    } catch {
+    } catch (error) {
+      reportUnexpectedError("notes.today", error);
       dispatch(setToastMessage({ severity: "error", message: t("notes.toast.todayFailed") }));
     }
   };

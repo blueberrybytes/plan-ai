@@ -8,6 +8,7 @@ import { TokenService } from "../services/tokenService";
 import { logout } from "../store/slices/auth/authSlice";
 import { setToastMessage } from "../store/slices/app/appSlice";
 import { clientLogger } from "./clientLogger";
+import { reportUnexpectedError } from "./reportError";
 import i18n from "../i18n";
 
 // Function to create a configured fetchBaseQuery with optional custom baseUrl
@@ -37,6 +38,7 @@ const createBaseQuery = (customBaseUrl?: string) =>
         token = await TokenService.getIdToken();
       } catch (error) {
         console.warn("Could not get an ID token for this request", error);
+        reportUnexpectedError("auth.readToken", error, { endpoint });
       }
       if (token) {
         headers.set("Authorization", `Bearer ${token}`);
@@ -399,6 +401,18 @@ const createBaseQueryWithReauth =
     if (result.error && httpStatus !== undefined && httpStatus >= 500) {
       clientLogger.error(`API Server Error ${httpStatus}`, result.error, {
         endpoint: typeof args === "string" ? args : args.url,
+      });
+    }
+
+    // A success answer whose body is not valid JSON is a bug, not an expected outcome.
+    // 4xx bodies (often HTML from a proxy) are expected, and 5xx is reported above.
+    if (
+      result.error?.status === "PARSING_ERROR" &&
+      (httpStatus === undefined || httpStatus < 400)
+    ) {
+      clientLogger.error("API response could not be parsed", undefined, {
+        endpoint: typeof args === "string" ? args : args.url,
+        status: httpStatus,
       });
     }
 
