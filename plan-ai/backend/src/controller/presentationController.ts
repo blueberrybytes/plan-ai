@@ -136,13 +136,11 @@ export class PresentationController extends BaseWorkspaceController {
   ): Promise<PresentationResponse> {
     const { user, workspaceId } = await this.getPaidGenerationAccess(request);
 
-    let template = await prisma.slideTemplate.findFirst({
+    // Only this workspace's templates: the response includes the template,
+    // so a fallback to any row would show another customer's.
+    const template = await prisma.slideTemplate.findFirst({
       where: { workspaceId },
     });
-
-    if (!template) {
-      template = await prisma.slideTemplate.findFirst();
-    }
 
     const demoSlides = [
       {
@@ -339,7 +337,9 @@ export class PresentationController extends BaseWorkspaceController {
       data: {
         userId: user.id,
         workspaceId,
-        templateId: template ? template.id : "default",
+        // No template in a fresh database: "default" is not a row and broke the
+        // foreign key. The column is optional.
+        templateId: template?.id ?? null,
         title: "All Layouts Demo",
         status: "COMPLETED",
         slidesJson: demoSlides,
