@@ -224,7 +224,10 @@ describe("stats", () => {
   it("keeps the last weight of the day", () => {
     const stats = computeStats(
       tracker({ name: "Weight", unit: "kg", aggregation: "LAST" }) as any,
-      [entry("2026-09-30", 81.2, "2026-09-30T07:00:00Z"), entry("2026-09-30", 80.9, "2026-09-30T21:00:00Z")],
+      [
+        entry("2026-09-30", 81.2, "2026-09-30T07:00:00Z"),
+        entry("2026-09-30", 80.9, "2026-09-30T21:00:00Z"),
+      ],
       today,
       today,
       today,

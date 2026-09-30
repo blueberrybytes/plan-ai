@@ -144,7 +144,8 @@ function trackerData(input: TrackerInput, current?: Tracker): Prisma.TrackerUnch
     const value = input.goalValue !== undefined ? input.goalValue : (current?.goalValue ?? null);
     const direction =
       input.goalDirection !== undefined ? input.goalDirection : (current?.goalDirection ?? null);
-    const period = input.goalPeriod !== undefined ? input.goalPeriod : (current?.goalPeriod ?? null);
+    const period =
+      input.goalPeriod !== undefined ? input.goalPeriod : (current?.goalPeriod ?? null);
     if (value === null) {
       data.goalValue = null;
       data.goalDirection = null;
@@ -419,7 +420,11 @@ export function aggregate(tracker: Pick<Tracker, "kind" | "aggregation">, entrie
   return tracker.aggregation === "AVERAGE" ? sum / entries.length : sum;
 }
 
-const meets = (direction: TrackerGoalDirection | null, goal: number | null, value: number | null) => {
+const meets = (
+  direction: TrackerGoalDirection | null,
+  goal: number | null,
+  value: number | null,
+) => {
   if (goal === null || direction === null || value === null) return null;
   return direction === "AT_LEAST" ? value >= goal : value <= goal;
 };

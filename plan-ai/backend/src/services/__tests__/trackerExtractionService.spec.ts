@@ -92,9 +92,7 @@ describe("reading a note", () => {
           value: null,
           label: "Breakfast",
           dayOffset: 0,
-          foods: [
-            { name: "2 eggs", grams: 100, gramsLow: 90, gramsHigh: 110, kcalPer100g: 155 },
-          ],
+          foods: [{ name: "2 eggs", grams: 100, gramsLow: 90, gramsHigh: 110, kcalPer100g: 155 }],
         },
         { trackerId: "t-gym", value: null, label: "Gym", dayOffset: 0, foods: null },
         // Not one of the user's trackers: dropped.

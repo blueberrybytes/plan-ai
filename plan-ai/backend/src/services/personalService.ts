@@ -81,7 +81,11 @@ export async function enablePersonalMode(
   request?: AuditRequestInfo,
 ): Promise<PersonalStatus> {
   if (!personalModeAvailable(user.email)) {
-    throw fail(403, "Personal mode is not available for this account.", "personal_mode_unavailable");
+    throw fail(
+      403,
+      "Personal mode is not available for this account.",
+      "personal_mode_unavailable",
+    );
   }
   if (input?.consent !== true) {
     throw fail(400, "Personal mode needs your explicit consent.", "consent_required");
@@ -180,10 +184,7 @@ export async function withdrawPersonalConsent(
  * Tracker routes run only in the user's own personal workspace, with the
  * current consent text accepted.
  */
-export async function requireTrackerAccess(
-  user: PersonalUser,
-  workspaceId: string,
-): Promise<void> {
+export async function requireTrackerAccess(user: PersonalUser, workspaceId: string): Promise<void> {
   const profile = await prisma.personalProfile.findUnique({ where: { userId: user.id } });
   if (
     !personalModeAvailable(user.email) ||
