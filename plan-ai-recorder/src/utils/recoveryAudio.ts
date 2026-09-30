@@ -8,6 +8,8 @@
  * Every call is best effort: a failed write never touches the recording.
  */
 
+import { reportError, reportOnce } from "./errorReporting";
+
 export type RecoveryTrack = "mic" | "sys";
 
 // Blob.arrayBuffer() resolves asynchronously, so chunks are chained per track
@@ -41,6 +43,12 @@ export function appendRecoveryAudio(
         `[recoveryAudio] could not save a ${track} chunk:`,
         err instanceof Error ? err.message : err,
       );
+      // Disk errors are reported by the main process. This covers the IPC
+      // call and reading the chunk. Once per track, chunks come every second.
+      reportOnce(`recovery-audio-append:${key}`, err, "recovery-audio-write", {
+        sessionId,
+        track,
+      });
     });
   chains.set(key, next);
 }
@@ -52,7 +60,8 @@ export async function recoveryAudioInfo(
   if (!api) return { micBytes: 0, sysBytes: 0 };
   try {
     return await api.info(sessionId);
-  } catch {
+  } catch (err) {
+    reportError(err, "recovery-audio-read", { sessionId, step: "info" });
     return { micBytes: 0, sysBytes: 0 };
   }
 }
@@ -69,7 +78,8 @@ export async function readRecoveryAudio(
         ? new Blob([bytes as Uint8Array<ArrayBuffer>], { type: "audio/webm" })
         : undefined;
     return { micBlob: toBlob(mic), sysBlob: toBlob(sys) };
-  } catch {
+  } catch (err) {
+    reportError(err, "recovery-audio-read", { sessionId, step: "read" });
     return {};
   }
 }
@@ -87,11 +97,15 @@ export function deleteRecoveryAudio(sessionId: string): void {
       chains.delete(`${sessionId}:sys`);
       return api.remove(sessionId);
     })
-    .catch(() => undefined);
+    .catch((err) => {
+      reportError(err, "recovery-audio-delete", { sessionId });
+    });
 }
 
 export function pruneRecoveryAudio(keepSessionIds: string[]): void {
   const api = window.electron?.recoveryAudio;
   if (!api) return;
-  void api.prune(keepSessionIds).catch(() => undefined);
+  void api.prune(keepSessionIds).catch((err) => {
+    reportError(err, "recovery-audio-delete", { step: "prune" });
+  });
 }

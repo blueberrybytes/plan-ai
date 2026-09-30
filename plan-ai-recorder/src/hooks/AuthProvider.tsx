@@ -6,6 +6,7 @@ import {
   signInWithCustomToken,
   signOut as firebaseSignOut,
 } from "firebase/auth";
+import * as Sentry from "@sentry/electron/renderer";
 import { auth } from "../firebase";
 import { AuthContext, type AuthContextValue } from "./useAuth";
 import { createPlanAiApi, type Workspace } from "../services/planAiApi";
@@ -86,6 +87,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   useEffect(() => {
     const unsubscribe = onIdTokenChanged(auth, async (firebaseUser) => {
       setUser(firebaseUser);
+      // Sentry gets the Firebase uid only, never the email or name.
+      Sentry.setUser(firebaseUser ? { id: firebaseUser.uid } : null);
       if (firebaseUser) {
         const idToken = await firebaseUser.getIdToken();
         setToken(idToken);

@@ -38,35 +38,51 @@ export type SubscriptionStatusResponse =
 export type UpdateSpeakerNamesBody =
   components["schemas"]["UpdateSpeakerNamesBody"];
 
+/**
+ * An Error carrying the HTTP status, so callers can tell an expected answer
+ * (401, 404, 429...) from a failure worth reporting. The message is unchanged.
+ */
+function apiError(message: string, status: number): Error {
+  return Object.assign(new Error(message), { status });
+}
+
+/**
+ * 5xx responses go to Sentry with the path only: query strings can hold
+ * search text typed by the user.
+ */
+function report5xx(res: Response): void {
+  if (res.status < 500) return;
+  const path = res.url.split("?")[0];
+  Sentry.captureException(new Error(`API 5xx Error: ${res.status} on ${path}`), {
+    tags: { feature: "api", http_status: String(res.status) },
+    extra: { status: res.status, url: path, statusText: res.statusText },
+  });
+}
+
 async function handleResponseWithRetry<T>(
   res: Response,
   retryRequest: () => Promise<Response>,
 ): Promise<T> {
-  if (res.status >= 500) {
-    Sentry.captureException(
-      new Error(`API 5xx Error: ${res.status} on ${res.url}`),
-      {
-        extra: { status: res.status, url: res.url, statusText: res.statusText },
-      },
-    );
-  }
+  report5xx(res);
 
   // 403 = role-based permission failure — refreshing the token won't help, return error immediately
   if (res.status === 403) {
     const body = await res.json().catch(() => ({ message: res.statusText }));
-    throw new Error((body as { message?: string }).message ?? `HTTP 403`);
+    throw apiError((body as { message?: string }).message ?? `HTTP 403`, 403);
   }
 
   // 401 = token expired/invalid — refresh and retry once
   if (res.status === 401) {
     console.log(`HTTP 401 encountered, attempting token refresh...`);
     const refreshedRes = await retryRequest();
+    report5xx(refreshedRes);
     if (!refreshedRes.ok) {
       const body = await refreshedRes
         .json()
         .catch(() => ({ message: refreshedRes.statusText }));
-      throw new Error(
+      throw apiError(
         (body as { message?: string }).message ?? `HTTP ${refreshedRes.status}`,
+        refreshedRes.status,
       );
     }
     const json = (await refreshedRes.json()) as any;
@@ -85,24 +101,27 @@ async function handleResponseWithRetry<T>(
           : limitType === "recording"
             ? "recording hour"
             : "generation";
-      throw new Error(
+      throw apiError(
         `You've reached your monthly ${friendly} limit. Upgrade your plan or wait until next billing cycle.`,
+        429,
       );
     }
     // A limit the server explains (e.g. the notes of a meeting were already
     // sent 5 times) is shown as it is, not as a temporary rate limit.
     if (typeof data.message === "string" && data.message.trim()) {
-      throw new Error(data.message);
+      throw apiError(data.message, 429);
     }
-    throw new Error(
+    throw apiError(
       "Rate limit reached. Please wait a moment before trying again.",
+      429,
     );
   }
 
   if (!res.ok) {
     const body = await res.json().catch(() => ({ message: res.statusText }));
-    throw new Error(
+    throw apiError(
       (body as { message?: string }).message ?? `HTTP ${res.status}`,
+      res.status,
     );
   }
   const json = (await res.json()) as any;
@@ -115,7 +134,7 @@ export const createPlanAiApi = (
 ) => {
   const getAuthHeaders = async (forceRefresh = false): Promise<HeadersInit> => {
     const token = await getToken(forceRefresh);
-    if (!token) throw new Error("No auth token available");
+    if (!token) throw apiError("No auth token available", 401);
     const headers: Record<string, string> = {
       Authorization: `Bearer ${token}`,
       "Content-Type": "application/json",
@@ -301,7 +320,7 @@ export const createPlanAiApi = (
       projectIds?: string[],
     ): Promise<WebSocket> {
       const token = await getToken(false);
-      if (!token) throw new Error("No auth token available");
+      if (!token) throw apiError("No auth token available", 401);
 
       const wsProtocol = BASE_URL.startsWith("https") ? "wss:" : "ws:";
       const wsUrl = new URL(
@@ -485,7 +504,7 @@ export const createPlanAiApi = (
         }
 
         const token = await getToken(force);
-        if (!token) throw new Error("No auth token available");
+        if (!token) throw apiError("No auth token available", 401);
 
         const headers: Record<string, string> = {
           Authorization: `Bearer ${token}`,

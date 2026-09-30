@@ -58,6 +58,8 @@ import {
   deleteRecoveryAudio,
   pruneRecoveryAudio,
 } from "../utils/recoveryAudio";
+import * as Sentry from "@sentry/electron/renderer";
+import { isExpectedError, reportError } from "../utils/errorReporting";
 
 /** A meeting that never reached the backend, with the size of its saved audio. */
 interface RecoverableMeeting extends UnsavedTranscript {
@@ -267,6 +269,23 @@ const Home: React.FC = () => {
           meeting.sessionId && audioFits && meeting.micBytes + meeting.sysBytes > 0
             ? await readRecoveryAudio(meeting.sessionId)
             : {};
+        // Audio on disk that could not be read: the meeting is saved with its
+        // text only. Reported, because that audio is then deleted.
+        const unreadMic = meeting.micBytes > 0 && !audio.micBlob;
+        const unreadSys = meeting.sysBytes > 0 && !audio.sysBlob;
+        if (audioFits && (unreadMic || unreadSys)) {
+          Sentry.captureMessage("Recovered meeting audio could not be read", {
+            level: "error",
+            tags: { feature: "recovery-audio-read" },
+            extra: {
+              sessionId: meeting.sessionId ?? null,
+              micBytes: meeting.micBytes,
+              sysBytes: meeting.sysBytes,
+              unreadMic,
+              unreadSys,
+            },
+          });
+        }
         const startedAt = meeting.startedAt ?? meeting.savedAt;
         await api.saveRecording({
           content: meeting.content.trim() ? meeting.content : undefined,
@@ -295,6 +314,21 @@ const Home: React.FC = () => {
         void fetchData(true);
       } catch (err) {
         console.error("[Home] Failed to recover unsaved meeting", err);
+        // Same rule as a normal save: only offline, auth and plan limits are
+        // expected. The recovery copy stays for another try.
+        if (
+          !isExpectedError(err, {
+            statuses: [401, 403, 429],
+            reportTimeouts: true,
+          })
+        ) {
+          reportError(err, "meeting-recover", {
+            sessionId: meeting.sessionId ?? null,
+            micBytes: meeting.micBytes,
+            sysBytes: meeting.sysBytes,
+            online: navigator.onLine,
+          });
+        }
         setError(err instanceof Error ? err.message : "Failed to recover the unsaved meeting.");
       } finally {
         setRecoveringKey(null);

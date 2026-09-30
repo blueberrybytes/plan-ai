@@ -19,6 +19,7 @@
  */
 
 import type { CalendarEvent } from "./recorderConfig";
+import { reportOnce } from "./errorReporting";
 import type { components } from "../types/api";
 
 export type RecordingBookmark = components["schemas"]["RecordingBookmark"];
@@ -55,7 +56,8 @@ export interface UnsavedSession {
 function seal(json: string): string {
   try {
     return window.electron?.localData?.seal(json) ?? json;
-  } catch {
+  } catch (err) {
+    reportOnce("recovery-seal", err, "recovery-encrypt");
     return json;
   }
 }
@@ -65,7 +67,8 @@ function unseal(raw: string): string | null {
   if (!raw.startsWith(SEALED_PREFIX)) return raw;
   try {
     return window.electron?.localData?.open(raw) ?? null;
-  } catch {
+  } catch (err) {
+    reportOnce("recovery-open", err, "recovery-decrypt");
     return null;
   }
 }
@@ -73,8 +76,12 @@ function unseal(raw: string): string | null {
 function write(key: string, record: UnsavedTranscript): void {
   try {
     localStorage.setItem(key, seal(JSON.stringify(record)));
-  } catch {
-    /* localStorage full/unavailable — non-fatal */
+  } catch (err) {
+    // localStorage full or unavailable. The recording goes on, but a crash
+    // now would lose the meeting's text. Reported once per launch.
+    reportOnce("recovery-write", err, "recovery-write", {
+      sessionId: record.sessionId ?? null,
+    });
   }
 }
 
@@ -100,7 +107,15 @@ function parse(stored: string | null): UnsavedTranscript | null {
           ? parsed.calendarEvent
           : undefined,
     };
-  } catch {
+  } catch (err) {
+    // A record that is not valid JSON: its meeting cannot be recovered.
+    // The error name only, the message can quote the record.
+    const name = err instanceof Error ? err.name : "unknown";
+    reportOnce(
+      "recovery-parse",
+      new Error(`Recovery record is not valid JSON (${name})`),
+      "recovery-read",
+    );
     return null;
   }
 }

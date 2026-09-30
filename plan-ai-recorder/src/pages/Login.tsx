@@ -16,6 +16,7 @@ import AppleIcon from "@mui/icons-material/Apple";
 import BugIcon from "@mui/icons-material/BugReport";
 import { useAuth } from "../hooks/useAuth";
 import MicrosoftIcon from "../components/MicrosoftIcon";
+import { reportError } from "../utils/errorReporting";
 
 const Login: React.FC = () => {
   const { signInWithEmail, signInWithDesktopBrowser } = useAuth();
@@ -92,13 +93,22 @@ const Login: React.FC = () => {
   // The link carries this login's state, so it only works for the login in
   // progress.
   const copyAuthLink = async () => {
-    const authUrl = await window.electron.getDesktopAuthUrl?.();
+    let authUrl: string | null | undefined;
+    try {
+      authUrl = await window.electron.getDesktopAuthUrl?.();
+    } catch (err) {
+      reportError(err, "login-copy-link");
+    }
     if (!authUrl) {
       setError("This sign-in has expired. Start it again.");
       setWaitingProvider(null);
       return;
     }
-    await navigator.clipboard.writeText(authUrl);
+    try {
+      await navigator.clipboard.writeText(authUrl);
+    } catch {
+      // Clipboard refused (window not focused). Nothing to report.
+    }
   };
 
   // The debug panel is for development builds only.

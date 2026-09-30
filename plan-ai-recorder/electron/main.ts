@@ -40,6 +40,44 @@ import * as Sentry from "@sentry/electron/main";
 // electron.vite.config.ts. Sent as a header on every app:// HTML response.
 declare const __RENDERER_CSP__: string;
 
+// ─── Sentry ──────────────────────────────────────────────────────────────────
+// Only ids, status codes, error codes and a feature tag reach Sentry. Never
+// transcript text, chat messages, file names, meeting titles or emails.
+// Renderer events are sent through this process, so these rules cover them
+// too (the renderer runs the same ones, see src/utils/errorReporting.ts).
+function stripQuery(url: string): string {
+  return url.split("?")[0];
+}
+
+/**
+ * Console lines are dropped: the renderer's echo debug log prints every
+ * utterance, and other logs name files and projects. URLs lose their query
+ * string, which can hold search text or a login code.
+ */
+function scrubBreadcrumb(crumb: Sentry.Breadcrumb): Sentry.Breadcrumb | null {
+  if (crumb.category === "console") return null;
+  if (!crumb.data) return crumb;
+  const data = { ...crumb.data };
+  for (const key of ["url", "from", "to"]) {
+    if (typeof data[key] === "string") data[key] = stripQuery(data[key]);
+  }
+  return { ...crumb, data };
+}
+
+/** Drops request bodies, cookies and headers, and keeps only the user id. */
+function scrubEvent(event: Sentry.ErrorEvent): Sentry.ErrorEvent {
+  if (event.request) {
+    event.request = event.request.url ? { url: stripQuery(event.request.url) } : undefined;
+  }
+  event.user = event.user?.id !== undefined ? { id: event.user.id } : undefined;
+  if (event.breadcrumbs) {
+    event.breadcrumbs = event.breadcrumbs
+      .map(scrubBreadcrumb)
+      .filter((crumb): crumb is Sentry.Breadcrumb => crumb !== null);
+  }
+  return event;
+}
+
 // Initialize Sentry only in production if DSN is provided
 const sentryDsn = import.meta.env.VITE_SENTRY_DSN;
 const sentryEnabled = app.isPackaged && !!sentryDsn;
@@ -47,7 +85,57 @@ console.log("[main] Sentry enabled:", sentryEnabled);
 Sentry.init({
   dsn: sentryDsn,
   enabled: sentryEnabled,
+  beforeSend: scrubEvent,
+  beforeBreadcrumb: scrubBreadcrumb,
 });
+
+type ReportExtra = Record<string, string | number | boolean | null | undefined>;
+
+/**
+ * Reports an unexpected failure. Node's fs errors carry the file path in their
+ * message (with the user name in it), so those are sent as their code only.
+ */
+function reportMain(err: unknown, feature: string, extra?: ReportExtra): void {
+  const code = (err as { code?: unknown } | null)?.code;
+  const error =
+    typeof code === "string"
+      ? new Error(`${feature} failed: ${code}`)
+      : err instanceof Error
+        ? err
+        : new Error(`${feature} failed`);
+  Sentry.captureException(error, {
+    tags: { feature, ...(typeof code === "string" ? { error_code: code } : {}) },
+    extra,
+  });
+}
+
+const reportedOnce = new Set<string>();
+
+/** Same, once per key and launch, for paths that run on every audio chunk. */
+function reportMainOnce(key: string, err: unknown, feature: string, extra?: ReportExtra): void {
+  if (reportedOnce.has(key)) return;
+  reportedOnce.add(key);
+  reportMain(err, feature, extra);
+}
+
+/**
+ * ipcMain.handle with reporting. An error thrown in a handler goes back to
+ * the renderer as a rejected promise and never reached Sentry. It is reported
+ * here (channel name only, never the arguments) and thrown on as before.
+ */
+function handleIpc(
+  channel: string,
+  listener: (event: Electron.IpcMainInvokeEvent, ...args: any[]) => unknown,
+): void {
+  ipcMain.handle(channel, async (event, ...args) => {
+    try {
+      return await listener(event, ...args);
+    } catch (err) {
+      reportMain(err, "ipc", { channel });
+      throw err;
+    }
+  });
+}
 
 // Custom protocol for receiving auth tokens from the system browser
 const BASE_PROTOCOL = import.meta.env.VITE_APP_PROTOCOL || "blueberrybytes-recorder";
@@ -141,6 +229,7 @@ function openExternalSafely(rawUrl: string): void {
   }
   shell.openExternal(url.toString()).catch((err) => {
     console.error("[external] openExternal failed:", err);
+    reportMain(err, "open-external", { protocol: url.protocol });
   });
 }
 
@@ -322,6 +411,8 @@ async function migrateFileOriginStorage(): Promise<void> {
     writeFileSync(marker, new Date().toISOString(), { mode: 0o600 });
   } catch (err) {
     console.error("[storage-migration] Failed, will retry on next launch:", err);
+    // Until it succeeds, users look signed out and unsaved meetings are hidden.
+    reportMain(err, "storage-migration");
   } finally {
     reader?.destroy();
     writer?.destroy();
@@ -924,7 +1015,7 @@ app.on("web-contents-created", (_event, contents) => {
   });
 });
 
-ipcMain.handle("clear-auth-session", async () => {
+handleIpc("clear-auth-session", async () => {
   console.log("[Desktop Auth] [SESSION WIPE] Erasing defaultSession cookies/storage to force fresh logins...");
   try {
     const cookiesBefore = await session.defaultSession.cookies.get({});
@@ -952,6 +1043,7 @@ ipcMain.handle("clear-auth-session", async () => {
     return true;
   } catch (err) {
     console.error("[Desktop Auth] [SESSION WIPE FATAL] Failed to clear storage:", err);
+    reportMain(err, "ipc", { channel: "clear-auth-session" });
     return false;
   }
 });
@@ -987,9 +1079,9 @@ function isAppleAuthFlowUrl(rawUrl: string): boolean {
 }
 
 // The web URL of the login in progress, for the "Copy Auth Link" button.
-ipcMain.handle("get-desktop-auth-url", () => (isAuthStatePending() ? pendingAuthUrl : null));
+handleIpc("get-desktop-auth-url", () => (isAuthStatePending() ? pendingAuthUrl : null));
 
-ipcMain.handle("open-desktop-auth", (_event, _provider?: string) => {
+handleIpc("open-desktop-auth", (_event, _provider?: string) => {
   // APPLE REQUIREMENT (App Store Guideline 4):
   // "Sign in with Apple should always be completed without leaving the app"
   if (_provider === "apple") {
@@ -1127,12 +1219,12 @@ ipcMain.handle("open-desktop-auth", (_event, _provider?: string) => {
 });
 
 // IPC: Open a URL in the default browser. Only https, http and mailto.
-ipcMain.handle("open-external-url", (_event, url: unknown) => {
+handleIpc("open-external-url", (_event, url: unknown) => {
   if (typeof url === "string" && url) openExternalSafely(url);
 });
 
 // IPC: Fetch deep system diagnostics for the Admin Debug Panel
-ipcMain.handle("get-system-diagnostics", () => {
+handleIpc("get-system-diagnostics", () => {
   return {
     arch: process.arch,
     platform: process.platform,
@@ -1145,7 +1237,7 @@ ipcMain.handle("get-system-diagnostics", () => {
 });
 
 // IPC: List desktop/window sources for system audio capture
-ipcMain.handle("get-desktop-sources", async () => {
+handleIpc("get-desktop-sources", async () => {
   console.log("[IPC main] Requesting desktop sources...");
   try {
     const sources = await desktopCapturer.getSources({
@@ -1166,7 +1258,7 @@ ipcMain.handle("get-desktop-sources", async () => {
 });
 
 // IPC: Native File Save Dialog
-ipcMain.handle("save-file", async (_event, content: string, defaultPath: string) => {
+handleIpc("save-file", async (_event, content: string, defaultPath: string) => {
   if (!mainWindow) return false;
   try {
     const { canceled, filePath } = await dialog.showSaveDialog(mainWindow, {
@@ -1178,12 +1270,13 @@ ipcMain.handle("save-file", async (_event, content: string, defaultPath: string)
     return true;
   } catch (err) {
     console.error("[IPC main] save-file failed:", err);
+    reportMain(err, "ipc", { channel: "save-file" });
     return false;
   }
 });
 
 // IPC: Screen Recording Permissions (macOS)
-ipcMain.handle("check-screen-recording-permission", async () => {
+handleIpc("check-screen-recording-permission", async () => {
   console.log("[IPC main] Checking macOS screen recording permissions...");
 
   if (process.platform !== "darwin") {
@@ -1207,6 +1300,7 @@ ipcMain.handle("check-screen-recording-permission", async () => {
       return await systemPreferences.askForMediaAccess("screen");
     } catch (err) {
       console.warn("[IPC main] Error executing askForMediaAccess:", err);
+      reportMain(err, "ipc", { channel: "check-screen-recording-permission" });
     }
     return false; // Still returning false so the user knows they need to restart the app
   }
@@ -1215,7 +1309,7 @@ ipcMain.handle("check-screen-recording-permission", async () => {
 });
 
 // IPC: Microphone Permissions (macOS)
-ipcMain.handle("check-microphone-permission", async () => {
+handleIpc("check-microphone-permission", async () => {
   console.log("[IPC main] Checking macOS microphone permissions...");
   if (process.platform !== "darwin") return true;
 
@@ -1232,7 +1326,7 @@ ipcMain.handle("check-microphone-permission", async () => {
 });
 
 // IPC: Open System Preferences (macOS) / Settings (Windows)
-ipcMain.handle("open-system-preferences", (_, pane: "microphone" | "screen") => {
+handleIpc("open-system-preferences", (_, pane: "microphone" | "screen") => {
   let url: string;
   if (process.platform === "darwin") {
     url =
@@ -1252,13 +1346,13 @@ ipcMain.handle("open-system-preferences", (_, pane: "microphone" | "screen") => 
 });
 
 // IPC: App version
-ipcMain.handle("get-app-version", () => app.getVersion());
+handleIpc("get-app-version", () => app.getVersion());
 
 // ─── Native macOS System Audio Capture ───────────────────────────────────────
 let currentChunkPromiseResolve: ((buf: Uint8Array | null) => void) | null = null;
 let currentAudioPath: string | null = null;
 
-ipcMain.handle("start-system-audio", async () => {
+handleIpc("start-system-audio", async () => {
   if (systemAudioProcess) return "already_running";
 
   // On non-macOS (Windows/Linux) we have no native binary — tell the renderer
@@ -1361,7 +1455,7 @@ ipcMain.handle("start-system-audio", async () => {
   return "started";
 });
 
-ipcMain.handle("chunk-system-audio", async () => {
+handleIpc("chunk-system-audio", async () => {
   if (!systemAudioProcess) return null;
   // One rotation at a time. A second request used to overwrite the pending
   // resolver, so the first promise never settled (one leaked request per
@@ -1420,7 +1514,10 @@ function localDataKey(): Buffer | null {
     localDataKeyCache = key;
     return key;
   } catch (err) {
+    // Recovery data sealed with this key cannot be read until this is fixed.
+    // Runs once per launch (the result is cached).
     console.error("[local-data] Could not load the encryption key:", err);
+    reportMain(err, "recovery-key");
     return null;
   }
 }
@@ -1449,12 +1546,19 @@ function openBytes(key: Buffer, sealed: Buffer): Buffer | null {
 
 // Synchronous on purpose: the renderer's crash-recovery store is localStorage,
 // which is synchronous. A transcript is a few hundred KB at most.
+// A handler that throws never sets returnValue, and the renderer's sendSync
+// then gets nothing back. Both handlers answer null on any failure.
 ipcMain.on("local-data-seal", (event, text: unknown) => {
-  const key =
-    typeof text === "string" && isRendererUrl(event.senderFrame?.url) ? localDataKey() : null;
-  event.returnValue = key
-    ? SEALED_TEXT_PREFIX + sealBytes(key, Buffer.from(text as string, "utf8")).toString("base64")
-    : null;
+  try {
+    const key =
+      typeof text === "string" && isRendererUrl(event.senderFrame?.url) ? localDataKey() : null;
+    event.returnValue = key
+      ? SEALED_TEXT_PREFIX + sealBytes(key, Buffer.from(text as string, "utf8")).toString("base64")
+      : null;
+  } catch (err) {
+    reportMainOnce("local-data-seal", err, "recovery-encrypt");
+    event.returnValue = null;
+  }
 });
 
 ipcMain.on("local-data-open", (event, sealed: unknown) => {
@@ -1466,11 +1570,24 @@ ipcMain.on("local-data-open", (event, sealed: unknown) => {
     event.returnValue = null;
     return;
   }
-  const key = localDataKey();
-  const plain = key
-    ? openBytes(key, Buffer.from(sealed.slice(SEALED_TEXT_PREFIX.length), "base64"))
-    : null;
-  event.returnValue = plain ? plain.toString("utf8") : null;
+  try {
+    const key = localDataKey();
+    const plain = key
+      ? openBytes(key, Buffer.from(sealed.slice(SEALED_TEXT_PREFIX.length), "base64"))
+      : null;
+    if (!plain) {
+      // A sealed meeting record that cannot be opened is hidden from recovery.
+      reportMainOnce(
+        `local-data-open:${key ? "decrypt" : "no-key"}`,
+        new Error(key ? "Recovery record failed to decrypt" : "No key for a sealed recovery record"),
+        "recovery-decrypt",
+      );
+    }
+    event.returnValue = plain ? plain.toString("utf8") : null;
+  } catch (err) {
+    reportMainOnce("local-data-open", err, "recovery-decrypt");
+    event.returnValue = null;
+  }
 });
 
 // ─── Crash-safe copy of the recording's audio ────────────────────────────────
@@ -1538,11 +1655,30 @@ async function fileSize(file: string): Promise<number> {
   }
 }
 
-async function readRecoveryTrack(files: { plain: string; sealed: string }): Promise<Uint8Array | null> {
-  const sealed = await fsPromises.readFile(files.sealed).catch(() => null);
+/** A missing file is normal (no audio on that track). Anything else is reported. */
+function reportUnlessMissing(err: unknown, extra: ReportExtra): void {
+  if ((err as { code?: unknown } | null)?.code === "ENOENT") return;
+  reportMain(err, "recovery-audio-read", extra);
+}
+
+async function readRecoveryTrack(
+  files: { plain: string; sealed: string },
+  sessionId: string,
+  track: string,
+): Promise<Uint8Array | null> {
+  const sealed = await fsPromises.readFile(files.sealed).catch((err) => {
+    reportUnlessMissing(err, { sessionId, track, sealed: true });
+    return null;
+  });
   if (sealed) {
     const key = localDataKey();
-    if (!key) return null;
+    if (!key) {
+      reportMain(new Error("No key for sealed recovery audio"), "recovery-audio-read", {
+        sessionId,
+        track,
+      });
+      return null;
+    }
     const parts: Buffer[] = [];
     let offset = 0;
     while (offset + 4 <= sealed.length) {
@@ -1550,7 +1686,17 @@ async function readRecoveryTrack(files: { plain: string; sealed: string }): Prom
       const end = offset + 4 + length;
       if (end > sealed.length) break; // torn last write
       const plain = openBytes(key, sealed.subarray(offset + 4, end));
-      if (!plain) break;
+      if (!plain) {
+        // A whole frame that fails to decrypt is not a torn write: the audio
+        // after it is lost.
+        reportMain(new Error("Recovery audio frame failed to decrypt"), "recovery-audio-read", {
+          sessionId,
+          track,
+          offset,
+          fileBytes: sealed.length,
+        });
+        break;
+      }
       parts.push(plain);
       offset = end;
     }
@@ -1558,12 +1704,13 @@ async function readRecoveryTrack(files: { plain: string; sealed: string }): Prom
   }
   try {
     return new Uint8Array(await fsPromises.readFile(files.plain));
-  } catch {
+  } catch (err) {
+    reportUnlessMissing(err, { sessionId, track, sealed: false });
     return null;
   }
 }
 
-ipcMain.handle(
+handleIpc(
   "recovery-audio-append",
   async (event, sessionId: string, track: string, data: Uint8Array) => {
     const files = recoveryFiles(sessionId, track);
@@ -1588,6 +1735,12 @@ ipcMain.handle(
     });
     const settled = next.catch((err) => {
       console.error(`[recovery] append failed for ${files.plain}:`, err);
+      // Crash recovery has no audio for this track from here on. Once per
+      // track: chunks arrive every second and a full disk fails them all.
+      reportMainOnce(`recovery-append:${sessionId}:${track}`, err, "recovery-audio-write", {
+        sessionId,
+        track,
+      });
     });
     recoveryAppendChains.set(files.plain, settled);
     void settled.then(() => {
@@ -1604,7 +1757,7 @@ ipcMain.handle(
   },
 );
 
-ipcMain.handle("recovery-audio-info", async (_event, sessionId: string) => {
+handleIpc("recovery-audio-info", async (_event, sessionId: string) => {
   const mic = recoveryFiles(sessionId, "mic");
   const sys = recoveryFiles(sessionId, "sys");
   if (!mic || !sys) return { micBytes: 0, sysBytes: 0 };
@@ -1614,25 +1767,28 @@ ipcMain.handle("recovery-audio-info", async (_event, sessionId: string) => {
   return { micBytes: await size(mic), sysBytes: await size(sys) };
 });
 
-ipcMain.handle("recovery-audio-read", async (event, sessionId: string) => {
+handleIpc("recovery-audio-read", async (event, sessionId: string) => {
   if (!isRendererUrl(event.senderFrame?.url)) return { mic: null, sys: null };
   const read = async (track: string): Promise<Uint8Array | null> => {
     const files = recoveryFiles(sessionId, track);
-    return files ? readRecoveryTrack(files) : null;
+    return files ? readRecoveryTrack(files, sessionId, track) : null;
   };
   return { mic: await read("mic"), sys: await read("sys") };
 });
 
-ipcMain.handle("recovery-audio-delete", async (_event, sessionId: string) => {
+handleIpc("recovery-audio-delete", async (_event, sessionId: string) => {
   const dir = recoveryDir(sessionId);
   if (!dir) return false;
-  await fsPromises.rm(dir, { recursive: true, force: true }).catch(() => undefined);
+  // Audio left behind after a save or a discard stays on disk: reported.
+  await fsPromises.rm(dir, { recursive: true, force: true }).catch((err) => {
+    reportMain(err, "recovery-audio-delete", { sessionId });
+  });
   return true;
 });
 
 // Deletes every session folder except the ones still listed as recoverable
 // (orphans from saves whose cleanup failed, or recoveries the user discarded).
-ipcMain.handle("recovery-audio-prune", async (_event, keepSessionIds: string[]) => {
+handleIpc("recovery-audio-prune", async (_event, keepSessionIds: string[]) => {
   // A key file that cannot be opened now (keychain locked or denied) means the
   // renderer could not read every record: deleting audio would lose meetings.
   if (existsSync(path.join(app.getPath("userData"), LOCAL_DATA_KEY_FILE)) && !localDataKey()) {
@@ -1654,12 +1810,14 @@ ipcMain.handle("recovery-audio-prune", async (_event, keepSessionIds: string[]) 
       .then(() => {
         removed += 1;
       })
-      .catch(() => undefined);
+      .catch((err) => {
+        reportMainOnce("recovery-prune", err, "recovery-audio-delete", { step: "prune" });
+      });
   }
   return removed;
 });
 
-ipcMain.handle("stop-system-audio", async () => {
+handleIpc("stop-system-audio", async () => {
   if (!systemAudioProcess) return null;
 
   console.log("[IPC main] Stopping system audio capture (SIGTERM)...");
@@ -1696,7 +1854,7 @@ ipcMain.on("simulate-main-crash", () => {
   process.crash();
 });
 
-ipcMain.handle("quit-and-install", () => {
+handleIpc("quit-and-install", () => {
   console.log("[IPC main] Received quit-and-install. Restarting app...");
   autoUpdater.quitAndInstall();
 });
@@ -1777,8 +1935,19 @@ function setupAutoUpdater() {
       }
     });
 
+    // The check rejects when offline (every wake from sleep without a network).
+    // It was an unhandled rejection; now only failures other than the network
+    // are reported.
     const trigger = (reason: string) =>
-      guardedCheck(() => autoUpdater.checkForUpdatesAndNotify(), reason);
+      guardedCheck(() => {
+        autoUpdater.checkForUpdatesAndNotify().catch((err) => {
+          console.error(`[AutoUpdater] check failed (${reason})`, err);
+          const message = err instanceof Error ? err.message : String(err);
+          if (!/net::ERR_|ENOTFOUND|ECONNRESET|ECONNREFUSED|ETIMEDOUT|EAI_AGAIN/.test(message)) {
+            reportMain(err, "auto-update", { reason });
+          }
+        });
+      }, reason);
     trigger("startup");
     setInterval(() => trigger("interval"), UPDATE_POLL_INTERVAL_MS);
     powerMonitor.on("resume", () => trigger("resume-from-sleep"));

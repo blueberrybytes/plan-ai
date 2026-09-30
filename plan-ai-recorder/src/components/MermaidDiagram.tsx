@@ -1,6 +1,7 @@
 import React, { useEffect, useId, useState } from "react";
 import { Alert, Box, CircularProgress } from "@mui/material";
 import DOMPurify from "dompurify";
+import { reportError } from "../utils/errorReporting";
 
 // Diagrams are drawn on this machine. They used to go through the mermaid.ink
 // web service, which sent task titles from the meeting to a third party.
@@ -19,6 +20,12 @@ function loadMermaid() {
         htmlLabels: false,
       });
       return mermaid;
+    });
+    // A failed load used to stay cached, so no diagram could render until a
+    // restart. The next diagram tries again.
+    mermaidReady.catch((err) => {
+      mermaidReady = null;
+      reportError(err, "mermaid-load");
     });
   }
   return mermaidReady;

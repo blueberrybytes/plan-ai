@@ -59,6 +59,12 @@ import {
   newRecordingSessionId,
   deleteRecoveryAudio,
 } from "../utils/recoveryAudio";
+import * as Sentry from "@sentry/electron/renderer";
+import {
+  reportError,
+  reportUnexpected,
+  isExpectedError,
+} from "../utils/errorReporting";
 import ReactMarkdown from "react-markdown";
 import { markdownComponents } from "../utils/markdownComponents";
 import {
@@ -885,6 +891,9 @@ const Recording: React.FC = () => {
 
       setChatHistory((p) => [...p, { role: "assistant", content: response }]);
     } catch (err) {
+      reportUnexpected(err, "live-chat", {
+        documents: chatDocuments.length,
+      });
       setChatHistory((p) => [
         ...p,
         {
@@ -929,6 +938,8 @@ const Recording: React.FC = () => {
             },
           ]);
         } catch (err) {
+          // 400 is an unsupported or unreadable file: expected.
+          reportUnexpected(err, "live-chat-file-read", { bytes: file.size });
           setChatAttachError(
             err instanceof Error ? err.message : `Could not read ${file.name}.`,
           );
@@ -1167,6 +1178,8 @@ const Recording: React.FC = () => {
       const skipAudio = options?.skipAudio === true;
       if (!token) return;
       setPhase("saving");
+      // Where the save stopped, for the Sentry report.
+      let stage = "prepare";
 
       try {
         // Build final block text
@@ -1230,6 +1243,7 @@ const Recording: React.FC = () => {
             console.warn("Failed to generate AI project title", e);
           }
 
+          stage = "create-project";
           const newProject = await api.createProject({
             title: aiTitle || `${timeLabel} (${formattedDate})`,
             description:
@@ -1239,6 +1253,7 @@ const Recording: React.FC = () => {
         }
 
         const startedAt = recordingStartedAtRef.current;
+        stage = "upload";
         const savedTranscript = await api.saveRecording({
           content: fullPayload,
           recordedAt: new Date().toISOString(),
@@ -1284,18 +1299,39 @@ const Recording: React.FC = () => {
           sysFile: skipAudio ? undefined : blobs.sysBlob,
           aecTelemetry: aecTelemetry ?? undefined,
         });
+        stage = "after-upload";
 
         // Files attached to the live chat go into the meeting's context, so the
         // project and later chats keep them. The meeting is already saved, so
-        // a failed upload is only logged.
+        // a failed upload is logged and reported, and the save goes on.
         const meetingContextId = savedTranscript.contextIds?.[0];
         if (meetingContextId && chatDocuments.length > 0) {
           await Promise.all(
-            chatDocuments.map((d) =>
+            chatDocuments.map((d, index) =>
               api.addFileToContext(meetingContextId, d.file).catch((err) => {
                 console.warn(`Could not add ${d.name} to the context`, err);
+                reportUnexpected(err, "live-chat-file-upload", {
+                  transcriptId: savedTranscript.id,
+                  contextId: meetingContextId,
+                  fileIndex: index,
+                  bytes: d.file.size,
+                });
               }),
             ),
+          );
+        } else if (chatDocuments.length > 0) {
+          // The backend always pairs a project with a context. Without one the
+          // attached files are silently dropped.
+          Sentry.captureMessage(
+            "Live chat files not saved: the saved meeting has no context",
+            {
+              level: "error",
+              tags: { feature: "live-chat-file-upload" },
+              extra: {
+                transcriptId: savedTranscript.id,
+                files: chatDocuments.length,
+              },
+            },
           );
         }
 
@@ -1306,6 +1342,26 @@ const Recording: React.FC = () => {
         // Navigate back to the home/dashboard immediately to allow async processing
         navigate(`/`);
       } catch (err) {
+        // A finished meeting did not reach the server. Its recovery copy stays
+        // on this computer. Everything is reported except being offline, auth
+        // and plan limits. A timeout is reported: the upload was cut.
+        if (
+          !isExpectedError(err, {
+            statuses: [401, 403, 429],
+            reportTimeouts: true,
+          })
+        ) {
+          reportError(err, "meeting-save", {
+            sessionId: recoverySessionRef.current.sessionId,
+            projectId: selectedProjectId || null,
+            stage,
+            skipAi,
+            skipAudio,
+            micBytes: skipAudio ? 0 : (blobs.micBlob?.size ?? 0),
+            sysBytes: skipAudio ? 0 : (blobs.sysBlob?.size ?? 0),
+            online: navigator.onLine,
+          });
+        }
         setError(
           err instanceof Error ? err.message : "Failed to save transcript.",
         );
@@ -1593,6 +1649,14 @@ const Recording: React.FC = () => {
     const startTimeout = setTimeout(() => {
       recorder.start().catch((err) => {
         console.error("[Recording] Start failed:", err);
+        // A refused permission or a missing microphone is expected. Errors
+        // with a backend code (missing key, plan limit) are reported by the
+        // recorder itself.
+        if (!(err as { code?: unknown } | null)?.code) {
+          reportUnexpected(err, "recording-start", {
+            sessionId: recoverySessionRef.current.sessionId,
+          });
+        }
         setError(err instanceof Error ? err.message : String(err));
         setPhase("error");
       });
@@ -1614,10 +1678,21 @@ const Recording: React.FC = () => {
     setIsStopping(true);
     setAutoPauseWarning(null);
     if (timerRef.current) clearInterval(timerRef.current);
-    const result = await recorderRef.current?.stop();
-    if (result) setBlobs(result);
-    setAecTelemetry(recorderRef.current?.getAecTelemetry() ?? null);
-    setIsStopping(false);
+    try {
+      const result = await recorderRef.current?.stop();
+      if (result) setBlobs(result);
+      setAecTelemetry(recorderRef.current?.getAecTelemetry() ?? null);
+    } catch (err) {
+      // The button used to stay on "Finalizing..." for good, with no way to
+      // save. Go on to the save screen, which then saves the text only.
+      console.error("[Recording] Stop failed:", err);
+      reportError(err, "recording-stop", {
+        sessionId: recoverySessionRef.current.sessionId,
+      });
+      handleStop();
+    } finally {
+      setIsStopping(false);
+    }
   };
 
   // Interim text that never finalized because the live socket closed on
