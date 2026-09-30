@@ -6,17 +6,29 @@ import * as FileSystem from 'expo-file-system';
 import { useEffect, useState } from 'react';
 import { Alert, Linking, View } from 'react-native';
 import { useAuth } from '../../context/AuthContext';
+import { TrackersDrawerLabel } from '../../components/TrackersDrawerLabel';
+import { loadPersonalStatus, usePersonalStatus } from '../../services/trackersStore';
 
 const WEB_APP_URL = process.env.EXPO_PUBLIC_PLAN_AI_WEB_URL ?? 'https://plan-ai.blueberrybytes.com';
 
 export default function DrawerLayout() {
   const theme = useTheme();
   const [showAiBanner, setShowAiBanner] = useState(false);
-  const { workspaces, activeWorkspaceId, logout, refreshBackendUser, refreshWorkspaces, api } = useAuth();
+  const { user, workspaces, activeWorkspaceId, logout, refreshBackendUser, refreshWorkspaces, api } = useAuth();
   const [refreshing, setRefreshing] = useState(false);
   const [showStillPending, setShowStillPending] = useState(false);
 
   const activeWorkspace = workspaces.find((w) => w.id === activeWorkspaceId);
+
+  // Trackers show only in the personal workspace, and never when personal
+  // mode is off for the account. Before the status is known (offline start)
+  // a personal workspace is enough: it only exists once personal mode was on.
+  const { status: personalStatus } = usePersonalStatus();
+  useEffect(() => {
+    if (user?.uid) void loadPersonalStatus(api);
+  }, [user?.uid, api]);
+  const showTrackers =
+    activeWorkspace?.kind === 'PERSONAL' && personalStatus?.available !== false;
 
   // Load subscription track to distinguish BYOK vs Managed plans.
   // Only BYOK workspaces need user-provided API keys.
@@ -148,6 +160,19 @@ export default function DrawerLayout() {
           title: 'Notes',
           drawerIcon: ({ color, size }: { color: string; size: number }) => (
             <MaterialCommunityIcons name="note-text-outline" color={color} size={size} />
+          )
+        }}
+      />
+      <Drawer.Screen
+        name="trackers"
+        options={{
+          title: 'Trackers',
+          drawerItemStyle: showTrackers ? undefined : { display: 'none' },
+          drawerLabel: showTrackers
+            ? ({ color }: { color: string }) => <TrackersDrawerLabel color={color} />
+            : 'Trackers',
+          drawerIcon: ({ color, size }: { color: string; size: number }) => (
+            <MaterialCommunityIcons name="chart-box-outline" color={color} size={size} />
           )
         }}
       />

@@ -27,7 +27,7 @@ import Markdown from "react-native-markdown-display";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFocusEffect, useRouter, type Href } from "expo-router";
 import { useAuth } from "../context/AuthContext";
-import type { Project } from "../services/planAiApi";
+import type { Project, Workspace } from "../services/planAiApi";
 import {
   cacheServerNote,
   createDraftNote,
@@ -45,6 +45,7 @@ import {
   type NoteEdit,
 } from "../services/notesStore";
 import { requestNotesSync, syncNotes } from "../services/notesSync";
+import { queueNoteExtraction } from "../services/trackersStore";
 import { onMarkdownLinkPress } from "../utils/openWebUrl";
 
 // The note is written to the phone at most this long after a key press.
@@ -91,6 +92,12 @@ export function NoteEditor({ id, isNew = false }: NoteEditorProps) {
   const dirtyRef = useRef(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const seenRemoteRev = useRef(initial?.remoteRev ?? 0);
+  // The user typed during this visit. On leaving, a note in the personal
+  // workspace is read by the AI for trackers (after its upload).
+  const changedRef = useRef(false);
+  const workspaceKind = (workspaces as Workspace[]).find(
+    (w) => w.id === (note?.workspaceId ?? activeWorkspaceId),
+  )?.kind;
 
   const mine = note ? isMineNote(note) : true;
 
@@ -114,11 +121,13 @@ export function NoteEditor({ id, isNew = false }: NoteEditorProps) {
   };
 
   const onTitle = (t: string) => {
+    changedRef.current = true;
     titleRef.current = t;
     setTitle(t);
     scheduleSave();
   };
   const onBody = (t: string) => {
+    changedRef.current = true;
     bodyRef.current = t;
     setBody(t);
     scheduleSave();
@@ -207,6 +216,20 @@ export function NoteEditor({ id, isNew = false }: NoteEditorProps) {
       return () => flush();
     }, [flush]),
   );
+
+  // Leaving a changed note: queue it for the trackers AI. It is sent once
+  // the notes sync has uploaded this version, never per keystroke.
+  const leaveRef = useRef({ flush, workspaceKind });
+  useEffect(() => {
+    leaveRef.current = { flush, workspaceKind };
+  });
+  useEffect(() => {
+    return () => {
+      if (!changedRef.current) return;
+      leaveRef.current.flush();
+      queueNoteExtraction(api, id, leaveRef.current.workspaceKind);
+    };
+  }, [api, id]);
 
   // Project names, for the chip and the picker.
   const loadProjects = useCallback(() => {

@@ -1,7 +1,7 @@
 import { Platform } from "react-native";
 import * as Sentry from '@sentry/react-native';
 import * as LegacyFileSystem from "expo-file-system/legacy";
-import type { components } from '../types/api';
+import type { components, operations } from '../types/api';
 
 // ── Types sourced from the generated backend swagger ──────────────────────────
 export type Workspace              = components['schemas']['WorkspaceResponse'];
@@ -39,6 +39,20 @@ export type NoteVisibility         = components['schemas']['NoteVisibilityValue'
 export type NotePeriod             = components['schemas']['NotePeriodValue'];
 /** Which notes GET /api/notes returns. Mirrors the backend's list of scopes. */
 export type NoteScope = "all" | "inbox" | "pinned" | "mine" | "shared" | "trash";
+export type WorkspaceKind          = components['schemas']['WorkspaceKind'];
+export type PersonalStatus         = components['schemas']['PersonalStatusResponse'];
+export type Tracker                = components['schemas']['TrackerResponse'];
+export type TrackerStats           = components['schemas']['TrackerStatsResponse'];
+export type TrackerDay             = components['schemas']['TrackerDayValue'];
+export type TrackerEntry           = components['schemas']['TrackerEntryResponse'];
+export type TrackerEntryStatus     = components['schemas']['TrackerEntryStatusValue'];
+export type AddTrackerEntryRequest = components['schemas']['AddEntryRequest'];
+export type UpdateTrackerEntryRequest = components['schemas']['UpdateEntryRequest'];
+export type ReviewTrackerEntriesRequest = components['schemas']['ReviewEntriesRequest'];
+export type ExtractTrackerEntriesRequest = components['schemas']['ExtractRequest'];
+export type ExtractTrackerEntriesResponse = components['schemas']['ExtractResponse'];
+export type TrackerStatsQuery      = operations['GetTrackerStats']['parameters']['query'];
+export type TrackerEntriesQuery    = NonNullable<operations['ListTrackerEntries']['parameters']['query']>;
 
 /**
  * An API error that keeps the HTTP status, so callers can tell a request
@@ -69,6 +83,26 @@ export class NoteConflictError extends HttpError {
     this.name = "NoteConflictError";
   }
 }
+
+/**
+ * A refused trackers call. `code` is the backend's reason when it sent one,
+ * e.g. "missing_api_key" or "personal_mode_required".
+ */
+export class TrackerApiError extends HttpError {
+  constructor(
+    message: string,
+    status?: number,
+    public readonly code?: string,
+  ) {
+    super(message, status);
+    this.name = "TrackerApiError";
+  }
+}
+
+// Trackers calls never show an alert: the screen says what went wrong.
+// Reading text with AI can take a while, so extract gets longer.
+const TRACKERS_TIMEOUT_MS = 20000;
+const TRACKERS_EXTRACT_TIMEOUT_MS = 90000;
 
 // Notes calls run in the background outbox. They never show an alert and
 // give up sooner than the default 60 s, so a bad network does not hold the queue.
@@ -206,6 +240,67 @@ export const createPlanAiApi = (
     } finally {
       clearTimeout(timeoutId);
     }
+  };
+
+  /**
+   * One trackers call. A network error becomes a TrackerApiError with no
+   * status (offline). A refusal keeps the status and the backend's code.
+   * Only the status goes to Sentry: bodies may hold health data.
+   */
+  const trackerRequest = async <T>(
+    path: string,
+    opts: { method?: string; body?: unknown; workspaceId?: string | null; timeoutMs?: number } = {},
+  ): Promise<T> => {
+    const send = async (force: boolean): Promise<Response> => {
+      const headers = await noteHeaders(force, opts.workspaceId);
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), opts.timeoutMs ?? TRACKERS_TIMEOUT_MS);
+      try {
+        return await fetch(`${BASE_URL}${path}`, {
+          method: opts.method ?? "GET",
+          headers,
+          body: opts.body === undefined ? undefined : JSON.stringify(opts.body),
+          signal: controller.signal as any,
+        });
+      } catch (err) {
+        const aborted = err instanceof Error && err.name === "AbortError";
+        throw new TrackerApiError(aborted ? "The server did not answer in time" : "No connection");
+      } finally {
+        clearTimeout(timeoutId);
+      }
+    };
+    let res = await send(false);
+    if (res.status === 401) res = await send(true);
+    if (!res.ok) {
+      const body = (await res.json().catch(() => ({}))) as {
+        message?: string;
+        code?: string;
+        limitType?: string;
+      };
+      if (res.status >= 500) {
+        Sentry.captureMessage("Trackers request failed", {
+          level: "warning",
+          tags: { status: String(res.status) },
+        });
+      }
+      let message = body.message ?? `HTTP ${res.status}`;
+      if (res.status === 429) {
+        message =
+          body.code === "usage_limit_exceeded"
+            ? "You have reached the monthly AI limit of this workspace."
+            : "Too many requests. Wait a moment and try again.";
+      }
+      throw new TrackerApiError(message, res.status, body.code);
+    }
+    const json = (await res.json()) as any;
+    return json && json.data !== undefined ? json.data : json;
+  };
+
+  const query = (params: Record<string, string | undefined>): string => {
+    const parts = Object.entries(params)
+      .filter(([, v]) => v !== undefined && v !== "")
+      .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v as string)}`);
+    return parts.length ? `?${parts.join("&")}` : "";
   };
 
   return {
@@ -1064,6 +1159,102 @@ export const createPlanAiApi = (
           headers: await noteHeaders(force, workspaceId),
         });
       return handleResponseWithRetry<Note>(await req(false), () => req(true));
+    },
+
+    // ── Personal mode and trackers ─────────────────────────────────────────
+    // Trackers live only in the user's personal workspace. Every call takes
+    // that workspace id and falls back to the active one.
+
+    /** Whether personal mode exists for this account, consent and settings. */
+    async getPersonalStatus(): Promise<PersonalStatus> {
+      return trackerRequest<PersonalStatus>("/api/personal");
+    },
+
+    async listTrackers(workspaceId?: string | null): Promise<Tracker[]> {
+      return trackerRequest<Tracker[]>("/api/trackers", { workspaceId });
+    },
+
+    /** Values per day, today, this week, goals and streaks. `today` is the local date. */
+    async getTrackerStats(q: TrackerStatsQuery, workspaceId?: string | null): Promise<TrackerStats[]> {
+      return trackerRequest<TrackerStats[]>(
+        `/api/trackers/stats${query({ today: q.today, from: q.from, to: q.to })}`,
+        { workspaceId },
+      );
+    },
+
+    /** Entries, newest first. status=PROPOSED lists what waits to be accepted. */
+    async listTrackerEntries(
+      q: TrackerEntriesQuery = {},
+      workspaceId?: string | null,
+    ): Promise<TrackerEntry[]> {
+      return trackerRequest<TrackerEntry[]>(
+        `/api/trackers/entries${query({
+          status: q.status,
+          noteId: q.noteId,
+          trackerId: q.trackerId,
+          from: q.from,
+          to: q.to,
+        })}`,
+        { workspaceId },
+      );
+    },
+
+    /** A value the user typed. Counts at once. Idempotent when `body.id` is set. */
+    async addTrackerEntry(
+      trackerId: string,
+      body: AddTrackerEntryRequest,
+      workspaceId?: string | null,
+    ): Promise<TrackerEntry> {
+      return trackerRequest<TrackerEntry>(
+        `/api/trackers/${encodeURIComponent(trackerId)}/entries`,
+        { method: "POST", body, workspaceId },
+      );
+    },
+
+    async updateTrackerEntry(
+      entryId: string,
+      body: UpdateTrackerEntryRequest,
+      workspaceId?: string | null,
+    ): Promise<TrackerEntry> {
+      return trackerRequest<TrackerEntry>(
+        `/api/trackers/entries/${encodeURIComponent(entryId)}`,
+        { method: "PATCH", body, workspaceId },
+      );
+    },
+
+    async deleteTrackerEntry(entryId: string, workspaceId?: string | null): Promise<void> {
+      await trackerRequest<{ success: boolean }>(
+        `/api/trackers/entries/${encodeURIComponent(entryId)}`,
+        { method: "DELETE", workspaceId },
+      );
+    },
+
+    /** Accepts or refuses several proposals at once. */
+    async reviewTrackerEntries(
+      body: ReviewTrackerEntriesRequest,
+      workspaceId?: string | null,
+    ): Promise<{ updated: number }> {
+      return trackerRequest<{ updated: number }>("/api/trackers/entries/review", {
+        method: "POST",
+        body,
+        workspaceId,
+      });
+    },
+
+    /**
+     * Reads a note or a line of text with AI and returns proposals. A note is
+     * read once per version: asking again for an unchanged note costs nothing.
+     */
+    async extractTrackerEntries(
+      body: ExtractTrackerEntriesRequest,
+      workspaceId?: string | null,
+    ): Promise<ExtractTrackerEntriesResponse> {
+      return trackerRequest<ExtractTrackerEntriesResponse>("/api/trackers/extract", {
+        method: "POST",
+        body,
+        workspaceId,
+        timeoutMs: TRACKERS_EXTRACT_TIMEOUT_MS,
+      });
     },
   };
 };

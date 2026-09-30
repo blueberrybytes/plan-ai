@@ -564,6 +564,9 @@ const subscribe = (listener: () => void) => {
   };
 };
 
+/** Calls `listener` after every local edit or sync. Returns the unsubscribe. */
+export const subscribeLocalNotes = (listener: () => void): (() => void) => subscribe(listener);
+
 /** One note, updated on every local edit or sync. */
 export function useLocalNote(id: string): LocalNote | null {
   return useSyncExternalStore(subscribe, () => load().get(id) ?? null);
