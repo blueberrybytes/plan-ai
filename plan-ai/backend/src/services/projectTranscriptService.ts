@@ -81,6 +81,7 @@ import { generateProjectDigest } from "./projectDigestService";
 import { twentyIntegrationService } from "./twentyIntegrationService";
 import { readableUrl } from "../firebase/privateStorage";
 import { deepgramPrivacyOptions } from "../utils/deepgramPrivacy";
+import { resolveWorkspaceDeepgramKey } from "./platformKeys";
 
 /**
  * Which Twenty company a meeting note is filed under.
@@ -450,6 +451,8 @@ export class ProjectTranscriptService {
      * where one microphone hears everyone in the room.
      */
     diarizeMic = false,
+    /** The workspace's Deepgram key. Null falls back to the platform's. */
+    deepgramKey: string | null = null,
   ): Promise<{
     combinedText: string;
     utterances: Utterance[];
@@ -466,7 +469,7 @@ export class ProjectTranscriptService {
     // Whisper-only deployment may not have one at all.
     let deepgram: DeepgramClient | null = null;
     const getDeepgram = (): DeepgramClient =>
-      (deepgram ??= new DeepgramClient({ key: process.env.DEEPGRAM_API_KEY! }));
+      (deepgram ??= new DeepgramClient({ key: deepgramKey || process.env.DEEPGRAM_API_KEY! }));
     const diagnostics: string[] = [];
 
     // Honour the language the user picked in the recorder. nova-3 supports the
@@ -853,12 +856,25 @@ export class ProjectTranscriptService {
         existing.rawMicUrl ? readableUrl(existing.rawMicUrl) : null,
         existing.rawSysUrl ? readableUrl(existing.rawSysUrl) : null,
       ]);
+      // The workspace's own Deepgram key (or the platform's for courtesy and
+      // MANAGED plans). A workspace with neither still gets the platform's,
+      // logged, so a finished meeting is never lost at this step.
+      let deepgramKey: string | null = null;
+      if (getSttProvider() !== "whisper") {
+        deepgramKey = await resolveWorkspaceDeepgramKey(existing.workspaceId);
+        if (!deepgramKey) {
+          logger.warn(
+            `[Diarization] Workspace ${existing.workspaceId} has no Deepgram key; ${existing.id} uses the platform key`,
+          );
+        }
+      }
       const diarizationResult = await this.diarizeAudio(
         micUrl,
         sysUrl,
         recordingLanguage,
         keyterms,
         inPerson,
+        deepgramKey,
       );
       let { combinedText, utterances } = diarizationResult;
       const { totalSeconds } = diarizationResult;

@@ -5,6 +5,7 @@ import prisma from "../prisma/prismaClient";
 import { logger } from "./logger";
 import { withDecryptedWorkspaceKeys } from "./workspaceSecrets";
 import { SecretCryptoError } from "./secretCrypto";
+import { PLATFORM_KEY_SELECT, usesPlatformKeys } from "../services/platformKeys";
 import {
   getEmbeddingsProvider,
   getLlmProvider,
@@ -145,18 +146,18 @@ export function getConfiguredModel(modelKey?: string, apiKey?: string) {
  */
 export async function resolveWorkspaceApiKey(workspaceId: string): Promise<string> {
   let apiKey: string | undefined = undefined;
-  let isCourtesy = false;
+  let platformKeys = false;
 
   try {
     const workspace = withDecryptedWorkspaceKeys(
       await prisma.workspace.findUnique({
         where: { id: workspaceId },
-        select: { openRouterKey: true, isCourtesy: true },
+        select: { openRouterKey: true, ...PLATFORM_KEY_SELECT },
       }),
     );
 
-    if (workspace?.isCourtesy) {
-      isCourtesy = true;
+    if (usesPlatformKeys(workspace)) {
+      platformKeys = true;
     }
 
     // Only accept valid-looking OpenRouter keys (sk-or-)
@@ -170,8 +171,8 @@ export async function resolveWorkspaceApiKey(workspaceId: string): Promise<strin
     logger.error(`[resolveWorkspaceApiKey] Failed to fetch workspace ${workspaceId}`, error);
   }
 
-  // Fallback to the global key ONLY if the workspace has courtesy access
-  if (!apiKey && isCourtesy) {
+  // The platform's key only for courtesy workspaces and paid MANAGED plans.
+  if (!apiKey && platformKeys) {
     apiKey = EnvUtils.get("OPENROUTER_API_KEY");
   }
 
@@ -292,10 +293,10 @@ export async function resolveWorkspaceEmbeddingConfig(
     const workspace = withDecryptedWorkspaceKeys(
       await prisma.workspace.findUnique({
         where: { id: workspaceId },
-        select: { openRouterKey: true, openaiKey: true, isCourtesy: true },
+        select: { openRouterKey: true, openaiKey: true, ...PLATFORM_KEY_SELECT },
       }),
     );
-    if (workspace?.isCourtesy) isCourtesy = true;
+    if (usesPlatformKeys(workspace)) isCourtesy = true;
 
     const orKey = workspace?.openRouterKey?.trim();
     if (orKey && orKey.startsWith("sk-or-")) {

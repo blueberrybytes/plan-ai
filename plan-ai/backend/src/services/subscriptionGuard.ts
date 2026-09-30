@@ -8,7 +8,7 @@ import { logger } from "../utils/logger";
  * short grace window (Stripe handles dunning + retries) but UNPAID/CANCELED
  * locks the workspace immediately.
  */
-const ACTIVE_STATUSES: SubscriptionStatus[] = ["ACTIVE", "TRIALING", "PAST_DUE"];
+export const ACTIVE_STATUSES: SubscriptionStatus[] = ["ACTIVE", "TRIALING", "PAST_DUE"];
 
 export class SubscriptionRequiredError extends Error {
   status = 402; // Payment Required

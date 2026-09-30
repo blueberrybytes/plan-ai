@@ -5,7 +5,6 @@ import { signInInfoFromToken, verifyFirebaseIdToken } from "../middleware/authMi
 import { resolveWorkspaceAccess } from "../services/workspaceAccess";
 import prisma from "../prisma/prismaClient";
 import { logger } from "../utils/logger";
-import EnvUtils from "../utils/EnvUtils";
 import { withDecryptedWorkspaceKeys } from "../utils/workspaceSecrets";
 import { EchoDeduper, wordsFromDeepgram, wordsFromText } from "../utils/echoDedup";
 import { LiveTranscriptionEvents } from "@deepgram/sdk";
@@ -24,6 +23,7 @@ import { aiUsageService } from "../services/aiUsageService";
 import { checkSubscription } from "../services/subscriptionGuard";
 import { checkUsageLimit, UsageLimitExceededError } from "../services/usageLimitGuard";
 import { deepgramPrivacyOptions } from "../utils/deepgramPrivacy";
+import { deepgramKeyFor } from "../services/platformKeys";
 
 export function setupAudioStream(server: Server) {
   const wss = new WebSocketServer({ noServer: true });
@@ -338,22 +338,10 @@ export function setupAudioStream(server: Server) {
         console.log("[DEBUG WS] using the self-hosted Whisper server");
         liveTranscriber = createWhisperLiveTranscriber();
       } else {
-        console.log("[DEBUG WS] looking up DEEPGRAM_API_KEY");
-        let deepgramApiKey: string | undefined = undefined;
-        const isCourtesy = workspaceRecord?.isCourtesy ?? false;
-
-        // Deepgram keys are 32+ char hex strings — basic shape check rejects obvious junk
-        if (
-          workspaceRecord?.deepgramKey &&
-          /^[a-f0-9]{32,}$/i.test(workspaceRecord.deepgramKey.trim())
-        ) {
-          deepgramApiKey = workspaceRecord.deepgramKey.trim();
-        }
-
-        // Fall back to the global key ONLY if the workspace has courtesy access
-        if (!deepgramApiKey && isCourtesy) {
-          deepgramApiKey = EnvUtils.get("DEEPGRAM_API_KEY");
-        }
+        console.log("[DEBUG WS] looking up the Deepgram key");
+        // The workspace's own key, or the platform's for courtesy and paid
+        // MANAGED plans (see services/platformKeys.ts).
+        const deepgramApiKey = deepgramKeyFor(workspaceRecord);
 
         if (!deepgramApiKey) {
           ws.send(
