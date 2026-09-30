@@ -1,0 +1,14 @@
+diff --git a/node_modules/expo-router/ios/LinkPreview/LinkPreviewNativeActionView.swift b/node_modules/expo-router/ios/LinkPreview/LinkPreviewNativeActionView.swift
+index 3884b78..4253627 100644
+--- a/node_modules/expo-router/ios/LinkPreview/LinkPreviewNativeActionView.swift
++++ b/node_modules/expo-router/ios/LinkPreview/LinkPreviewNativeActionView.swift
+@@ -137,7 +137,8 @@ class LinkPreviewNativeActionView: RouterViewWithLogger, LinkPreviewMenuUpdatabl
+     baseUiAction.attributes = attributes
+     baseUiAction.state = isOn == true ? .on : .off
+ 
+-    if let subtitle = subtitle {
++    // Guarded: Xcode 27 refuses this iOS 16 property with a 15.1 minimum.
++    if #available(iOS 16.0, *), let subtitle = subtitle {
+       baseUiAction.subtitle = subtitle
+     }
+     if let label = discoverabilityLabel {
