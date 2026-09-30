@@ -49,14 +49,14 @@ export class ImageGenerationService {
         signal: AbortSignal.timeout(30000),
       });
       if (!response.ok) {
-        logger.warn(`[ImageGeneration] OpenRouter answered ${response.status}`);
+        logger.error(`[ImageGeneration] OpenRouter answered ${response.status}`);
         return null;
       }
 
       const data = await response.json();
       const imageUrl: unknown = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
       if (typeof imageUrl !== "string" || !imageUrl.startsWith("data:image/")) {
-        logger.warn("[ImageGeneration] No image data returned");
+        logger.error("[ImageGeneration] No image data returned");
         return null;
       }
 

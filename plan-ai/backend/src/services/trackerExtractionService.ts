@@ -160,23 +160,36 @@ async function callModel(
     .filter(Boolean)
     .join("\n\n");
 
-  const response = await generateText({
-    model,
-    providerOptions: {
-      openrouter: {
-        ...structured.openrouter,
-        provider: { ...privacyProviderPrefs(), data_collection: "deny", zdr: true },
+  let response;
+  try {
+    response = await generateText({
+      model,
+      providerOptions: {
+        openrouter: {
+          ...structured.openrouter,
+          provider: { ...privacyProviderPrefs(), data_collection: "deny", zdr: true },
+        },
       },
-    },
-    output: Output.object({
-      name: "TrackerEntries",
-      description: "Tracker entries found in the user's text.",
-      schema: ExtractionSchema,
-    }),
-    system: SYSTEM_PROMPT,
-    prompt,
-    temperature: 0,
-  });
+      output: Output.object({
+        name: "TrackerEntries",
+        description: "Tracker entries found in the user's text.",
+        schema: ExtractionSchema,
+      }),
+      system: SYSTEM_PROMPT,
+      prompt,
+      temperature: 0,
+    });
+  } catch (err) {
+    // The provider's error can carry the note or the model's answer, which is
+    // health data. Only its kind and HTTP status go on, to the logs and Sentry.
+    const e = err as { name?: string; statusCode?: number };
+    throw Object.assign(
+      new Error(
+        `Tracker AI call failed: ${e?.name ?? "Error"}${e?.statusCode ? ` ${e.statusCode}` : ""}`,
+      ),
+      { name: "TrackerAiError" },
+    );
+  }
 
   if (response.totalUsage) {
     await aiUsageService.logUsage({
@@ -277,10 +290,7 @@ export async function extractFromNote(
     where: {
       id: note.id,
       version: note.version,
-      OR: [
-        { trackersExtractedVersion: null },
-        { trackersExtractedVersion: { not: note.version } },
-      ],
+      OR: [{ trackersExtractedVersion: null }, { trackersExtractedVersion: { not: note.version } }],
     },
     data: { trackersExtractedVersion: note.version, updatedAt: note.updatedAt },
   });

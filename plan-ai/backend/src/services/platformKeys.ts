@@ -1,6 +1,7 @@
 import type { SubscriptionStatus, SubscriptionTrack } from "@prisma/client";
 import prisma from "../prisma/prismaClient";
 import EnvUtils from "../utils/EnvUtils";
+import { logger } from "../utils/logger";
 import { withDecryptedWorkspaceKeys } from "../utils/workspaceSecrets";
 import { ACTIVE_STATUSES } from "./subscriptionGuard";
 
@@ -43,7 +44,12 @@ export function deepgramKeyFor(
 ): string | null {
   const own = workspace?.deepgramKey?.trim();
   if (own && DEEPGRAM_KEY_SHAPE.test(own)) return own;
-  if (usesPlatformKeys(workspace)) return EnvUtils.get("DEEPGRAM_API_KEY", "") || null;
+  if (usesPlatformKeys(workspace)) {
+    const platform = EnvUtils.get("DEEPGRAM_API_KEY", "");
+    // A paying MANAGED workspace cannot record without it: a server problem.
+    if (!platform) logger.error("[platformKeys] DEEPGRAM_API_KEY is not set");
+    return platform || null;
+  }
   return null;
 }
 

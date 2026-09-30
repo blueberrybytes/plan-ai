@@ -15,7 +15,8 @@ const signed = async (ref: string | null | undefined): Promise<string | null> =>
   try {
     return await readableUrl(ref, DISPLAY_URL_TTL_MS);
   } catch (err) {
-    logger.warn(`[Export] Could not sign ${ref}: ${(err as Error)?.message}`);
+    // No path in the message: it can hold a user's file name.
+    logger.error("[Export] Could not sign a file link", err);
     return null;
   }
 };

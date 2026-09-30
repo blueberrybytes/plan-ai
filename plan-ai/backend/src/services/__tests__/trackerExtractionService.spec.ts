@@ -162,9 +162,12 @@ describe("reading a note", () => {
     db.tracker.findMany.mockResolvedValue([gym]);
     db.note.updateMany.mockResolvedValue({ count: 1 });
     db.trackerEntry.findMany.mockResolvedValue([]);
-    mocks.generateText.mockRejectedValue(new Error("provider down"));
+    // The provider's error repeats the note: it must not travel on.
+    mocks.generateText.mockRejectedValue(new Error(`provider down: ${note.body}`));
 
-    await expect(extractFromNote(owner, "n1", today)).rejects.toThrow("provider down");
+    const error = await extractFromNote(owner, "n1", today).catch((e: Error) => e);
+    expect((error as Error).message).toContain("Tracker AI call failed");
+    expect((error as Error).message).not.toContain("boiled eggs");
     expect(db.note.updateMany.mock.calls[1][0].data.trackersExtractedVersion).toBeNull();
   });
 

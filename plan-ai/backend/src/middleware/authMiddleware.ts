@@ -36,6 +36,10 @@ const accountState = new Map<string, { validAfterSec: number; disabled: boolean;
 
 const revokedError = (code: string, message: string) => Object.assign(new Error(message), { code });
 
+// Firebase being down fails this check on every request: report it to
+// Sentry once a minute, not once per request.
+let lastAccountCheckReport = 0;
+
 async function assertNotRevoked(decoded: DecodedIdToken): Promise<void> {
   const now = Date.now();
   let state = accountState.get(decoded.uid);
@@ -57,7 +61,12 @@ async function assertNotRevoked(decoded: DecodedIdToken): Promise<void> {
       }
       // Firebase unreachable: keep serving with the last known state rather
       // than taking the whole API down. The token signature is still checked.
-      logger.warn(`[Auth] Could not check account state for ${decoded.uid}: ${err?.message}`);
+      if (now - lastAccountCheckReport > 60_000) {
+        lastAccountCheckReport = now;
+        logger.error("[Auth] Could not check account state with Firebase", err);
+      } else {
+        logger.warn(`[Auth] Could not check account state for ${decoded.uid}: ${err?.message}`);
+      }
       if (!state) return;
     }
   }
