@@ -45,9 +45,11 @@ const WorkspaceSwitcher: React.FC = () => {
     // Polling or refetch rules can go here if needed
   });
 
-  // Auto-select the first workspace if none is active
+  // Pick the first workspace when none is active, or when the stored one is
+  // no longer in the list (the user was removed, or the workspace deleted).
   useEffect(() => {
-    if (workspaces && workspaces.length > 0 && !activeWorkspaceId) {
+    if (!workspaces || workspaces.length === 0) return;
+    if (!activeWorkspaceId || !workspaces.some((w) => w.id === activeWorkspaceId)) {
       dispatch(setActiveWorkspaceId(workspaces[0].id));
     }
   }, [workspaces, activeWorkspaceId, dispatch]);
@@ -133,7 +135,8 @@ const WorkspaceSwitcher: React.FC = () => {
               bgcolor: "background.paper",
               mt: 1,
               boxShadow: "0 4px 20px rgba(0,0,0,0.5)",
-              border: "1px solid rgba(255,255,255,0.1)",
+              border: 1,
+              borderColor: "divider",
               borderRadius: "12px",
             },
           },
@@ -142,12 +145,13 @@ const WorkspaceSwitcher: React.FC = () => {
           borderRadius: "12px",
           color: "text.primary",
           fontWeight: 600,
-          bgcolor: "rgba(255,255,255,0.03)",
+          // Theme colours, so the box shows on light and dark backgrounds.
+          bgcolor: "action.hover",
           "& .MuiOutlinedInput-notchedOutline": {
-            borderColor: "rgba(255, 255, 255, 0.08)",
+            borderColor: "divider",
           },
           "&:hover .MuiOutlinedInput-notchedOutline": {
-            borderColor: "rgba(255, 255, 255, 0.2)",
+            borderColor: "text.secondary",
           },
           "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
             borderColor: "primary.main",
