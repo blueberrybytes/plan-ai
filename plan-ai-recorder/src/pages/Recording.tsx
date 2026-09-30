@@ -36,7 +36,6 @@ import {
   Headset as HeadsetIcon,
   BookmarkAdd as BookmarkAddIcon,
   AttachFile as AttachIcon,
-  InsertDriveFileOutlined as FileIcon,
 } from "@mui/icons-material";
 import { IconButton, Popover, TextField } from "@mui/material";
 import { useNavigate } from "react-router-dom";
@@ -143,7 +142,9 @@ const ChatMessageItem = ({
             msg.role === "user" ? "primary.contrastText" : "text.secondary",
         }}
       >
-        <ReactMarkdown components={markdownComponents}>{msg.content}</ReactMarkdown>
+        <ReactMarkdown components={markdownComponents}>
+          {msg.content}
+        </ReactMarkdown>
       </Box>
 
       <IconButton
@@ -1714,7 +1715,10 @@ const Recording: React.FC = () => {
   useEffect(() => {
     if (phase !== "recording") return;
     const iv = setInterval(() => {
-      if (pausedRef.current || recorderRef.current?.currentState !== "recording")
+      if (
+        pausedRef.current ||
+        recorderRef.current?.currentState !== "recording"
+      )
         return;
       const now = Date.now();
       const silentFor = now - lastActivityRef.current;
@@ -1843,8 +1847,8 @@ const Recording: React.FC = () => {
             {chatDocuments.length > 0 && (
               <Typography variant="caption" color="text.secondary">
                 {chatDocuments.length === 1
-                  ? `${chatDocuments[0].name} (attached to the live chat) will be added to the meeting's context.`
-                  : `The ${chatDocuments.length} files attached to the live chat will be added to the meeting's context.`}
+                  ? `${chatDocuments[0].name}, attached in the live chat, will be saved to this project.`
+                  : `The ${chatDocuments.length} files attached in the live chat will be saved to this project.`}
               </Typography>
             )}
 
@@ -2994,7 +2998,9 @@ const Recording: React.FC = () => {
                     color: "text.secondary",
                   }}
                 >
-                  <ReactMarkdown components={markdownComponents}>{liveSummary}</ReactMarkdown>
+                  <ReactMarkdown components={markdownComponents}>
+                    {liveSummary}
+                  </ReactMarkdown>
                 </Box>
               ) : (
                 <Typography
@@ -3090,14 +3096,15 @@ const Recording: React.FC = () => {
                         key={d.id}
                         title={
                           d.truncated
-                            ? "Long file: the chat reads only the first part. The whole file is added to the context when you save."
-                            : "The chat reads this file. It is added to the context when you save."
+                            ? "Long file: the chat reads only the first part. The whole file is saved to the project."
+                            : "Loaded. The chat reads this file with every question."
                         }
                       >
                         <Chip
                           size="small"
                           variant="outlined"
-                          icon={<FileIcon />}
+                          color="success"
+                          icon={<DoneIcon />}
                           label={d.truncated ? `${d.name} (partial)` : d.name}
                           onDelete={() =>
                             setChatDocuments((p) =>
@@ -3122,6 +3129,17 @@ const Recording: React.FC = () => {
                         sx={{ width: "100%" }}
                       >
                         {chatAttachError}
+                      </Typography>
+                    )}
+                    {chatDocuments.length > 0 && (
+                      <Typography
+                        variant="caption"
+                        color="text.secondary"
+                        sx={{ width: "100%" }}
+                      >
+                        {chatDocuments.length === 1
+                          ? "Loaded. The chat reads it with every question, and it is saved to the meeting's project when you press Stop & Save."
+                          : `${chatDocuments.length} files loaded. The chat reads them with every question, and they are saved to the meeting's project when you press Stop & Save.`}
                       </Typography>
                     )}
                   </Stack>
