@@ -1,8 +1,15 @@
-import React, { useRef, useState } from "react";
+import React, { useCallback, useRef, useState } from "react";
 import { Alert, Box, IconButton, InputBase, Tooltip } from "@mui/material";
 import { ArrowBack as BackIcon } from "@mui/icons-material";
+import { useDispatch } from "react-redux";
 import { useTranslation } from "react-i18next";
+import type { ThunkDispatch, UnknownAction } from "@reduxjs/toolkit";
 import type { Note } from "../../store/apis/notesApi";
+import { usePersonalMode } from "../personal/usePersonalMode";
+import LogToTrackersButton from "../trackers/LogToTrackersButton";
+import NoteTrackersPanel from "../trackers/NoteTrackersPanel";
+import { extractInBackground } from "../trackers/extractInBackground";
+import { useLogNoteToTrackers } from "../trackers/useLogNoteToTrackers";
 import NoteBodyEditor, { type NoteBodyEditorHandle } from "./NoteBodyEditor";
 import NoteSaveStatus from "./NoteSaveStatus";
 import NoteToolbar from "./NoteToolbar";
@@ -37,16 +44,26 @@ const NoteEditor: React.FC<NoteEditorProps> = ({
   onRemoved,
 }) => {
   const { t } = useTranslation();
+  const dispatch = useDispatch<ThunkDispatch<unknown, unknown, UnknownAction>>();
   const periodLabel = usePeriodLabel();
+  const personal = usePersonalMode();
   const [title, setTitle] = useState(note.title ?? "");
   const [body, setBody] = useState({ markdown: note.body, revision: 0 });
   const [created, setCreated] = useState(exists);
   const bodyRef = useRef<NoteBodyEditorHandle>(null);
+  const createdRef = useRef(exists);
+  // The user typed in this visit: leaving the note may read it for trackers.
+  const editedRef = useRef(false);
 
-  const { status, edit, setMeta, flush } = useNoteSaver({
+  const inTrash = Boolean(note.deletedAt);
+  const editable = note.isMine && !inTrash;
+  const trackersOn = personal.trackersReady && editable;
+
+  const { status, edit, setMeta, flush, hasUnsavedWork } = useNoteSaver({
     note,
     exists,
     onCreated: (saved) => {
+      createdRef.current = true;
       setCreated(true);
       onCreated?.(saved);
     },
@@ -54,10 +71,20 @@ const NoteEditor: React.FC<NoteEditorProps> = ({
       setTitle(server.title ?? "");
       setBody((previous) => ({ markdown: server.body, revision: previous.revision + 1 }));
     },
+    onLeave: (onServer) => {
+      if (onServer && editedRef.current && trackersOn && personal.autoExtract) {
+        extractInBackground(dispatch, note.id);
+      }
+    },
   });
 
-  const inTrash = Boolean(note.deletedAt);
-  const editable = note.isMine && !inTrash;
+  const isCreated = useCallback(() => createdRef.current, []);
+  const trackerLog = useLogNoteToTrackers({
+    noteId: note.id,
+    flush,
+    isCreated,
+    hasUnsavedWork,
+  });
   const titlePlaceholder = periodLabel(note) ?? t("notes.titlePlaceholder");
 
   return (
@@ -83,6 +110,9 @@ const NoteEditor: React.FC<NoteEditorProps> = ({
         )}
         {editable && <NoteSaveStatus status={status} />}
         <Box sx={{ flex: 1 }} />
+        {trackersOn && (
+          <LogToTrackersButton loading={trackerLog.logging} onClick={() => void trackerLog.log()} />
+        )}
         <NoteToolbar
           note={note}
           exists={created}
@@ -122,6 +152,7 @@ const NoteEditor: React.FC<NoteEditorProps> = ({
           autoFocus={autoFocus === "title"}
           inputProps={{ "aria-label": t("notes.titlePlaceholder"), maxLength: 200 }}
           onChange={(event) => {
+            editedRef.current = true;
             setTitle(event.target.value);
             edit({ title: event.target.value });
           }}
@@ -140,8 +171,18 @@ const NoteEditor: React.FC<NoteEditorProps> = ({
           editable={editable}
           autoFocus={autoFocus === "body"}
           placeholder={t("notes.bodyPlaceholder")}
-          onChange={(markdown) => edit({ body: markdown })}
+          onChange={(markdown) => {
+            editedRef.current = true;
+            edit({ body: markdown });
+          }}
         />
+        {trackersOn && created && (
+          <NoteTrackersPanel
+            noteId={note.id}
+            hideCalories={personal.hideCalories}
+            missingKey={trackerLog.missingKey}
+          />
+        )}
       </Box>
     </Box>
   );

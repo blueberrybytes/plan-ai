@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Box,
   MenuItem,
@@ -15,12 +15,27 @@ import {
 } from "../../store/slices/app/appSelector";
 import { setActiveWorkspaceId } from "../../store/slices/app/appSlice";
 import { useGetMyWorkspacesQuery } from "../../store/apis/workspaceApi";
-import { Business as BusinessIcon, Person as PersonIcon } from "@mui/icons-material";
+import { useGetPersonalStatusQuery } from "../../store/apis/personalApi";
+import {
+  AddCircleOutline as AddIcon,
+  Business as BusinessIcon,
+  Person as PersonIcon,
+} from "@mui/icons-material";
+import { useTranslation } from "react-i18next";
+import PersonalConsentDialog from "../personal/PersonalConsentDialog";
+import { useSwitchToPersonal } from "../personal/useSwitchToPersonal";
+
+/** Select value of the "Personal space" entry. It opens the consent dialog. */
+const PERSONAL_OPTION = "__personal__";
 
 const WorkspaceSwitcher: React.FC = () => {
   const dispatch = useDispatch();
   const activeWorkspaceId = useSelector(selectActiveWorkspaceId);
   const isCollapsed = useSelector(selectSidebarCollapsed);
+  const { t } = useTranslation();
+  const [consentOpen, setConsentOpen] = useState(false);
+  const switchToPersonal = useSwitchToPersonal();
+  const { data: personal } = useGetPersonalStatusQuery();
 
   const {
     data: workspaces,
@@ -39,6 +54,10 @@ const WorkspaceSwitcher: React.FC = () => {
 
   const handleChange = (event: SelectChangeEvent<string>) => {
     const newId = event.target.value;
+    if (newId === PERSONAL_OPTION) {
+      setConsentOpen(true);
+      return;
+    }
     if (newId && newId !== activeWorkspaceId) {
       // Dispatching setActiveWorkspaceId naturally intercepts at rootReducers.ts
       // which aggressively purges every single workspace-dependent RTK query cache instantly!
@@ -59,6 +78,11 @@ const WorkspaceSwitcher: React.FC = () => {
   }
 
   const activeWorkspace = workspaces.find((w) => w.id === activeWorkspaceId) || workspaces[0];
+  // After consent is withdrawn the personal workspace stays in the list, and
+  // opening it asks for consent again. The extra entry is for the first time.
+  const offerPersonal =
+    Boolean(personal?.available && !personal.enabled) &&
+    !workspaces.some((w) => w.kind === "PERSONAL");
 
   if (isCollapsed) {
     // Mini view
@@ -78,7 +102,7 @@ const WorkspaceSwitcher: React.FC = () => {
           }}
           title={activeWorkspace.name}
         >
-          {activeWorkspace.tier === "FREE" ? (
+          {activeWorkspace.kind === "PERSONAL" ? (
             <PersonIcon fontSize="small" />
           ) : (
             <BusinessIcon fontSize="small" />
@@ -90,6 +114,14 @@ const WorkspaceSwitcher: React.FC = () => {
 
   return (
     <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+      <PersonalConsentDialog
+        open={consentOpen}
+        onClose={() => setConsentOpen(false)}
+        onEnabled={(status) => {
+          setConsentOpen(false);
+          void switchToPersonal(status.workspaceId);
+        }}
+      />
       <Select
         value={activeWorkspaceId || activeWorkspace.id}
         onChange={handleChange}
@@ -142,7 +174,7 @@ const WorkspaceSwitcher: React.FC = () => {
               my: 0.5,
             }}
           >
-            {ws.tier === "FREE" ? (
+            {ws.kind === "PERSONAL" ? (
               <PersonIcon fontSize="small" color="action" sx={{ flexShrink: 0 }} />
             ) : (
               <BusinessIcon fontSize="small" color="action" sx={{ flexShrink: 0 }} />
@@ -152,11 +184,36 @@ const WorkspaceSwitcher: React.FC = () => {
                 {ws.name}
               </Typography>
               <Typography variant="caption" color="text.secondary" noWrap sx={{ display: "block" }}>
-                {ws.tier === "FREE" ? "Personal" : "Team"} • {ws.role}
+                {ws.kind === "PERSONAL"
+                  ? t("workspaceSwitcher.personal")
+                  : `${t("workspaceSwitcher.team")} • ${ws.role}`}
               </Typography>
             </Box>
           </MenuItem>
         ))}
+        {offerPersonal && (
+          <MenuItem
+            value={PERSONAL_OPTION}
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              gap: 1.5,
+              borderRadius: "8px",
+              mx: 1,
+              my: 0.5,
+            }}
+          >
+            <AddIcon fontSize="small" color="action" sx={{ flexShrink: 0 }} />
+            <Box sx={{ flexGrow: 1, minWidth: 0, overflow: "hidden" }}>
+              <Typography variant="body2" sx={{ fontWeight: 600 }} noWrap>
+                {t("workspaceSwitcher.personalSpace")}
+              </Typography>
+              <Typography variant="caption" color="text.secondary" noWrap sx={{ display: "block" }}>
+                {t("workspaceSwitcher.personalSpaceHint")}
+              </Typography>
+            </Box>
+          </MenuItem>
+        )}
       </Select>
     </Box>
   );

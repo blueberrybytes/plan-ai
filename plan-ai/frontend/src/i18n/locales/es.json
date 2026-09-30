@@ -957,7 +957,8 @@
       "integrations": "Integraciones",
       "recordings": "Grabaciones",
       "users": "Usuarios",
-      "billing": "Facturación"
+      "billing": "Facturación",
+      "trackers": "Seguimiento"
     },
     "tooltip": {
       "expand": "Expandir barra lateral",
@@ -1863,6 +1864,256 @@
       "purged": "Nota borrada para siempre.",
       "todayFailed": "No se ha podido abrir la nota de hoy. Vuelve a intentarlo.",
       "actionFailed": "No ha funcionado. Vuelve a intentarlo."
+    }
+  },
+  "workspaceSwitcher": {
+    "personal": "Personal",
+    "team": "Equipo",
+    "personalSpace": "Espacio personal",
+    "personalSpaceHint": "Notas privadas y seguimiento"
+  },
+  "personal": {
+    "consent": {
+      "title": "Activar tu espacio personal",
+      "what": "Tu espacio personal guarda notas privadas y el seguimiento de cosas como comida, peso, pasos y hábitos.",
+      "healthData": "En la UE, la comida, el peso y los pasos cuentan como datos de salud. Para guardarlos necesitamos tu consentimiento explícito.",
+      "private": "Estos datos son solo tuyos. Ningún propietario ni administrador de ningún espacio de trabajo puede verlos, y el asistente no los lee.",
+      "ai": "Cuando se lee una nota con IA, la petición usa tu propia clave de OpenRouter y pide proveedores que no guardan datos.",
+      "estimates": "Las calorías son estimaciones. No son consejo médico ni nutricional.",
+      "withdraw": "Puedes retirar tu consentimiento cuando quieras en los ajustes de Seguimiento. Eso borra todos tus seguimientos y registros.",
+      "checkbox": "He leído esto y acepto guardar mis datos de salud en mi espacio personal.",
+      "cancel": "Ahora no",
+      "accept": "Aceptar y activar",
+      "outdated": "El texto ha cambiado desde que lo aceptaste. Léelo de nuevo, por favor.",
+      "changedNow": "El texto ha cambiado mientras esta ventana estaba abierta. Léelo de nuevo y acéptalo.",
+      "failed": "No se ha podido activar el modo personal. Inténtalo de nuevo."
+    },
+    "settings": {
+      "title": "Ajustes del espacio personal",
+      "hideCalories": "Ocultar calorías",
+      "hideCaloriesHelp": "El seguimiento de calorías muestra alimentos y gramos, y si has cumplido el objetivo, sin números.",
+      "autoExtract": "Leer las notas automáticamente al salir de ellas",
+      "autoExtractHelp": "Al salir de una nota que has editado, la IA la lee y propone registros. Nada cuenta hasta que lo aceptas.",
+      "withdrawHelp": "Retirar el consentimiento borra todos tus seguimientos y registros. Tus notas se quedan.",
+      "withdraw": "Retirar el consentimiento y borrar los datos de seguimiento",
+      "close": "Cerrar"
+    },
+    "withdraw": {
+      "title": "¿Retirar el consentimiento?",
+      "body": "Esto borra todos tus seguimientos y todos sus registros, también las propuestas pendientes de revisar. No se puede deshacer.",
+      "notesStay": "Tus notas se quedan en tu espacio personal. Bórralas desde Notas si quieres eliminarlas.",
+      "confirm": "Retirar y borrar",
+      "cancel": "Cancelar",
+      "done": "Consentimiento retirado. Se han borrado tus seguimientos y registros."
+    }
+  },
+  "trackers": {
+    "title": "Seguimiento",
+    "subtitle": "Solo lo ves tú. Nadie más de ningún espacio de trabajo tiene acceso.",
+    "newTracker": "Nuevo seguimiento",
+    "showArchived": "Mostrar archivados",
+    "value": {
+      "done": "Hecho",
+      "days_one": "{{count}} día",
+      "days_other": "{{count}} días"
+    },
+    "day": {
+      "today": "Hoy",
+      "yesterday": "Ayer"
+    },
+    "kcal": {
+      "about": "unas {{value}} kcal",
+      "aboutRange": "unas {{value}} kcal ({{low}} a {{high}})"
+    },
+    "food": {
+      "grams": "{{grams}} g",
+      "gramsRange": "{{grams}} g ({{low}} a {{high}} g)",
+      "kcal": "{{kcal}} kcal",
+      "usda": "USDA",
+      "ai": "Estimación IA"
+    },
+    "proposals": {
+      "title_one": "{{count}} registro por revisar",
+      "title_other": "{{count}} registros por revisar",
+      "hint": "Nada cuenta hasta que lo aceptas.",
+      "acceptAll": "Aceptar todo",
+      "accept": "Aceptar",
+      "edit": "Editar valor",
+      "reject": "Rechazar",
+      "value": "Valor",
+      "unknownTracker": "Seguimiento"
+    },
+    "actions": {
+      "save": "Guardar",
+      "cancel": "Cancelar",
+      "add": "Añadir",
+      "doneToday": "Hecho hoy",
+      "delete": "Borrar",
+      "restore": "Restaurar",
+      "archive": "Archivar",
+      "create": "Crear",
+      "close": "Cerrar"
+    },
+    "goal": {
+      "atLeast": {
+        "day": "Objetivo: al menos {{goal}} al día",
+        "week": "Objetivo: al menos {{goal}} a la semana"
+      },
+      "atMost": {
+        "day": "Objetivo: como mucho {{goal}} al día",
+        "week": "Objetivo: como mucho {{goal}} a la semana"
+      },
+      "progress": {
+        "day": "{{current}} de {{goal}} hoy",
+        "week": "{{current}} de {{goal}} esta semana"
+      },
+      "met": {
+        "day": "Objetivo cumplido hoy",
+        "week": "Objetivo cumplido esta semana"
+      },
+      "notMet": {
+        "day": "Objetivo no cumplido hoy",
+        "week": "Objetivo aún no cumplido esta semana"
+      }
+    },
+    "chart": {
+      "nothing": "Sin registros",
+      "logged": "Registrado",
+      "met": "Objetivo cumplido",
+      "notMet": "Objetivo no cumplido"
+    },
+    "streak": {
+      "days_one": "{{count}} día seguido",
+      "days_other": "{{count}} días seguidos",
+      "weeks_one": "{{count}} semana seguida",
+      "weeks_other": "{{count}} semanas seguidas"
+    },
+    "card": {
+      "doneToday": "Hecho hoy",
+      "notDoneToday": "Sin hacer hoy",
+      "loggedToday": "Registrado hoy",
+      "nothingToday": "Nada registrado hoy",
+      "noValue": "Aún sin valor",
+      "archived": "Archivado",
+      "menu": "Opciones del seguimiento",
+      "edit": "Editar",
+      "history": "Historial",
+      "restore": "Restaurar"
+    },
+    "addEntry": {
+      "title": "Añadir a {{name}}",
+      "value": "Valor",
+      "date": "Día",
+      "label": "Nota (opcional)"
+    },
+    "form": {
+      "createTitle": "Nuevo seguimiento",
+      "editTitle": "Editar seguimiento",
+      "presets": "Empezar desde",
+      "name": "Nombre",
+      "kind": "Tipo",
+      "kinds": {
+        "NUMBER": "Número",
+        "CHECK": "Hecho o no",
+        "CALORIES": "Calorías"
+      },
+      "kindHelp": {
+        "NUMBER": "Un número que apuntas, como pasos, peso u horas.",
+        "CHECK": "Algo que haces o no, como ir al gimnasio.",
+        "CALORIES": "La IA estima las kcal de lo que has comido. Siempre en kcal."
+      },
+      "unit": "Unidad",
+      "unitPlaceholder": "pasos, kg, h",
+      "aggregation": "Cómo se suma en un día",
+      "aggregations": {
+        "SUM": "Sumar los valores",
+        "LAST": "Quedarse con el último valor",
+        "AVERAGE": "Media de los valores"
+      },
+      "goal": "Objetivo",
+      "goals": {
+        "NONE": "Sin objetivo",
+        "AT_LEAST": "Al menos",
+        "AT_MOST": "Como mucho"
+      },
+      "goalValue": "Valor del objetivo",
+      "goalDays": "Días",
+      "goalPeriod": "Por",
+      "periods": {
+        "DAY": "Día",
+        "WEEK": "Semana"
+      },
+      "instructions": "Notas para la IA",
+      "instructionsHelp": "Por ejemplo: cuenta solo los paseos al aire libre.",
+      "deleteTitle": "¿Borrar el seguimiento?",
+      "deleteBody": "Esto borra el seguimiento y todos sus registros. No se puede deshacer.",
+      "deleteHint": "Para conservar los registros, archiva el seguimiento.",
+      "errors": {
+        "name": "Ponle un nombre al seguimiento.",
+        "goal": "El objetivo tiene que ser un número mayor que 0."
+      }
+    },
+    "presets": {
+      "calories": "Calorías",
+      "steps": "Pasos",
+      "weight": "Peso",
+      "sleep": "Sueño",
+      "gym": "Gimnasio",
+      "water": "Agua",
+      "custom": "Personalizado"
+    },
+    "history": {
+      "title": "{{name}}: historial",
+      "empty": "Aún no hay registros.",
+      "edit": "Editar registro",
+      "delete": "Borrar registro"
+    },
+    "toast": {
+      "archived": "Seguimiento archivado.",
+      "restored": "Seguimiento restaurado.",
+      "deleted": "Seguimiento y registros borrados."
+    },
+    "errors": {
+      "generic": "Algo ha fallado. Inténtalo de nuevo."
+    },
+    "extract": {
+      "noTrackers": "Crea primero un seguimiento y así la IA podrá registrar en él.",
+      "empty": "Todavía no hay nada que leer.",
+      "unchanged": "Esta nota ya se ha leído. No hay nada nuevo que registrar.",
+      "nothingFound": "No se ha encontrado nada que registrar.",
+      "failed": "No se ha podido leer el texto. Inténtalo de nuevo.",
+      "consentOutdated": "El texto del consentimiento ha cambiado. Abre Seguimiento para leerlo y aceptarlo de nuevo."
+    },
+    "missingKey": {
+      "body": "Leer con IA necesita una clave de OpenRouter en tu espacio personal. Añádela en los ajustes del espacio de trabajo.",
+      "action": "Abrir ajustes"
+    },
+    "quickLog": {
+      "placeholder": "¿Qué has comido o hecho?",
+      "submit": "Registrar"
+    },
+    "empty": {
+      "title": "Aún no tienes seguimientos",
+      "body": "Elige uno para empezar. Puedes cambiarlo después."
+    },
+    "footer": {
+      "estimates": "Las calorías son estimaciones, no consejo médico ni nutricional.",
+      "aiOnly": "En la última lectura, las calorías vienen solo de estimaciones de la IA, no de una base de datos de alimentos."
+    },
+    "gate": {
+      "consentTitle": "El modo personal está desactivado",
+      "consentBody": "El seguimiento necesita tu consentimiento para guardar datos de salud.",
+      "outdatedTitle": "Lee el nuevo texto del consentimiento",
+      "outdatedBody": "El texto ha cambiado desde que lo aceptaste. El seguimiento queda en pausa hasta que lo aceptes de nuevo.",
+      "consentAction": "Leer y aceptar",
+      "switchTitle": "El seguimiento está en tu espacio personal",
+      "switchBody": "Cambia a tu espacio de trabajo personal para verlo.",
+      "switchAction": "Abrir espacio personal"
+    },
+    "note": {
+      "log": "Registrar en seguimiento",
+      "writeFirst": "Escribe algo en la nota primero.",
+      "saveFirst": "La nota aún no se ha guardado. Vuelve a probar cuando ponga Guardado."
     }
   }
 }

@@ -19,10 +19,18 @@ interface UseNoteSaverOptions {
   exists: boolean;
   onCreated?: (note: Note) => void;
   onConflict?: (event: ConflictEvent) => void;
+  /** Runs when the editor closes, after the last save. `created`: the note is on the server. */
+  onLeave?: (created: boolean) => void;
 }
 
 /** Binds a NoteSaver to RTK Query for one mounted note editor. */
-export const useNoteSaver = ({ note, exists, onCreated, onConflict }: UseNoteSaverOptions) => {
+export const useNoteSaver = ({
+  note,
+  exists,
+  onCreated,
+  onConflict,
+  onLeave,
+}: UseNoteSaverOptions) => {
   const { t } = useTranslation();
   const dispatch = useDispatch<AppDispatch>();
   const [createNote] = useCreateNoteMutation();
@@ -32,8 +40,8 @@ export const useNoteSaver = ({ note, exists, onCreated, onConflict }: UseNoteSav
   const saverRef = useRef<NoteSaver | null>(null);
 
   // Callbacks change on every render; the saver reads the latest ones.
-  const handlers = useRef({ onCreated, onConflict, t });
-  handlers.current = { onCreated, onConflict, t };
+  const handlers = useRef({ onCreated, onConflict, onLeave, t });
+  handlers.current = { onCreated, onConflict, onLeave, t };
   // Same for the request functions: a new identity must not replace the saver.
   const requests = useRef({ createNote, updateNote, fetchNote });
   requests.current = { createNote, updateNote, fetchNote };
@@ -94,6 +102,11 @@ export const useNoteSaver = ({ note, exists, onCreated, onConflict }: UseNoteSav
       window.removeEventListener("online", flushWhenOnline);
       window.removeEventListener("beforeunload", warnBeforeLeaving);
       saver.dispose();
+      // dispose() started the last save; this waits for it.
+      void saver.flush().then(
+        () => handlers.current.onLeave?.(saver.isCreated),
+        () => undefined,
+      );
       if (saverRef.current === saver) saverRef.current = null;
     };
   }, [dispatch]);
@@ -110,5 +123,8 @@ export const useNoteSaver = ({ note, exists, onCreated, onConflict }: UseNoteSav
     await saverRef.current?.flush();
   }, []);
 
-  return { status, edit, setMeta, flush };
+  /** True while some text has not reached the server (offline, failed save). */
+  const hasUnsavedWork = useCallback(() => saverRef.current?.hasUnsavedWork() ?? false, []);
+
+  return { status, edit, setMeta, flush, hasUnsavedWork };
 };

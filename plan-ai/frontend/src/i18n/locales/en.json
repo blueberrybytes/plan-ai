@@ -963,7 +963,8 @@
       "integrations": "Integrations",
       "recordings": "Recordings",
       "users": "Users",
-      "billing": "Billing"
+      "billing": "Billing",
+      "trackers": "Trackers"
     },
     "tooltip": {
       "expand": "Expand sidebar",
@@ -1869,6 +1870,256 @@
       "purged": "Note deleted for good.",
       "todayFailed": "Could not open today's note. Try again.",
       "actionFailed": "That did not work. Try again."
+    }
+  },
+  "workspaceSwitcher": {
+    "personal": "Personal",
+    "team": "Team",
+    "personalSpace": "Personal space",
+    "personalSpaceHint": "Private notes and trackers"
+  },
+  "personal": {
+    "consent": {
+      "title": "Turn on your personal space",
+      "what": "Your personal space keeps private notes and trackers for things like food, weight, steps and habits.",
+      "healthData": "In the EU, food, weight and steps count as health data. To store them we need your explicit consent.",
+      "private": "This data is private to you. No owner or admin of any workspace can see it, and the assistant does not read it.",
+      "ai": "When a note is read with AI, the request uses your own OpenRouter key and asks for providers that keep no data.",
+      "estimates": "Calorie numbers are estimates. They are not medical or nutrition advice.",
+      "withdraw": "You can withdraw your consent at any time in the trackers settings. That deletes all your trackers and entries.",
+      "checkbox": "I have read this and I agree to store my health data in my personal space.",
+      "cancel": "Not now",
+      "accept": "Accept and turn on",
+      "outdated": "The text has changed since you last agreed. Please read it again.",
+      "changedNow": "The text changed while this window was open. Read it again and accept.",
+      "failed": "Could not turn on personal mode. Try again."
+    },
+    "settings": {
+      "title": "Personal space settings",
+      "hideCalories": "Hide calories",
+      "hideCaloriesHelp": "Calorie trackers show foods and grams, and whether you met the goal, without numbers.",
+      "autoExtract": "Read notes automatically when I leave them",
+      "autoExtractHelp": "When you leave a note you edited, the AI reads it and proposes entries. Nothing counts until you accept it.",
+      "withdrawHelp": "Withdrawing consent deletes all your trackers and entries. Your notes stay.",
+      "withdraw": "Withdraw consent and delete tracker data",
+      "close": "Close"
+    },
+    "withdraw": {
+      "title": "Withdraw consent?",
+      "body": "This deletes every tracker and every entry in them, including proposals waiting for review. It cannot be undone.",
+      "notesStay": "Your notes stay in your personal space. Delete them from Notes if you want them gone.",
+      "confirm": "Withdraw and delete",
+      "cancel": "Cancel",
+      "done": "Consent withdrawn. Your trackers and entries were deleted."
+    }
+  },
+  "trackers": {
+    "title": "Trackers",
+    "subtitle": "Private to you. Nobody else in any workspace sees this.",
+    "newTracker": "New tracker",
+    "showArchived": "Show archived",
+    "value": {
+      "done": "Done",
+      "days_one": "{{count}} day",
+      "days_other": "{{count}} days"
+    },
+    "day": {
+      "today": "Today",
+      "yesterday": "Yesterday"
+    },
+    "kcal": {
+      "about": "about {{value}} kcal",
+      "aboutRange": "about {{value}} kcal ({{low}} to {{high}})"
+    },
+    "food": {
+      "grams": "{{grams}} g",
+      "gramsRange": "{{grams}} g ({{low}} to {{high}} g)",
+      "kcal": "{{kcal}} kcal",
+      "usda": "USDA",
+      "ai": "AI estimate"
+    },
+    "proposals": {
+      "title_one": "{{count}} entry to review",
+      "title_other": "{{count}} entries to review",
+      "hint": "Nothing counts until you accept it.",
+      "acceptAll": "Accept all",
+      "accept": "Accept",
+      "edit": "Edit value",
+      "reject": "Reject",
+      "value": "Value",
+      "unknownTracker": "Tracker"
+    },
+    "actions": {
+      "save": "Save",
+      "cancel": "Cancel",
+      "add": "Add",
+      "doneToday": "Done today",
+      "delete": "Delete",
+      "restore": "Restore",
+      "archive": "Archive",
+      "create": "Create",
+      "close": "Close"
+    },
+    "goal": {
+      "atLeast": {
+        "day": "Goal: at least {{goal}} a day",
+        "week": "Goal: at least {{goal}} a week"
+      },
+      "atMost": {
+        "day": "Goal: at most {{goal}} a day",
+        "week": "Goal: at most {{goal}} a week"
+      },
+      "progress": {
+        "day": "{{current}} of {{goal}} today",
+        "week": "{{current}} of {{goal}} this week"
+      },
+      "met": {
+        "day": "Goal met today",
+        "week": "Goal met this week"
+      },
+      "notMet": {
+        "day": "Goal not met today",
+        "week": "Goal not met this week yet"
+      }
+    },
+    "chart": {
+      "nothing": "Nothing logged",
+      "logged": "Logged",
+      "met": "Goal met",
+      "notMet": "Goal not met"
+    },
+    "streak": {
+      "days_one": "{{count}} day in a row",
+      "days_other": "{{count}} days in a row",
+      "weeks_one": "{{count}} week in a row",
+      "weeks_other": "{{count}} weeks in a row"
+    },
+    "card": {
+      "doneToday": "Done today",
+      "notDoneToday": "Not done today",
+      "loggedToday": "Logged today",
+      "nothingToday": "Nothing logged today",
+      "noValue": "No value yet",
+      "archived": "Archived",
+      "menu": "Tracker options",
+      "edit": "Edit",
+      "history": "History",
+      "restore": "Restore"
+    },
+    "addEntry": {
+      "title": "Add to {{name}}",
+      "value": "Value",
+      "date": "Day",
+      "label": "Note (optional)"
+    },
+    "form": {
+      "createTitle": "New tracker",
+      "editTitle": "Edit tracker",
+      "presets": "Start from",
+      "name": "Name",
+      "kind": "Type",
+      "kinds": {
+        "NUMBER": "Number",
+        "CHECK": "Done or not done",
+        "CALORIES": "Calories"
+      },
+      "kindHelp": {
+        "NUMBER": "A number you log, like steps, weight or hours.",
+        "CHECK": "Something you do or not, like going to the gym.",
+        "CALORIES": "The AI estimates kcal from what you ate. Always in kcal."
+      },
+      "unit": "Unit",
+      "unitPlaceholder": "steps, kg, h",
+      "aggregation": "How it adds up in a day",
+      "aggregations": {
+        "SUM": "Add up the values",
+        "LAST": "Keep the last value",
+        "AVERAGE": "Average of the values"
+      },
+      "goal": "Goal",
+      "goals": {
+        "NONE": "No goal",
+        "AT_LEAST": "At least",
+        "AT_MOST": "At most"
+      },
+      "goalValue": "Goal value",
+      "goalDays": "Days",
+      "goalPeriod": "Per",
+      "periods": {
+        "DAY": "Day",
+        "WEEK": "Week"
+      },
+      "instructions": "Notes for the AI",
+      "instructionsHelp": "For example: count only walks outside.",
+      "deleteTitle": "Delete tracker?",
+      "deleteBody": "This deletes the tracker and all its entries. It cannot be undone.",
+      "deleteHint": "To keep the entries, archive the tracker instead.",
+      "errors": {
+        "name": "Give the tracker a name.",
+        "goal": "The goal must be a number above 0."
+      }
+    },
+    "presets": {
+      "calories": "Calories",
+      "steps": "Steps",
+      "weight": "Weight",
+      "sleep": "Sleep",
+      "gym": "Gym",
+      "water": "Water",
+      "custom": "Custom"
+    },
+    "history": {
+      "title": "{{name}}: history",
+      "empty": "No entries yet.",
+      "edit": "Edit entry",
+      "delete": "Delete entry"
+    },
+    "toast": {
+      "archived": "Tracker archived.",
+      "restored": "Tracker restored.",
+      "deleted": "Tracker and entries deleted."
+    },
+    "errors": {
+      "generic": "Something went wrong. Try again."
+    },
+    "extract": {
+      "noTrackers": "Create a tracker first, then the AI can log to it.",
+      "empty": "There is nothing to read yet.",
+      "unchanged": "This note was already read. Nothing new to log.",
+      "nothingFound": "Nothing to log was found.",
+      "failed": "Could not read the text. Try again.",
+      "consentOutdated": "The consent text has changed. Open Trackers to read it and accept it again."
+    },
+    "missingKey": {
+      "body": "Reading with AI needs an OpenRouter key in your personal workspace. Add it in the workspace settings.",
+      "action": "Open settings"
+    },
+    "quickLog": {
+      "placeholder": "What did you eat or do?",
+      "submit": "Log"
+    },
+    "empty": {
+      "title": "No trackers yet",
+      "body": "Pick one to start. You can change it later."
+    },
+    "footer": {
+      "estimates": "Calorie numbers are estimates, not medical or nutrition advice.",
+      "aiOnly": "In the last reading, calories come from AI estimates only, not from a food database."
+    },
+    "gate": {
+      "consentTitle": "Personal mode is off",
+      "consentBody": "Trackers need your consent to store health data.",
+      "outdatedTitle": "Please read the new consent text",
+      "outdatedBody": "The text changed since you agreed. Trackers stay paused until you accept it again.",
+      "consentAction": "Read and accept",
+      "switchTitle": "Trackers live in your personal space",
+      "switchBody": "Switch to your personal workspace to see them.",
+      "switchAction": "Open personal space"
+    },
+    "note": {
+      "log": "Log to trackers",
+      "writeFirst": "Write something in the note first.",
+      "saveFirst": "The note is not saved yet. Try again when it shows Saved."
     }
   }
 }

@@ -416,8 +416,11 @@ const WorkspaceTeam: React.FC = () => {
   const activeWorkspace = workspaces?.find((w) => w.id === activeWorkspaceId);
   const { data: subscription } = useGetSubscriptionQuery(undefined, { refetchOnFocus: true });
   const isByokTrack = subscription?.track === "BYOK";
+  // A personal workspace has no other members.
   const canInvite =
-    activeWorkspace && (activeWorkspace.role === "OWNER" || activeWorkspace.role === "ADMIN");
+    activeWorkspace &&
+    activeWorkspace.kind !== "PERSONAL" &&
+    (activeWorkspace.role === "OWNER" || activeWorkspace.role === "ADMIN");
   const canViewUsage = activeWorkspace && (activeWorkspace.role === "OWNER" || isAdmin);
 
   const {
@@ -476,7 +479,8 @@ const WorkspaceTeam: React.FC = () => {
     }
     if (canViewUsage) list.push({ id: "usage", label: "Workspace usage" });
     if (canViewUsage) list.push({ id: "analytics", label: "My usage" });
-    if (activeWorkspace?.role === "OWNER" && isByokTrack)
+    // A personal workspace has no plan, but its owner still sets the AI keys here.
+    if (activeWorkspace?.role === "OWNER" && (isByokTrack || activeWorkspace?.kind === "PERSONAL"))
       list.push({ id: "settings", label: "Settings" });
     if (activeWorkspace?.role === "OWNER" || activeWorkspace?.role === "ADMIN")
       list.push({ id: "security", label: t("workspaceSecurity.tab") });
@@ -485,6 +489,7 @@ const WorkspaceTeam: React.FC = () => {
     activeMembers.length,
     pendingInvitations.length,
     activeWorkspace?.role,
+    activeWorkspace?.kind,
     canViewUsage,
     isByokTrack,
     t,

@@ -38,6 +38,7 @@ import {
   Brush as BrushIcon,
   CreditCard as CreditCardIcon,
   StickyNote2 as NotesIcon,
+  Insights as TrackersIcon,
 } from "@mui/icons-material";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
@@ -81,6 +82,13 @@ const coreNavItems: NavItem[] = [
   { labelKey: "sidebarLayout.nav.chat", path: "/chat", icon: <ChatIcon fontSize="small" /> },
   { labelKey: "sidebarLayout.nav.notes", path: "/notes", icon: <NotesIcon fontSize="small" /> },
 ];
+
+/** Shown only in a personal workspace. */
+const trackersNavItem: NavItem = {
+  labelKey: "sidebarLayout.nav.trackers",
+  path: "/trackers",
+  icon: <TrackersIcon fontSize="small" />,
+};
 
 const libraryNavItems: NavItem[] = [
   {
@@ -149,6 +157,12 @@ const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children, fullHeight = fa
   const activeWorkspace = React.useMemo(
     () => workspaces?.find((w) => w.id === activeWorkspaceId),
     [workspaces, activeWorkspaceId],
+  );
+
+  const mainNavItems = React.useMemo(
+    () =>
+      activeWorkspace?.kind === "PERSONAL" ? [...coreNavItems, trackersNavItem] : coreNavItems,
+    [activeWorkspace?.kind],
   );
 
   const isByokTrack = subscription?.track === "BYOK";
@@ -387,7 +401,7 @@ const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children, fullHeight = fa
               },
             }}
           >
-            {coreNavItems.map((item) => {
+            {mainNavItems.map((item) => {
               return (
                 <ListItemButton
                   key={item.path}

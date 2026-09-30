@@ -26,6 +26,7 @@ import ProjectTranscriptDetail from "./pages/ProjectTranscriptDetail";
 import ProjectFileViewer from "./pages/ProjectFileViewer";
 import Recordings from "./pages/Recordings";
 import Notes from "./pages/Notes";
+import Trackers from "./pages/Trackers";
 import RecordingDetail from "./pages/RecordingDetail";
 import ProjectDetails from "./pages/ProjectDetails";
 import Chat from "./pages/Chat";
@@ -130,6 +131,7 @@ const AppContent: React.FC = () => {
           <Route path="/recordings" element={<Recordings />} />
           <Route path="/recordings/:recordingId" element={<RecordingDetail />} />
           <Route path="/notes" element={<Notes />} />
+          <Route path="/trackers" element={<Trackers />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/integrations" element={<Integrations />} />
           <Route path="/integrations/:provider" element={<Integrations />} />
