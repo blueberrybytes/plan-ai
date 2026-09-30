@@ -3521,6 +3521,18 @@ ${taskSummaries}`,
     // Generate .docx Buffer
     const buffer = await DocumentGenerator.generateDocx(markdownContent);
 
+    // One subfolder per project inside the picked folder. A meeting with no
+    // project goes to the picked folder itself.
+    const project = transcript.projectId
+      ? await prisma.project.findFirst({
+          where: { id: transcript.projectId, workspaceId },
+          select: { id: true, title: true },
+        })
+      : null;
+    const projectFolder = project
+      ? { projectId: project.id, projectTitle: project.title }
+      : undefined;
+
     if (options.exportToGoogleDrive) {
       await this.setPostMeetingTaskStatus(transcript.id, "googleDrive", { status: "PENDING" });
       try {
@@ -3529,6 +3541,7 @@ ${taskSummaries}`,
           filename,
           buffer,
           "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+          projectFolder,
         );
         logger.info(`Successfully exported document to Google Drive: ${link}`);
         await this.setPostMeetingTaskStatus(transcript.id, "googleDrive", {
@@ -3551,6 +3564,7 @@ ${taskSummaries}`,
           workspaceId,
           filename,
           buffer,
+          projectFolder,
         );
         logger.info(`Successfully exported document to OneDrive: ${link}`);
         await this.setPostMeetingTaskStatus(transcript.id, "oneDrive", {

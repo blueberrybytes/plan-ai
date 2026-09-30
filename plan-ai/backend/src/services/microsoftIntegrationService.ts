@@ -6,6 +6,7 @@ import { logger } from "../utils/logger";
 import { encryptSecret } from "../utils/secretCrypto";
 import { encryptTokens, withDecryptedTokens } from "../utils/integrationSecrets";
 import { safeRedirectPath } from "../utils/oauthState";
+import { resolveProjectFolder, type ProjectFolderRef } from "./projectFolders";
 
 const prisma = new PrismaClient();
 
@@ -270,6 +271,8 @@ export class MicrosoftIntegrationService {
     workspaceId: string,
     filename: string,
     buffer: Buffer,
+    /** Put the file in this project's subfolder of the picked folder. */
+    project?: ProjectFolderRef,
   ): Promise<string> {
     const integration = await prisma.workspaceIntegration.findUnique({
       where: {
@@ -293,7 +296,53 @@ export class MicrosoftIntegrationService {
 
     // Read target folder from integration metadata
     const meta = (integration.metadata ?? {}) as Record<string, unknown>;
-    const parentFolderId = meta.defaultFolderId as string | undefined;
+    const pickedFolderId = meta.defaultFolderId as string | undefined;
+    const graph = "https://graph.microsoft.com/v1.0/me/drive";
+    const auth = { Authorization: `Bearer ${accessToken}` };
+    const projectFolderId = await resolveProjectFolder(
+      workspaceId,
+      IntegrationProvider.ONEDRIVE,
+      integration.metadata,
+      project,
+      {
+        nameOf: async (folderId) => {
+          try {
+            const res = await axios.get(
+              `${graph}/items/${encodeURIComponent(folderId)}?select=name`,
+              {
+                headers: auth,
+                timeout: 15000,
+              },
+            );
+            return (res.data?.name as string | undefined) ?? null;
+          } catch (error) {
+            if (axios.isAxiosError(error) && error.response?.status === 404) return null;
+            throw error;
+          }
+        },
+        rename: async (folderId, name) => {
+          await axios.patch(
+            `${graph}/items/${encodeURIComponent(folderId)}`,
+            { name },
+            { headers: auth, timeout: 15000 },
+          );
+        },
+        create: async (name) => {
+          const parent = pickedFolderId
+            ? `${graph}/items/${encodeURIComponent(pickedFolderId)}`
+            : `${graph}/root`;
+          const res = await axios.post(
+            `${parent}/children`,
+            // "rename": a folder of the same name made by hand is left alone.
+            { name, folder: {}, "@microsoft.graph.conflictBehavior": "rename" },
+            { headers: auth, timeout: 15000 },
+          );
+          if (!res.data?.id) throw new Error("OneDrive returned no folder id");
+          return res.data.id as string;
+        },
+      },
+    );
+    const parentFolderId = projectFolderId ?? pickedFolderId;
 
     // Build upload URL: to specific folder or root
     const url = parentFolderId
@@ -346,6 +395,8 @@ export class MicrosoftIntegrationService {
       ...currentMeta,
       defaultFolderId: folderId,
       defaultFolderName: resolvedName,
+      // Project subfolders live in the old folder: start again in the new one.
+      ...(currentMeta.defaultFolderId !== folderId ? { projectFolders: {} } : {}),
     };
 
     await prisma.workspaceIntegration.update({

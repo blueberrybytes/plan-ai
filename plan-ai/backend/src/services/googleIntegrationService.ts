@@ -6,6 +6,7 @@ import { encryptSecret } from "../utils/secretCrypto";
 import { withDecryptedTokens } from "../utils/integrationSecrets";
 import { PrismaClient, IntegrationProvider, IntegrationStatus, Prisma } from "@prisma/client";
 import { safeRedirectPath } from "../utils/oauthState";
+import { resolveProjectFolder, type ProjectFolderRef } from "./projectFolders";
 
 const prisma = new PrismaClient();
 
@@ -241,6 +242,8 @@ class GoogleIntegrationService {
     filename: string,
     buffer: Buffer,
     mimeType: string,
+    /** Put the file in this project's subfolder of the picked folder. */
+    project?: ProjectFolderRef,
   ): Promise<string> {
     const integration = withDecryptedTokens(
       await prisma.workspaceIntegration.findUnique({
@@ -272,7 +275,49 @@ class GoogleIntegrationService {
 
     // Read target folder from integration metadata
     const meta = (integration.metadata ?? {}) as Record<string, unknown>;
-    const parentFolderId = meta.defaultFolderId as string | undefined;
+    const pickedFolderId = meta.defaultFolderId as string | undefined;
+    const projectFolderId = await resolveProjectFolder(
+      workspaceId,
+      IntegrationProvider.GOOGLE_DRIVE,
+      integration.metadata,
+      project,
+      {
+        nameOf: async (folderId) => {
+          try {
+            const res = await drive.files.get({
+              fileId: folderId,
+              fields: "name, trashed",
+              supportsAllDrives: true,
+            });
+            return res.data.trashed ? null : (res.data.name ?? null);
+          } catch (error: any) {
+            if (error?.code === 404) return null;
+            throw error;
+          }
+        },
+        rename: async (folderId, name) => {
+          await drive.files.update({
+            fileId: folderId,
+            requestBody: { name },
+            supportsAllDrives: true,
+          });
+        },
+        create: async (name) => {
+          const res = await drive.files.create({
+            requestBody: {
+              name,
+              mimeType: "application/vnd.google-apps.folder",
+              ...(pickedFolderId ? { parents: [pickedFolderId] } : {}),
+            },
+            fields: "id",
+            supportsAllDrives: true,
+          });
+          if (!res.data.id) throw new Error("Drive returned no folder id");
+          return res.data.id;
+        },
+      },
+    );
+    const parentFolderId = projectFolderId ?? pickedFolderId;
 
     // Readable stream from buffer
     const stream = new Readable();
@@ -355,6 +400,8 @@ class GoogleIntegrationService {
       ...currentMeta,
       defaultFolderId: folderId,
       defaultFolderName: folderName,
+      // Project subfolders live in the old folder: start again in the new one.
+      ...(currentMeta.defaultFolderId !== folderId ? { projectFolders: {} } : {}),
     };
 
     await prisma.workspaceIntegration.update({
