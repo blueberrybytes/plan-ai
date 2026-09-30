@@ -2,6 +2,7 @@ import { useSyncExternalStore } from "react";
 import { Directory, File, Paths } from "expo-file-system";
 import * as Crypto from "expo-crypto";
 import type { Note, NoteScope, NoteVisibility } from "./planAiApi";
+import { reportUnexpected } from "../utils/reportError";
 
 /**
  * Notes on this phone. Every note the app knows is one JSON file:
@@ -94,6 +95,8 @@ function load(): Map<string, LocalNote> {
   try {
     const dir = notesDir();
     if (!dir.exists) dir.create({ intermediates: true, idempotent: true });
+    let unreadable = 0;
+    let firstError: unknown = null;
     for (const entry of dir.list()) {
       if (!(entry instanceof File)) continue;
       const tmp = entry.name.endsWith(".json.tmp");
@@ -102,16 +105,34 @@ function load(): Map<string, LocalNote> {
         const n = parse(entry.textSync());
         // A .tmp only counts when the real file is missing (a crash mid-write).
         if (n && (!tmp || !map.has(n.id))) map.set(n.id, n);
-      } catch {
+        // A broken .json may hold text that never reached the server.
+        else if (!n && !tmp) unreadable++;
+      } catch (err) {
         // unreadable file: skip it, never block the app
+        unreadable++;
+        firstError ??= err;
       }
+    }
+    // The files stay on disk. Counts only: the names are note ids, the
+    // content is the user's text.
+    if (unreadable > 0) {
+      reportUnexpected(
+        firstError ?? new Error("Unreadable note files"),
+        "notes",
+        { op: "load", unreadable, loaded: map.size },
+      );
     }
   } catch (err) {
     console.warn("[notes] could not read the notes folder", err);
+    reportUnexpected(err, "notes", { op: "load_folder" });
   }
   byId = map;
   return map;
 }
+
+// Notes whose last write to disk failed. Their text is only in memory, so
+// the editor warns the user until a write works again.
+const unsaved = new Set<string>();
 
 /** Writes through a temp file so a kill never leaves half a JSON. */
 function persist(n: LocalNote): void {
@@ -124,18 +145,26 @@ function persist(n: LocalNote): void {
     const target = noteFile(n.id);
     if (target.exists) target.delete();
     tmp.move(target);
+    unsaved.delete(n.id);
   } catch (err) {
     console.warn("[notes] could not save a note", err);
+    // Once per note until a write works again, so typing does not flood Sentry.
+    if (!unsaved.has(n.id)) {
+      reportUnexpected(err, "notes", { op: "persist", noteId: n.id, status: n.status });
+    }
+    unsaved.add(n.id);
   }
 }
 
 function unlink(id: string): void {
   load().delete(id);
+  unsaved.delete(id);
   for (const f of [noteFile(id), noteTmpFile(id)]) {
     try {
       if (f.exists) f.delete();
-    } catch {
-      // the next load skips it or prune removes it
+    } catch (err) {
+      // The note comes back on the next start. Worth knowing, not blocking.
+      reportUnexpected(err, "notes", { op: "unlink", noteId: id }, "warning");
     }
   }
 }
@@ -570,6 +599,11 @@ export const subscribeLocalNotes = (listener: () => void): (() => void) => subsc
 /** One note, updated on every local edit or sync. */
 export function useLocalNote(id: string): LocalNote | null {
   return useSyncExternalStore(subscribe, () => load().get(id) ?? null);
+}
+
+/** True while the last write of this note to the phone failed. */
+export function useNoteSaveFailed(id: string): boolean {
+  return useSyncExternalStore(subscribe, () => unsaved.has(id));
 }
 
 let listSnapshot: { count: number; uid: string | null; notes: LocalNote[] } | null = null;

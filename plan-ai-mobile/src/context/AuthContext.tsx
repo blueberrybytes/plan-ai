@@ -20,6 +20,7 @@ import { createPlanAiApi, HttpError } from '../services/planAiApi';
 import type { components } from '../types/api';
 import { createPkcePair, queryParams, randomBase64Url } from '../utils/pkce';
 import * as Sentry from '@sentry/react-native';
+import { markReported, reportMessage, reportUnexpected } from '../utils/reportError';
 import { migrateLegacyRecordings } from '../services/recordingSessions';
 import { useOutboxProcessor } from '../services/recordingUploader';
 import { useNotesSync } from '../services/notesSync';
@@ -95,8 +96,9 @@ const authCacheFile = () => {
         else legacy.move(file);
       }
     }
-  } catch {
+  } catch (err) {
     // the cache only saves a round trip; never block on it
+    reportUnexpected(err, 'auth', { op: 'auth_cache_move' }, 'warning');
   }
   return file;
 };
@@ -364,6 +366,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const signInWithMicrosoft = async () => {
+    // An error for the login screen that needs no report of its own.
+    const handled = (message: string) => {
+      const e = new Error(message);
+      markReported(e);
+      return e;
+    };
     try {
       // The backend runs the Microsoft OAuth flow and sends back a one-time
       // code through the deep link. The code only works together with the
@@ -382,15 +390,21 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         return;
       }
       if (!result.url.startsWith(MICROSOFT_REDIRECT_URI)) {
-        throw new Error('Microsoft sign-in failed: unexpected redirect.');
+        reportMessage('Microsoft sign-in: unexpected redirect', 'auth', {}, 'error');
+        throw handled('Microsoft sign-in failed: unexpected redirect.');
       }
 
       const params = queryParams(result.url);
       if (params.state !== appState) {
-        throw new Error('Microsoft sign-in failed: this sign-in was not started by the app.');
+        reportMessage('Microsoft sign-in: state mismatch', 'auth', { hasState: !!params.state }, 'error');
+        throw handled('Microsoft sign-in failed: this sign-in was not started by the app.');
       }
-      if (params.error) throw new Error(params.error);
-      if (!params.code) throw new Error('Microsoft sign-in failed: no code returned.');
+      // The backend logs its own failures. A cancel at Microsoft lands here too.
+      if (params.error) throw handled(params.error);
+      if (!params.code) {
+        reportMessage('Microsoft sign-in: no code returned', 'auth', {}, 'error');
+        throw handled('Microsoft sign-in failed: no code returned.');
+      }
 
       const res = await fetch(`${BASE_URL}/api/session/mobile-exchange`, {
         method: 'POST',
@@ -400,11 +414,26 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       const body = (await res.json().catch(() => null)) as CustomTokenResponse | null;
       const customToken = res.ok ? body?.data?.customToken : undefined;
       if (!customToken) {
-        throw new Error(body?.message || 'Microsoft sign-in failed. Please try again.');
+        // A 4xx is an expired or used code. A 5xx, or a yes without a token,
+        // is not expected. Status only: the body may carry the token.
+        if (res.status >= 500 || res.ok) {
+          reportMessage('Microsoft sign-in: code exchange failed', 'auth', {
+            status: res.status,
+            parsed: body !== null,
+          }, 'error');
+        }
+        throw handled(body?.message || 'Microsoft sign-in failed. Please try again.');
       }
 
       await signInWithCustomToken(getAuth(), customToken);
     } catch (error) {
+      // Failures above are already reported or expected. What is left is
+      // unexpected: a crypto or browser error, or a refused custom token.
+      // No network is skipped.
+      reportUnexpected(error, 'auth', {
+        op: 'microsoft_sign_in',
+        code: (error as { code?: string } | null)?.code,
+      });
       console.error('Microsoft Sign-In Error:', error);
       throw error;
     }

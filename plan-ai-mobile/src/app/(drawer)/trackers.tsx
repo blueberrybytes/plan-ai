@@ -54,6 +54,7 @@ import {
   weekdayLetter,
 } from "../../utils/trackerFormat";
 import { openWebUrl } from "../../utils/openWebUrl";
+import { reportUnexpected } from "../../utils/reportError";
 
 const WEB_APP_URL = process.env.EXPO_PUBLIC_PLAN_AI_WEB_URL ?? "https://plan-ai.blueberrybytes.com";
 const MAX_TEXT = 2000;
@@ -133,6 +134,8 @@ export default function TrackersScreen() {
         setPendingProposalCount(proposals.length);
         setLoadError(null);
       } catch (err) {
+        // Offline and refusals are expected. A bug or a bad answer is not.
+        reportUnexpected(err, "trackers", { op: "load" });
         if (request !== requestRef.current) return;
         console.warn("[trackers] could not load", err instanceof HttpError ? err.status : err);
         setLoadError(isOffline(err) ? OFFLINE_TEXT : describeError(err));
@@ -158,6 +161,7 @@ export default function TrackersScreen() {
     try {
       await fn();
     } catch (err) {
+      reportUnexpected(err, "trackers", { op: "action", key });
       setNotice(describeError(err));
     } finally {
       setBusy((b) => {
@@ -188,6 +192,7 @@ export default function TrackersScreen() {
       }
       await load();
     } catch (err) {
+      reportUnexpected(err, "trackers", { op: "extract_text" });
       setNotice(describeError(err));
     } finally {
       setSending(false);

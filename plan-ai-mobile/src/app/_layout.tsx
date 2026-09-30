@@ -33,13 +33,23 @@ Sentry.init({
   // there are no Sentry logs and no console breadcrumbs.
   enableLogs: false,
   integrations: [Sentry.feedbackIntegration()],
-  beforeBreadcrumb: (breadcrumb) =>
-    breadcrumb.category === "console" ? null : breadcrumb,
+  // Request breadcrumbs keep the path without the query string: a note
+  // search puts the user's words in the URL.
+  beforeBreadcrumb: (breadcrumb) => {
+    if (breadcrumb.category === "console") return null;
+    const url = breadcrumb.data?.url;
+    if (typeof url === "string") {
+      breadcrumb.data = { ...breadcrumb.data, url: url.replace(/[?#].*$/, "") };
+    }
+    return breadcrumb;
+  },
   beforeSend: (event) => {
     if (event.request) {
       delete event.request.data;
       delete event.request.cookies;
       delete event.request.headers;
+      delete event.request.query_string;
+      if (event.request.url) event.request.url = event.request.url.replace(/[?#].*$/, "");
     }
     // AuthContext sets the user with an email. Keep only the id.
     if (event.user) {
@@ -107,6 +117,12 @@ function RootLayout() {
 
 export function ErrorBoundary({ error, retry }: ErrorBoundaryProps) {
   const router = useRouter();
+
+  // Expo Router catches render errors here, so they never reach Sentry's
+  // global handler. Report each one once.
+  useEffect(() => {
+    Sentry.captureException(error, { tags: { feature: "render" } });
+  }, [error]);
 
   return (
     <View style={styles.errorContainer}>

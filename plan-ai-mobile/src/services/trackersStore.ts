@@ -2,6 +2,7 @@ import { useSyncExternalStore } from "react";
 import { getAuth } from "@react-native-firebase/auth";
 import type { PersonalStatus, WorkspaceKind, createPlanAiApi } from "./planAiApi";
 import { getLocalNote, localDateKey, subscribeLocalNotes } from "./notesStore";
+import { reportUnexpected } from "../utils/reportError";
 
 type Api = ReturnType<typeof createPlanAiApi>;
 
@@ -72,6 +73,7 @@ export function loadPersonalStatus(
     })
     .catch((err) => {
       console.warn("[trackers] could not load the personal mode status", err);
+      reportUnexpected(err, "trackers", { op: "status" });
       if (currentUid() === uid) setState({ failed: true });
       return state.status;
     })
@@ -112,6 +114,7 @@ export async function refreshPendingProposalCount(api: Api): Promise<void> {
     if (currentUid() === uid) setPendingProposalCount(entries.length);
   } catch (err) {
     console.warn("[trackers] could not count the proposals", err);
+    reportUnexpected(err, "trackers", { op: "count_proposals" });
   }
 }
 
@@ -178,5 +181,6 @@ async function extractNote(api: Api, noteId: string, workspaceId: string | null)
     // A hint only: no alert. Status and code, never the note text.
     const e = err as { status?: number; code?: string };
     console.warn("[trackers] could not read the note", e?.status ?? "offline", e?.code ?? "");
+    reportUnexpected(err, "trackers", { op: "extract_note", noteId });
   }
 }

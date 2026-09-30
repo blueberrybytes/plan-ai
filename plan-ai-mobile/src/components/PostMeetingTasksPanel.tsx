@@ -11,6 +11,7 @@ import {
 import { useAuth } from "@/context/AuthContext";
 import type { components } from "@/types/api";
 import { openWebUrl, webAppLink } from "@/utils/openWebUrl";
+import { reportMessage } from "@/utils/reportError";
 
 type PostMeetingTaskKind = components["schemas"]["PostMeetingTaskKind"];
 type PostMeetingTaskStatus = components["schemas"]["PostMeetingTaskStatus"];
@@ -99,8 +100,13 @@ export const PostMeetingTasksPanel: React.FC<Props> = ({
 
   const openResource = (url: string) => {
     const fullUrl = url.startsWith("/") ? webAppLink(WEB_APP_URL, url) : url;
-    openWebUrl(fullUrl).catch(() => {
-      /* swallow — user can copy from the failure message */
+    openWebUrl(fullUrl).catch((e) => {
+      // The user can copy the link from the failure message. The error text
+      // holds the URL, so only its type is reported.
+      reportMessage("Could not open a link", "links", {
+        op: "post_meeting_resource",
+        error: e instanceof Error ? e.name : typeof e,
+      });
     });
   };
 

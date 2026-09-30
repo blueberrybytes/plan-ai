@@ -19,6 +19,7 @@ import {
   saveConflictedCopy,
   type LocalNote,
 } from "./notesStore";
+import { reportUnexpected } from "../utils/reportError";
 
 type Api = ReturnType<typeof createPlanAiApi>;
 
@@ -49,6 +50,10 @@ const currentUid = (): string | null => getAuth().currentUser?.uid ?? null;
 let fallbackWorkspaceId: string | null = null;
 
 const statusOf = (err: unknown) => (err instanceof HttpError ? err.status : undefined);
+
+// Refusals that are part of normal use. The note waits for the user and
+// nothing is reported. Any other stop is reported with its status.
+const EXPECTED_STOP_STATUSES = new Set([400, 401, 403, 404, 409, 422, 429]);
 
 const isRetryable = (err: unknown): boolean => {
   if (!(err instanceof HttpError)) return true;
@@ -221,6 +226,10 @@ export function syncNotes(api: Api, opts: { force?: boolean } = {}): Promise<voi
         await runPass(api, force);
         force = false;
       } while (rerun);
+    } catch (err) {
+      // runPass handles each note. Reaching here is a bug in the outbox.
+      // Callers ignore the result, so report it instead of rethrowing.
+      reportUnexpected(err, "notes", { op: "sync_pass" });
     } finally {
       inFlight = null;
     }
@@ -264,12 +273,19 @@ async function runPass(api: Api, force: boolean): Promise<void> {
           ? Date.now() + Math.min(RETRY_MAX_MS, RETRY_BASE_MS * 2 ** (attempts - 1))
           : undefined,
       });
-      if (!retryable) {
+      const status = statusOf(err);
+      if (!retryable && (status === undefined || !EXPECTED_STOP_STATUSES.has(status))) {
         // Status only: the message and the note text stay on the phone.
         Sentry.captureMessage("Note upload stopped", {
           level: "warning",
-          tags: { status: String(statusOf(err) ?? "none") },
+          tags: { status: String(status ?? "none"), feature: "notes" },
+          extra: { noteId: n.id, attempts },
         });
+      } else if (retryable && attempts === 1) {
+        // An exception in our code, a bad answer or a file error. Once per
+        // streak of failures: the retries would repeat it every few minutes.
+        // Offline, 5xx (reported where the answer is read) and 401 are skipped.
+        reportUnexpected(err, "notes", { op: "upload", noteId: n.id, attempts });
       }
       // No connection: the rest would fail the same way.
       if (statusOf(err) === undefined && err instanceof HttpError) return;

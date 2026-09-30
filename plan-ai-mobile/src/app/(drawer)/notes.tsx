@@ -35,6 +35,7 @@ import {
   type LocalNote,
 } from "../../services/notesStore";
 import { syncNotes } from "../../services/notesSync";
+import { reportUnexpected } from "../../utils/reportError";
 
 const TABS: { value: NoteScope; label: string }[] = [
   { value: "inbox", label: "Inbox" },
@@ -102,6 +103,8 @@ export default function NotesScreen() {
       setPage({ key, notes: res.notes, nextCursor: res.nextCursor });
       setOffline(false);
     } catch (err) {
+      // Offline and refusals are expected. A bug or a bad answer is not.
+      reportUnexpected(err, "notes", { op: "list", scope });
       if (request !== requestRef.current) return;
       console.warn("[notes] could not load the list", err);
       setOffline(true);
@@ -137,8 +140,9 @@ export default function NotesScreen() {
           ? { key, notes: [...p.notes, ...res.notes], nextCursor: res.nextCursor }
           : p,
       );
-    } catch {
+    } catch (err) {
       // the next scroll tries again
+      reportUnexpected(err, "notes", { op: "list_more", scope });
     } finally {
       setLoadingMore(false);
     }
@@ -195,7 +199,8 @@ export default function NotesScreen() {
       const note = await api.getPeriodNote("DAY", date, activeWorkspaceId);
       cacheServerNote(uid, note);
       openNote(note.id);
-    } catch {
+    } catch (err) {
+      reportUnexpected(err, "notes", { op: "open_today" });
       Alert.alert(
         "Could not open today's note",
         "Today's note is made on the server the first time. Check the connection and try again.",
@@ -214,7 +219,8 @@ export default function NotesScreen() {
       const note = await api.restoreNote(id, activeWorkspaceId);
       cacheServerNote(uid, note);
       void fetchFirstPage();
-    } catch {
+    } catch (err) {
+      reportUnexpected(err, "notes", { op: "restore", noteId: id });
       Alert.alert("Could not restore the note", "Check the connection and try again.");
     }
   };

@@ -4,6 +4,7 @@ import { Text, useTheme } from "react-native-paper";
 import { WebView, type WebViewMessageEvent } from "react-native-webview";
 import { Asset } from "expo-asset";
 import { File } from "expo-file-system";
+import { reportMessage, reportUnexpected } from "../utils/reportError";
 
 /**
  * Renders a mermaid diagram on the phone. The diagram text is meeting content,
@@ -104,7 +105,9 @@ export default function MermaidViewer({ code }: { code: string }) {
         if (!cancelled) setLibrary(text);
       })
       .catch((e) => {
+        // The library ships with the app, so this is a build or disk problem.
         console.warn("Could not load the mermaid library", e);
+        reportUnexpected(e, "mermaid", { op: "load_library" });
         if (!cancelled) setHasError(true);
       });
     return () => {
@@ -121,7 +124,12 @@ export default function MermaidViewer({ code }: { code: string }) {
   // Show the source if the page never answers.
   useEffect(() => {
     if (height !== null || hasError) return;
-    const timer = setTimeout(() => setHasError(true), RENDER_TIMEOUT_MS);
+    const timer = setTimeout(() => {
+      // A diagram with a syntax error answers at once. Silence means the
+      // library or the WebView never ran. No diagram text in the report.
+      reportMessage("Mermaid diagram timed out", "mermaid", { op: "render" });
+      setHasError(true);
+    }, RENDER_TIMEOUT_MS);
     return () => clearTimeout(timer);
   }, [height, hasError, code]);
 
@@ -141,7 +149,8 @@ export default function MermaidViewer({ code }: { code: string }) {
       } else if (message.type === "error") {
         setHasError(true);
       }
-    } catch {
+    } catch (e) {
+      reportUnexpected(e, "mermaid", { op: "message" });
       setHasError(true);
     }
   };

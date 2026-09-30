@@ -2,6 +2,7 @@ import { Platform } from "react-native";
 import * as Sentry from '@sentry/react-native';
 import * as LegacyFileSystem from "expo-file-system/legacy";
 import type { components, operations } from '../types/api';
+import { featureOfUrl, reportUnexpected, stripQuery } from '../utils/reportError';
 
 // ── Types sourced from the generated backend swagger ──────────────────────────
 export type Workspace              = components['schemas']['WorkspaceResponse'];
@@ -103,6 +104,8 @@ export class TrackerApiError extends HttpError {
 // Reading text with AI can take a while, so extract gets longer.
 const TRACKERS_TIMEOUT_MS = 20000;
 const TRACKERS_EXTRACT_TIMEOUT_MS = 90000;
+// Refusals the trackers screen explains. Any other failed status is reported.
+const EXPECTED_TRACKER_STATUSES = new Set([400, 401, 402, 403, 404, 409, 422, 429]);
 
 // Notes calls run in the background outbox. They never show an alert and
 // give up sooner than the default 60 s, so a bad network does not hold the queue.
@@ -114,18 +117,35 @@ if (__DEV__ && Platform.OS === 'android') {
 }
 let BASE_URL = rawBaseUrl.replace(/\/+$/, "");
 
+// A 5xx is always unexpected. The URL goes without its query string: a
+// note search puts the user's words there.
+function report5xx(res: Response): void {
+  if (res.status < 500) return;
+  const url = stripQuery(res.url);
+  const errorMsg = `API 5xx Error: ${res.status} on ${url}`;
+  console.error(errorMsg);
+  Sentry.captureException(new Error(errorMsg), {
+    tags: { url, status: res.status.toString(), feature: featureOfUrl(url) },
+    extra: { statusText: res.statusText }
+  });
+}
+
+// A 2xx whose body is not JSON. Reported, then thrown as before.
+async function readJson(res: Response): Promise<any> {
+  try {
+    return await res.json();
+  } catch (err) {
+    const url = stripQuery(res.url);
+    reportUnexpected(err, featureOfUrl(url), { url, status: res.status });
+    throw err;
+  }
+}
+
 async function handleResponseWithRetry<T>(
   res: Response,
   retryRequest: () => Promise<Response>,
 ): Promise<T> {
-  if (res.status >= 500) {
-    const errorMsg = `API 5xx Error: ${res.status} on ${res.url}`;
-    console.error(errorMsg);
-    Sentry.captureException(new Error(errorMsg), {
-      tags: { url: res.url, status: res.status.toString() },
-      extra: { statusText: res.statusText }
-    });
-  }
+  report5xx(res);
 
   // 403 = role-based permission failure — refreshing the token won't help, return error immediately
   if (res.status === 403) {
@@ -138,13 +158,14 @@ async function handleResponseWithRetry<T>(
     console.log(`HTTP 401 encountered, attempting token refresh...`);
     const refreshedRes = await retryRequest();
     if (!refreshedRes.ok) {
+      report5xx(refreshedRes);
       const body = await refreshedRes.json().catch(() => ({ message: refreshedRes.statusText }));
       throw new HttpError(
         (body as { message?: string }).message ?? `HTTP ${refreshedRes.status}`,
         refreshedRes.status,
       );
     }
-    const json = await refreshedRes.json() as any;
+    const json = await readJson(refreshedRes);
     return json.data !== undefined ? json.data : json;
   }
 
@@ -167,7 +188,7 @@ async function handleResponseWithRetry<T>(
     const body = await res.json().catch(() => ({ message: res.statusText }));
     throw new HttpError((body as { message?: string }).message ?? `HTTP ${res.status}`, res.status);
   }
-  const json = await res.json() as any;
+  const json = await readJson(res);
   return json.data !== undefined ? json.data : json;
 }
 
@@ -205,10 +226,10 @@ export const createPlanAiApi = (
       clearTimeout(timeoutId);
       console.error("[planAiApi] Network/CORS/DNS Error:", err);
       if (err.name === 'AbortError') {
-         Sentry.captureException(new Error(`API Connection Timeout`), { tags: { url } });
+         Sentry.captureException(new Error(`API Connection Timeout`), { tags: { url: stripQuery(url) } });
          if (!silent) alert(`API Connection Timeout: The server did not respond after ${timeoutMs/1000}s. \nURL: ${url}`);
       } else {
-         Sentry.captureException(err, { tags: { url } });
+         Sentry.captureException(err, { tags: { url: stripQuery(url) } });
          if (!silent) alert(`API Connection Error: ${err instanceof Error ? err.message : String(err)} \nURL: ${url}`);
       }
       throw err;
@@ -277,10 +298,13 @@ export const createPlanAiApi = (
         code?: string;
         limitType?: string;
       };
-      if (res.status >= 500) {
+      // 5xx, and statuses the screen has no words for (413, 405...). The
+      // usual refusals (400, 401, 402, 403, 404, 409, 422, 429) are expected.
+      if (!EXPECTED_TRACKER_STATUSES.has(res.status)) {
         Sentry.captureMessage("Trackers request failed", {
-          level: "warning",
-          tags: { status: String(res.status) },
+          level: res.status >= 500 ? "error" : "warning",
+          tags: { status: String(res.status), feature: "trackers" },
+          extra: { path: stripQuery(path), method: opts.method ?? "GET", code: body.code },
         });
       }
       let message = body.message ?? `HTTP ${res.status}`;
@@ -292,7 +316,14 @@ export const createPlanAiApi = (
       }
       throw new TrackerApiError(message, res.status, body.code);
     }
-    const json = (await res.json()) as any;
+    let json: any;
+    try {
+      json = await res.json();
+    } catch (err) {
+      // The server said yes but the body is not JSON. Thrown as before.
+      reportUnexpected(err, "trackers", { path: stripQuery(path), status: res.status });
+      throw err;
+    }
     return json && json.data !== undefined ? json.data : json;
   };
 

@@ -6,6 +6,7 @@ import Markdown from 'react-native-markdown-display';
 import { Task } from '../../services/planAiApi';
 import { useAuth } from '../../context/AuthContext';
 import { onMarkdownLinkPress, openWebUrl, webAppLink } from '../../utils/openWebUrl';
+import { reportUnexpected } from '../../utils/reportError';
 
 const WEB_APP_URL = process.env.EXPO_PUBLIC_PLAN_AI_WEB_URL ?? 'https://plan-ai.blueberrybytes.com';
 
@@ -35,6 +36,7 @@ export default function TaskDetailsScreen() {
       })
       .catch((e) => {
         console.warn('Failed to load task', e);
+        reportUnexpected(e, 'tasks', { op: 'open', taskId: id, projectId });
       })
       .finally(() => {
         if (!cancelled) setIsLoading(false);

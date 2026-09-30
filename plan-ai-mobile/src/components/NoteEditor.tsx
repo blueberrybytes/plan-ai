@@ -42,11 +42,13 @@ import {
   saveLocalEdit,
   trashLocalNote,
   useLocalNote,
+  useNoteSaveFailed,
   type NoteEdit,
 } from "../services/notesStore";
 import { requestNotesSync, syncNotes } from "../services/notesSync";
 import { queueNoteExtraction } from "../services/trackersStore";
 import { onMarkdownLinkPress } from "../utils/openWebUrl";
+import { reportMessage, reportUnexpected } from "../utils/reportError";
 
 // The note is written to the phone at most this long after a key press.
 const SAVE_DELAY_MS = 500;
@@ -75,6 +77,7 @@ export function NoteEditor({ id, isNew = false }: NoteEditorProps) {
   const stored = useLocalNote(id);
   // Another account's copy on this phone is never shown here.
   const note = stored && stored.accountUid === uid ? stored : null;
+  const saveFailed = useNoteSaveFailed(id);
 
   const [title, setTitle] = useState(initial?.title ?? "");
   const [body, setBody] = useState(initial?.body ?? "");
@@ -109,7 +112,10 @@ export function NoteEditor({ id, isNew = false }: NoteEditorProps) {
     }
     if (!dirtyRef.current) return;
     dirtyRef.current = false;
-    saveLocalEdit(id, { title: titleRef.current, body: bodyRef.current });
+    const saved = saveLocalEdit(id, { title: titleRef.current, body: bodyRef.current });
+    // The note left the phone while it was open (e.g. it became a copy).
+    // The last few keystrokes had nowhere to go. Ids only.
+    if (!saved) reportMessage("Note edit had no local note", "notes", { noteId: id });
     requestNotesSync(api);
   }, [id, api]);
 
@@ -155,6 +161,8 @@ export function NoteEditor({ id, isNew = false }: NoteEditorProps) {
         }
       })
       .catch((err) => {
+        // Offline and 4xx are expected. A bug or a bad answer is not.
+        reportUnexpected(err, "notes", { op: "open", noteId: id });
         if (cancelled || local) return;
         setNotFound(true);
         console.warn("[notes] could not load the note", err);
@@ -425,6 +433,11 @@ export function NoteEditor({ id, isNew = false }: NoteEditorProps) {
         )}
       </View>
 
+      {saveFailed && (
+        <Banner visible icon="content-save-alert-outline">
+          This phone could not save the note. Keep the app open until it uploads, or copy your text.
+        </Banner>
+      )}
       {note.status === "conflict" && (
         <Banner visible icon="alert-circle-outline">
           Conflicted copy. The original changed on another device, so this text was kept apart.

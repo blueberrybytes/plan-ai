@@ -1,4 +1,5 @@
 import { Linking } from "react-native";
+import { reportMessage } from "./reportError";
 
 /**
  * True for an http or https link. Links from the server, and from a task
@@ -26,7 +27,15 @@ export async function openWebUrl(url: unknown): Promise<void> {
  */
 export function onMarkdownLinkPress(url: string): boolean {
   if (isWebUrl(url) || /^mailto:[^\s]+$/i.test(url)) {
-    Linking.openURL(url).catch((e) => console.warn("Could not open link", e));
+    Linking.openURL(url).catch((e) => {
+      // No app for a web or mail link. The error text holds the URL, which
+      // may come from meeting text, so only its type is reported.
+      console.warn("Could not open link", e);
+      reportMessage("Could not open a link", "links", {
+        op: "markdown_link",
+        error: e instanceof Error ? e.name : typeof e,
+      });
+    });
   } else {
     console.warn("Blocked a link that is not a web or mail address");
   }
