@@ -21,6 +21,7 @@ import { exportWorkspace } from "../services/workspaceExportService";
 import type { TsoaJsonObject } from "./controllerTypes";
 import { revokeMcpTokensForMember } from "../services/mcpTokenService";
 import { checkWorkspacePolicy, type WorkspacePolicy } from "../services/workspaceAccess";
+import { personalModeAvailable } from "../services/personalService";
 
 const prisma = new PrismaClient();
 
@@ -156,8 +157,13 @@ export class WorkspaceController extends BaseWorkspaceController {
       throw { status: 404, message: "User not found" };
     }
 
+    // A personal workspace stays hidden while personal mode is off for this
+    // user, so nobody lands in it by mistake.
     const memberships = await prisma.workspaceMember.findMany({
-      where: { userId: user.id },
+      where: {
+        userId: user.id,
+        ...(personalModeAvailable(user.email) ? {} : { workspace: { kind: "TEAM" } }),
+      },
       include: {
         workspace: true,
       },

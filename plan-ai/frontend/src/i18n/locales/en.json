@@ -1438,6 +1438,10 @@
     "finish": "Complete Setup"
   },
   "billing": {
+    "personal": {
+      "noPlan": "Your personal space needs no plan. To subscribe, switch to your team workspace: the apps and recordings use that one.",
+      "cancelMistake": "This personal space has a subscription, probably bought by mistake. Cancel it in the billing portal and subscribe from your team workspace."
+    },
     "title": "Billing",
     "subtitle": "Manage your subscription, seats, and payment method.",
     "notConfigured": "Billing is disabled on this instance (self-hosted / OSS). No subscription required.",

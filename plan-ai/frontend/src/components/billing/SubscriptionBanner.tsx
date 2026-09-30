@@ -37,6 +37,8 @@ const SubscriptionBanner: React.FC = () => {
   if (location.pathname.startsWith("/billing")) return null;
 
   const activeWorkspace = workspaces?.find((w) => w.id === activeWorkspaceId);
+  // A personal workspace needs no plan.
+  if (activeWorkspace?.kind === "PERSONAL") return null;
   const canSubscribe = activeWorkspace?.role === "OWNER" || activeWorkspace?.role === "ADMIN";
 
   // `over_quota` means the subscription IS active (and paid) — they just

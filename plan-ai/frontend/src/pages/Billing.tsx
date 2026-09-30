@@ -225,6 +225,35 @@ const Billing: React.FC = () => {
     );
   }
 
+  // A personal workspace needs no plan. A subscription bought here by mistake
+  // can still be cancelled from the portal.
+  if (activeWorkspace?.kind === "PERSONAL") {
+    return (
+      <SidebarLayout>
+        <Container maxWidth="md" sx={{ py: 6 }}>
+          <Typography variant="h4" sx={{ fontWeight: 700, mb: 2 }}>
+            {t("billing.title")}
+          </Typography>
+          <Stack spacing={2}>
+            <Alert severity="info">{t("billing.personal.noPlan")}</Alert>
+            {subscription?.active && (
+              <Alert
+                severity="warning"
+                action={
+                  <Button color="inherit" onClick={handlePortal} disabled={portalLoading}>
+                    {t("billing.managePortal")}
+                  </Button>
+                }
+              >
+                {t("billing.personal.cancelMistake")}
+              </Alert>
+            )}
+          </Stack>
+        </Container>
+      </SidebarLayout>
+    );
+  }
+
   // Courtesy workspace — full access granted by the team, no billing needed.
   if (activeWorkspace?.isCourtesy) {
     return (

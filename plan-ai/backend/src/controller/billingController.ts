@@ -153,6 +153,20 @@ export class BillingController extends BaseWorkspaceController {
     @Body() body: CheckoutBody,
   ): Promise<CheckoutResponse> {
     const { user, workspaceId } = await this.requireAdminOrOwner(request);
+    // A personal workspace has one member and needs no plan. Paying for it
+    // by mistake leaves the team workspace, which the apps use, unpaid.
+    const workspace = await prisma.workspace.findUnique({
+      where: { id: workspaceId },
+      select: { kind: true },
+    });
+    if (workspace?.kind === "PERSONAL") {
+      this.setStatus(400);
+      throw {
+        status: 400,
+        code: "personal_workspace_no_plan",
+        message: "A personal workspace needs no plan. Switch to your team workspace to subscribe.",
+      };
+    }
     if (!body.priceId) {
       this.setStatus(400);
       throw { status: 400, message: "Missing priceId" };

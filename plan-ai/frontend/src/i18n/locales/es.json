@@ -1432,6 +1432,10 @@
     "finish": "Completar Configuración"
   },
   "billing": {
+    "personal": {
+      "noPlan": "Tu espacio personal no necesita plan. Para suscribirte, cambia a tu workspace de equipo: es el que usan las apps y las grabaciones.",
+      "cancelMistake": "Este espacio personal tiene una suscripción, seguramente contratada por error. Cancélala en el portal de facturación y suscríbete desde tu workspace de equipo."
+    },
     "title": "Facturación",
     "subtitle": "Gestiona tu suscripción, asientos y método de pago.",
     "notConfigured": "La facturación está desactivada en esta instancia (auto-alojada / OSS). No se requiere suscripción.",
