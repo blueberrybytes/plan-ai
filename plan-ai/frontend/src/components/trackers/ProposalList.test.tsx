@@ -35,9 +35,8 @@ const entry = (overrides: Partial<TrackerEntry>): TrackerEntry => ({
         gramsLow: 120,
         gramsHigh: 180,
         kcal: 248,
-        source: "usda",
       },
-      { name: "Olive oil", grams: 10, kcal: 88, source: "ai" },
+      { name: "Olive oil", grams: 10, kcal: 88 },
     ],
     kcalLow: 281,
     kcalHigh: 452,
@@ -74,12 +73,11 @@ const renderList = (props: Partial<ProposalListProps> = {}) => {
 };
 
 describe("ProposalList", () => {
-  it("shows the kcal estimate, the foods and where each number comes from", () => {
+  it("shows the kcal estimate and the foods", () => {
     renderList();
     expect(screen.getByText("about 350 kcal (280 to 450)")).toBeInTheDocument();
     expect(screen.getByText(/Chicken breast, 150 g \(120 to 180 g\)/)).toBeInTheDocument();
-    expect(screen.getByText("USDA")).toBeInTheDocument();
-    expect(screen.getByText("AI estimate")).toBeInTheDocument();
+    expect(screen.getByText(/Olive oil, 10 g, 88 kcal/)).toBeInTheDocument();
   });
 
   it("hides every kcal number when calories are hidden", () => {

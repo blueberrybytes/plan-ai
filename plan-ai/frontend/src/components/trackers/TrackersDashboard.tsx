@@ -55,7 +55,6 @@ const TrackersDashboard: React.FC<TrackersDashboardProps> = ({
   const [formTarget, setFormTarget] = useState<FormTarget | null>(null);
   const [historyTracker, setHistoryTracker] = useState<Tracker | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [foodDatabase, setFoodDatabase] = useState<boolean | null>(null);
 
   const trackersQuery = useListTrackersQuery(showArchived ? { includeArchived: true } : undefined);
   const { data: stats = [] } = useGetTrackerStatsQuery({ today });
@@ -108,7 +107,7 @@ const TrackersDashboard: React.FC<TrackersDashboardProps> = ({
         </Button>
       </Box>
 
-      {hasActive && <QuickLogInput onResult={(result) => setFoodDatabase(result.foodDatabase)} />}
+      {hasActive && <QuickLogInput />}
       <PendingProposals hideCalories={hideCalories} />
 
       {trackersQuery.isLoading ? (
@@ -131,7 +130,7 @@ const TrackersDashboard: React.FC<TrackersDashboardProps> = ({
 
       <Box sx={{ display: "flex", alignItems: "center", gap: 2, flexWrap: "wrap" }}>
         <Box sx={{ flex: 1, minWidth: 240 }}>
-          <TrackersFooter foodDatabase={foodDatabase} />
+          <TrackersFooter />
         </Box>
         <FormControlLabel
           control={

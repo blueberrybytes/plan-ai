@@ -1,5 +1,5 @@
 import React from "react";
-import { Box, Chip, Stack, Typography } from "@mui/material";
+import { Box, Stack, Typography } from "@mui/material";
 import { useTranslation } from "react-i18next";
 import { roundKcal, type FoodItem } from "./trackerUtils";
 import { useTrackerFormat } from "./useTrackerFormat";
@@ -10,7 +10,7 @@ interface FoodBreakdownProps {
   hideKcal: boolean;
 }
 
-/** The foods of a calories entry: grams, kcal and where the number comes from. */
+/** The foods of a calories entry: grams and kcal. */
 const FoodBreakdown: React.FC<FoodBreakdownProps> = ({ items, hideKcal }) => {
   const { t } = useTranslation();
   const { number } = useTrackerFormat();
@@ -48,13 +48,6 @@ const FoodBreakdown: React.FC<FoodBreakdownProps> = ({ items, hideKcal }) => {
               ? `, ${t("trackers.food.kcal", { kcal: number(roundKcal(item.kcal), 0) })}`
               : ""}
           </Typography>
-          <Chip
-            size="small"
-            variant="outlined"
-            label={t(item.source === "usda" ? "trackers.food.usda" : "trackers.food.ai")}
-            title={item.matchedName}
-            sx={{ height: 20, fontSize: "0.7rem" }}
-          />
         </Box>
       ))}
     </Stack>

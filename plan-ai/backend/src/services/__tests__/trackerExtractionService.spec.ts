@@ -13,7 +13,7 @@ const mocks = vi.hoisted(() => {
     },
   };
   db.$transaction = vi.fn((arg: any) => Promise.all(arg));
-  return { db, generateText: vi.fn(), lookupFood: vi.fn(), logUsage: vi.fn() };
+  return { db, generateText: vi.fn(), logUsage: vi.fn() };
 });
 vi.mock("../../prisma/prismaClient", () => ({ default: mocks.db }));
 vi.mock("ai", async (importOriginal) => ({
@@ -24,7 +24,6 @@ vi.mock("../../utils/aiModelUtils", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../utils/aiModelUtils")>()),
   getWorkspaceModel: vi.fn().mockResolvedValue("model"),
 }));
-vi.mock("../foodLookupService", () => ({ lookupFood: mocks.lookupFood }));
 vi.mock("../aiUsageService", () => ({ aiUsageService: { logUsage: mocks.logUsage } }));
 
 import { extractFromNote, priceFoods } from "../trackerExtractionService";
@@ -54,41 +53,29 @@ beforeEach(() => {
 });
 
 describe("pricing food", () => {
-  it("uses the database kcal and keeps a range", async () => {
-    mocks.lookupFood.mockResolvedValue({
-      fdcId: 173424,
-      description: "Egg, whole, cooked, hard-boiled",
-      kcalPer100g: 155,
-    });
-    const details = await priceFoods([
-      {
-        name: "2 huevos",
-        usdaQuery: "egg whole boiled",
-        grams: 100,
-        gramsLow: 90,
-        gramsHigh: 120,
-        kcalPer100g: 150,
-      },
+  it("multiplies the grams by the kcal per 100 g and keeps a range", () => {
+    const details = priceFoods([
+      { name: "2 huevos", grams: 100, gramsLow: 90, gramsHigh: 120, kcalPer100g: 155 },
+      { name: "tostada", grams: 30, gramsLow: 25, gramsHigh: 40, kcalPer100g: 290 },
     ]);
-    expect(details?.items[0]).toMatchObject({ kcal: 155, kcalLow: 140, kcalHigh: 186, source: "usda" });
+    expect(details?.items[0]).toMatchObject({ kcal: 155, kcalLow: 140, kcalHigh: 186 });
+    expect(details).toMatchObject({ kcalLow: 140 + 73, kcalHigh: 186 + 116 });
   });
 
-  it("keeps the AI number when the database found something else", async () => {
-    // "boiled egg" matching "peanuts, boiled" (318 kcal) against the AI's 150.
-    mocks.lookupFood.mockResolvedValue({ fdcId: 1, description: "Peanuts, boiled", kcalPer100g: 318 });
-    const details = await priceFoods([
-      { name: "egg", usdaQuery: "egg boiled", grams: 50, gramsLow: 50, gramsHigh: 60, kcalPer100g: 140 },
-    ]);
-    expect(details?.items[0]).toMatchObject({ kcal: 70, source: "ai" });
-  });
-
-  it("ignores foods with no weight", async () => {
-    mocks.lookupFood.mockResolvedValue(null);
+  it("drops foods with no weight or an impossible kcal value", () => {
     expect(
-      await priceFoods([
-        { name: "air", usdaQuery: "air", grams: 0, gramsLow: 0, gramsHigh: 0, kcalPer100g: 0 },
+      priceFoods([
+        { name: "air", grams: 0, gramsLow: 0, gramsHigh: 0, kcalPer100g: 0 },
+        { name: "typo", grams: 100, gramsLow: 100, gramsHigh: 100, kcalPer100g: 5000 },
       ]),
     ).toBeNull();
+  });
+
+  it("orders a low end given above the best guess", () => {
+    const details = priceFoods([
+      { name: "rice", grams: 150, gramsLow: 200, gramsHigh: 100, kcalPer100g: 130 },
+    ]);
+    expect(details?.items[0]).toMatchObject({ gramsLow: 150, gramsHigh: 150 });
   });
 });
 
@@ -98,7 +85,6 @@ describe("reading a note", () => {
     db.tracker.findMany.mockResolvedValue([food, gym]);
     db.note.updateMany.mockResolvedValue({ count: 1 });
     db.trackerEntry.findMany.mockResolvedValue([]);
-    mocks.lookupFood.mockResolvedValue({ fdcId: 1, description: "Egg", kcalPer100g: 155 });
     mocks.generateText.mockResolvedValue(
       answer([
         {
@@ -107,7 +93,7 @@ describe("reading a note", () => {
           label: "Breakfast",
           dayOffset: 0,
           foods: [
-            { name: "2 eggs", usdaQuery: "egg boiled", grams: 100, gramsLow: 90, gramsHigh: 110, kcalPer100g: 150 },
+            { name: "2 eggs", grams: 100, gramsLow: 90, gramsHigh: 110, kcalPer100g: 155 },
           ],
         },
         { trackerId: "t-gym", value: null, label: "Gym", dayOffset: 0, foods: null },

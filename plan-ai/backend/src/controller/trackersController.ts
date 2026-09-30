@@ -21,7 +21,6 @@ import {
 } from "../services/trackerService";
 import { extractFromNote, extractFromText } from "../services/trackerExtractionService";
 import { MissingApiKeyError } from "../utils/aiModelUtils";
-import { foodLookupConfigured } from "../services/foodLookupService";
 
 export type TrackerKindValue = "NUMBER" | "CHECK" | "CALORIES";
 export type TrackerAggregationValue = "SUM" | "LAST" | "AVERAGE";
@@ -55,7 +54,7 @@ export interface TrackerEntryResponse {
   label: string | null;
   /**
    * For CALORIES: { items: [{ name, grams, gramsLow, gramsHigh, kcal, kcalLow,
-   * kcalHigh, source: "usda" | "ai", fdcId?, matchedName? }], kcalLow, kcalHigh }.
+   * kcalHigh }], kcalLow, kcalHigh }. The kcal are AI estimates.
    */
   details: TsoaJsonObject | null;
   status: TrackerEntryStatusValue;
@@ -115,8 +114,6 @@ export interface ExtractResponse {
   entries: TrackerEntryResponse[];
   /** Why the AI was not called: no_trackers, unchanged (already read) or empty. */
   skipped: "no_trackers" | "unchanged" | "empty" | null;
-  /** False when kcal come from the AI only (USDA_FDC_API_KEY is not set). */
-  foodDatabase: boolean;
 }
 
 export interface TrackerDayValue {
@@ -315,7 +312,6 @@ export class TrackersController extends BaseWorkspaceController {
       return {
         entries: result.entries.map(entryResponse),
         skipped: result.skipped,
-        foodDatabase: foodLookupConfigured(),
       };
     });
   }

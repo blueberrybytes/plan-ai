@@ -1313,7 +1313,6 @@ const models: TsoaRoute.Models = {
         "properties": {
             "entries": {"dataType":"array","array":{"dataType":"refObject","ref":"TrackerEntryResponse"},"required":true},
             "skipped": {"dataType":"union","subSchemas":[{"dataType":"enum","enums":["no_trackers"]},{"dataType":"enum","enums":["unchanged"]},{"dataType":"enum","enums":["empty"]},{"dataType":"enum","enums":[null]}],"required":true},
-            "foodDatabase": {"dataType":"boolean","required":true},
         },
         "additionalProperties": false,
     },

@@ -1879,7 +1879,7 @@
       "healthData": "En la UE, la comida, el peso y los pasos cuentan como datos de salud. Para guardarlos necesitamos tu consentimiento explícito.",
       "private": "Estos datos son solo tuyos. Ningún propietario ni administrador de ningún espacio de trabajo puede verlos, y el asistente no los lee.",
       "ai": "Cuando se lee una nota con IA, la petición usa tu propia clave de OpenRouter y pide proveedores que no guardan datos.",
-      "estimates": "Las calorías son estimaciones. No son consejo médico ni nutricional.",
+      "estimates": "Las calorías son estimaciones de la IA, no consejo médico ni nutricional.",
       "withdraw": "Puedes retirar tu consentimiento cuando quieras en los ajustes de Seguimiento. Eso borra todos tus seguimientos y registros.",
       "checkbox": "He leído esto y acepto guardar mis datos de salud en mi espacio personal.",
       "cancel": "Ahora no",
@@ -1928,9 +1928,7 @@
     "food": {
       "grams": "{{grams}} g",
       "gramsRange": "{{grams}} g ({{low}} a {{high}} g)",
-      "kcal": "{{kcal}} kcal",
-      "usda": "USDA",
-      "ai": "Estimación IA"
+      "kcal": "{{kcal}} kcal"
     },
     "proposals": {
       "title_one": "{{count}} registro por revisar",
@@ -2097,8 +2095,7 @@
       "body": "Elige uno para empezar. Puedes cambiarlo después."
     },
     "footer": {
-      "estimates": "Las calorías son estimaciones, no consejo médico ni nutricional.",
-      "aiOnly": "En la última lectura, las calorías vienen solo de estimaciones de la IA, no de una base de datos de alimentos."
+      "estimates": "Las calorías son estimaciones de la IA, no consejo médico ni nutricional."
     },
     "gate": {
       "consentTitle": "El modo personal está desactivado",

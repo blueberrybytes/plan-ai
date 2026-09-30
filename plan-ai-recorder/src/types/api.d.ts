@@ -4369,7 +4369,7 @@ export interface components {
             label: string | null;
             /**
              * @description For CALORIES: { items: [{ name, grams, gramsLow, gramsHigh, kcal, kcalLow,
-             *     kcalHigh, source: "usda" | "ai", fdcId?, matchedName? }], kcalLow, kcalHigh }.
+             *     kcalHigh }], kcalLow, kcalHigh }. The kcal are AI estimates.
              */
             details: components["schemas"]["TsoaJsonObject"] | null;
             status: components["schemas"]["TrackerEntryStatusValue"];
@@ -4397,8 +4397,6 @@ export interface components {
              * @enum {string|null}
              */
             skipped: "no_trackers" | "unchanged" | "empty" | null;
-            /** @description False when kcal come from the AI only (USDA_FDC_API_KEY is not set). */
-            foodDatabase: boolean;
         };
         ExtractRequest: {
             /** @description Read this note of the user. */

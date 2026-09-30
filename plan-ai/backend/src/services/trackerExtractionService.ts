@@ -9,14 +9,13 @@ import {
   privacyProviderPrefs,
 } from "../utils/aiModelUtils";
 import { aiUsageService } from "./aiUsageService";
-import { lookupFood } from "./foodLookupService";
 import { addDays, dayKey, listTrackers, parseToday, type TrackerOwner } from "./trackerService";
 
 /**
  * Reads a note (or a line the user typed) and proposes tracker entries.
- * Nothing counts until the user accepts it. For food, the AI names each food
- * and guesses the grams; the kcal come from USDA FoodData Central when it
- * knows the food, and every number is kept as a range.
+ * Nothing counts until the user accepts it. For food, the AI names each food,
+ * guesses the grams with a low and a high end, and estimates kcal per 100 g.
+ * The server multiplies them, so every kcal number is kept as a range.
  *
  * The text is health data, so the call asks OpenRouter for providers that
  * keep nothing (zero data retention), on top of the usual no-training rule.
@@ -44,15 +43,12 @@ const fail = (status: number, message: string, code?: string): ExtractionError =
 // optional properties (see aiTaskCoachService).
 const FoodSchema = z.object({
   name: z.string().describe("The food as the user wrote it, in their language."),
-  usdaQuery: z
-    .string()
-    .describe(
-      "Short generic English description to search the USDA food database, e.g. 'egg whole boiled', 'bread white toasted', 'rice white cooked'.",
-    ),
   grams: z.number().describe("Best guess of the eaten weight in grams."),
   gramsLow: z.number().describe("Low end of a reasonable range of grams."),
   gramsHigh: z.number().describe("High end of a reasonable range of grams."),
-  kcalPer100g: z.number().describe("Your own estimate of kcal per 100 g, as a backup."),
+  kcalPer100g: z
+    .number()
+    .describe("kcal per 100 g of this food as eaten, from standard nutrition tables."),
 });
 
 const ExtractionSchema = z.object({
@@ -85,10 +81,6 @@ export interface FoodItemDetails {
   kcal: number;
   kcalLow: number;
   kcalHigh: number;
-  /** "usda" when the kcal per 100 g came from the database, "ai" when it is the model's guess. */
-  source: "usda" | "ai";
-  fdcId?: number;
-  matchedName?: string;
 }
 
 export interface FoodDetails {
@@ -100,12 +92,8 @@ export interface FoodDetails {
 const clampGrams = (g: unknown): number =>
   typeof g === "number" && Number.isFinite(g) ? Math.min(Math.max(g, 0), MAX_GRAMS) : 0;
 
-/**
- * Turns the AI's foods into kcal. The database value is used unless it is
- * more than twice as far from the AI's own estimate, which means the search
- * matched the wrong food ("boiled egg" finding "boiled peanuts").
- */
-export async function priceFoods(foods: Extracted["foods"]): Promise<FoodDetails | null> {
+/** Turns the AI's foods into kcal, with a range from the grams. */
+export function priceFoods(foods: Extracted["foods"]): FoodDetails | null {
   if (!foods || foods.length === 0) return null;
   const items: FoodItemDetails[] = [];
   for (const food of foods.slice(0, 20)) {
@@ -113,18 +101,11 @@ export async function priceFoods(foods: Extracted["foods"]): Promise<FoodDetails
     if (grams <= 0) continue;
     const low = Math.min(clampGrams(food.gramsLow) || grams, grams);
     const high = Math.max(clampGrams(food.gramsHigh) || grams, grams);
-    const aiPer100 =
-      typeof food.kcalPer100g === "number" && food.kcalPer100g >= 0 && food.kcalPer100g <= 950
-        ? food.kcalPer100g
-        : null;
-    const match = await lookupFood(food.usdaQuery || food.name);
-    const plausible =
-      match &&
-      (aiPer100 === null ||
-        aiPer100 === 0 ||
-        (match.kcalPer100g / aiPer100 <= 2 && match.kcalPer100g / aiPer100 >= 0.5));
-    const per100 = plausible ? match!.kcalPer100g : aiPer100;
-    if (per100 === null) continue;
+    // Pure fat is about 900 kcal per 100 g; anything above is a mistake.
+    const per100 = food.kcalPer100g;
+    if (typeof per100 !== "number" || !Number.isFinite(per100) || per100 < 0 || per100 > 950) {
+      continue;
+    }
     items.push({
       name: food.name.slice(0, 80),
       grams: Math.round(grams),
@@ -133,8 +114,6 @@ export async function priceFoods(foods: Extracted["foods"]): Promise<FoodDetails
       kcal: Math.round((grams * per100) / 100),
       kcalLow: Math.round((low * per100) / 100),
       kcalHigh: Math.round((high * per100) / 100),
-      source: plausible ? "usda" : "ai",
-      ...(plausible ? { fdcId: match!.fdcId, matchedName: match!.description } : {}),
     });
   }
   if (items.length === 0) return null;
@@ -233,7 +212,7 @@ async function toProposals(
     if (tracker.kind === "CHECK") {
       value = 1;
     } else if (tracker.kind === "CALORIES") {
-      details = await priceFoods(e.foods);
+      details = priceFoods(e.foods);
       if (!details) continue;
       value = details.items.reduce((t, i) => t + i.kcal, 0);
     } else {

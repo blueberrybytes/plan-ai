@@ -1885,7 +1885,7 @@
       "healthData": "In the EU, food, weight and steps count as health data. To store them we need your explicit consent.",
       "private": "This data is private to you. No owner or admin of any workspace can see it, and the assistant does not read it.",
       "ai": "When a note is read with AI, the request uses your own OpenRouter key and asks for providers that keep no data.",
-      "estimates": "Calorie numbers are estimates. They are not medical or nutrition advice.",
+      "estimates": "Calories are AI estimates, not medical or nutrition advice.",
       "withdraw": "You can withdraw your consent at any time in the trackers settings. That deletes all your trackers and entries.",
       "checkbox": "I have read this and I agree to store my health data in my personal space.",
       "cancel": "Not now",
@@ -1934,9 +1934,7 @@
     "food": {
       "grams": "{{grams}} g",
       "gramsRange": "{{grams}} g ({{low}} to {{high}} g)",
-      "kcal": "{{kcal}} kcal",
-      "usda": "USDA",
-      "ai": "AI estimate"
+      "kcal": "{{kcal}} kcal"
     },
     "proposals": {
       "title_one": "{{count}} entry to review",
@@ -2103,8 +2101,7 @@
       "body": "Pick one to start. You can change it later."
     },
     "footer": {
-      "estimates": "Calorie numbers are estimates, not medical or nutrition advice.",
-      "aiOnly": "In the last reading, calories come from AI estimates only, not from a food database."
+      "estimates": "Calories are AI estimates, not medical or nutrition advice."
     },
     "gate": {
       "consentTitle": "Personal mode is off",

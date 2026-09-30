@@ -90,10 +90,10 @@ describe("readFoodDetails", () => {
     expect(readFoodDetails({ kcalLow: 1 })).toBeNull();
   });
 
-  it("keeps valid items and marks unknown sources as AI", () => {
+  it("keeps valid items and reads missing numbers as null", () => {
     const details = readFoodDetails({
       items: [
-        { name: "Rice", grams: 150, kcal: 195, source: "usda", matchedName: "Rice, white" },
+        { name: "Rice", grams: 150, kcal: 195 },
         { name: "Sauce", grams: "a lot", kcal: 80, source: "other" },
         { grams: 10 },
       ],
@@ -101,8 +101,8 @@ describe("readFoodDetails", () => {
       kcalHigh: 340,
     });
     expect(details?.items).toHaveLength(2);
-    expect(details?.items[0]).toMatchObject({ name: "Rice", grams: 150, source: "usda" });
-    expect(details?.items[1]).toMatchObject({ name: "Sauce", grams: null, source: "ai" });
+    expect(details?.items[0]).toMatchObject({ name: "Rice", grams: 150 });
+    expect(details?.items[1]).toMatchObject({ name: "Sauce", grams: null });
     expect(details?.kcalLow).toBe(220);
   });
 });

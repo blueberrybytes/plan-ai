@@ -10,7 +10,6 @@ export interface CalorieItem {
   kcal: number | null;
   kcalLow: number | null;
   kcalHigh: number | null;
-  source: "usda" | "ai" | null;
 }
 
 export interface CalorieDetails {
@@ -37,7 +36,6 @@ export function caloriesDetailsOf(entry: Pick<TrackerEntry, "details">): Calorie
       kcal: num(i.kcal),
       kcalLow: num(i.kcalLow),
       kcalHigh: num(i.kcalHigh),
-      source: i.source === "usda" || i.source === "ai" ? i.source : null,
     });
   }
   return { items, kcalLow: num(d.kcalLow), kcalHigh: num(d.kcalHigh) };

@@ -29,8 +29,6 @@ export interface FoodItem {
   kcal: number | null;
   kcalLow: number | null;
   kcalHigh: number | null;
-  source: "usda" | "ai";
-  matchedName?: string;
 }
 
 export interface FoodDetails {
@@ -54,8 +52,6 @@ const readFoodItem = (raw: unknown): FoodItem | null => {
     kcal: numberOrNull(item.kcal),
     kcalLow: numberOrNull(item.kcalLow),
     kcalHigh: numberOrNull(item.kcalHigh),
-    source: item.source === "usda" ? "usda" : "ai",
-    ...(typeof item.matchedName === "string" ? { matchedName: item.matchedName } : {}),
   };
 };
 

@@ -3652,7 +3652,7 @@
 							}
 						],
 						"nullable": true,
-						"description": "For CALORIES: { items: [{ name, grams, gramsLow, gramsHigh, kcal, kcalLow,\nkcalHigh, source: \"usda\" | \"ai\", fdcId?, matchedName? }], kcalLow, kcalHigh }."
+						"description": "For CALORIES: { items: [{ name, grams, gramsLow, gramsHigh, kcal, kcalLow,\nkcalHigh }], kcalLow, kcalHigh }. The kcal are AI estimates."
 					},
 					"status": {
 						"$ref": "#/components/schemas/TrackerEntryStatusValue"
@@ -3745,16 +3745,11 @@
 						],
 						"nullable": true,
 						"description": "Why the AI was not called: no_trackers, unchanged (already read) or empty."
-					},
-					"foodDatabase": {
-						"type": "boolean",
-						"description": "False when kcal come from the AI only (USDA_FDC_API_KEY is not set)."
 					}
 				},
 				"required": [
 					"entries",
-					"skipped",
-					"foodDatabase"
+					"skipped"
 				],
 				"type": "object",
 				"additionalProperties": false

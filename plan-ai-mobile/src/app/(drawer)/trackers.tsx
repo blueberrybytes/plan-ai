@@ -96,7 +96,6 @@ export default function TrackersScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
-  const [aiOnly, setAiOnly] = useState(false);
   const [busy, setBusy] = useState<Set<string>>(new Set());
   const [inputs, setInputs] = useState<Record<string, string>>({});
   const [notice, setNotice] = useState<string | null>(null);
@@ -186,7 +185,6 @@ export default function TrackersScreen() {
         setNotice("Nothing to log was found in that text.");
       } else {
         setText("");
-        setAiOnly(!res.foodDatabase);
       }
       await load();
     } catch (err) {
@@ -335,7 +333,6 @@ export default function TrackersScreen() {
               const parts = [item.name];
               if (item.grams !== null) parts.push(`${formatNumber(Math.round(item.grams))} g`);
               if (!hideCalories && item.kcal !== null) parts.push(`${formatNumber(Math.round(item.kcal))} kcal`);
-              if (item.source) parts.push(item.source === "usda" ? "USDA" : "AI estimate");
               return (
                 <Text key={`${entry.id}-${i}`} variant="bodySmall" style={muted}>
                   {parts.join(", ")}
@@ -608,11 +605,6 @@ export default function TrackersScreen() {
               </Button>
             </View>
             {data.proposals.map((p) => renderProposal(p, byId, data.today))}
-            {aiOnly && !s.hideCalories && data.proposals.some((p) => byId.get(p.trackerId)?.kind === "CALORIES") && (
-              <Text variant="bodySmall" style={muted}>
-                These calories are AI estimates only. The food database is not set up.
-              </Text>
-            )}
           </View>
         )}
 
@@ -624,7 +616,7 @@ export default function TrackersScreen() {
 
         {hasCalories && (
           <Text variant="bodySmall" style={[muted, styles.footer]}>
-            Calories are estimates, not medical advice.
+            Calories are AI estimates, not medical advice.
           </Text>
         )}
       </>
