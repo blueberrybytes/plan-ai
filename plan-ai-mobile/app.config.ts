@@ -126,6 +126,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
         },
       ],
       "./plugins/with-rnfb-fix.js",
+      "./plugins/with-min-pod-deployment-target.js",
       "./plugins/with-adi-registration.js",
       "./plugins/with-notifee-microphone-service.js",
       "./plugins/with-no-backup-folders.js",
