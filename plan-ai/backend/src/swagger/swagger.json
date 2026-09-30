@@ -3378,6 +3378,434 @@
 					"twenty"
 				]
 			},
+			"TrackerKindValue": {
+				"type": "string",
+				"enum": [
+					"NUMBER",
+					"CHECK",
+					"CALORIES"
+				]
+			},
+			"TrackerAggregationValue": {
+				"type": "string",
+				"enum": [
+					"SUM",
+					"LAST",
+					"AVERAGE"
+				]
+			},
+			"TrackerGoalDirectionValue": {
+				"type": "string",
+				"enum": [
+					"AT_LEAST",
+					"AT_MOST"
+				]
+			},
+			"TrackerPeriodValue": {
+				"type": "string",
+				"enum": [
+					"DAY",
+					"WEEK"
+				]
+			},
+			"TrackerResponse": {
+				"properties": {
+					"id": {
+						"type": "string"
+					},
+					"name": {
+						"type": "string"
+					},
+					"kind": {
+						"$ref": "#/components/schemas/TrackerKindValue"
+					},
+					"unit": {
+						"type": "string",
+						"nullable": true
+					},
+					"aggregation": {
+						"$ref": "#/components/schemas/TrackerAggregationValue"
+					},
+					"goalValue": {
+						"type": "number",
+						"format": "double",
+						"nullable": true
+					},
+					"goalDirection": {
+						"allOf": [
+							{
+								"$ref": "#/components/schemas/TrackerGoalDirectionValue"
+							}
+						],
+						"nullable": true
+					},
+					"goalPeriod": {
+						"allOf": [
+							{
+								"$ref": "#/components/schemas/TrackerPeriodValue"
+							}
+						],
+						"nullable": true
+					},
+					"instructions": {
+						"type": "string",
+						"nullable": true
+					},
+					"position": {
+						"type": "number",
+						"format": "double"
+					},
+					"archived": {
+						"type": "boolean"
+					},
+					"createdAt": {
+						"type": "string"
+					},
+					"updatedAt": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"id",
+					"name",
+					"kind",
+					"unit",
+					"aggregation",
+					"goalValue",
+					"goalDirection",
+					"goalPeriod",
+					"instructions",
+					"position",
+					"archived",
+					"createdAt",
+					"updatedAt"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"TrackerInputRequest": {
+				"properties": {
+					"name": {
+						"type": "string"
+					},
+					"kind": {
+						"$ref": "#/components/schemas/TrackerKindValue"
+					},
+					"unit": {
+						"type": "string",
+						"nullable": true
+					},
+					"aggregation": {
+						"$ref": "#/components/schemas/TrackerAggregationValue"
+					},
+					"goalValue": {
+						"type": "number",
+						"format": "double",
+						"nullable": true,
+						"description": "Null removes the goal."
+					},
+					"goalDirection": {
+						"allOf": [
+							{
+								"$ref": "#/components/schemas/TrackerGoalDirectionValue"
+							}
+						],
+						"nullable": true
+					},
+					"goalPeriod": {
+						"allOf": [
+							{
+								"$ref": "#/components/schemas/TrackerPeriodValue"
+							}
+						],
+						"nullable": true
+					},
+					"instructions": {
+						"type": "string",
+						"nullable": true,
+						"description": "Extra words for the AI, e.g. \"count only hours with clients\"."
+					},
+					"position": {
+						"type": "number",
+						"format": "double"
+					},
+					"archived": {
+						"type": "boolean"
+					}
+				},
+				"type": "object",
+				"additionalProperties": false
+			},
+			"TrackerDayValue": {
+				"properties": {
+					"date": {
+						"type": "string"
+					},
+					"value": {
+						"type": "number",
+						"format": "double",
+						"nullable": true
+					},
+					"goalMet": {
+						"type": "boolean",
+						"nullable": true
+					}
+				},
+				"required": [
+					"date",
+					"value",
+					"goalMet"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"TrackerStatsResponse": {
+				"properties": {
+					"trackerId": {
+						"type": "string"
+					},
+					"days": {
+						"items": {
+							"$ref": "#/components/schemas/TrackerDayValue"
+						},
+						"type": "array"
+					},
+					"today": {
+						"type": "number",
+						"format": "double",
+						"nullable": true
+					},
+					"week": {
+						"type": "number",
+						"format": "double",
+						"nullable": true
+					},
+					"goalMetToday": {
+						"type": "boolean",
+						"nullable": true
+					},
+					"goalMetThisWeek": {
+						"type": "boolean",
+						"nullable": true
+					},
+					"streak": {
+						"type": "number",
+						"format": "double"
+					},
+					"streakUnit": {
+						"$ref": "#/components/schemas/TrackerPeriodValue"
+					}
+				},
+				"required": [
+					"trackerId",
+					"days",
+					"today",
+					"week",
+					"goalMetToday",
+					"goalMetThisWeek",
+					"streak",
+					"streakUnit"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"TrackerEntryStatusValue": {
+				"type": "string",
+				"enum": [
+					"PROPOSED",
+					"CONFIRMED",
+					"REJECTED"
+				]
+			},
+			"TrackerEntrySourceValue": {
+				"type": "string",
+				"enum": [
+					"MANUAL",
+					"NOTE",
+					"IMPORT"
+				]
+			},
+			"TrackerEntryResponse": {
+				"properties": {
+					"id": {
+						"type": "string"
+					},
+					"trackerId": {
+						"type": "string"
+					},
+					"date": {
+						"type": "string",
+						"description": "YYYY-MM-DD, the user's local day."
+					},
+					"value": {
+						"type": "number",
+						"format": "double"
+					},
+					"label": {
+						"type": "string",
+						"nullable": true
+					},
+					"details": {
+						"allOf": [
+							{
+								"$ref": "#/components/schemas/TsoaJsonObject"
+							}
+						],
+						"nullable": true,
+						"description": "For CALORIES: { items: [{ name, grams, gramsLow, gramsHigh, kcal, kcalLow,\nkcalHigh, source: \"usda\" | \"ai\", fdcId?, matchedName? }], kcalLow, kcalHigh }."
+					},
+					"status": {
+						"$ref": "#/components/schemas/TrackerEntryStatusValue"
+					},
+					"source": {
+						"$ref": "#/components/schemas/TrackerEntrySourceValue"
+					},
+					"noteId": {
+						"type": "string",
+						"nullable": true
+					},
+					"createdAt": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"id",
+					"trackerId",
+					"date",
+					"value",
+					"label",
+					"details",
+					"status",
+					"source",
+					"noteId",
+					"createdAt"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"ReviewEntriesRequest": {
+				"properties": {
+					"ids": {
+						"items": {
+							"type": "string"
+						},
+						"type": "array"
+					},
+					"status": {
+						"type": "string",
+						"enum": [
+							"CONFIRMED",
+							"REJECTED"
+						]
+					}
+				},
+				"required": [
+					"ids",
+					"status"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"UpdateEntryRequest": {
+				"properties": {
+					"date": {
+						"type": "string"
+					},
+					"value": {
+						"type": "number",
+						"format": "double"
+					},
+					"label": {
+						"type": "string",
+						"nullable": true
+					},
+					"status": {
+						"$ref": "#/components/schemas/TrackerEntryStatusValue",
+						"description": "CONFIRMED accepts a proposal, REJECTED refuses it."
+					}
+				},
+				"type": "object",
+				"additionalProperties": false
+			},
+			"ExtractResponse": {
+				"properties": {
+					"entries": {
+						"items": {
+							"$ref": "#/components/schemas/TrackerEntryResponse"
+						},
+						"type": "array"
+					},
+					"skipped": {
+						"type": "string",
+						"enum": [
+							"no_trackers",
+							"unchanged",
+							"empty",
+							null
+						],
+						"nullable": true,
+						"description": "Why the AI was not called: no_trackers, unchanged (already read) or empty."
+					},
+					"foodDatabase": {
+						"type": "boolean",
+						"description": "False when kcal come from the AI only (USDA_FDC_API_KEY is not set)."
+					}
+				},
+				"required": [
+					"entries",
+					"skipped",
+					"foodDatabase"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"ExtractRequest": {
+				"properties": {
+					"noteId": {
+						"type": "string",
+						"description": "Read this note of the user."
+					},
+					"text": {
+						"type": "string",
+						"description": "Or read this text (at most 2000 characters)."
+					},
+					"today": {
+						"type": "string",
+						"description": "The user's local date, YYYY-MM-DD."
+					}
+				},
+				"required": [
+					"today"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"AddEntryRequest": {
+				"properties": {
+					"id": {
+						"type": "string",
+						"description": "Optional id made by the app (16 to 64 of A-Z a-z 0-9 _ -), so a retry is not duplicated."
+					},
+					"date": {
+						"type": "string",
+						"description": "YYYY-MM-DD."
+					},
+					"value": {
+						"type": "number",
+						"format": "double",
+						"description": "Ignored for CHECK trackers (always 1)."
+					},
+					"label": {
+						"type": "string",
+						"nullable": true
+					}
+				},
+				"required": [
+					"date"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
 			"TaskCategory": {
 				"type": "string",
 				"enum": [
@@ -4490,6 +4918,87 @@
 				"required": [
 					"status"
 				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"PersonalStatusResponse": {
+				"properties": {
+					"available": {
+						"type": "boolean",
+						"description": "Personal mode is turned on for this account (PERSONAL_MODE_EMAILS)."
+					},
+					"enabled": {
+						"type": "boolean",
+						"description": "Consent given and the personal workspace exists."
+					},
+					"workspaceId": {
+						"type": "string",
+						"nullable": true
+					},
+					"consentAt": {
+						"type": "string",
+						"nullable": true
+					},
+					"consentVersion": {
+						"type": "string",
+						"nullable": true
+					},
+					"currentConsentVersion": {
+						"type": "string",
+						"description": "Version of the consent text the apps must show and send back."
+					},
+					"consentOutdated": {
+						"type": "boolean",
+						"description": "The accepted text is older than the current one."
+					},
+					"hideCalories": {
+						"type": "boolean"
+					},
+					"autoExtract": {
+						"type": "boolean"
+					}
+				},
+				"required": [
+					"available",
+					"enabled",
+					"workspaceId",
+					"consentAt",
+					"consentVersion",
+					"currentConsentVersion",
+					"consentOutdated",
+					"hideCalories",
+					"autoExtract"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"EnablePersonalRequest": {
+				"properties": {
+					"consent": {
+						"type": "boolean",
+						"description": "Must be true: the user ticked the consent box."
+					},
+					"consentVersion": {
+						"type": "string",
+						"description": "The version of the text the user read."
+					}
+				},
+				"required": [
+					"consent",
+					"consentVersion"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"PersonalSettingsRequest": {
+				"properties": {
+					"hideCalories": {
+						"type": "boolean"
+					},
+					"autoExtract": {
+						"type": "boolean"
+					}
+				},
 				"type": "object",
 				"additionalProperties": false
 			},
@@ -7951,6 +8460,16 @@
 				],
 				"type": "object"
 			},
+			"_36_Enums.WorkspaceKind": {
+				"type": "string",
+				"enum": [
+					"TEAM",
+					"PERSONAL"
+				]
+			},
+			"WorkspaceKind": {
+				"$ref": "#/components/schemas/_36_Enums.WorkspaceKind"
+			},
 			"_36_Enums.WorkspaceTier": {
 				"type": "string",
 				"enum": [
@@ -7982,6 +8501,10 @@
 					},
 					"name": {
 						"type": "string"
+					},
+					"kind": {
+						"$ref": "#/components/schemas/WorkspaceKind",
+						"description": "PERSONAL: the user's own workspace for private notes and trackers."
 					},
 					"tier": {
 						"$ref": "#/components/schemas/WorkspaceTier"
@@ -11752,6 +12275,506 @@
 				]
 			}
 		},
+		"/api/trackers": {
+			"get": {
+				"operationId": "ListTrackers",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"items": {
+										"$ref": "#/components/schemas/TrackerResponse"
+									},
+									"type": "array"
+								}
+							}
+						}
+					}
+				},
+				"tags": [
+					"Trackers"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": [
+					{
+						"in": "query",
+						"name": "includeArchived",
+						"required": false,
+						"schema": {
+							"type": "boolean"
+						}
+					}
+				]
+			},
+			"post": {
+				"operationId": "CreateTracker",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/TrackerResponse"
+								}
+							}
+						}
+					}
+				},
+				"tags": [
+					"Trackers"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": [],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/TrackerInputRequest"
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/trackers/stats": {
+			"get": {
+				"operationId": "GetTrackerStats",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"items": {
+										"$ref": "#/components/schemas/TrackerStatsResponse"
+									},
+									"type": "array"
+								}
+							}
+						}
+					}
+				},
+				"description": "Values per day for charts, today, this week, goals and streaks.\n`today` is the user's local date; from/to default to the last 30 days.",
+				"tags": [
+					"Trackers"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": [
+					{
+						"in": "query",
+						"name": "today",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"in": "query",
+						"name": "from",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"in": "query",
+						"name": "to",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					}
+				]
+			}
+		},
+		"/api/trackers/entries": {
+			"get": {
+				"operationId": "ListTrackerEntries",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"items": {
+										"$ref": "#/components/schemas/TrackerEntryResponse"
+									},
+									"type": "array"
+								}
+							}
+						}
+					}
+				},
+				"description": "Entries, newest first. Use status=PROPOSED for what waits to be accepted.",
+				"tags": [
+					"Trackers"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": [
+					{
+						"in": "query",
+						"name": "from",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"in": "query",
+						"name": "to",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"in": "query",
+						"name": "status",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"in": "query",
+						"name": "trackerId",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"in": "query",
+						"name": "noteId",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					}
+				]
+			}
+		},
+		"/api/trackers/entries/review": {
+			"post": {
+				"operationId": "ReviewTrackerEntries",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"updated": {
+											"type": "number",
+											"format": "double"
+										}
+									},
+									"required": [
+										"updated"
+									],
+									"type": "object"
+								}
+							}
+						}
+					}
+				},
+				"description": "Accepts or refuses several proposals at once.",
+				"tags": [
+					"Trackers"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": [],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/ReviewEntriesRequest"
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/trackers/entries/{entryId}": {
+			"patch": {
+				"operationId": "UpdateTrackerEntry",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/TrackerEntryResponse"
+								}
+							}
+						}
+					}
+				},
+				"tags": [
+					"Trackers"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": [
+					{
+						"in": "path",
+						"name": "entryId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/UpdateEntryRequest"
+							}
+						}
+					}
+				}
+			},
+			"delete": {
+				"operationId": "DeleteTrackerEntry",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"success": {
+											"type": "boolean"
+										}
+									},
+									"required": [
+										"success"
+									],
+									"type": "object"
+								}
+							}
+						}
+					}
+				},
+				"tags": [
+					"Trackers"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": [
+					{
+						"in": "path",
+						"name": "entryId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				]
+			}
+		},
+		"/api/trackers/extract": {
+			"post": {
+				"operationId": "ExtractTrackerEntries",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ExtractResponse"
+								}
+							}
+						}
+					}
+				},
+				"description": "Reads a note (or a line of text) with AI and proposes entries. They do\nnot count until accepted. A note is read once per version.",
+				"tags": [
+					"Trackers"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": [],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/ExtractRequest"
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/trackers/{id}": {
+			"patch": {
+				"operationId": "UpdateTracker",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/TrackerResponse"
+								}
+							}
+						}
+					}
+				},
+				"tags": [
+					"Trackers"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": [
+					{
+						"in": "path",
+						"name": "id",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/TrackerInputRequest"
+							}
+						}
+					}
+				}
+			},
+			"delete": {
+				"operationId": "DeleteTracker",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"success": {
+											"type": "boolean"
+										}
+									},
+									"required": [
+										"success"
+									],
+									"type": "object"
+								}
+							}
+						}
+					}
+				},
+				"description": "Deletes the tracker and all its entries. Archive it instead to keep them.",
+				"tags": [
+					"Trackers"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": [
+					{
+						"in": "path",
+						"name": "id",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				]
+			}
+		},
+		"/api/trackers/{id}/entries": {
+			"post": {
+				"operationId": "AddTrackerEntry",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/TrackerEntryResponse"
+								}
+							}
+						}
+					}
+				},
+				"description": "A value the user typed. It counts at once.",
+				"tags": [
+					"Trackers"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": [
+					{
+						"in": "path",
+						"name": "id",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/AddEntryRequest"
+							}
+						}
+					}
+				}
+			}
+		},
 		"/api/integrations/telegram/webhook": {
 			"post": {
 				"operationId": "HandleWebhook",
@@ -12864,6 +13887,132 @@
 						}
 					}
 				}
+			}
+		},
+		"/api/personal": {
+			"get": {
+				"operationId": "GetPersonalStatus",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/PersonalStatusResponse"
+								}
+							}
+						}
+					}
+				},
+				"tags": [
+					"Personal"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": []
+			}
+		},
+		"/api/personal/enable": {
+			"post": {
+				"operationId": "EnablePersonalMode",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/PersonalStatusResponse"
+								}
+							}
+						}
+					}
+				},
+				"description": "Gives consent to store health data and creates the personal workspace\nthe first time.",
+				"tags": [
+					"Personal"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": [],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/EnablePersonalRequest"
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/personal/settings": {
+			"patch": {
+				"operationId": "UpdatePersonalSettings",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/PersonalStatusResponse"
+								}
+							}
+						}
+					}
+				},
+				"tags": [
+					"Personal"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": [],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/PersonalSettingsRequest"
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/personal/withdraw-consent": {
+			"post": {
+				"operationId": "WithdrawPersonalConsent",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/PersonalStatusResponse"
+								}
+							}
+						}
+					}
+				},
+				"description": "Withdraws consent and deletes every tracker and entry. Notes stay.",
+				"tags": [
+					"Personal"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": []
 			}
 		},
 		"/api/onboarding/complete": {

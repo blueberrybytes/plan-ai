@@ -2,6 +2,7 @@ import { BaseWorkspaceController } from "./BaseWorkspaceController";
 import { Get, Post, Put, Delete, Body, Route, Security, Request, Tags, Path, Query } from "tsoa";
 import {
   PrismaClient,
+  WorkspaceKind,
   WorkspaceRole,
   WorkspaceTier,
   Role,
@@ -26,6 +27,8 @@ const prisma = new PrismaClient();
 export interface WorkspaceResponse {
   id: string;
   name: string;
+  /** PERSONAL: the user's own workspace for private notes and trackers. */
+  kind?: WorkspaceKind;
   tier: WorkspaceTier;
   role: WorkspaceRole;
   stripeId: string | null;
@@ -160,9 +163,16 @@ export class WorkspaceController extends BaseWorkspaceController {
       },
     });
 
+    // Team workspaces first: apps that pick the first one must not land in
+    // the personal workspace.
+    memberships.sort(
+      (a, b) => Number(a.workspace.kind === "PERSONAL") - Number(b.workspace.kind === "PERSONAL"),
+    );
+
     return memberships.map((m) => ({
       id: m.workspace.id,
       name: m.workspace.name,
+      kind: m.workspace.kind,
       tier: m.workspace.tier,
       role: m.role,
       stripeId: m.workspace.stripeId,
@@ -327,6 +337,10 @@ export class WorkspaceController extends BaseWorkspaceController {
     }
 
     const workspace = await prisma.workspace.findUnique({ where: { id: workspaceId } });
+    if (workspace?.kind === "PERSONAL") {
+      this.setStatus(403);
+      throw { status: 403, message: "A personal workspace cannot have other members." };
+    }
 
     // Check invitation limits
     const activeMembersCount = await prisma.workspaceMember.count({
@@ -818,6 +832,14 @@ export class WorkspaceController extends BaseWorkspaceController {
       this.setStatus(403);
       throw { status: 403, message: "Only the workspace owner can transfer ownership." };
     }
+    const kind = await prisma.workspace.findUnique({
+      where: { id: workspaceId },
+      select: { kind: true },
+    });
+    if (kind?.kind === "PERSONAL") {
+      this.setStatus(403);
+      throw { status: 403, message: "A personal workspace cannot change owner." };
+    }
     const target = await prisma.workspaceMember.findUnique({
       where: { id: body?.memberId ?? "" },
       include: { user: { select: { email: true } } },
@@ -864,12 +886,20 @@ export class WorkspaceController extends BaseWorkspaceController {
     }
     const workspace = await prisma.workspace.findUniqueOrThrow({
       where: { id: workspaceId },
-      select: { name: true, subscriptionStatus: true, subscriptionCancelAtPeriodEnd: true },
+      select: {
+        name: true,
+        kind: true,
+        subscriptionStatus: true,
+        subscriptionCancelAtPeriodEnd: true,
+      },
     });
-    // Without any workspace the user could not use the app, and only
-    // platform admins can create one.
-    const ownWorkspaces = await prisma.workspaceMember.count({ where: { userId: user.id } });
-    if (ownWorkspaces <= 1) {
+    // Without any team workspace the user could not use the app, and only
+    // platform admins can create one. A personal workspace can always go:
+    // turning personal mode on again makes a new one.
+    const teamWorkspaces = await prisma.workspaceMember.count({
+      where: { userId: user.id, workspace: { kind: "TEAM" } },
+    });
+    if (workspace.kind === "TEAM" && teamWorkspaces <= 1) {
       this.setStatus(409);
       throw {
         status: 409,

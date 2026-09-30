@@ -21,8 +21,8 @@ const signed = async (ref: string | null | undefined): Promise<string | null> =>
 };
 
 /**
- * `exportedBy` is the owner running the export: their own private notes are
- * included, other members' private notes never are.
+ * `exportedBy` is the owner running the export: their own private notes and
+ * trackers are included, other members' private notes never are.
  */
 export async function exportWorkspace(
   workspaceId: string,
@@ -53,6 +53,7 @@ export async function exportWorkspace(
     threads,
     auditLog,
     notes,
+    trackers,
   ] = await Promise.all([
     prisma.workspaceMember.findMany({
       where: { workspaceId },
@@ -161,6 +162,37 @@ export async function exportWorkspace(
         updatedAt: true,
       },
     }),
+    // Trackers exist only in a personal workspace and belong to its owner.
+    prisma.tracker.findMany({
+      where: { workspaceId, userId: exportedBy },
+      select: {
+        id: true,
+        name: true,
+        kind: true,
+        unit: true,
+        aggregation: true,
+        goalValue: true,
+        goalDirection: true,
+        goalPeriod: true,
+        archivedAt: true,
+        createdAt: true,
+        entries: {
+          where: { status: { not: "REJECTED" } },
+          select: {
+            id: true,
+            date: true,
+            value: true,
+            label: true,
+            details: true,
+            status: true,
+            source: true,
+            noteId: true,
+            createdAt: true,
+          },
+          orderBy: { date: "asc" },
+        },
+      },
+    }),
   ]);
 
   const transcriptsOut = [];
@@ -201,6 +233,7 @@ export async function exportWorkspace(
     diagrams,
     chatThreads: threads,
     notes,
+    ...(trackers.length > 0 ? { trackers } : {}),
     auditLog,
   };
 }

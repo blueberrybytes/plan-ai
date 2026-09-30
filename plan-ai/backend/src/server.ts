@@ -165,6 +165,7 @@ const postOnly =
     req.method === "POST" ? limiter(req, res, next) : next();
 app.use("/api/documents", postOnly(aiLimiter));
 app.use("/api/diagrams", postOnly(aiLimiter));
+app.use("/api/trackers/extract", aiLimiter);
 // The MCP endpoint and the queue dashboard are outside /api.
 app.use("/mcp", apiLimiter);
 app.use(

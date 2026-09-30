@@ -836,6 +836,146 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/trackers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ListTrackers"];
+        put?: never;
+        post: operations["CreateTracker"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/trackers/stats": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description Values per day for charts, today, this week, goals and streaks.
+         *     `today` is the user's local date; from/to default to the last 30 days.
+         */
+        get: operations["GetTrackerStats"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/trackers/entries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Entries, newest first. Use status=PROPOSED for what waits to be accepted. */
+        get: operations["ListTrackerEntries"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/trackers/entries/review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Accepts or refuses several proposals at once. */
+        post: operations["ReviewTrackerEntries"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/trackers/entries/{entryId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["DeleteTrackerEntry"];
+        options?: never;
+        head?: never;
+        patch: operations["UpdateTrackerEntry"];
+        trace?: never;
+    };
+    "/api/trackers/extract": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description Reads a note (or a line of text) with AI and proposes entries. They do
+         *     not count until accepted. A note is read once per version.
+         */
+        post: operations["ExtractTrackerEntries"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/trackers/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** @description Deletes the tracker and all its entries. Archive it instead to keep them. */
+        delete: operations["DeleteTracker"];
+        options?: never;
+        head?: never;
+        patch: operations["UpdateTracker"];
+        trace?: never;
+    };
+    "/api/trackers/{id}/entries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description A value the user typed. It counts at once. */
+        post: operations["AddTrackerEntry"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/integrations/telegram/webhook": {
         parameters: {
             query?: never;
@@ -1255,6 +1395,75 @@ export interface paths {
         options?: never;
         head?: never;
         patch: operations["UpdatePresentationStatus"];
+        trace?: never;
+    };
+    "/api/personal": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetPersonalStatus"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/personal/enable": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description Gives consent to store health data and creates the personal workspace
+         *     the first time.
+         */
+        post: operations["EnablePersonalMode"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/personal/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["UpdatePersonalSettings"];
+        trace?: never;
+    };
+    "/api/personal/withdraw-consent": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Withdraws consent and deletes every tracker and entry. Notes stay. */
+        post: operations["WithdrawPersonalConsent"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/onboarding/complete": {
@@ -4084,6 +4293,133 @@ export interface components {
         };
         /** @enum {string} */
         PostMeetingTaskKind: "jira" | "linear" | "trello" | "notion" | "asana" | "googleDrive" | "oneDrive" | "doc" | "slides" | "twenty";
+        /** @enum {string} */
+        TrackerKindValue: "NUMBER" | "CHECK" | "CALORIES";
+        /** @enum {string} */
+        TrackerAggregationValue: "SUM" | "LAST" | "AVERAGE";
+        /** @enum {string} */
+        TrackerGoalDirectionValue: "AT_LEAST" | "AT_MOST";
+        /** @enum {string} */
+        TrackerPeriodValue: "DAY" | "WEEK";
+        TrackerResponse: {
+            id: string;
+            name: string;
+            kind: components["schemas"]["TrackerKindValue"];
+            unit: string | null;
+            aggregation: components["schemas"]["TrackerAggregationValue"];
+            /** Format: double */
+            goalValue: number | null;
+            goalDirection: components["schemas"]["TrackerGoalDirectionValue"] | null;
+            goalPeriod: components["schemas"]["TrackerPeriodValue"] | null;
+            instructions: string | null;
+            /** Format: double */
+            position: number;
+            archived: boolean;
+            createdAt: string;
+            updatedAt: string;
+        };
+        TrackerInputRequest: {
+            name?: string;
+            kind?: components["schemas"]["TrackerKindValue"];
+            unit?: string | null;
+            aggregation?: components["schemas"]["TrackerAggregationValue"];
+            /**
+             * Format: double
+             * @description Null removes the goal.
+             */
+            goalValue?: number | null;
+            goalDirection?: components["schemas"]["TrackerGoalDirectionValue"] | null;
+            goalPeriod?: components["schemas"]["TrackerPeriodValue"] | null;
+            /** @description Extra words for the AI, e.g. "count only hours with clients". */
+            instructions?: string | null;
+            /** Format: double */
+            position?: number;
+            archived?: boolean;
+        };
+        TrackerDayValue: {
+            date: string;
+            /** Format: double */
+            value: number | null;
+            goalMet: boolean | null;
+        };
+        TrackerStatsResponse: {
+            trackerId: string;
+            days: components["schemas"]["TrackerDayValue"][];
+            /** Format: double */
+            today: number | null;
+            /** Format: double */
+            week: number | null;
+            goalMetToday: boolean | null;
+            goalMetThisWeek: boolean | null;
+            /** Format: double */
+            streak: number;
+            streakUnit: components["schemas"]["TrackerPeriodValue"];
+        };
+        /** @enum {string} */
+        TrackerEntryStatusValue: "PROPOSED" | "CONFIRMED" | "REJECTED";
+        /** @enum {string} */
+        TrackerEntrySourceValue: "MANUAL" | "NOTE" | "IMPORT";
+        TrackerEntryResponse: {
+            id: string;
+            trackerId: string;
+            /** @description YYYY-MM-DD, the user's local day. */
+            date: string;
+            /** Format: double */
+            value: number;
+            label: string | null;
+            /**
+             * @description For CALORIES: { items: [{ name, grams, gramsLow, gramsHigh, kcal, kcalLow,
+             *     kcalHigh, source: "usda" | "ai", fdcId?, matchedName? }], kcalLow, kcalHigh }.
+             */
+            details: components["schemas"]["TsoaJsonObject"] | null;
+            status: components["schemas"]["TrackerEntryStatusValue"];
+            source: components["schemas"]["TrackerEntrySourceValue"];
+            noteId: string | null;
+            createdAt: string;
+        };
+        ReviewEntriesRequest: {
+            ids: string[];
+            /** @enum {string} */
+            status: "CONFIRMED" | "REJECTED";
+        };
+        UpdateEntryRequest: {
+            date?: string;
+            /** Format: double */
+            value?: number;
+            label?: string | null;
+            /** @description CONFIRMED accepts a proposal, REJECTED refuses it. */
+            status?: components["schemas"]["TrackerEntryStatusValue"];
+        };
+        ExtractResponse: {
+            entries: components["schemas"]["TrackerEntryResponse"][];
+            /**
+             * @description Why the AI was not called: no_trackers, unchanged (already read) or empty.
+             * @enum {string|null}
+             */
+            skipped: "no_trackers" | "unchanged" | "empty" | null;
+            /** @description False when kcal come from the AI only (USDA_FDC_API_KEY is not set). */
+            foodDatabase: boolean;
+        };
+        ExtractRequest: {
+            /** @description Read this note of the user. */
+            noteId?: string;
+            /** @description Or read this text (at most 2000 characters). */
+            text?: string;
+            /** @description The user's local date, YYYY-MM-DD. */
+            today: string;
+        };
+        AddEntryRequest: {
+            /** @description Optional id made by the app (16 to 64 of A-Z a-z 0-9 _ -), so a retry is not duplicated. */
+            id?: string;
+            /** @description YYYY-MM-DD. */
+            date: string;
+            /**
+             * Format: double
+             * @description Ignored for CHECK trackers (always 1).
+             */
+            value?: number;
+            label?: string | null;
+        };
         /**
          * @description Work-category tag set by the AI ticket extractor. Lets the frontend split
          *     engineering work from support / design / ops / research items so the
@@ -4388,6 +4724,31 @@ export interface components {
         };
         UpdatePresentationStatusRequest: {
             status: string;
+        };
+        PersonalStatusResponse: {
+            /** @description Personal mode is turned on for this account (PERSONAL_MODE_EMAILS). */
+            available: boolean;
+            /** @description Consent given and the personal workspace exists. */
+            enabled: boolean;
+            workspaceId: string | null;
+            consentAt: string | null;
+            consentVersion: string | null;
+            /** @description Version of the consent text the apps must show and send back. */
+            currentConsentVersion: string;
+            /** @description The accepted text is older than the current one. */
+            consentOutdated: boolean;
+            hideCalories: boolean;
+            autoExtract: boolean;
+        };
+        EnablePersonalRequest: {
+            /** @description Must be true: the user ticked the consent box. */
+            consent: boolean;
+            /** @description The version of the text the user read. */
+            consentVersion: string;
+        };
+        PersonalSettingsRequest: {
+            hideCalories?: boolean;
+            autoExtract?: boolean;
         };
         "ApiResponse__success-boolean--role-string__": {
             message?: string;
@@ -5342,6 +5703,9 @@ export interface components {
             status: number;
         };
         /** @enum {string} */
+        "_36_Enums.WorkspaceKind": "TEAM" | "PERSONAL";
+        WorkspaceKind: components["schemas"]["_36_Enums.WorkspaceKind"];
+        /** @enum {string} */
         "_36_Enums.WorkspaceTier": "FREE" | "PRO" | "BUSINESS" | "ENTERPRISE" | "AGENCY";
         WorkspaceTier: components["schemas"]["_36_Enums.WorkspaceTier"];
         /** @enum {string} */
@@ -5350,6 +5714,8 @@ export interface components {
         WorkspaceResponse: {
             id: string;
             name: string;
+            /** @description PERSONAL: the user's own workspace for private notes and trackers. */
+            kind?: components["schemas"]["WorkspaceKind"];
             tier: components["schemas"]["WorkspaceTier"];
             role: components["schemas"]["WorkspaceRole"];
             stripeId: string | null;
@@ -7414,6 +7780,279 @@ export interface operations {
             };
         };
     };
+    ListTrackers: {
+        parameters: {
+            query?: {
+                includeArchived?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TrackerResponse"][];
+                };
+            };
+        };
+    };
+    CreateTracker: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TrackerInputRequest"];
+            };
+        };
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TrackerResponse"];
+                };
+            };
+        };
+    };
+    GetTrackerStats: {
+        parameters: {
+            query: {
+                today: string;
+                from?: string;
+                to?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TrackerStatsResponse"][];
+                };
+            };
+        };
+    };
+    ListTrackerEntries: {
+        parameters: {
+            query?: {
+                from?: string;
+                to?: string;
+                status?: string;
+                trackerId?: string;
+                noteId?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TrackerEntryResponse"][];
+                };
+            };
+        };
+    };
+    ReviewTrackerEntries: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReviewEntriesRequest"];
+            };
+        };
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: double */
+                        updated: number;
+                    };
+                };
+            };
+        };
+    };
+    DeleteTrackerEntry: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                entryId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        success: boolean;
+                    };
+                };
+            };
+        };
+    };
+    UpdateTrackerEntry: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                entryId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateEntryRequest"];
+            };
+        };
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TrackerEntryResponse"];
+                };
+            };
+        };
+    };
+    ExtractTrackerEntries: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ExtractRequest"];
+            };
+        };
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExtractResponse"];
+                };
+            };
+        };
+    };
+    DeleteTracker: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        success: boolean;
+                    };
+                };
+            };
+        };
+    };
+    UpdateTracker: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TrackerInputRequest"];
+            };
+        };
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TrackerResponse"];
+                };
+            };
+        };
+    };
+    AddTrackerEntry: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AddEntryRequest"];
+            };
+        };
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TrackerEntryResponse"];
+                };
+            };
+        };
+    };
     HandleWebhook: {
         parameters: {
             query?: never;
@@ -8152,6 +8791,94 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PresentationResponse"];
+                };
+            };
+        };
+    };
+    GetPersonalStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PersonalStatusResponse"];
+                };
+            };
+        };
+    };
+    EnablePersonalMode: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EnablePersonalRequest"];
+            };
+        };
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PersonalStatusResponse"];
+                };
+            };
+        };
+    };
+    UpdatePersonalSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PersonalSettingsRequest"];
+            };
+        };
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PersonalStatusResponse"];
+                };
+            };
+        };
+    };
+    WithdrawPersonalConsent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PersonalStatusResponse"];
                 };
             };
         };

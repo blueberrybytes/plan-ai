@@ -23,7 +23,15 @@ export interface LogUsageParams {
   userId: string;
   workspaceId: string;
   projectId?: string | null;
-  feature: "CHAT" | "DOC" | "SLIDES" | "DIAGRAM" | "TRANSCRIPT" | "TASK_EXTRACTION" | "RECORDER";
+  feature:
+    | "CHAT"
+    | "DOC"
+    | "SLIDES"
+    | "DIAGRAM"
+    | "TRANSCRIPT"
+    | "TASK_EXTRACTION"
+    | "RECORDER"
+    | "TRACKERS";
   provider: string;
   model: string;
   inputTokens: number;

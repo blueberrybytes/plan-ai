@@ -41,6 +41,13 @@ enum SubscriptionStatus {
   PAUSED
 }
 
+/// A PERSONAL workspace belongs to one user and holds their private notes and
+/// trackers. It cannot have other members.
+enum WorkspaceKind {
+  TEAM
+  PERSONAL
+}
+
 enum SubscriptionTrack {
   BYOK
   MANAGED
@@ -49,6 +56,7 @@ enum SubscriptionTrack {
 model Workspace {
   id                 String        @id @default(cuid())
   name               String
+  kind               WorkspaceKind @default(TEAM)
   stripeId           String?
   tier               WorkspaceTier @default(FREE)
   maxInvitations     Int           @default(5)
@@ -112,6 +120,9 @@ model Workspace {
   telegramLinks  TelegramLink[]
   prototypes     Prototype[]
   notes          Note[]
+  trackers       Tracker[]
+  trackerEntries TrackerEntry[]
+  personalOwner  PersonalProfile?
 
   @@index([defaultThemeId])
 }
@@ -367,6 +378,9 @@ model User {
   telegramLinks        TelegramLink[]
   prototypes           Prototype[]
   notes                Note[]
+  personalProfile      PersonalProfile?
+  trackers             Tracker[]
+  trackerEntries       TrackerEntry[]
 }
 
 model DesktopAuthCode {
@@ -999,35 +1013,153 @@ enum NoteSource {
 /// one per author, workspace and period start.
 model Note {
   /// The apps may send their own id, so a retried create never makes a copy.
-  id           String         @id @default(cuid())
-  workspaceId  String
-  userId       String
-  title        String?        @db.VarChar(200)
-  body         String         @default("") @db.Text
-  visibility   NoteVisibility @default(PRIVATE)
-  pinned       Boolean        @default(false)
-  projectId    String?
-  transcriptId String?
-  periodType   NotePeriod?
+  id                       String         @id @default(cuid())
+  workspaceId              String
+  userId                   String
+  title                    String?        @db.VarChar(200)
+  body                     String         @default("") @db.Text
+  visibility               NoteVisibility @default(PRIVATE)
+  pinned                   Boolean        @default(false)
+  projectId                String?
+  transcriptId             String?
+  periodType               NotePeriod?
   /// Local calendar day of the author (the Monday for a weekly note).
-  periodStart  DateTime?      @db.Date
-  source       NoteSource     @default(WEB)
+  periodStart              DateTime?      @db.Date
+  source                   NoteSource     @default(WEB)
   /// Bumped on every edit. An edit sent with an older version is refused, so
   /// two devices never overwrite each other silently.
-  version      Int            @default(1)
+  version                  Int            @default(1)
+  /// The version last read for tracker entries, so the same text is not
+  /// sent to the AI twice.
+  trackersExtractedVersion Int?
   /// In the trash since then. Purged after 30 days.
-  deletedAt    DateTime?
-  createdAt    DateTime       @default(now())
-  updatedAt    DateTime       @updatedAt
+  deletedAt                DateTime?
+  createdAt                DateTime       @default(now())
+  updatedAt                DateTime       @updatedAt
 
-  workspace  Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  project    Project?    @relation(fields: [projectId], references: [id], onDelete: SetNull)
-  transcript Transcript? @relation(fields: [transcriptId], references: [id], onDelete: SetNull)
+  workspace      Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project        Project?       @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  transcript     Transcript?    @relation(fields: [transcriptId], references: [id], onDelete: SetNull)
+  trackerEntries TrackerEntry[]
 
   @@unique([workspaceId, userId, periodType, periodStart])
   @@index([workspaceId, userId, updatedAt])
   @@index([workspaceId, visibility, updatedAt])
   @@index([projectId])
   @@index([transcriptId])
+}
+
+/// Personal mode of a user: their personal workspace and their consent to
+/// store health data (food, weight, steps). Trackers only work while
+/// consentAt is set. Withdrawing consent deletes every tracker and entry.
+model PersonalProfile {
+  userId         String    @id
+  workspaceId    String    @unique
+  consentAt      DateTime?
+  /// Version of the consent text the user accepted.
+  consentVersion String?   @db.VarChar(32)
+  /// Hide calorie numbers in the apps. The server still counts them.
+  hideCalories   Boolean   @default(false)
+  /// Read notes for tracker entries when the user leaves a note.
+  autoExtract    Boolean   @default(true)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+}
+
+enum TrackerKind {
+  /// A number with a unit: steps, kg, hours.
+  NUMBER
+  /// Done or not on a day: gym, no alcohol.
+  CHECK
+  /// Food, counted in kcal. Entries keep the foods and a range.
+  CALORIES
+}
+
+enum TrackerAggregation {
+  /// Add the day's entries (steps, kcal, hours).
+  SUM
+  /// Keep the last entry of the day (weight).
+  LAST
+  /// Average of the day's entries (mood from 1 to 5).
+  AVERAGE
+}
+
+enum TrackerGoalDirection {
+  AT_LEAST
+  AT_MOST
+}
+
+enum TrackerEntryStatus {
+  /// Read from a note by the AI, waiting for the user to accept it.
+  PROPOSED
+  CONFIRMED
+  /// Refused by the user. Kept so the same note does not propose it again.
+  REJECTED
+}
+
+enum TrackerEntrySource {
+  MANUAL
+  NOTE
+  IMPORT
+}
+
+/// Something a user measures over time. Always private to its user.
+model Tracker {
+  id            String                @id @default(cuid())
+  workspaceId   String
+  userId        String
+  name          String                @db.VarChar(60)
+  kind          TrackerKind
+  unit          String?               @db.VarChar(16)
+  aggregation   TrackerAggregation    @default(SUM)
+  /// Goal for a day or a week. For a CHECK tracker a weekly goal counts days.
+  goalValue     Float?
+  goalDirection TrackerGoalDirection?
+  goalPeriod    NotePeriod?
+  /// Extra words for the AI, e.g. "count only hours with clients".
+  instructions  String?               @db.VarChar(300)
+  position      Int                   @default(0)
+  archivedAt    DateTime?
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime              @updatedAt
+
+  workspace Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  entries   TrackerEntry[]
+
+  @@index([workspaceId, userId])
+}
+
+model TrackerEntry {
+  /// The apps may send their own id, so a retried create never makes a copy.
+  id          String             @id @default(cuid())
+  trackerId   String
+  workspaceId String
+  userId      String
+  /// Local calendar day of the user.
+  date        DateTime           @db.Date
+  /// 1 for a CHECK tracker, kcal for CALORIES.
+  value       Float
+  /// What was written, e.g. "2 eggs and toast".
+  label       String?            @db.VarChar(200)
+  /// For CALORIES: the foods, grams, kcal range and where each number came from.
+  details     Json?
+  status      TrackerEntryStatus @default(CONFIRMED)
+  source      TrackerEntrySource @default(MANUAL)
+  noteId      String?
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+
+  tracker   Tracker   @relation(fields: [trackerId], references: [id], onDelete: Cascade)
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  note      Note?     @relation(fields: [noteId], references: [id], onDelete: SetNull)
+
+  @@index([trackerId, date])
+  @@index([workspaceId, userId, status, date])
+  @@index([noteId])
 }

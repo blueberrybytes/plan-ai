@@ -259,7 +259,9 @@ export function setupAudioStream(server: Server) {
       // workspace, with the same checks.
       let workspaceIdParam = url.searchParams.get("workspaceId");
       if (!workspaceIdParam) {
-        const membership = await prisma.workspaceMember.findFirst({ where: { userId: dbUser.id } });
+        const membership = await prisma.workspaceMember.findFirst({
+          where: { userId: dbUser.id, workspace: { kind: "TEAM" } },
+        });
         workspaceIdParam = membership?.workspaceId ?? null;
       }
       if (workspaceIdParam) {
