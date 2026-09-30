@@ -23,9 +23,10 @@ import { clientLogger } from "../utils/clientLogger";
  *  4. We hand code AND state to the recorder, via the deep link, or via
  *     http://localhost:<local_port>/auth in development
  *
+ * Recorders up to 4.4.0 send no state. They get the code alone, as before,
+ * until that version is gone; a recorder that sends a state always gets it back.
  * The recorder accepts a code only with the state of the login it started, so
- * a page cannot sign the recorder into another account (login CSRF). Without
- * a state (an old recorder) we refuse to hand over a code at all.
+ * a page cannot sign the recorder into another account (login CSRF).
  */
 const DESKTOP_STATE_KEY = "desktop_auth_state";
 // The recorder sends 32 random bytes in base64url (43 characters).
@@ -73,9 +74,11 @@ const DesktopCallback: React.FC = () => {
   const [triggerGetDesktopToken] = useGetDesktopTokenMutation();
 
   const cancelAuth = useCallback(() => {
-    if (localPort && desktopState) {
+    if (localPort) {
       navigator.sendBeacon(
-        `http://localhost:${localPort}/auth-cancel?state=${encodeURIComponent(desktopState)}`,
+        desktopState
+          ? `http://localhost:${localPort}/auth-cancel?state=${encodeURIComponent(desktopState)}`
+          : `http://localhost:${localPort}/auth-cancel`,
       );
       window.setTimeout(() => window.close(), 100);
     }
@@ -98,13 +101,6 @@ const DesktopCallback: React.FC = () => {
     if (!localPortValid) {
       setStatus("error");
       setErrorMsg("This sign-in link is not valid. Start the sign-in again from Plan AI Recorder.");
-      return;
-    }
-    if (!desktopState) {
-      setStatus("error");
-      setErrorMsg(
-        "This sign-in link is missing its security check. Update Plan AI Recorder to the latest version, then sign in again from the app.",
-      );
       return;
     }
 
@@ -151,7 +147,10 @@ const DesktopCallback: React.FC = () => {
           }
 
           const authCode = fetchResponse.data.code;
-          const query = `code=${encodeURIComponent(authCode)}&state=${encodeURIComponent(desktopState)}`;
+          // A recorder up to 4.4.0 sends no state and reads only the code.
+          const query = desktopState
+            ? `code=${encodeURIComponent(authCode)}&state=${encodeURIComponent(desktopState)}`
+            : `code=${encodeURIComponent(authCode)}`;
           // One login, one hand-off: a reload of this tab must not reuse it.
           sessionStorage.removeItem(DESKTOP_STATE_KEY);
 

@@ -697,6 +697,31 @@ export async function microsoftMobileStart(
   // app can refuse a sign-in it did not start.
   const codeChallenge = req.query["code_challenge"];
   const appState = req.query["app_state"];
+
+  // Apps up to 4.4.0 send neither and expect the token in the deep link, as
+  // before PKCE. They keep working until they are gone from the stores; an
+  // app that sends one of the two must send both, valid.
+  const legacyApp = codeChallenge === undefined && appState === undefined;
+  if (legacyApp) {
+    const legacyState = createOAuthState(
+      MICROSOFT_MOBILE_STATE_PURPOSE,
+      { redirect_uri, legacy: true },
+      oauthStateSecret(),
+    );
+    const legacyParams = new URLSearchParams({
+      client_id: MS_CLIENT_ID,
+      response_type: "code",
+      redirect_uri: `${BACKEND_URL}/api/auth/microsoft/mobile-callback`,
+      response_mode: "query",
+      scope: "openid profile email User.Read",
+      state: legacyState,
+    });
+    res.redirect(
+      `https://login.microsoftonline.com/${MS_TENANT}/oauth2/v2.0/authorize?${legacyParams.toString()}`,
+    );
+    return;
+  }
+
   if (typeof codeChallenge !== "string" || !/^[A-Za-z0-9_-]{43}$/.test(codeChallenge)) {
     res.status(400).json({ error: "Missing or invalid code_challenge. Update the app." });
     return;
@@ -732,11 +757,12 @@ export async function microsoftMobileCallback(
 ): Promise<void> {
   const { code, state, error: msError } = req.query as Record<string, string>;
 
-  const decoded = readOAuthState<{ redirect_uri: string; codeChallenge: string; appState: string }>(
-    MICROSOFT_MOBILE_STATE_PURPOSE,
-    state,
-    oauthStateSecret(),
-  );
+  const decoded = readOAuthState<{
+    redirect_uri: string;
+    codeChallenge?: string;
+    appState?: string;
+    legacy?: boolean;
+  }>(MICROSOFT_MOBILE_STATE_PURPOSE, state, oauthStateSecret());
   const redirect_uri = decoded?.redirect_uri;
   if (
     !decoded ||
@@ -746,8 +772,12 @@ export async function microsoftMobileCallback(
     res.status(400).send("Invalid or expired state parameter");
     return;
   }
+  // An app up to 4.4.0 reads `token` and `error` and sends no app state.
+  const legacyApp = decoded.legacy === true;
   const withAppState = (params: Record<string, string>) =>
-    `${redirect_uri}?${new URLSearchParams({ ...params, state: decoded.appState }).toString()}`;
+    `${redirect_uri}?${new URLSearchParams(
+      legacyApp || !decoded.appState ? params : { ...params, state: decoded.appState },
+    ).toString()}`;
 
   if (msError || !code) {
     res.redirect(withAppState({ error: "Microsoft sign-in was cancelled or failed." }));
@@ -841,6 +871,17 @@ export async function microsoftMobileCallback(
         where: { id: existingDbUser.id },
         data: { microsoftId: msUser.id, isMicrosoftAccount: true },
       });
+    }
+
+    if (legacyApp) {
+      const legacyToken = await firebaseAdmin
+        .auth()
+        .createCustomToken(
+          firebaseUserRecord.uid,
+          signInClaims({ signInProvider: "microsoft.com" }),
+        );
+      res.redirect(withAppState({ token: legacyToken }));
+      return;
     }
 
     // Hand the app a one-time code, not the token itself. The app exchanges
