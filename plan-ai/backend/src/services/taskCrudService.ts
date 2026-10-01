@@ -31,6 +31,8 @@ export interface CreateTaskInput {
   dueDate?: Date | null;
   metadata?: Prisma.InputJsonValue | null;
   dependencyTaskIds?: string[];
+  /** A member of the workspace. Null leaves the task with nobody. */
+  assigneeId?: string | null;
 }
 
 export interface UpdateTaskInput {
@@ -44,6 +46,8 @@ export interface UpdateTaskInput {
   dueDate?: Date | null;
   metadata?: Prisma.InputJsonValue | null;
   dependencyTaskIds?: string[];
+  /** A member of the workspace. Null leaves the task with nobody. */
+  assigneeId?: string | null;
 }
 
 export class TaskCrudService {
@@ -113,15 +117,19 @@ export class TaskCrudService {
     input: CreateTaskInput,
   ): Promise<TaskWithRelations> {
     await this.assertProjectBelongsToWorkspace(workspaceId, input.projectId);
+    if (input.assigneeId) await this.assertMemberOfWorkspace(workspaceId, input.assigneeId);
+    const status = input.status ?? TaskStatus.BACKLOG;
 
     const task = await prisma.task.create({
       data: {
         projectId: input.projectId,
+        assigneeId: input.assigneeId ?? null,
+        completedAt: status === TaskStatus.COMPLETED ? new Date() : null,
         title: input.title,
         description: input.description ?? null,
         summary: input.summary ?? null,
         acceptanceCriteria: input.acceptanceCriteria ?? null,
-        status: input.status ?? TaskStatus.BACKLOG,
+        status,
         priority: input.priority ?? TaskPriority.MEDIUM,
         type: input.type ?? TaskType.TASK,
         dueDate: input.dueDate ?? null,
@@ -146,9 +154,9 @@ export class TaskCrudService {
     taskId: string,
     data: UpdateTaskInput,
   ): Promise<TaskWithRelations> {
-    await this.getTaskForWorkspace(workspaceId, taskId);
+    const current = await this.getTaskForWorkspace(workspaceId, taskId);
 
-    const updateData: Prisma.TaskUpdateInput = {};
+    const updateData: Prisma.TaskUncheckedUpdateInput = {};
 
     if (typeof data.title !== "undefined") {
       updateData.title = data.title;
@@ -168,6 +176,17 @@ export class TaskCrudService {
 
     if (typeof data.status !== "undefined") {
       updateData.status = data.status;
+      // The weekly team report counts a task in the week it was closed.
+      if (data.status === TaskStatus.COMPLETED && current.status !== TaskStatus.COMPLETED) {
+        updateData.completedAt = new Date();
+      } else if (data.status !== TaskStatus.COMPLETED && current.status === TaskStatus.COMPLETED) {
+        updateData.completedAt = null;
+      }
+    }
+
+    if (typeof data.assigneeId !== "undefined") {
+      if (data.assigneeId) await this.assertMemberOfWorkspace(workspaceId, data.assigneeId);
+      updateData.assigneeId = data.assigneeId;
     }
 
     if (typeof data.priority !== "undefined") {
@@ -211,6 +230,17 @@ export class TaskCrudService {
 
     if (!project) {
       throw { status: 404, message: "Project not found" };
+    }
+  }
+
+  private async assertMemberOfWorkspace(workspaceId: string, userId: string) {
+    const member = await prisma.workspaceMember.findUnique({
+      where: { workspaceId_userId: { workspaceId, userId } },
+      select: { id: true },
+    });
+
+    if (!member) {
+      throw { status: 400, message: "The assignee is not a member of this workspace" };
     }
   }
 

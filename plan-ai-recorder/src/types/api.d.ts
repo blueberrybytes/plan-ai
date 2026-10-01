@@ -2090,6 +2090,132 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/daily-report/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Whether the daily report is on and whether this member accepted its text. */
+        get: operations["GetDailyReportStatus"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/daily-report/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** @description Turns the daily report on or off and sets the reminder time. Owners and admins. */
+        patch: operations["UpdateDailyReportSettings"];
+        trace?: never;
+    };
+    "/api/daily-report/consent": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Accepts or withdraws the member's consent. Withdrawing drops waiting proposals. */
+        post: operations["SetDailyReportConsent"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/daily-report/extract": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description Reads the member's day note with AI and proposes task changes. Nothing
+         *     changes until they are accepted. A note is read once per version.
+         */
+        post: operations["ExtractDailyReport"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/daily-report/proposals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description The member's proposals, newest day first. status=PROPOSED for what waits. */
+        get: operations["ListDailyReportProposals"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/daily-report/proposals/review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Accepts or refuses proposals. Accepting changes or creates the tasks. */
+        post: operations["ReviewDailyReportProposals"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/daily-report/team": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description The team's week for owners and admins: per member, tasks closed, stuck and
+         *     past due. `week` is any day of the week (default: last week). With
+         *     summary=true the AI adds one or two sentences per member.
+         */
+        get: operations["GetTeamReport"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/contexts": {
         parameters: {
             query?: never;
@@ -3613,6 +3739,10 @@ export interface components {
             priority: components["schemas"]["TaskPriority"];
             /** Format: date-time */
             dueDate: string | null;
+            /** @description The member who owns the task. Null when nobody does. */
+            assigneeId: string | null;
+            /** Format: date-time */
+            completedAt: string | null;
             dependencies: string[];
             metadata: components["schemas"]["TsoaJsonObject"] | null;
             /** Format: date-time */
@@ -3752,6 +3882,8 @@ export interface components {
             dueDate?: string | null;
             metadata?: components["schemas"]["TsoaJsonObject"] | null;
             dependencyTaskIds?: string[];
+            /** @description A member of the workspace. */
+            assigneeId?: string | null;
         };
         UpdateTaskRequest: {
             title?: string;
@@ -3768,6 +3900,8 @@ export interface components {
             dueDate?: string | null;
             metadata?: components["schemas"]["TsoaJsonObject"] | null;
             dependencyTaskIds?: string[];
+            /** @description A member of the workspace. Null leaves the task with nobody. */
+            assigneeId?: string | null;
         };
         RefineTaskResponse: {
             refinedTitle: string;
@@ -5020,6 +5154,129 @@ export interface components {
             /** Format: double */
             installationId: number;
             repositories: components["schemas"]["GithubRepository"][];
+        };
+        DailyReportStatusResponse: {
+            /** @description On for this workspace. */
+            enabled: boolean;
+            /** @description "HH:mm", local time of each member, when the apps remind them. */
+            reminderTime: string;
+            /** @description False in a personal workspace. */
+            available: boolean;
+            /**
+             * Format: double
+             * @description Version of the consent text the member has to accept.
+             */
+            consentVersion: number;
+            /** Format: double */
+            consentedVersion: number | null;
+            consentedAt: string | null;
+            /** @description On, but the member has not accepted the current text. */
+            needsConsent: boolean;
+            /** @description Owner or admin: can change the settings and read the team report. */
+            canManage: boolean;
+        };
+        DailyReportSettingsRequest: {
+            enabled?: boolean;
+            /** @description "HH:mm". Null goes back to 17:30. */
+            reminderTime?: string | null;
+        };
+        DailyReportConsentRequest: {
+            /** @description True accepts the text, false withdraws the consent. */
+            accept: boolean;
+        };
+        /** @enum {string} */
+        TaskUpdateKindValue: "COMPLETED" | "PROGRESS" | "BLOCKED" | "NEW" | "DONE";
+        /** @enum {string} */
+        TaskUpdateStatusValue: "PROPOSED" | "ACCEPTED" | "REJECTED";
+        TaskUpdateProposalResponse: {
+            id: string;
+            kind: components["schemas"]["TaskUpdateKindValue"];
+            status: components["schemas"]["TaskUpdateStatusValue"];
+            /** @description The task title, or the proposed title of a new task. */
+            title: string;
+            /** @description What moved forward, or why it is stuck. */
+            detail: string | null;
+            /** @description YYYY-MM-DD, the day of the report. */
+            day: string;
+            noteId: string | null;
+            taskId: string | null;
+            /** @description Current status of the existing task. */
+            taskStatus: string | null;
+            projectId: string | null;
+            /** @description The project of the task, or where a new task will go. Null lets the server pick. */
+            projectTitle: string | null;
+            createdAt: string;
+            reviewedAt: string | null;
+        };
+        DailyReportExtractResponse: {
+            proposals: components["schemas"]["TaskUpdateProposalResponse"][];
+            /**
+             * @description Why the AI was not called: unchanged (already read) or empty.
+             * @enum {string|null}
+             */
+            skipped: "unchanged" | "empty" | null;
+        };
+        DailyReportExtractRequest: {
+            /** @description The member's day note. */
+            noteId: string;
+        };
+        ReviewProposalsResponse: {
+            /** Format: double */
+            updated: number;
+            failed: {
+                message: string;
+                id: string;
+            }[];
+        };
+        ReviewProposalItem: {
+            id: string;
+            /** @enum {string} */
+            status: "ACCEPTED" | "REJECTED";
+            /** @description For NEW and DONE: the title after the member edited it. */
+            title?: string;
+            /** @description For NEW and DONE: the project the member picked. */
+            projectId?: string | null;
+        };
+        ReviewProposalsRequest: {
+            items: components["schemas"]["ReviewProposalItem"][];
+        };
+        TeamReportTaskResponse: {
+            id: string;
+            title: string;
+            projectTitle: string;
+            /** @description Completed: when. Past due: the due date. */
+            date: string | null;
+            /** @description Stuck: the reason the member gave. */
+            reason: string | null;
+        };
+        TeamReportMemberResponse: {
+            userId: string;
+            name: string;
+            email: string;
+            role: string;
+            usesDailyReport: boolean;
+            /** Format: double */
+            completedCount: number;
+            completed: components["schemas"]["TeamReportTaskResponse"][];
+            /** Format: double */
+            inProgressCount: number;
+            blocked: components["schemas"]["TeamReportTaskResponse"][];
+            /** Format: double */
+            overdueCount: number;
+            overdue: components["schemas"]["TeamReportTaskResponse"][];
+            /**
+             * Format: double
+             * @description Days of the week with a daily report. Null when the member does not use it.
+             */
+            reportDays: number | null;
+            summary: string | null;
+        };
+        TeamReportResponse: {
+            workspaceName: string;
+            dailyReportEnabled: boolean;
+            weekStart: string;
+            weekEnd: string;
+            members: components["schemas"]["TeamReportMemberResponse"][];
         };
         ContextFileResponse: {
             id: string;
@@ -9850,6 +10107,169 @@ export interface operations {
                             name: string;
                         }[];
                     };
+                };
+            };
+        };
+    };
+    GetDailyReportStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DailyReportStatusResponse"];
+                };
+            };
+        };
+    };
+    UpdateDailyReportSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DailyReportSettingsRequest"];
+            };
+        };
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DailyReportStatusResponse"];
+                };
+            };
+        };
+    };
+    SetDailyReportConsent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DailyReportConsentRequest"];
+            };
+        };
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DailyReportStatusResponse"];
+                };
+            };
+        };
+    };
+    ExtractDailyReport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DailyReportExtractRequest"];
+            };
+        };
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DailyReportExtractResponse"];
+                };
+            };
+        };
+    };
+    ListDailyReportProposals: {
+        parameters: {
+            query?: {
+                status?: string;
+                noteId?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskUpdateProposalResponse"][];
+                };
+            };
+        };
+    };
+    ReviewDailyReportProposals: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReviewProposalsRequest"];
+            };
+        };
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReviewProposalsResponse"];
+                };
+            };
+        };
+    };
+    GetTeamReport: {
+        parameters: {
+            query?: {
+                week?: string;
+                summary?: boolean;
+                language?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TeamReportResponse"];
                 };
             };
         };

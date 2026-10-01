@@ -157,6 +157,7 @@ export const {
   useListNotesQuery,
   useGetNoteQuery,
   useLazyGetNoteQuery,
+  useGetPeriodNoteQuery,
   useLazyGetPeriodNoteQuery,
   useCreateNoteMutation,
   useUpdateNoteMutation,

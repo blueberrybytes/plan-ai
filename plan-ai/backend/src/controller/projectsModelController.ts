@@ -174,6 +174,9 @@ export interface TaskResponse {
   status: TaskStatus;
   priority: TaskPriority;
   dueDate: Date | null;
+  /** The member who owns the task. Null when nobody does. */
+  assigneeId: string | null;
+  completedAt: Date | null;
   dependencies: string[];
   metadata: TsoaJsonObject | null;
   createdAt: Date;
@@ -261,6 +264,8 @@ interface CreateTaskRequest {
   dueDate?: Date | null;
   metadata?: TsoaJsonObject | null;
   dependencyTaskIds?: string[];
+  /** A member of the workspace. */
+  assigneeId?: string | null;
 }
 
 interface UpdateTaskRequest {
@@ -275,6 +280,8 @@ interface UpdateTaskRequest {
   dueDate?: Date | null;
   metadata?: TsoaJsonObject | null;
   dependencyTaskIds?: string[];
+  /** A member of the workspace. Null leaves the task with nobody. */
+  assigneeId?: string | null;
 }
 
 interface RefineTaskRequest {
@@ -307,6 +314,8 @@ export function mapTaskResponse(
     status: task.status,
     priority: task.priority,
     dueDate: task.dueDate,
+    assigneeId: task.assigneeId,
+    completedAt: task.completedAt,
     dependencies: (task.dependants ?? []).map((dependency) => dependency.dependsOnTaskId),
     metadata: (task.metadata as TsoaJsonObject) || null,
     createdAt: task.createdAt,
@@ -1011,6 +1020,7 @@ export class ProjectsModelController extends BaseWorkspaceController {
       dueDate: body.dueDate ?? null,
       metadata: (body.metadata as Prisma.InputJsonValue) ?? null,
       dependencyTaskIds: body.dependencyTaskIds,
+      assigneeId: body.assigneeId,
     });
 
     return {
@@ -1042,6 +1052,7 @@ export class ProjectsModelController extends BaseWorkspaceController {
       dueDate: body.dueDate,
       metadata: body.metadata as Prisma.InputJsonValue,
       dependencyTaskIds: body.dependencyTaskIds,
+      assigneeId: body.assigneeId,
     });
 
     return {

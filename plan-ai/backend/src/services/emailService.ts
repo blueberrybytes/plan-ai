@@ -2,9 +2,11 @@ import {
   renderWorkspaceInvitationEmail,
   renderTelegramLeadEmail,
   renderWeeklyDigestEmail,
+  renderTeamReportEmail,
 } from "./templates";
 import type { TelegramLeadEmailInput } from "./templates/telegramLead";
 import type { WeeklyDigestEmailInput } from "./templates/weeklyDigest";
+import type { TeamReportEmailInput } from "./templates/teamReport";
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
 const FROM_EMAIL = process.env.FROM_EMAIL || "Plan AI <noreply@plan-ai.blueberrybytes.com>";
@@ -173,5 +175,32 @@ export async function sendWeeklyDigestEmail(
   if (!response.ok) {
     const body = await response.text();
     throw new Error(`Weekly digest email failed ${response.status}: ${body}`);
+  }
+}
+
+export async function sendTeamReportEmail(to: string, input: TeamReportEmailInput): Promise<void> {
+  if (!RESEND_API_KEY) {
+    console.warn(`[EMAIL] RESEND_API_KEY not set. Skipping team report to ${to}`);
+    return;
+  }
+
+  const response = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${RESEND_API_KEY}`,
+    },
+    body: JSON.stringify({
+      from: FROM_EMAIL,
+      to: [to],
+      subject: `Your team's week in ${input.report.workspaceName}`,
+      html: renderTeamReportEmail(input),
+    }),
+    signal: AbortSignal.timeout(15000),
+  });
+
+  if (!response.ok) {
+    const body = await response.text();
+    throw new Error(`Team report email failed ${response.status}: ${body}`);
   }
 }

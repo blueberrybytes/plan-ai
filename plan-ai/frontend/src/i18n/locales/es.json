@@ -958,7 +958,9 @@
       "recordings": "Grabaciones",
       "users": "Usuarios",
       "billing": "Facturación",
-      "trackers": "Seguimiento"
+      "trackers": "Seguimiento",
+      "dailyReport": "Parte diario",
+      "teamReport": "Resumen del equipo"
     },
     "tooltip": {
       "expand": "Expandir barra lateral",
@@ -2116,5 +2118,104 @@
       "writeFirst": "Escribe algo en la nota primero.",
       "saveFirst": "La nota aún no se ha guardado. Vuelve a probar cuando ponga Guardado."
     }
+  },
+  "dailyReport": {
+    "title": "Parte diario",
+    "subtitle": "Cuenta lo que has hecho hoy. La IA propone cambios en tus tareas y nada cambia hasta que los aceptas.",
+    "loadError": "No se pudo cargar el parte diario. Inténtalo de nuevo.",
+    "personal": {
+      "title": "Estás en tu espacio personal",
+      "body": "El parte diario es para espacios de equipo. Cambia a un espacio de equipo para usarlo."
+    },
+    "off": {
+      "title": "El parte diario está apagado",
+      "body": "Un propietario o administrador de este espacio puede activarlo.",
+      "bodyManager": "Actívalo aquí abajo. Cada miembro acepta el texto antes de empezar a usarlo."
+    },
+    "consent": {
+      "title": "Antes de empezar",
+      "what": "Al final del día escribes o dictas lo que has hecho. La IA lo lee junto a tus tareas abiertas y propone cambios: tareas hechas, que avanzan o que están paradas, y tareas nuevas. Nada cambia hasta que lo aceptas.",
+      "who": "Los propietarios y administradores de este espacio ven tus tareas y su estado, como ya pueden en los proyectos, y cuántos días has enviado el parte. Nunca ven el texto ni el audio de tu parte. Es privado.",
+      "notRecorded": "No se registra nada más: ni la pantalla, ni el teclado, ni la ubicación, ni el tiempo delante del ordenador.",
+      "withdraw": "Puedes dejarlo cuando quieras desde esta página. Las propuestas pendientes se borran.",
+      "accept": "Entendido, empezar",
+      "withdrawAction": "Dejar de usar el parte diario",
+      "withdrawConfirm": "¿Dejar de usar el parte diario? Se borran tus propuestas pendientes. Las tareas que ya aceptaste se quedan como están.",
+      "withdrawn": "Ya no usas el parte diario."
+    },
+    "editor": {
+      "title": "Hoy, {{date}}",
+      "placeholder": "¿Qué has hecho hoy? ¿Qué está parado y por qué? ¿Qué queda para mañana?",
+      "hint": "Con palabras normales basta. En el móvil lo puedes dictar.",
+      "save": "Guardar",
+      "saveAndRead": "Guardar y actualizar mis tareas",
+      "reading": "Leyendo tu parte…",
+      "saved": "Guardado.",
+      "conflict": "Este parte cambió en otro dispositivo. La página muestra ya la última versión.",
+      "saveError": "No se pudo guardar el parte. Inténtalo de nuevo.",
+      "empty": "Escribe algo primero.",
+      "unchanged": "No hay nada nuevo desde la última lectura.",
+      "noProposals": "No hay cambios para tus tareas."
+    },
+    "proposals": {
+      "title": "Cambios propuestos ({{count}})",
+      "hint": "Acepta lo que esté bien. Nada cambia hasta que lo hagas.",
+      "acceptAll": "Aceptar todo",
+      "accept": "Aceptar",
+      "reject": "Rechazar",
+      "edit": "Editar título",
+      "newTaskProject": "Va a: {{project}}",
+      "defaultProject": "Proyecto Parte diario",
+      "failed": "{{count}} no se pudieron aplicar: {{message}}",
+      "error": "No se pudo guardar tu respuesta. Inténtalo de nuevo.",
+      "done": "Tus tareas están actualizadas."
+    },
+    "kind": {
+      "COMPLETED": "Hecha",
+      "PROGRESS": "Avanza",
+      "BLOCKED": "Parada",
+      "NEW": "Tarea nueva",
+      "DONE": "Hecha, tarea nueva"
+    },
+    "settings": {
+      "title": "Ajustes de este espacio",
+      "enabled": "Parte diario activado",
+      "reminder": "Hora del aviso",
+      "reminderHelp": "Hora local de cada miembro. Las apps avisan si no ha enviado el parte.",
+      "saved": "Ajustes guardados.",
+      "error": "No se pudieron guardar los ajustes.",
+      "teamReport": "Abrir el resumen del equipo"
+    },
+    "missingKey": "Añade una clave de OpenRouter a este espacio para leer los partes con IA.",
+    "missingKeyAction": "Abrir ajustes"
+  },
+  "teamReport": {
+    "title": "Resumen del equipo",
+    "subtitle": "Lo que cada persona cerró, lo que está parado y lo que va con retraso. Sale de las tareas. El texto de los partes sigue siendo privado.",
+    "forbidden": "Solo los propietarios y administradores pueden ver el resumen del equipo.",
+    "loadError": "No se pudo cargar el resumen. Inténtalo de nuevo.",
+    "week": "Del {{start}} al {{end}}",
+    "previous": "Semana anterior",
+    "next": "Semana siguiente",
+    "summarize": "Escribir resúmenes con IA",
+    "summarizing": "Escribiendo…",
+    "summaryError": "No se pudieron escribir los resúmenes.",
+    "closed": "Cerradas",
+    "inProgress": "En curso",
+    "stuck": "Paradas",
+    "overdue": "Con retraso",
+    "reportDays": "Parte diario: {{count}} de 5 días",
+    "notUsing": "No usa el parte diario",
+    "more": "y {{count}} más",
+    "due": "vence {{date}}",
+    "empty": "Ningún miembro tiene tareas asignadas esta semana.",
+    "quiet": "{{count}} miembros sin tareas asignadas esta semana",
+    "dailyReportOff": "El parte diario está apagado en este espacio. El resumen muestra igualmente las tareas.",
+    "settings": "Ajustes del parte diario"
+  },
+  "taskAssignee": {
+    "label": "Responsable",
+    "nobody": "Nadie",
+    "unknown": "Alguien que ya no está en este espacio"
   }
 }

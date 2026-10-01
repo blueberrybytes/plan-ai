@@ -54,31 +54,36 @@ enum SubscriptionTrack {
 }
 
 model Workspace {
-  id                 String        @id @default(cuid())
-  name               String
-  kind               WorkspaceKind @default(TEAM)
-  stripeId           String?
-  tier               WorkspaceTier @default(FREE)
-  maxInvitations     Int           @default(5)
-  createdAt          DateTime      @default(now())
-  updatedAt          DateTime      @updatedAt
-  openRouterKey      String?
-  deepgramKey        String?
+  id                      String        @id @default(cuid())
+  name                    String
+  kind                    WorkspaceKind @default(TEAM)
+  stripeId                String?
+  tier                    WorkspaceTier @default(FREE)
+  maxInvitations          Int           @default(5)
+  createdAt               DateTime      @default(now())
+  updatedAt               DateTime      @updatedAt
+  openRouterKey           String?
+  deepgramKey             String?
   // LEGACY / OPTIONAL: embeddings now run through the workspace's openRouterKey
   // (OpenRouter shipped an OpenAI-compatible embeddings endpoint), so BYOK needs
   // only OpenRouter + Deepgram. This column is kept for backward compatibility —
   // workspaces that already set an OpenAI key still use it as an embeddings
   // fallback. New workspaces don't need it.
-  openaiKey          String?
-  isCourtesy         Boolean       @default(false)
-  monthlyTokenLimit  Int           @default(200000)
+  openaiKey               String?
+  isCourtesy              Boolean       @default(false)
+  monthlyTokenLimit       Int           @default(200000)
   // Workspace-wide default brand theme. Used for AI-generated docs & slides
   // when neither an explicit theme nor the project's theme is set — covers
   // standalone recordings (recorder/mobile) that have no project.
-  defaultThemeId     String?
+  defaultThemeId          String?
   // Days to keep meeting audio after it is recorded. Past that a daily job
   // deletes the audio files and keeps the transcript. Null keeps audio forever.
-  audioRetentionDays Int?
+  audioRetentionDays      Int?
+  // Daily report (parte diario): members say what they did and the AI
+  // proposes changes to their tasks. Off until an owner or admin turns it on.
+  dailyReportEnabled      Boolean       @default(false)
+  // Local time "HH:mm" when the apps remind members to send it. Null: 17:30.
+  dailyReportReminderTime String?       @db.VarChar(5)
 
   // Sign-in rules for members, checked on every request. Empty means no rule.
   // Members whose email is outside these domains lose access.
@@ -99,30 +104,31 @@ model Workspace {
   subscriptionCurrentPeriodEnd  DateTime?
   subscriptionCancelAtPeriodEnd Boolean             @default(false)
 
-  members        WorkspaceMember[]
-  integrations   WorkspaceIntegration[]
-  crmNotes       MeetingCrmNote[]
-  projects       Project[]
-  contexts       Context[]
-  transcripts    Transcript[]
-  painPoints     PainPoint[]
-  slideTemplates SlideTemplate[]
-  presentations  Presentation[]
-  brandThemes    BrandTheme[]           @relation("WorkspaceThemes")
-  defaultTheme   BrandTheme?            @relation("WorkspaceDefaultTheme", fields: [defaultThemeId], references: [id], onDelete: SetNull)
-  docDocuments   DocDocument[]
-  diagrams       Diagram[]
-  aiUsageLogs    AiUsageLog[]
-  chatThreads    ChatThread[]
-  invitations    WorkspaceInvitation[]
-  mcpTokens      McpToken[]
-  billingEvents  BillingEvent[]
-  telegramLinks  TelegramLink[]
-  prototypes     Prototype[]
-  notes          Note[]
-  trackers       Tracker[]
-  trackerEntries TrackerEntry[]
-  personalOwner  PersonalProfile?
+  members             WorkspaceMember[]
+  integrations        WorkspaceIntegration[]
+  crmNotes            MeetingCrmNote[]
+  projects            Project[]
+  contexts            Context[]
+  transcripts         Transcript[]
+  painPoints          PainPoint[]
+  slideTemplates      SlideTemplate[]
+  presentations       Presentation[]
+  brandThemes         BrandTheme[]           @relation("WorkspaceThemes")
+  defaultTheme        BrandTheme?            @relation("WorkspaceDefaultTheme", fields: [defaultThemeId], references: [id], onDelete: SetNull)
+  docDocuments        DocDocument[]
+  diagrams            Diagram[]
+  aiUsageLogs         AiUsageLog[]
+  chatThreads         ChatThread[]
+  invitations         WorkspaceInvitation[]
+  mcpTokens           McpToken[]
+  billingEvents       BillingEvent[]
+  telegramLinks       TelegramLink[]
+  prototypes          Prototype[]
+  notes               Note[]
+  trackers            Tracker[]
+  trackerEntries      TrackerEntry[]
+  personalOwner       PersonalProfile?
+  taskUpdateProposals TaskUpdateProposal[]
 
   @@index([defaultThemeId])
 }
@@ -246,12 +252,16 @@ model BillingEvent {
 }
 
 model WorkspaceMember {
-  id           String        @id @default(cuid())
-  workspaceId  String
-  userId       String
-  role         WorkspaceRole @default(MEMBER)
-  personas     UserPersona[] @default([])
-  personaNotes String?       @db.Text
+  id                        String        @id @default(cuid())
+  workspaceId               String
+  userId                    String
+  role                      WorkspaceRole @default(MEMBER)
+  personas                  UserPersona[] @default([])
+  personaNotes              String?       @db.Text
+  /// When the member accepted the daily report text of this workspace, and
+  /// which version of it. Without it the daily report does not run for them.
+  dailyReportConsentAt      DateTime?
+  dailyReportConsentVersion Int?
 
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -381,6 +391,7 @@ model User {
   personalProfile      PersonalProfile?
   trackers             Tracker[]
   trackerEntries       TrackerEntry[]
+  taskUpdateProposals  TaskUpdateProposal[]
 }
 
 model DesktopAuthCode {
@@ -476,15 +487,16 @@ model Project {
   // project's meetings. SetNull so deleting the theme just unlinks it.
   themeId     String?
 
-  workspace   Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  theme       BrandTheme?   @relation(fields: [themeId], references: [id], onDelete: SetNull)
-  tasks       Task[]
-  transcripts Transcript[]
-  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  aiUsageLogs AiUsageLog[]
-  context     Context?
-  documents   DocDocument[]
-  notes       Note[]
+  workspace           Workspace            @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  theme               BrandTheme?          @relation(fields: [themeId], references: [id], onDelete: SetNull)
+  tasks               Task[]
+  transcripts         Transcript[]
+  user                User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  aiUsageLogs         AiUsageLog[]
+  context             Context?
+  documents           DocDocument[]
+  notes               Note[]
+  taskUpdateProposals TaskUpdateProposal[]
 
   @@index([userId])
   @@index([workspaceId])
@@ -568,6 +580,7 @@ model Task {
   dependants         TaskDependency[]     @relation("TaskDependencyDependencies")
   transcriptLinks    TaskTranscriptLink[]
   resolvedPainPoint  PainPoint?
+  updateProposals    TaskUpdateProposal[]
 
   @@index([projectId])
   @@index([status])
@@ -1032,16 +1045,19 @@ model Note {
   /// The version last read for tracker entries, so the same text is not
   /// sent to the AI twice.
   trackersExtractedVersion Int?
+  /// The same for the daily report: the version last read for task updates.
+  tasksExtractedVersion    Int?
   /// In the trash since then. Purged after 30 days.
   deletedAt                DateTime?
   createdAt                DateTime       @default(now())
   updatedAt                DateTime       @updatedAt
 
-  workspace      Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  project        Project?       @relation(fields: [projectId], references: [id], onDelete: SetNull)
-  transcript     Transcript?    @relation(fields: [transcriptId], references: [id], onDelete: SetNull)
-  trackerEntries TrackerEntry[]
+  workspace           Workspace            @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user                User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project             Project?             @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  transcript          Transcript?          @relation(fields: [transcriptId], references: [id], onDelete: SetNull)
+  trackerEntries      TrackerEntry[]
+  taskUpdateProposals TaskUpdateProposal[]
 
   @@unique([workspaceId, userId, periodType, periodStart])
   @@index([workspaceId, userId, updatedAt])
@@ -1162,4 +1178,58 @@ model TrackerEntry {
   @@index([trackerId, date])
   @@index([workspaceId, userId, status, date])
   @@index([noteId])
+}
+
+enum TaskUpdateKind {
+  /// An existing task is done.
+  COMPLETED
+  /// An existing task moved forward.
+  PROGRESS
+  /// An existing task is stuck.
+  BLOCKED
+  /// Something still to do that was not a task yet.
+  NEW
+  /// Something done today that was not a task yet.
+  DONE
+}
+
+enum TaskUpdateStatus {
+  PROPOSED
+  ACCEPTED
+  REJECTED
+}
+
+/// A change to a member's tasks that the AI read in their daily report.
+/// Nothing changes until the member accepts it. Accepted rows stay as the
+/// history the weekly team report is built from.
+model TaskUpdateProposal {
+  id          String           @id @default(cuid())
+  workspaceId String
+  userId      String
+  noteId      String?
+  /// The existing task. Null for NEW and DONE until accepted.
+  taskId      String?
+  /// Where a NEW or DONE task goes. Null lets the server pick.
+  projectId   String?
+  kind        TaskUpdateKind
+  /// The task title: copied for an existing task, proposed for a new one.
+  title       String           @db.VarChar(300)
+  /// A few words: what moved forward, or why it is stuck.
+  detail      String?          @db.VarChar(500)
+  status      TaskUpdateStatus @default(PROPOSED)
+  /// Local calendar day of the report.
+  day         DateTime         @db.Date
+  reviewedAt  DateTime?
+  createdAt   DateTime         @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  note      Note?     @relation(fields: [noteId], references: [id], onDelete: SetNull)
+  task      Task?     @relation(fields: [taskId], references: [id], onDelete: SetNull)
+  project   Project?  @relation(fields: [projectId], references: [id], onDelete: SetNull)
+
+  @@index([workspaceId, userId, status, day])
+  @@index([noteId])
+  @@index([taskId])
+  @@index([projectId])
 }

@@ -26,6 +26,8 @@ import { pricingSyncWorker } from "./workers/pricingSyncWorker";
 import { pricingSyncQueue } from "./queue/pricingSyncQueue";
 import { weeklyDigestWorker } from "./workers/weeklyDigestWorker";
 import { weeklyDigestQueue } from "./queue/weeklyDigestQueue";
+import { teamReportWorker } from "./workers/teamReportWorker";
+import { teamReportQueue } from "./queue/teamReportQueue";
 import { storageCleanupWorker } from "./workers/storageCleanupWorker";
 import { storageCleanupQueue } from "./queue/storageCleanupQueue";
 import { transcriptGenerationWorker } from "./workers/transcriptGenerationWorker";
@@ -241,6 +243,7 @@ createBullBoard({
     new BullMQAdapter(taskRefinementQueue),
     new BullMQAdapter(contextDocumentQueue),
     new BullMQAdapter(weeklyDigestQueue),
+    new BullMQAdapter(teamReportQueue),
     new BullMQAdapter(storageCleanupQueue),
   ],
   serverAdapter: serverAdapter,
@@ -427,6 +430,19 @@ const startServer = async () => {
   }
 
   try {
+    // Mondays at 08:15 server time, after the personal digest. Fixed jobId
+    // so a restart reuses the schedule instead of adding another one.
+    const teamJob = await teamReportQueue.add(
+      "team-report",
+      {},
+      { repeat: { pattern: "15 8 * * 1" }, jobId: "team-report-cron" },
+    );
+    logger.info(`Scheduled team report job: ${teamJob.id}`);
+  } catch (error) {
+    logger.error("Failed to schedule team report job", error);
+  }
+
+  try {
     // Daily at 03:00: slices of recording uploads that never finished.
     // Fixed jobId so restarts reuse the schedule instead of stacking one.
     const cleanupJob = await storageCleanupQueue.add(
@@ -500,6 +516,7 @@ const closeServer = async (cb?: () => void) => {
   await taskRefinementWorker.close();
   await contextDocumentWorker.close();
   await weeklyDigestWorker.close();
+  await teamReportWorker.close();
   await storageCleanupWorker.close();
   pricingCacheService.close();
 

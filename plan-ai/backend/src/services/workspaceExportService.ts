@@ -40,6 +40,8 @@ export async function exportWorkspace(
       allowedEmailDomains: true,
       requireMfa: true,
       requiredSignInProvider: true,
+      dailyReportEnabled: true,
+      dailyReportReminderTime: true,
     },
   });
 
@@ -55,6 +57,7 @@ export async function exportWorkspace(
     auditLog,
     notes,
     trackers,
+    taskUpdates,
   ] = await Promise.all([
     prisma.workspaceMember.findMany({
       where: { workspaceId },
@@ -194,6 +197,24 @@ export async function exportWorkspace(
         },
       },
     }),
+    // Daily report proposals are as private as the day note they came from.
+    prisma.taskUpdateProposal.findMany({
+      where: { workspaceId, userId: exportedBy },
+      select: {
+        id: true,
+        kind: true,
+        status: true,
+        title: true,
+        detail: true,
+        day: true,
+        noteId: true,
+        taskId: true,
+        projectId: true,
+        reviewedAt: true,
+        createdAt: true,
+      },
+      orderBy: { createdAt: "asc" },
+    }),
   ]);
 
   const transcriptsOut = [];
@@ -235,6 +256,7 @@ export async function exportWorkspace(
     chatThreads: threads,
     notes,
     ...(trackers.length > 0 ? { trackers } : {}),
+    ...(taskUpdates.length > 0 ? { dailyReportProposals: taskUpdates } : {}),
     auditLog,
   };
 }

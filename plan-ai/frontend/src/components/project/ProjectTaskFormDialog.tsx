@@ -33,6 +33,7 @@ import {
   ApiResponseRefineTaskResponse,
 } from "../../store/apis/projectApi";
 import { setToastMessage } from "../../store/slices/app/appSlice";
+import TaskAssigneeSelect from "./TaskAssigneeSelect";
 
 const TASK_STATUSES: TaskStatusSchema[] = [
   "BACKLOG",
@@ -104,6 +105,7 @@ const ProjectTaskFormDialog: React.FC<ProjectTaskFormDialogProps> = ({
   const [priority, setPriority] = React.useState<TaskPrioritySchema>("MEDIUM");
   const [type, setType] = React.useState<TaskTypeSchema>("TASK");
   const [dueDate, setDueDate] = React.useState("");
+  const [assigneeId, setAssigneeId] = React.useState<string | null>(null);
   const [dependencyTaskIds, setDependencyTaskIds] = React.useState<string[]>([]);
   const [metadataText, setMetadataText] = React.useState("");
   const [formError, setFormError] = React.useState<string | null>(null);
@@ -132,6 +134,7 @@ const ProjectTaskFormDialog: React.FC<ProjectTaskFormDialogProps> = ({
       setPriority(task.priority);
       setType((task as unknown as { type?: TaskTypeSchema }).type ?? "TASK");
       setDueDate(formatDateTimeLocal(task.dueDate));
+      setAssigneeId(task.assigneeId ?? null);
       setDependencyTaskIds(task.dependencies ?? []);
       setMetadataText(richTask.metadata ? JSON.stringify(richTask.metadata, null, 2) : "");
       setFormError(null);
@@ -146,6 +149,7 @@ const ProjectTaskFormDialog: React.FC<ProjectTaskFormDialogProps> = ({
       setPriority("MEDIUM");
       setType("TASK");
       setDueDate("");
+      setAssigneeId(null);
       setDependencyTaskIds([]);
       setMetadataText("");
       setFormError(null);
@@ -200,6 +204,7 @@ const ProjectTaskFormDialog: React.FC<ProjectTaskFormDialogProps> = ({
       dueDate: dueDateIso,
       metadata: metadata ?? null,
       dependencyTaskIds,
+      assigneeId,
     };
 
     try {
@@ -515,6 +520,8 @@ const ProjectTaskFormDialog: React.FC<ProjectTaskFormDialogProps> = ({
             onChange={(e) => setDueDate(e.target.value)}
             InputLabelProps={{ shrink: true }}
           />
+
+          <TaskAssigneeSelect value={assigneeId} onChange={setAssigneeId} disabled={isSubmitting} />
 
           {/* ── Simple: optional note ── */}
           {!advancedMode && (

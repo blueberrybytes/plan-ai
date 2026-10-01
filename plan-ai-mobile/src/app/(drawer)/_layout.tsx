@@ -177,6 +177,16 @@ export default function DrawerLayout() {
         }}
       />
       <Drawer.Screen
+        name="daily-report"
+        options={{
+          title: 'Daily report',
+          drawerItemStyle: activeWorkspace?.kind === 'PERSONAL' ? { display: 'none' } : undefined,
+          drawerIcon: ({ color, size }: { color: string; size: number }) => (
+            <MaterialCommunityIcons name="clipboard-text-clock-outline" color={color} size={size} />
+          )
+        }}
+      />
+      <Drawer.Screen
         name="docs"
         options={{ 
           title: 'Docs',

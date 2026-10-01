@@ -32,6 +32,7 @@ import {
 } from "../../store/apis/projectApi";
 import { setToastMessage } from "../../store/slices/app/appSlice";
 import MarkdownRenderer from "../common/MarkdownRenderer";
+import TaskAssigneeChip from "./TaskAssigneeChip";
 import { useSyncTaskMutation } from "../../store/apis/taskApi";
 import SyncIcon from "@mui/icons-material/Sync";
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
@@ -245,6 +246,8 @@ const DraggableTaskCard: React.FC<{
               }}
             />
           ) : null}
+
+          <TaskAssigneeChip assigneeId={task.assigneeId ?? null} />
 
           {task.dependencies?.length ? (
             <Tooltip title="Number of blocking tasks">

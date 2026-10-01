@@ -39,6 +39,8 @@ import {
   CreditCard as CreditCardIcon,
   StickyNote2 as NotesIcon,
   Insights as TrackersIcon,
+  EditNote as DailyReportIcon,
+  Groups as TeamReportIcon,
 } from "@mui/icons-material";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
@@ -88,6 +90,20 @@ const trackersNavItem: NavItem = {
   labelKey: "sidebarLayout.nav.trackers",
   path: "/trackers",
   icon: <TrackersIcon fontSize="small" />,
+};
+
+/** Shown only in a team workspace. */
+const dailyReportNavItem: NavItem = {
+  labelKey: "sidebarLayout.nav.dailyReport",
+  path: "/daily-report",
+  icon: <DailyReportIcon fontSize="small" />,
+};
+
+/** Shown to owners and admins of a team workspace. */
+const teamReportNavItem: NavItem = {
+  labelKey: "sidebarLayout.nav.teamReport",
+  path: "/team-report",
+  icon: <TeamReportIcon fontSize="small" />,
 };
 
 const libraryNavItems: NavItem[] = [
@@ -159,11 +175,14 @@ const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children, fullHeight = fa
     [workspaces, activeWorkspaceId],
   );
 
-  const mainNavItems = React.useMemo(
-    () =>
-      activeWorkspace?.kind === "PERSONAL" ? [...coreNavItems, trackersNavItem] : coreNavItems,
-    [activeWorkspace?.kind],
-  );
+  const mainNavItems = React.useMemo(() => {
+    if (!activeWorkspace) return coreNavItems;
+    if (activeWorkspace.kind === "PERSONAL") return [...coreNavItems, trackersNavItem];
+    const manages = activeWorkspace.role === "OWNER" || activeWorkspace.role === "ADMIN";
+    return manages
+      ? [...coreNavItems, dailyReportNavItem, teamReportNavItem]
+      : [...coreNavItems, dailyReportNavItem];
+  }, [activeWorkspace]);
 
   const isByokTrack = subscription?.track === "BYOK";
   const isMissingKeys =

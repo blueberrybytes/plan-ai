@@ -60,6 +60,8 @@ import { GoogleController } from './../controller/googleController';
 // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
 import { GithubIntegrationController } from './../controller/githubIntegrationController';
 // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+import { DailyReportController } from './../controller/dailyReportController';
+// WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
 import { ContextController } from './../controller/contextController';
 // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
 import { ChatController } from './../controller/chatController';
@@ -521,6 +523,8 @@ const models: TsoaRoute.Models = {
             "status": {"ref":"TaskStatus","required":true},
             "priority": {"ref":"TaskPriority","required":true},
             "dueDate": {"dataType":"union","subSchemas":[{"dataType":"datetime"},{"dataType":"enum","enums":[null]}],"required":true},
+            "assigneeId": {"dataType":"union","subSchemas":[{"dataType":"string"},{"dataType":"enum","enums":[null]}],"required":true},
+            "completedAt": {"dataType":"union","subSchemas":[{"dataType":"datetime"},{"dataType":"enum","enums":[null]}],"required":true},
             "dependencies": {"dataType":"array","array":{"dataType":"string"},"required":true},
             "metadata": {"dataType":"union","subSchemas":[{"ref":"TsoaJsonObject"},{"dataType":"enum","enums":[null]}],"required":true},
             "createdAt": {"dataType":"datetime","required":true},
@@ -697,6 +701,7 @@ const models: TsoaRoute.Models = {
             "dueDate": {"dataType":"union","subSchemas":[{"dataType":"datetime"},{"dataType":"enum","enums":[null]}]},
             "metadata": {"dataType":"union","subSchemas":[{"ref":"TsoaJsonObject"},{"dataType":"enum","enums":[null]}]},
             "dependencyTaskIds": {"dataType":"array","array":{"dataType":"string"}},
+            "assigneeId": {"dataType":"union","subSchemas":[{"dataType":"string"},{"dataType":"enum","enums":[null]}]},
         },
         "additionalProperties": false,
     },
@@ -714,6 +719,7 @@ const models: TsoaRoute.Models = {
             "dueDate": {"dataType":"union","subSchemas":[{"dataType":"datetime"},{"dataType":"enum","enums":[null]}]},
             "metadata": {"dataType":"union","subSchemas":[{"ref":"TsoaJsonObject"},{"dataType":"enum","enums":[null]}]},
             "dependencyTaskIds": {"dataType":"array","array":{"dataType":"string"}},
+            "assigneeId": {"dataType":"union","subSchemas":[{"dataType":"string"},{"dataType":"enum","enums":[null]}]},
         },
         "additionalProperties": false,
     },
@@ -2083,6 +2089,157 @@ const models: TsoaRoute.Models = {
             "orgAvatarUrl": {"dataType":"string"},
             "installationId": {"dataType":"double","required":true},
             "repositories": {"dataType":"array","array":{"dataType":"refObject","ref":"GithubRepository"},"required":true},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "DailyReportStatusResponse": {
+        "dataType": "refObject",
+        "properties": {
+            "enabled": {"dataType":"boolean","required":true},
+            "reminderTime": {"dataType":"string","required":true},
+            "available": {"dataType":"boolean","required":true},
+            "consentVersion": {"dataType":"double","required":true},
+            "consentedVersion": {"dataType":"union","subSchemas":[{"dataType":"double"},{"dataType":"enum","enums":[null]}],"required":true},
+            "consentedAt": {"dataType":"union","subSchemas":[{"dataType":"string"},{"dataType":"enum","enums":[null]}],"required":true},
+            "needsConsent": {"dataType":"boolean","required":true},
+            "canManage": {"dataType":"boolean","required":true},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "DailyReportSettingsRequest": {
+        "dataType": "refObject",
+        "properties": {
+            "enabled": {"dataType":"boolean"},
+            "reminderTime": {"dataType":"union","subSchemas":[{"dataType":"string"},{"dataType":"enum","enums":[null]}]},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "DailyReportConsentRequest": {
+        "dataType": "refObject",
+        "properties": {
+            "accept": {"dataType":"boolean","required":true},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "TaskUpdateKindValue": {
+        "dataType": "refAlias",
+        "type": {"dataType":"union","subSchemas":[{"dataType":"enum","enums":["COMPLETED"]},{"dataType":"enum","enums":["PROGRESS"]},{"dataType":"enum","enums":["BLOCKED"]},{"dataType":"enum","enums":["NEW"]},{"dataType":"enum","enums":["DONE"]}],"validators":{}},
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "TaskUpdateStatusValue": {
+        "dataType": "refAlias",
+        "type": {"dataType":"union","subSchemas":[{"dataType":"enum","enums":["PROPOSED"]},{"dataType":"enum","enums":["ACCEPTED"]},{"dataType":"enum","enums":["REJECTED"]}],"validators":{}},
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "TaskUpdateProposalResponse": {
+        "dataType": "refObject",
+        "properties": {
+            "id": {"dataType":"string","required":true},
+            "kind": {"ref":"TaskUpdateKindValue","required":true},
+            "status": {"ref":"TaskUpdateStatusValue","required":true},
+            "title": {"dataType":"string","required":true},
+            "detail": {"dataType":"union","subSchemas":[{"dataType":"string"},{"dataType":"enum","enums":[null]}],"required":true},
+            "day": {"dataType":"string","required":true},
+            "noteId": {"dataType":"union","subSchemas":[{"dataType":"string"},{"dataType":"enum","enums":[null]}],"required":true},
+            "taskId": {"dataType":"union","subSchemas":[{"dataType":"string"},{"dataType":"enum","enums":[null]}],"required":true},
+            "taskStatus": {"dataType":"union","subSchemas":[{"dataType":"string"},{"dataType":"enum","enums":[null]}],"required":true},
+            "projectId": {"dataType":"union","subSchemas":[{"dataType":"string"},{"dataType":"enum","enums":[null]}],"required":true},
+            "projectTitle": {"dataType":"union","subSchemas":[{"dataType":"string"},{"dataType":"enum","enums":[null]}],"required":true},
+            "createdAt": {"dataType":"string","required":true},
+            "reviewedAt": {"dataType":"union","subSchemas":[{"dataType":"string"},{"dataType":"enum","enums":[null]}],"required":true},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "DailyReportExtractResponse": {
+        "dataType": "refObject",
+        "properties": {
+            "proposals": {"dataType":"array","array":{"dataType":"refObject","ref":"TaskUpdateProposalResponse"},"required":true},
+            "skipped": {"dataType":"union","subSchemas":[{"dataType":"enum","enums":["unchanged"]},{"dataType":"enum","enums":["empty"]},{"dataType":"enum","enums":[null]}],"required":true},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "DailyReportExtractRequest": {
+        "dataType": "refObject",
+        "properties": {
+            "noteId": {"dataType":"string","required":true},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "ReviewProposalsResponse": {
+        "dataType": "refObject",
+        "properties": {
+            "updated": {"dataType":"double","required":true},
+            "failed": {"dataType":"array","array":{"dataType":"nestedObjectLiteral","nestedProperties":{"message":{"dataType":"string","required":true},"id":{"dataType":"string","required":true}}},"required":true},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "ReviewProposalItem": {
+        "dataType": "refObject",
+        "properties": {
+            "id": {"dataType":"string","required":true},
+            "status": {"dataType":"union","subSchemas":[{"dataType":"enum","enums":["ACCEPTED"]},{"dataType":"enum","enums":["REJECTED"]}],"required":true},
+            "title": {"dataType":"string"},
+            "projectId": {"dataType":"union","subSchemas":[{"dataType":"string"},{"dataType":"enum","enums":[null]}]},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "ReviewProposalsRequest": {
+        "dataType": "refObject",
+        "properties": {
+            "items": {"dataType":"array","array":{"dataType":"refObject","ref":"ReviewProposalItem"},"required":true},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "TeamReportTaskResponse": {
+        "dataType": "refObject",
+        "properties": {
+            "id": {"dataType":"string","required":true},
+            "title": {"dataType":"string","required":true},
+            "projectTitle": {"dataType":"string","required":true},
+            "date": {"dataType":"union","subSchemas":[{"dataType":"string"},{"dataType":"enum","enums":[null]}],"required":true},
+            "reason": {"dataType":"union","subSchemas":[{"dataType":"string"},{"dataType":"enum","enums":[null]}],"required":true},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "TeamReportMemberResponse": {
+        "dataType": "refObject",
+        "properties": {
+            "userId": {"dataType":"string","required":true},
+            "name": {"dataType":"string","required":true},
+            "email": {"dataType":"string","required":true},
+            "role": {"dataType":"string","required":true},
+            "usesDailyReport": {"dataType":"boolean","required":true},
+            "completedCount": {"dataType":"double","required":true},
+            "completed": {"dataType":"array","array":{"dataType":"refObject","ref":"TeamReportTaskResponse"},"required":true},
+            "inProgressCount": {"dataType":"double","required":true},
+            "blocked": {"dataType":"array","array":{"dataType":"refObject","ref":"TeamReportTaskResponse"},"required":true},
+            "overdueCount": {"dataType":"double","required":true},
+            "overdue": {"dataType":"array","array":{"dataType":"refObject","ref":"TeamReportTaskResponse"},"required":true},
+            "reportDays": {"dataType":"union","subSchemas":[{"dataType":"double"},{"dataType":"enum","enums":[null]}],"required":true},
+            "summary": {"dataType":"union","subSchemas":[{"dataType":"string"},{"dataType":"enum","enums":[null]}],"required":true},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "TeamReportResponse": {
+        "dataType": "refObject",
+        "properties": {
+            "workspaceName": {"dataType":"string","required":true},
+            "dailyReportEnabled": {"dataType":"boolean","required":true},
+            "weekStart": {"dataType":"string","required":true},
+            "weekEnd": {"dataType":"string","required":true},
+            "members": {"dataType":"array","array":{"dataType":"refObject","ref":"TeamReportMemberResponse"},"required":true},
         },
         "additionalProperties": false,
     },
@@ -7910,6 +8067,232 @@ export function RegisterRoutes(app: Router,opts?:{multer?:ReturnType<typeof mult
                 next,
                 validatedArgs,
                 successStatus: 200,
+              });
+            } catch (err) {
+                return next(err);
+            }
+        });
+        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+        const argsDailyReportController_getDailyReportStatus: Record<string, TsoaRoute.ParameterSchema> = {
+                request: {"in":"request","name":"request","required":true,"dataType":"object"},
+        };
+        app.get('/api/daily-report/status',
+            authenticateMiddleware([{"ClientLevel":[]}]),
+            ...(fetchMiddlewares<RequestHandler>(DailyReportController)),
+            ...(fetchMiddlewares<RequestHandler>(DailyReportController.prototype.getDailyReportStatus)),
+
+            async function DailyReportController_getDailyReportStatus(request: ExRequest, response: ExResponse, next: any) {
+
+            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+
+            let validatedArgs: any[] = [];
+            try {
+                validatedArgs = templateService.getValidatedArgs({ args: argsDailyReportController_getDailyReportStatus, request, response });
+
+                const controller = new DailyReportController();
+
+              await templateService.apiHandler({
+                methodName: 'getDailyReportStatus',
+                controller,
+                response,
+                next,
+                validatedArgs,
+                successStatus: undefined,
+              });
+            } catch (err) {
+                return next(err);
+            }
+        });
+        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+        const argsDailyReportController_updateDailyReportSettings: Record<string, TsoaRoute.ParameterSchema> = {
+                request: {"in":"request","name":"request","required":true,"dataType":"object"},
+                body: {"in":"body","name":"body","required":true,"ref":"DailyReportSettingsRequest"},
+        };
+        app.patch('/api/daily-report/settings',
+            authenticateMiddleware([{"ClientLevel":[]}]),
+            ...(fetchMiddlewares<RequestHandler>(DailyReportController)),
+            ...(fetchMiddlewares<RequestHandler>(DailyReportController.prototype.updateDailyReportSettings)),
+
+            async function DailyReportController_updateDailyReportSettings(request: ExRequest, response: ExResponse, next: any) {
+
+            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+
+            let validatedArgs: any[] = [];
+            try {
+                validatedArgs = templateService.getValidatedArgs({ args: argsDailyReportController_updateDailyReportSettings, request, response });
+
+                const controller = new DailyReportController();
+
+              await templateService.apiHandler({
+                methodName: 'updateDailyReportSettings',
+                controller,
+                response,
+                next,
+                validatedArgs,
+                successStatus: undefined,
+              });
+            } catch (err) {
+                return next(err);
+            }
+        });
+        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+        const argsDailyReportController_setDailyReportConsent: Record<string, TsoaRoute.ParameterSchema> = {
+                request: {"in":"request","name":"request","required":true,"dataType":"object"},
+                body: {"in":"body","name":"body","required":true,"ref":"DailyReportConsentRequest"},
+        };
+        app.post('/api/daily-report/consent',
+            authenticateMiddleware([{"ClientLevel":[]}]),
+            ...(fetchMiddlewares<RequestHandler>(DailyReportController)),
+            ...(fetchMiddlewares<RequestHandler>(DailyReportController.prototype.setDailyReportConsent)),
+
+            async function DailyReportController_setDailyReportConsent(request: ExRequest, response: ExResponse, next: any) {
+
+            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+
+            let validatedArgs: any[] = [];
+            try {
+                validatedArgs = templateService.getValidatedArgs({ args: argsDailyReportController_setDailyReportConsent, request, response });
+
+                const controller = new DailyReportController();
+
+              await templateService.apiHandler({
+                methodName: 'setDailyReportConsent',
+                controller,
+                response,
+                next,
+                validatedArgs,
+                successStatus: undefined,
+              });
+            } catch (err) {
+                return next(err);
+            }
+        });
+        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+        const argsDailyReportController_extractDailyReport: Record<string, TsoaRoute.ParameterSchema> = {
+                request: {"in":"request","name":"request","required":true,"dataType":"object"},
+                body: {"in":"body","name":"body","required":true,"ref":"DailyReportExtractRequest"},
+        };
+        app.post('/api/daily-report/extract',
+            authenticateMiddleware([{"ClientLevel":[]}]),
+            ...(fetchMiddlewares<RequestHandler>(DailyReportController)),
+            ...(fetchMiddlewares<RequestHandler>(DailyReportController.prototype.extractDailyReport)),
+
+            async function DailyReportController_extractDailyReport(request: ExRequest, response: ExResponse, next: any) {
+
+            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+
+            let validatedArgs: any[] = [];
+            try {
+                validatedArgs = templateService.getValidatedArgs({ args: argsDailyReportController_extractDailyReport, request, response });
+
+                const controller = new DailyReportController();
+
+              await templateService.apiHandler({
+                methodName: 'extractDailyReport',
+                controller,
+                response,
+                next,
+                validatedArgs,
+                successStatus: undefined,
+              });
+            } catch (err) {
+                return next(err);
+            }
+        });
+        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+        const argsDailyReportController_listDailyReportProposals: Record<string, TsoaRoute.ParameterSchema> = {
+                request: {"in":"request","name":"request","required":true,"dataType":"object"},
+                status: {"in":"query","name":"status","dataType":"string"},
+                noteId: {"in":"query","name":"noteId","dataType":"string"},
+        };
+        app.get('/api/daily-report/proposals',
+            authenticateMiddleware([{"ClientLevel":[]}]),
+            ...(fetchMiddlewares<RequestHandler>(DailyReportController)),
+            ...(fetchMiddlewares<RequestHandler>(DailyReportController.prototype.listDailyReportProposals)),
+
+            async function DailyReportController_listDailyReportProposals(request: ExRequest, response: ExResponse, next: any) {
+
+            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+
+            let validatedArgs: any[] = [];
+            try {
+                validatedArgs = templateService.getValidatedArgs({ args: argsDailyReportController_listDailyReportProposals, request, response });
+
+                const controller = new DailyReportController();
+
+              await templateService.apiHandler({
+                methodName: 'listDailyReportProposals',
+                controller,
+                response,
+                next,
+                validatedArgs,
+                successStatus: undefined,
+              });
+            } catch (err) {
+                return next(err);
+            }
+        });
+        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+        const argsDailyReportController_reviewDailyReportProposals: Record<string, TsoaRoute.ParameterSchema> = {
+                request: {"in":"request","name":"request","required":true,"dataType":"object"},
+                body: {"in":"body","name":"body","required":true,"ref":"ReviewProposalsRequest"},
+        };
+        app.post('/api/daily-report/proposals/review',
+            authenticateMiddleware([{"ClientLevel":[]}]),
+            ...(fetchMiddlewares<RequestHandler>(DailyReportController)),
+            ...(fetchMiddlewares<RequestHandler>(DailyReportController.prototype.reviewDailyReportProposals)),
+
+            async function DailyReportController_reviewDailyReportProposals(request: ExRequest, response: ExResponse, next: any) {
+
+            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+
+            let validatedArgs: any[] = [];
+            try {
+                validatedArgs = templateService.getValidatedArgs({ args: argsDailyReportController_reviewDailyReportProposals, request, response });
+
+                const controller = new DailyReportController();
+
+              await templateService.apiHandler({
+                methodName: 'reviewDailyReportProposals',
+                controller,
+                response,
+                next,
+                validatedArgs,
+                successStatus: undefined,
+              });
+            } catch (err) {
+                return next(err);
+            }
+        });
+        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+        const argsDailyReportController_getTeamReport: Record<string, TsoaRoute.ParameterSchema> = {
+                request: {"in":"request","name":"request","required":true,"dataType":"object"},
+                week: {"in":"query","name":"week","dataType":"string"},
+                summary: {"in":"query","name":"summary","dataType":"boolean"},
+                language: {"in":"query","name":"language","dataType":"string"},
+        };
+        app.get('/api/daily-report/team',
+            authenticateMiddleware([{"ClientLevel":[]}]),
+            ...(fetchMiddlewares<RequestHandler>(DailyReportController)),
+            ...(fetchMiddlewares<RequestHandler>(DailyReportController.prototype.getTeamReport)),
+
+            async function DailyReportController_getTeamReport(request: ExRequest, response: ExResponse, next: any) {
+
+            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+
+            let validatedArgs: any[] = [];
+            try {
+                validatedArgs = templateService.getValidatedArgs({ args: argsDailyReportController_getTeamReport, request, response });
+
+                const controller = new DailyReportController();
+
+              await templateService.apiHandler({
+                methodName: 'getTeamReport',
+                controller,
+                response,
+                next,
+                validatedArgs,
+                successStatus: undefined,
               });
             } catch (err) {
                 return next(err);

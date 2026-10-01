@@ -964,7 +964,9 @@
       "recordings": "Recordings",
       "users": "Users",
       "billing": "Billing",
-      "trackers": "Trackers"
+      "trackers": "Trackers",
+      "dailyReport": "Daily report",
+      "teamReport": "Team report"
     },
     "tooltip": {
       "expand": "Expand sidebar",
@@ -2122,5 +2124,104 @@
       "writeFirst": "Write something in the note first.",
       "saveFirst": "The note is not saved yet. Try again when it shows Saved."
     }
+  },
+  "dailyReport": {
+    "title": "Daily report",
+    "subtitle": "Say what you did today. The AI proposes changes to your tasks and nothing changes until you accept them.",
+    "loadError": "Could not load the daily report. Try again.",
+    "personal": {
+      "title": "Not in a personal workspace",
+      "body": "The daily report is for team workspaces. Switch to a team workspace to use it."
+    },
+    "off": {
+      "title": "The daily report is off",
+      "body": "An owner or admin of this workspace can turn it on.",
+      "bodyManager": "Turn it on below. Each member accepts the text before it runs for them."
+    },
+    "consent": {
+      "title": "Before you start",
+      "what": "At the end of the day you write or dictate what you did. The AI reads it next to your open tasks and proposes changes: tasks done, moved forward or stuck, and new ones. Nothing changes until you accept it.",
+      "who": "The owners and admins of this workspace see your tasks and their status, as they already can in the projects, and how many days you sent a report. They never see the text or the audio of your report. It stays private to you.",
+      "notRecorded": "Nothing else is recorded: no screen, no keyboard, no location and no time in front of the computer.",
+      "withdraw": "You can withdraw at any time from this page. Your waiting proposals are then deleted.",
+      "accept": "I understand, start",
+      "withdrawAction": "Stop using the daily report",
+      "withdrawConfirm": "Stop using the daily report? Your waiting proposals are deleted. Tasks you already accepted stay as they are.",
+      "withdrawn": "You no longer use the daily report."
+    },
+    "editor": {
+      "title": "Today, {{date}}",
+      "placeholder": "What did you do today? What is stuck, and why? What is left for tomorrow?",
+      "hint": "Plain words are enough. On the phone you can dictate it.",
+      "save": "Save",
+      "saveAndRead": "Save and update my tasks",
+      "reading": "Reading your report…",
+      "saved": "Saved.",
+      "conflict": "This report changed on another device. The page shows the latest version now.",
+      "saveError": "Could not save the report. Try again.",
+      "empty": "Write something first.",
+      "unchanged": "Nothing new since the last read.",
+      "noProposals": "No changes found for your tasks."
+    },
+    "proposals": {
+      "title": "Proposed changes ({{count}})",
+      "hint": "Accept what is right. Nothing changes until you do.",
+      "acceptAll": "Accept all",
+      "accept": "Accept",
+      "reject": "Reject",
+      "edit": "Edit title",
+      "newTaskProject": "Goes to: {{project}}",
+      "defaultProject": "Daily report project",
+      "failed": "{{count}} could not be applied: {{message}}",
+      "error": "Could not save your answer. Try again.",
+      "done": "Your tasks are updated."
+    },
+    "kind": {
+      "COMPLETED": "Done",
+      "PROGRESS": "Moved forward",
+      "BLOCKED": "Stuck",
+      "NEW": "New task",
+      "DONE": "Done, new task"
+    },
+    "settings": {
+      "title": "Settings for this workspace",
+      "enabled": "Daily report on",
+      "reminder": "Reminder time",
+      "reminderHelp": "Local time of each member. The apps remind them if they have not sent a report.",
+      "saved": "Settings saved.",
+      "error": "Could not save the settings.",
+      "teamReport": "Open the team report"
+    },
+    "missingKey": "Add an OpenRouter key to this workspace to read reports with AI.",
+    "missingKeyAction": "Open settings"
+  },
+  "teamReport": {
+    "title": "Team report",
+    "subtitle": "What each person closed, what is stuck and what is past due. It comes from tasks. The text of daily reports stays private.",
+    "forbidden": "Only owners and admins can read the team report.",
+    "loadError": "Could not load the team report. Try again.",
+    "week": "{{start}} to {{end}}",
+    "previous": "Previous week",
+    "next": "Next week",
+    "summarize": "Write summaries with AI",
+    "summarizing": "Writing…",
+    "summaryError": "Could not write the summaries.",
+    "closed": "Closed",
+    "inProgress": "In progress",
+    "stuck": "Stuck",
+    "overdue": "Past due",
+    "reportDays": "Daily report: {{count}} of 5 days",
+    "notUsing": "Does not use the daily report",
+    "more": "and {{count}} more",
+    "due": "due {{date}}",
+    "empty": "No member has assigned tasks this week.",
+    "quiet": "{{count}} members with no assigned tasks this week",
+    "dailyReportOff": "The daily report is off in this workspace. The report still shows tasks.",
+    "settings": "Daily report settings"
+  },
+  "taskAssignee": {
+    "label": "Assigned to",
+    "nobody": "Nobody",
+    "unknown": "Someone no longer in this workspace"
   }
 }

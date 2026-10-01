@@ -15,6 +15,7 @@ export type ErrorFeature =
   | "tasks"
   | "links"
   | "mermaid"
+  | "daily_report"
   | "api";
 
 type Extra = Record<string, string | number | boolean | null | undefined>;

@@ -54,6 +54,12 @@ export type ExtractTrackerEntriesRequest = components['schemas']['ExtractRequest
 export type ExtractTrackerEntriesResponse = components['schemas']['ExtractResponse'];
 export type TrackerStatsQuery      = operations['GetTrackerStats']['parameters']['query'];
 export type TrackerEntriesQuery    = NonNullable<operations['ListTrackerEntries']['parameters']['query']>;
+export type DailyReportStatus      = components['schemas']['DailyReportStatusResponse'];
+export type TaskUpdateProposal     = components['schemas']['TaskUpdateProposalResponse'];
+export type TaskUpdateKind         = components['schemas']['TaskUpdateKindValue'];
+export type DailyReportExtractResponse = components['schemas']['DailyReportExtractResponse'];
+export type ReviewProposalItem     = components['schemas']['ReviewProposalItem'];
+export type ReviewProposalsResponse = components['schemas']['ReviewProposalsResponse'];
 
 /**
  * An API error that keeps the HTTP status, so callers can tell a request
@@ -270,7 +276,14 @@ export const createPlanAiApi = (
    */
   const trackerRequest = async <T>(
     path: string,
-    opts: { method?: string; body?: unknown; workspaceId?: string | null; timeoutMs?: number } = {},
+    opts: {
+      method?: string;
+      body?: unknown;
+      workspaceId?: string | null;
+      timeoutMs?: number;
+      /** Sentry tag. The daily report shares this helper. */
+      feature?: string;
+    } = {},
   ): Promise<T> => {
     const send = async (force: boolean): Promise<Response> => {
       const headers = await noteHeaders(force, opts.workspaceId);
@@ -303,7 +316,7 @@ export const createPlanAiApi = (
       if (!EXPECTED_TRACKER_STATUSES.has(res.status)) {
         Sentry.captureMessage("Trackers request failed", {
           level: res.status >= 500 ? "error" : "warning",
-          tags: { status: String(res.status), feature: "trackers" },
+          tags: { status: String(res.status), feature: opts.feature ?? "trackers" },
           extra: { path: stripQuery(path), method: opts.method ?? "GET", code: body.code },
         });
       }
@@ -1285,6 +1298,64 @@ export const createPlanAiApi = (
         body,
         workspaceId,
         timeoutMs: TRACKERS_EXTRACT_TIMEOUT_MS,
+      });
+    },
+
+    // ── Daily report ──────────────────────────────────────────────────────
+
+    async getDailyReportStatus(workspaceId?: string | null): Promise<DailyReportStatus> {
+      return trackerRequest<DailyReportStatus>("/api/daily-report/status", {
+        workspaceId,
+        feature: "daily_report",
+      });
+    },
+
+    /** true accepts the text, false withdraws the consent. */
+    async setDailyReportConsent(
+      accept: boolean,
+      workspaceId?: string | null,
+    ): Promise<DailyReportStatus> {
+      return trackerRequest<DailyReportStatus>("/api/daily-report/consent", {
+        method: "POST",
+        body: { accept },
+        workspaceId,
+        feature: "daily_report",
+      });
+    },
+
+    /** Reads the day note with AI. The proposals wait for the member. */
+    async extractDailyReport(
+      noteId: string,
+      workspaceId?: string | null,
+    ): Promise<DailyReportExtractResponse> {
+      return trackerRequest<DailyReportExtractResponse>("/api/daily-report/extract", {
+        method: "POST",
+        body: { noteId },
+        workspaceId,
+        timeoutMs: TRACKERS_EXTRACT_TIMEOUT_MS,
+        feature: "daily_report",
+      });
+    },
+
+    async listDailyReportProposals(
+      status: "PROPOSED" | "ACCEPTED" | "REJECTED",
+      workspaceId?: string | null,
+    ): Promise<TaskUpdateProposal[]> {
+      return trackerRequest<TaskUpdateProposal[]>(
+        `/api/daily-report/proposals${query({ status })}`,
+        { workspaceId, feature: "daily_report" },
+      );
+    },
+
+    async reviewDailyReportProposals(
+      items: ReviewProposalItem[],
+      workspaceId?: string | null,
+    ): Promise<ReviewProposalsResponse> {
+      return trackerRequest<ReviewProposalsResponse>("/api/daily-report/proposals/review", {
+        method: "POST",
+        body: { items },
+        workspaceId,
+        feature: "daily_report",
       });
     },
   };

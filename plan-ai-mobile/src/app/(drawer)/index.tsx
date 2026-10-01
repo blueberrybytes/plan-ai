@@ -24,6 +24,7 @@ import {
 } from "react-native-paper";
 import { useAuth } from "../../context/AuthContext";
 import { ScreenHeader } from "../../components/ScreenHeader";
+import { DailyReportReminder } from "../../components/DailyReportReminder";
 import { WorkspaceSelector } from "../../components/WorkspaceSelector";
 import { useRouter, useFocusEffect, useNavigation, Href } from "expo-router";
 import { Transcript } from "../../services/planAiApi";
@@ -597,6 +598,8 @@ export default function DashboardScreen() {
           />
         }
       />
+
+      <DailyReportReminder />
 
       {isLoading ? (
         <View style={styles.loadingContainer}>

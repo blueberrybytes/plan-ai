@@ -31,7 +31,9 @@ export interface LogUsageParams {
     | "TRANSCRIPT"
     | "TASK_EXTRACTION"
     | "RECORDER"
-    | "TRACKERS";
+    | "TRACKERS"
+    | "DAILY_REPORT"
+    | "TEAM_REPORT";
   provider: string;
   model: string;
   inputTokens: number;
