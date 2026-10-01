@@ -43,7 +43,7 @@ const SlideCreate: React.FC = () => {
   const navigate = useNavigate();
   const { data: themes = [] } = useGetBrandThemesQuery();
   const { data: projectsData } = useListProjectsQuery(undefined);
-  const { data: transcriptsData } = useListGlobalTranscriptsQuery({});
+  const { data: transcriptsData } = useListGlobalTranscriptsQuery({ lite: true });
   const [generatePresentation, { isLoading }] = useGeneratePresentationMutation();
 
   const [selectedThemeId, setSelectedThemeId] = useState("");

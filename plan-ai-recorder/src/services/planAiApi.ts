@@ -5,6 +5,9 @@ import type { components } from "../types/api";
 /** Fired on window when a request can't reach the backend at all. */
 export const API_UNREACHABLE_EVENT = "plan-ai-api-unreachable";
 
+/** Recordings loaded per page in the Home list. */
+export const TRANSCRIPTS_PAGE_SIZE = 30;
+
 // ── Types sourced from the generated backend swagger ──────────────────────────
 export type Workspace = components["schemas"]["WorkspaceResponse"];
 export type WorkspaceMemberResponse =
@@ -265,16 +268,20 @@ export const createPlanAiApi = (
       return handleResponseWithRetry<AiModel[]>(res, () => req(true));
     },
 
+    /** One page of the recordings list, newest first. Rows come without the full text. */
     async listTranscripts(
       q?: string,
       projectId?: string,
-    ): Promise<Transcript[]> {
+      page = 1,
+    ): Promise<{ transcripts: Transcript[]; total: number }> {
       const req = async (force: boolean) => {
         const url = new URL(`${BASE_URL}/api/transcripts`);
-        url.searchParams.set("pageSize", "50");
+        url.searchParams.set("page", String(page));
+        url.searchParams.set("pageSize", String(TRANSCRIPTS_PAGE_SIZE));
         url.searchParams.set("source", "RECORDING");
+        url.searchParams.set("lite", "true");
         if (q) url.searchParams.set("q", q);
-        // Server-side so it spans every page, not just the 50 loaded here.
+        // Server-side so it spans every page, not just the ones loaded here.
         if (projectId) url.searchParams.set("projectId", projectId);
 
         return safeFetch(url.toString(), {
@@ -283,9 +290,9 @@ export const createPlanAiApi = (
       };
 
       const res = await req(false);
-      return handleResponseWithRetry<{ transcripts: Transcript[] }>(res, () =>
+      return handleResponseWithRetry<{ transcripts: Transcript[]; total: number }>(res, () =>
         req(true),
-      ).then((d) => d.transcripts);
+      );
     },
 
     /** Companies from the connected Twenty CRM, for the post-recording picker. */

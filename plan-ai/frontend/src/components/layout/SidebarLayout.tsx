@@ -6,14 +6,10 @@ import {
   Divider,
   IconButton,
   List,
-  ListItemButton,
-  ListItemIcon,
-  ListItemText,
   Tooltip,
   Typography,
   alpha,
   Button,
-  Collapse,
 } from "@mui/material";
 import {
   //Dashboard as DashboardIcon,
@@ -21,26 +17,14 @@ import {
   Person as PersonIcon,
   ChevronLeft as ChevronLeftIcon,
   ChevronRight as ChevronRightIcon,
-  IntegrationInstructions as IntegrationInstructionsIcon,
-  Slideshow as SlideshowIcon,
   Mic as MicIcon,
-  Article as ArticleIcon,
-  AutoAwesome as AutoAwesomeIcon,
+  Home as HomeIcon,
   Chat as ChatIcon,
-  AccountTree as AccountTreeIcon,
-  Palette as PaletteIcon,
-  People as PeopleIcon,
-  Group as GroupIcon,
-  DesktopWindows as DesktopWindowsIcon,
-  Smartphone as SmartphoneIcon,
-  ExpandLess as ExpandLessIcon,
-  ExpandMore as ExpandMoreIcon,
   Brush as BrushIcon,
-  CreditCard as CreditCardIcon,
   StickyNote2 as NotesIcon,
   Insights as TrackersIcon,
   EditNote as DailyReportIcon,
-  Groups as TeamReportIcon,
+  Settings as SettingsIcon,
 } from "@mui/icons-material";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
@@ -50,6 +34,16 @@ import { selectSidebarCollapsed } from "../../store/slices/app/appSelector";
 import { toggleSidebar, setActiveWorkspaceId } from "../../store/slices/app/appSlice";
 import { selectActiveWorkspaceId } from "../../store/slices/app/appSelector";
 import WorkspaceSwitcher from "./WorkspaceSwitcher";
+import SidebarNavItem from "./SidebarNavItem";
+import SectionTabs from "./SectionTabs";
+import {
+  SectionTab,
+  buildReportTabs,
+  buildSettingsTabs,
+  isPathActive,
+  isSectionActive,
+  studioTabs,
+} from "./navSections";
 import SubscriptionBanner from "../billing/SubscriptionBanner";
 import { CircularProgress, LinearProgress } from "@mui/material";
 import { useTranslation } from "react-i18next";
@@ -67,10 +61,12 @@ type NavItem = {
   labelKey: string;
   path: string;
   icon: React.ReactElement;
+  /** Pages behind this entry. The entry is active on any of them. */
+  section?: SectionTab[];
 };
 
 const coreNavItems: NavItem[] = [
-  { labelKey: "sidebarLayout.nav.home", path: "/home", icon: <AutoAwesomeIcon fontSize="small" /> },
+  { labelKey: "sidebarLayout.nav.home", path: "/home", icon: <HomeIcon fontSize="small" /> },
   {
     labelKey: "sidebarLayout.nav.recordings",
     path: "/recordings",
@@ -92,52 +88,13 @@ const trackersNavItem: NavItem = {
   icon: <TrackersIcon fontSize="small" />,
 };
 
-/** Shown only in a team workspace. */
-const dailyReportNavItem: NavItem = {
-  labelKey: "sidebarLayout.nav.dailyReport",
-  path: "/daily-report",
-  icon: <DailyReportIcon fontSize="small" />,
+/** One entry for documents, slides and diagrams. The page shows them as tabs. */
+const studioNavItem: NavItem = {
+  labelKey: "sidebarLayout.nav.studio",
+  path: studioTabs[0].path,
+  icon: <BrushIcon fontSize="small" />,
+  section: studioTabs,
 };
-
-/** Shown to owners and admins of a team workspace. */
-const teamReportNavItem: NavItem = {
-  labelKey: "sidebarLayout.nav.teamReport",
-  path: "/team-report",
-  icon: <TeamReportIcon fontSize="small" />,
-};
-
-const libraryNavItems: NavItem[] = [
-  {
-    labelKey: "sidebarLayout.nav.integrations",
-    path: "/integrations",
-    icon: <IntegrationInstructionsIcon fontSize="small" />,
-  },
-  { labelKey: "sidebarLayout.nav.team", path: "/team", icon: <GroupIcon fontSize="small" /> },
-  {
-    labelKey: "sidebarLayout.nav.billing",
-    path: "/billing",
-    icon: <CreditCardIcon fontSize="small" />,
-  },
-];
-
-const studioNavItems: NavItem[] = [
-  {
-    labelKey: "sidebarLayout.nav.documents",
-    path: "/docs",
-    icon: <ArticleIcon fontSize="small" />,
-  },
-  {
-    labelKey: "sidebarLayout.nav.slides",
-    path: "/slides",
-    icon: <SlideshowIcon fontSize="small" />,
-  },
-  {
-    labelKey: "sidebarLayout.nav.diagrams",
-    path: "/diagrams",
-    icon: <AccountTreeIcon fontSize="small" />,
-  },
-  { labelKey: "Brand Themes", path: "/brand-themes", icon: <PaletteIcon fontSize="small" /> },
-];
 
 const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children, fullHeight = false }) => {
   const location = useLocation();
@@ -150,8 +107,6 @@ const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children, fullHeight = fa
   const isCollapsed = useSelector(selectSidebarCollapsed);
   const activeWorkspaceId = useSelector(selectActiveWorkspaceId);
   const { t } = useTranslation();
-
-  const [studioOpen, setStudioOpen] = React.useState(false);
 
   const { data: usageData } = useGetUsageMetricsQuery(
     { currentMonthOnly: true, limit: 1, workspaceId: activeWorkspaceId || "" },
@@ -175,14 +130,37 @@ const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children, fullHeight = fa
     [workspaces, activeWorkspaceId],
   );
 
-  const mainNavItems = React.useMemo(() => {
-    if (!activeWorkspace) return coreNavItems;
-    if (activeWorkspace.kind === "PERSONAL") return [...coreNavItems, trackersNavItem];
-    const manages = activeWorkspace.role === "OWNER" || activeWorkspace.role === "ADMIN";
-    return manages
-      ? [...coreNavItems, dailyReportNavItem, teamReportNavItem]
-      : [...coreNavItems, dailyReportNavItem];
-  }, [activeWorkspace]);
+  const managesWorkspace = activeWorkspace?.role === "OWNER" || activeWorkspace?.role === "ADMIN";
+  const reportTabs = React.useMemo(
+    () => buildReportTabs(activeWorkspace?.kind !== "PERSONAL" && managesWorkspace),
+    [activeWorkspace?.kind, managesWorkspace],
+  );
+  const settingsTabs = React.useMemo(
+    () => buildSettingsTabs(userDb?.role === "ADMIN"),
+    [userDb?.role],
+  );
+
+  const mainNavItems = React.useMemo<NavItem[]>(() => {
+    if (!activeWorkspace) return [...coreNavItems, studioNavItem];
+    if (activeWorkspace.kind === "PERSONAL") {
+      return [...coreNavItems, studioNavItem, trackersNavItem];
+    }
+    // One entry for the daily report and, for managers, the team report.
+    const reportsNavItem: NavItem = {
+      labelKey:
+        reportTabs.length > 1 ? "sidebarLayout.nav.reports" : "sidebarLayout.nav.dailyReport",
+      path: reportTabs[0].path,
+      icon: <DailyReportIcon fontSize="small" />,
+      section: reportTabs,
+    };
+    return [...coreNavItems, studioNavItem, reportsNavItem];
+  }, [activeWorkspace, reportTabs]);
+
+  const tabSections = React.useMemo(
+    () => [studioTabs, reportTabs, settingsTabs],
+    [reportTabs, settingsTabs],
+  );
+  const isSettingsActive = isSectionActive(location.pathname, settingsTabs);
 
   const isByokTrack = subscription?.track === "BYOK";
   const isMissingKeys =
@@ -208,30 +186,6 @@ const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children, fullHeight = fa
       : null;
   const tokenPercentage = Math.min((currentTokens / MAX_MONTHLY_TOKENS) * 100, 100);
   const isOverLimit = currentTokens > MAX_MONTHLY_TOKENS;
-
-  const adminNavItems = React.useMemo(() => {
-    const items = [];
-    if (userDb?.role === "ADMIN") {
-      items.push({
-        labelKey: "Admin",
-        path: "/admin",
-        icon: <PeopleIcon fontSize="small" />,
-      });
-    }
-    return items;
-  }, [userDb?.role]);
-
-  const isNavActive = React.useCallback(
-    (path: string): boolean =>
-      location.pathname === path || location.pathname.startsWith(`${path}/`),
-    [location.pathname],
-  );
-
-  React.useEffect(() => {
-    if (!isCollapsed && studioNavItems.some((item) => isNavActive(item.path))) {
-      setStudioOpen(true);
-    }
-  }, [isNavActive, isCollapsed]);
 
   const profileInitials = React.useMemo(() => {
     if (user?.displayName) {
@@ -420,373 +374,23 @@ const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children, fullHeight = fa
               },
             }}
           >
-            {mainNavItems.map((item) => {
-              return (
-                <ListItemButton
-                  key={item.path}
-                  component={NavLink}
-                  to={item.path}
-                  selected={isNavActive(item.path)}
-                  sx={{
-                    borderRadius: "12px",
-                    mb: 0.8,
-                    mx: isCollapsed ? 0.5 : 0,
-                    justifyContent: isCollapsed ? "center" : "flex-start",
-                    padding: isCollapsed ? "10px" : "10px 16px",
-                    "&.Mui-selected": {
-                      bgcolor: (theme) => alpha(theme.palette.primary.main, 0.12),
-                      color: "primary.light",
-                      border: (theme) => `1px solid ${alpha(theme.palette.primary.main, 0.2)}`,
-                      "& .MuiListItemIcon-root": {
-                        color: "primary.light",
-                      },
-                      "&::after": {
-                        content: '""',
-                        position: "absolute",
-                        left: 0,
-                        top: "20%",
-                        bottom: "20%",
-                        width: "3px",
-                        bgcolor: "primary.main",
-                        borderRadius: "0 4px 4px 0",
-                      },
-                    },
-                    "&:hover": {
-                      bgcolor: "action.hover",
-                    },
-                  }}
-                >
-                  <ListItemIcon
-                    sx={{
-                      color: "text.secondary",
-                      minWidth: isCollapsed ? 0 : 36,
-                      justifyContent: "center",
-                    }}
-                  >
-                    {item.icon}
-                  </ListItemIcon>
-                  {!isCollapsed ? (
-                    <ListItemText
-                      primary={t(item.labelKey)}
-                      primaryTypographyProps={{
-                        fontWeight: 600,
-                        fontSize: "0.9375rem",
-                      }}
-                    />
-                  ) : null}
-                </ListItemButton>
-              );
-            })}
-
-            <Divider
-              sx={{
-                my: 1.5,
-                borderColor: (theme) => theme.palette.primary.dark,
-                mx: isCollapsed ? 1 : 2,
-              }}
-            />
-
-            {libraryNavItems.map((item) => {
-              return (
-                <ListItemButton
-                  key={item.path}
-                  component={NavLink}
-                  to={item.path}
-                  selected={isNavActive(item.path)}
-                  sx={{
-                    borderRadius: "12px",
-                    mb: 0.8,
-                    mx: isCollapsed ? 0.5 : 0,
-                    justifyContent: isCollapsed ? "center" : "flex-start",
-                    padding: isCollapsed ? "10px" : "10px 16px",
-                    "&.Mui-selected": {
-                      bgcolor: (theme) => alpha(theme.palette.primary.main, 0.12),
-                      color: "primary.light",
-                      border: (theme) => `1px solid ${alpha(theme.palette.primary.main, 0.2)}`,
-                      "& .MuiListItemIcon-root": {
-                        color: "primary.light",
-                      },
-                      "&::after": {
-                        content: '""',
-                        position: "absolute",
-                        left: 0,
-                        top: "20%",
-                        bottom: "20%",
-                        width: "3px",
-                        bgcolor: "primary.main",
-                        borderRadius: "0 4px 4px 0",
-                      },
-                    },
-                    "&:hover": {
-                      bgcolor: "action.hover",
-                    },
-                  }}
-                >
-                  <ListItemIcon
-                    sx={{
-                      color: "text.secondary",
-                      minWidth: isCollapsed ? 0 : 36,
-                      justifyContent: "center",
-                    }}
-                  >
-                    {item.icon}
-                  </ListItemIcon>
-                  {!isCollapsed ? (
-                    <ListItemText
-                      primary={t(item.labelKey)}
-                      primaryTypographyProps={{
-                        fontWeight: 600,
-                        fontSize: "0.9375rem",
-                      }}
-                    />
-                  ) : null}
-                </ListItemButton>
-              );
-            })}
-
-            <ListItemButton
-              onClick={() => {
-                if (isCollapsed) {
-                  dispatch(toggleSidebar());
-                  setStudioOpen(true);
-                } else {
-                  setStudioOpen(!studioOpen);
+            {mainNavItems.map((item) => (
+              <SidebarNavItem
+                key={item.path}
+                label={t(item.labelKey)}
+                path={item.path}
+                icon={item.icon}
+                collapsed={isCollapsed}
+                selected={
+                  item.section
+                    ? isSectionActive(location.pathname, item.section)
+                    : isPathActive(location.pathname, item.path)
                 }
-              }}
-              selected={
-                studioNavItems.some((i) => isNavActive(i.path)) && (isCollapsed || !studioOpen)
-              }
-              sx={{
-                borderRadius: "12px",
-                mb: 0.8,
-                mx: isCollapsed ? 0.5 : 0,
-                justifyContent: isCollapsed ? "center" : "flex-start",
-                padding: isCollapsed ? "10px" : "10px 16px",
-                "&.Mui-selected": {
-                  bgcolor: (theme) => alpha(theme.palette.primary.main, 0.12),
-                  color: "primary.light",
-                  border: (theme) => `1px solid ${alpha(theme.palette.primary.main, 0.2)}`,
-                  "& .MuiListItemIcon-root": {
-                    color: "primary.light",
-                  },
-                  "&::after": {
-                    content: '""',
-                    position: "absolute",
-                    left: 0,
-                    top: "20%",
-                    bottom: "20%",
-                    width: "3px",
-                    bgcolor: "primary.main",
-                    borderRadius: "0 4px 4px 0",
-                  },
-                },
-                "&:hover": {
-                  bgcolor: "action.hover",
-                },
-              }}
-            >
-              <ListItemIcon
-                sx={{
-                  color: "text.secondary",
-                  minWidth: isCollapsed ? 0 : 36,
-                  justifyContent: "center",
-                }}
-              >
-                <BrushIcon fontSize="small" />
-              </ListItemIcon>
-              {!isCollapsed && (
-                <ListItemText
-                  primary="Studio"
-                  primaryTypographyProps={{
-                    fontWeight: 600,
-                    fontSize: "0.9375rem",
-                  }}
-                />
-              )}
-              {!isCollapsed && (
-                <ListItemIcon sx={{ minWidth: 0, color: "text.secondary" }}>
-                  {studioOpen ? (
-                    <ExpandLessIcon fontSize="small" />
-                  ) : (
-                    <ExpandMoreIcon fontSize="small" />
-                  )}
-                </ListItemIcon>
-              )}
-            </ListItemButton>
-
-            <Collapse in={studioOpen && !isCollapsed} timeout="auto" unmountOnExit>
-              <List component="div" disablePadding>
-                {studioNavItems.map((item) => {
-                  return (
-                    <ListItemButton
-                      key={item.path}
-                      component={NavLink}
-                      to={item.path}
-                      selected={isNavActive(item.path)}
-                      sx={{
-                        borderRadius: "12px",
-                        mb: 0.8,
-                        mx: isCollapsed ? 0.5 : 0,
-                        justifyContent: isCollapsed ? "center" : "flex-start",
-                        padding: isCollapsed ? "10px" : "10px 16px",
-                        pl: !isCollapsed ? 4 : undefined,
-                        "&.Mui-selected": {
-                          bgcolor: (theme) => alpha(theme.palette.primary.main, 0.12),
-                          color: "primary.light",
-                          border: (theme) => `1px solid ${alpha(theme.palette.primary.main, 0.2)}`,
-                          "& .MuiListItemIcon-root": {
-                            color: "primary.light",
-                          },
-                          "&::after": {
-                            content: '""',
-                            position: "absolute",
-                            left: 0,
-                            top: "20%",
-                            bottom: "20%",
-                            width: "3px",
-                            bgcolor: "primary.main",
-                            borderRadius: "0 4px 4px 0",
-                          },
-                        },
-                        "&:hover": {
-                          bgcolor: "action.hover",
-                        },
-                      }}
-                    >
-                      <ListItemIcon
-                        sx={{
-                          color: "text.secondary",
-                          minWidth: isCollapsed ? 0 : 36,
-                          justifyContent: "center",
-                        }}
-                      >
-                        {item.icon}
-                      </ListItemIcon>
-                      {!isCollapsed ? (
-                        <ListItemText
-                          primary={t(item.labelKey)}
-                          primaryTypographyProps={{
-                            fontWeight: 600,
-                            fontSize: "0.9375rem",
-                          }}
-                        />
-                      ) : null}
-                    </ListItemButton>
-                  );
-                })}
-              </List>
-            </Collapse>
-
-            {adminNavItems.length > 0 && (
-              <>
-                <Divider
-                  sx={{
-                    my: 1.5,
-                    borderColor: (theme) => theme.palette.primary.dark,
-                    mx: isCollapsed ? 1 : 2,
-                  }}
-                />
-                {adminNavItems.map((item) => {
-                  return (
-                    <ListItemButton
-                      key={item.path}
-                      component={NavLink}
-                      to={item.path}
-                      selected={isNavActive(item.path)}
-                      sx={{
-                        borderRadius: "12px",
-                        mb: 0.8,
-                        mx: isCollapsed ? 0.5 : 0,
-                        justifyContent: isCollapsed ? "center" : "flex-start",
-                        padding: isCollapsed ? "10px" : "10px 16px",
-                        "&.Mui-selected": {
-                          bgcolor: (theme) => alpha(theme.palette.primary.main, 0.12),
-                          color: "primary.light",
-                          border: (theme) => `1px solid ${alpha(theme.palette.primary.main, 0.2)}`,
-                          "& .MuiListItemIcon-root": {
-                            color: "primary.light",
-                          },
-                          "&::after": {
-                            content: '""',
-                            position: "absolute",
-                            left: 0,
-                            top: "20%",
-                            bottom: "20%",
-                            width: "3px",
-                            bgcolor: "primary.main",
-                            borderRadius: "0 4px 4px 0",
-                          },
-                        },
-                        "&:hover": {
-                          bgcolor: "action.hover",
-                        },
-                      }}
-                    >
-                      <ListItemIcon
-                        sx={{
-                          color: "text.secondary",
-                          minWidth: isCollapsed ? 0 : 36,
-                          justifyContent: "center",
-                        }}
-                      >
-                        {item.icon}
-                      </ListItemIcon>
-                      {!isCollapsed ? (
-                        <ListItemText
-                          primary={t(item.labelKey)}
-                          primaryTypographyProps={{
-                            fontWeight: 600,
-                            fontSize: "0.9375rem",
-                          }}
-                        />
-                      ) : null}
-                    </ListItemButton>
-                  );
-                })}
-              </>
-            )}
+              />
+            ))}
           </List>
 
           <Divider sx={{ my: 1, opacity: 0.5 }} />
-
-          <ButtonBase
-            component={NavLink}
-            to="/downloads"
-            sx={{
-              display: "flex",
-              alignItems: "center",
-              gap: isCollapsed ? 0 : 1.5,
-              borderRadius: "10px",
-              px: isCollapsed ? 1 : 1.5,
-              py: 0.8,
-              mb: 1,
-              mx: isCollapsed ? 0.5 : 0,
-              width: isCollapsed ? "auto" : "100%",
-              textAlign: "left",
-              color: "text.secondary",
-              transition: (theme) =>
-                theme.transitions.create(["background-color", "color"], { duration: 200 }),
-              "&.active": {
-                color: "primary.light",
-                bgcolor: (theme) => alpha(theme.palette.primary.main, 0.08),
-              },
-              "&:hover": {
-                bgcolor: "action.hover",
-                color: "text.primary",
-              },
-              justifyContent: isCollapsed ? "center" : "flex-start",
-            }}
-          >
-            <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-              <DesktopWindowsIcon sx={{ fontSize: 18 }} />
-              <SmartphoneIcon sx={{ fontSize: 16, opacity: 0.8 }} />
-            </Box>
-            {!isCollapsed && (
-              <Typography variant="body2" sx={{ fontWeight: 600, fontSize: "0.8125rem" }}>
-                Get the Apps
-              </Typography>
-            )}
-          </ButtonBase>
 
           <ButtonBase
             component={NavLink}
@@ -802,11 +406,15 @@ const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children, fullHeight = fa
               textAlign: "left",
               transition: (theme) =>
                 theme.transitions.create(["background-color"], { duration: 200 }),
+              bgcolor: isSettingsActive
+                ? (theme) => alpha(theme.palette.primary.main, 0.12)
+                : "transparent",
               "&:hover": {
                 bgcolor: "action.hover",
               },
               justifyContent: isCollapsed ? "center" : "flex-start",
             }}
+            aria-label={t("sidebarLayout.nav.settings")}
           >
             <Avatar
               src={avatar || undefined}
@@ -835,6 +443,11 @@ const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children, fullHeight = fa
                   {user?.email || t("sidebarLayout.profile.fallbackEmail")}
                 </Typography>
               </Box>
+            ) : null}
+            {!isCollapsed ? (
+              <Tooltip title={t("sidebarLayout.nav.settings")}>
+                <SettingsIcon sx={{ fontSize: 18, color: "text.secondary", flexShrink: 0 }} />
+              </Tooltip>
             ) : null}
           </ButtonBase>
         </Box>
@@ -906,6 +519,7 @@ const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children, fullHeight = fa
                   </Box>
                 )}
                 <SubscriptionBanner />
+                <SectionTabs sections={tabSections} />
                 {children}
               </>
             ) : (

@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useRef, useState, useCallback } from "react";
 import type { Theme } from "@mui/material/styles";
 import { alpha } from "@mui/material/styles";
 import {
@@ -38,6 +38,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 import type { Transcript, Project } from "../services/planAiApi";
+import { TRANSCRIPTS_PAGE_SIZE } from "../services/planAiApi";
 import type { DesktopSource } from "../types/electron";
 import { AudioLevelMonitor } from "../components/AudioLevelMonitor";
 import {
@@ -117,6 +118,11 @@ const Home: React.FC = () => {
   const isAdmin = dbUser?.role === "ADMIN";
 
   const [transcripts, setTranscripts] = useState<Transcript[]>([]);
+  // The list loads one page at a time and asks for the next one on scroll.
+  const [totalTranscripts, setTotalTranscripts] = useState(0);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const pagesLoadedRef = useRef(1);
+  const loadingMoreRef = useRef(false);
   const [desktopSources, setDesktopSources] = useState<DesktopSource[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -192,8 +198,20 @@ const Home: React.FC = () => {
     if (!silent) setLoading(true);
     if (!silent) setError(null);
     try {
-      const list = await api.listTranscripts(debouncedSearch, listProjectFilter || undefined);
-      setTranscripts(list);
+      const { transcripts: firstPage, total } = await api.listTranscripts(
+        debouncedSearch,
+        listProjectFilter || undefined,
+      );
+      setTotalTranscripts(total);
+      if (silent) {
+        // Background refresh: update the first page and keep the older pages
+        // the user already scrolled to.
+        const fresh = new Set(firstPage.map((t) => t.id));
+        setTranscripts((prev) => [...firstPage, ...prev.filter((t) => !fresh.has(t.id))]);
+      } else {
+        pagesLoadedRef.current = 1;
+        setTranscripts(firstPage);
+      }
     } catch (err) {
       if (!silent) {
         setError(
@@ -206,6 +224,44 @@ const Home: React.FC = () => {
       if (!silent) setLoading(false);
     }
   }, [token, activeWorkspaceId, debouncedSearch, listProjectFilter, api]);
+
+  const loadMoreTranscripts = useCallback(async () => {
+    if (!token || loadingMoreRef.current) return;
+    loadingMoreRef.current = true;
+    setLoadingMore(true);
+    try {
+      const nextPage = pagesLoadedRef.current + 1;
+      const { transcripts: more, total } = await api.listTranscripts(
+        debouncedSearch,
+        listProjectFilter || undefined,
+        nextPage,
+      );
+      pagesLoadedRef.current = nextPage;
+      setTotalTranscripts(total);
+      // A recording saved meanwhile shifts the pages by one, so skip repeats.
+      setTranscripts((prev) => {
+        const known = new Set(prev.map((t) => t.id));
+        return [...prev, ...more.filter((t) => !known.has(t.id))];
+      });
+    } catch (err) {
+      console.warn("[Home] Loading more recordings failed", err);
+    } finally {
+      loadingMoreRef.current = false;
+      setLoadingMore(false);
+    }
+  }, [token, debouncedSearch, listProjectFilter, api]);
+
+  // Pages left on the server. Counted in pages, not rows, so a deleted or
+  // newly saved recording cannot leave the list asking forever.
+  const hasMoreTranscripts =
+    pagesLoadedRef.current * TRANSCRIPTS_PAGE_SIZE < totalTranscripts;
+
+  const handleListScroll = (e: React.UIEvent<HTMLElement>) => {
+    const el = e.currentTarget;
+    if (hasMoreTranscripts && el.scrollTop + el.clientHeight >= el.scrollHeight - 200) {
+      void loadMoreTranscripts();
+    }
+  };
 
   const loadProjects = useCallback(() => {
     if (!api) return;
@@ -881,6 +937,7 @@ const Home: React.FC = () => {
             <List
               dense
               disablePadding
+              onScroll={handleListScroll}
               sx={{
                 overflowY: "auto",
                 flex: 1,
@@ -1146,6 +1203,11 @@ const Home: React.FC = () => {
                   )}
                 </ListItemButton>
               ))}
+              {loadingMore && (
+                <Box sx={{ display: "flex", justifyContent: "center", py: 1.5 }}>
+                  <CircularProgress size={18} />
+                </Box>
+              )}
             </List>
           )}
 
@@ -1257,19 +1319,40 @@ const Home: React.FC = () => {
         </Box>
 
         {/* ── RIGHT: General Recording  ───────────────────────── */}
+        {/* The settings scroll and the Start Recording button stays pinned
+            below them, so it is reachable at the minimum window height. */}
         <Box
           sx={{
             flex: 1,
-            overflowY: "auto",
-            p: 3,
+            minWidth: 0,
+            minHeight: 0,
             display: "flex",
             flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "flex-start",
-            pt: 10,
-            gap: 4,
           }}
         >
+          <Box
+            sx={{
+              flex: 1,
+              minHeight: 0,
+              overflowY: "auto",
+              p: 3,
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+            }}
+          >
+          {/* Auto margins center the block in a tall window and leave it at
+              the top when it has to scroll. */}
+          <Box
+            sx={{
+              my: "auto",
+              width: "100%",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: 2.5,
+            }}
+          >
           {/* Global Permission Warnings */}
           <Box
             sx={{
@@ -1278,7 +1361,8 @@ const Home: React.FC = () => {
               display: "flex",
               flexDirection: "column",
               gap: 2,
-              mb: 2,
+              // No warnings, no box: otherwise it leaves an empty gap on top.
+              "&:empty": { display: "none" },
             }}
           >
             {!hasScreenPermission && window.electron.platform === "darwin" && (
@@ -1342,7 +1426,6 @@ const Home: React.FC = () => {
               borderRadius: 2,
               bgcolor: "background.paper",
               border: (theme: Theme) => `1px solid ${alpha(theme.palette.text.primary, 0.1)}`,
-              mb: 4,
             }}
           >
             <Typography
@@ -1465,14 +1548,27 @@ const Home: React.FC = () => {
               ))}
             </TextField>
           </Box>
+          </Box>
+          </Box>
 
+          <Box
+            sx={{
+              flexShrink: 0,
+              px: 3,
+              py: 2,
+              borderTop: 1,
+              borderColor: "divider",
+              display: "flex",
+              justifyContent: "center",
+            }}
+          >
           <Box
             sx={{
               width: "100%",
               maxWidth: 350,
               display: "flex",
               flexDirection: "column",
-              gap: 2,
+              gap: 1,
             }}
           >
             <Button
@@ -1512,6 +1608,7 @@ const Home: React.FC = () => {
                 </Button>
               </Typography>
             )}
+          </Box>
           </Box>
         </Box>
       </Box>

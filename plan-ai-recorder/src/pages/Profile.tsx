@@ -59,7 +59,8 @@ const Profile: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [currentMemberInfo, setCurrentMemberInfo] = useState<WorkspaceMemberResponse | null>(null);
+  const [currentMemberInfo, setCurrentMemberInfo] =
+    useState<WorkspaceMemberResponse | null>(null);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -67,10 +68,12 @@ const Profile: React.FC = () => {
       try {
         const currentUser = await api.getCurrentUser();
         setProfileData(currentUser);
-        
+
         if (currentUser?.email) {
           const workspaceData = await api.getWorkspaceMembers();
-          const member = workspaceData.members.find(m => m.email === currentUser.email);
+          const member = workspaceData.members.find(
+            (m) => m.email === currentUser.email,
+          );
           if (member) setCurrentMemberInfo(member);
         }
       } catch (err) {
@@ -180,98 +183,158 @@ const Profile: React.FC = () => {
             elevation={0}
             sx={{
               width: "100%",
-              maxWidth: 400,
+              maxWidth: 820,
               p: { xs: 2.5, md: 3 },
-              border: (theme: Theme) => `1px solid ${alpha(theme.palette.text.primary, 0.08)}`,
+              border: (theme: Theme) =>
+                `1px solid ${alpha(theme.palette.text.primary, 0.08)}`,
               borderRadius: 3,
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              bgcolor: (theme: Theme) => alpha(theme.palette.text.primary, 0.02),
+              // Two columns so sign out is reachable without scrolling.
+              display: "grid",
+              gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" },
+              columnGap: 4,
+              rowGap: 3,
+              alignItems: "start",
+              bgcolor: (theme: Theme) =>
+                alpha(theme.palette.text.primary, 0.02),
             }}
           >
-            <Avatar
-              src={profileData?.avatarUrl || user?.photoURL || undefined}
+            {/* Left column: who is signed in */}
+            <Box
               sx={{
-                width: 64,
-                height: 64,
-                mb: 1.5,
-                fontSize: "1.75rem",
-                bgcolor: "primary.main",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                minWidth: 0,
               }}
             >
-              {!(profileData?.avatarUrl || user?.photoURL) &&
-                (profileData?.name?.[0] || user?.email?.[0]?.toUpperCase())}
-            </Avatar>
+              <Avatar
+                src={profileData?.avatarUrl || user?.photoURL || undefined}
+                sx={{
+                  width: 64,
+                  height: 64,
+                  mb: 1.5,
+                  fontSize: "1.75rem",
+                  bgcolor: "primary.main",
+                }}
+              >
+                {!(profileData?.avatarUrl || user?.photoURL) &&
+                  (profileData?.name?.[0] || user?.email?.[0]?.toUpperCase())}
+              </Avatar>
 
-            <Typography variant="h5" fontWeight="bold" gutterBottom>
-              {profileData?.name || "User"}
-            </Typography>
+              <Typography variant="h5" fontWeight="bold" gutterBottom>
+                {profileData?.name || "User"}
+              </Typography>
 
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 2.5 }}>
-              Plan AI Account
-            </Typography>
+              <Typography
+                variant="body2"
+                color="text.secondary"
+                sx={{ mb: 2.5 }}
+              >
+                Plan AI Account
+              </Typography>
 
-            <Divider sx={{ width: "100%", mb: 2.5, opacity: 0.5 }} />
+              <Divider sx={{ width: "100%", mb: 2.5, opacity: 0.5 }} />
 
-            <Stack spacing={2} sx={{ width: "100%", mb: 3 }}>
-              <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-                <EmailIcon color="action" />
-                <Box>
-                  <Typography
-                    variant="caption"
-                    color="text.secondary"
-                    display="block"
-                  >
-                    Email Address
-                  </Typography>
-                  <Typography variant="body2" fontWeight="medium">
-                    {profileData?.email || user?.email || "Unknown"}
-                  </Typography>
+              <Stack spacing={2} sx={{ width: "100%" }}>
+                <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+                  <EmailIcon color="action" />
+                  <Box>
+                    <Typography
+                      variant="caption"
+                      color="text.secondary"
+                      display="block"
+                    >
+                      Email Address
+                    </Typography>
+                    <Typography variant="body2" fontWeight="medium">
+                      {profileData?.email || user?.email || "Unknown"}
+                    </Typography>
+                  </Box>
                 </Box>
-              </Box>
 
-              <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-                <BadgeIcon color="action" />
-                <Box>
-                  <Typography
-                    variant="caption"
-                    color="text.secondary"
-                    display="block"
-                  >
-                    Account ID
-                  </Typography>
-                  <Typography
-                    variant="body2"
-                    fontWeight="medium"
-                    sx={{ fontFamily: "monospace" }}
-                  >
-                    {user?.uid || "Unknown"}
-                  </Typography>
+                <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+                  <BadgeIcon color="action" />
+                  <Box>
+                    <Typography
+                      variant="caption"
+                      color="text.secondary"
+                      display="block"
+                    >
+                      Account ID
+                    </Typography>
+                    <Typography
+                      variant="body2"
+                      fontWeight="medium"
+                      sx={{ fontFamily: "monospace", wordBreak: "break-all" }}
+                    >
+                      {user?.uid || "Unknown"}
+                    </Typography>
+                  </Box>
                 </Box>
-              </Box>
 
-              <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-                <BadgeIcon color="action" />
-                <Box>
-                  <Typography
-                    variant="caption"
-                    color="text.secondary"
-                    display="block"
-                  >
-                    Role
-                  </Typography>
-                  <Typography
-                    variant="body2"
-                    fontWeight="medium"
-                    sx={{ fontFamily: "monospace" }}
-                  >
-                    {profileData?.role || "Unknown"}
-                  </Typography>
+                <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+                  <BadgeIcon color="action" />
+                  <Box>
+                    <Typography
+                      variant="caption"
+                      color="text.secondary"
+                      display="block"
+                    >
+                      Role
+                    </Typography>
+                    <Typography
+                      variant="body2"
+                      fontWeight="medium"
+                      sx={{ fontFamily: "monospace" }}
+                    >
+                      {profileData?.role || "Unknown"}
+                    </Typography>
+                  </Box>
                 </Box>
-              </Box>
 
-              {currentMemberInfo?.personas && currentMemberInfo.personas.length > 0 && (
+                {currentMemberInfo?.personas &&
+                  currentMemberInfo.personas.length > 0 && (
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+                      <InfoIcon color="action" />
+                      <Box>
+                        <Typography
+                          variant="caption"
+                          color="text.secondary"
+                          display="block"
+                        >
+                          Personas (Active Workspace)
+                        </Typography>
+                        <Typography variant="body2" fontWeight="medium">
+                          {currentMemberInfo.personas
+                            .map((p) => p.replace("_", " "))
+                            .join(", ")}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  )}
+
+                {currentMemberInfo?.personaNotes && (
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+                    <InfoIcon color="action" />
+                    <Box>
+                      <Typography
+                        variant="caption"
+                        color="text.secondary"
+                        display="block"
+                      >
+                        Custom AI Instructions
+                      </Typography>
+                      <Typography
+                        variant="body2"
+                        fontWeight="medium"
+                        sx={{ whiteSpace: "pre-wrap" }}
+                      >
+                        {currentMemberInfo.personaNotes}
+                      </Typography>
+                    </Box>
+                  </Box>
+                )}
+
                 <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
                   <InfoIcon color="action" />
                   <Box>
@@ -280,296 +343,285 @@ const Profile: React.FC = () => {
                       color="text.secondary"
                       display="block"
                     >
-                      Personas (Active Workspace)
+                      App Version
                     </Typography>
                     <Typography
                       variant="body2"
                       fontWeight="medium"
+                      sx={{ fontFamily: "monospace" }}
                     >
-                      {currentMemberInfo.personas.map(p => p.replace('_', ' ')).join(', ')}
+                      {pkg.version}
                     </Typography>
                   </Box>
                 </Box>
-              )}
-
-              {currentMemberInfo?.personaNotes && (
                 <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-                  <InfoIcon color="action" />
+                  <FingerprintIcon color="action" />
                   <Box>
                     <Typography
                       variant="caption"
                       color="text.secondary"
                       display="block"
                     >
-                      Custom AI Instructions
+                      Sign-In Method
                     </Typography>
-                    <Typography
-                      variant="body2"
-                      fontWeight="medium"
-                      sx={{ whiteSpace: 'pre-wrap' }}
-                    >
-                      {currentMemberInfo.personaNotes}
-                    </Typography>
-                  </Box>
-                </Box>
-              )}
-
-              <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-                <InfoIcon color="action" />
-                <Box>
-                  <Typography
-                    variant="caption"
-                    color="text.secondary"
-                    display="block"
-                  >
-                    App Version
-                  </Typography>
-                  <Typography
-                    variant="body2"
-                    fontWeight="medium"
-                    sx={{ fontFamily: "monospace" }}
-                  >
-                    {pkg.version}
-                  </Typography>
-                </Box>
-              </Box>
-              <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-                <FingerprintIcon color="action" />
-                <Box>
-                  <Typography
-                    variant="caption"
-                    color="text.secondary"
-                    display="block"
-                  >
-                    Sign-In Method
-                  </Typography>
-                  <Box sx={{ display: "flex", gap: 1, mt: 0.5 }}>
-                    {profileData?.isGoogleAccount && (
-                      <Box
-                        sx={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 0.5,
-                          bgcolor: (theme: Theme) => alpha(theme.palette.text.primary, 0.05),
-                          px: 1,
-                          py: 0.5,
-                          borderRadius: 1,
-                        }}
-                      >
-                        <GoogleIcon fontSize="small" color="error" />
-                        <Typography variant="caption">Google</Typography>
-                      </Box>
-                    )}
-                    {profileData?.isAppleAccount && (
-                      <Box
-                        sx={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 0.5,
-                          bgcolor: (theme: Theme) => alpha(theme.palette.text.primary, 0.05),
-                          px: 1,
-                          py: 0.5,
-                          borderRadius: 1,
-                        }}
-                      >
-                        <AppleIcon fontSize="small" />
-                        <Typography variant="caption">Apple</Typography>
-                      </Box>
-                    )}
-                    {profileData?.isMicrosoftAccount && (
-                      <Box
-                        sx={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 0.5,
-                          bgcolor: (theme: Theme) => alpha(theme.palette.text.primary, 0.05),
-                          px: 1,
-                          py: 0.5,
-                          borderRadius: 1,
-                        }}
-                      >
-                        <MicrosoftIcon />
-                        <Typography variant="caption">Microsoft</Typography>
-                      </Box>
-                    )}
-                    {!profileData?.isGoogleAccount &&
-                      !profileData?.isAppleAccount &&
-                      !profileData?.isMicrosoftAccount && (
+                    <Box sx={{ display: "flex", gap: 1, mt: 0.5 }}>
+                      {profileData?.isGoogleAccount && (
                         <Box
                           sx={{
                             display: "flex",
                             alignItems: "center",
                             gap: 0.5,
-                            bgcolor: (theme: Theme) => alpha(theme.palette.text.primary, 0.05),
+                            bgcolor: (theme: Theme) =>
+                              alpha(theme.palette.text.primary, 0.05),
                             px: 1,
                             py: 0.5,
                             borderRadius: 1,
                           }}
                         >
-                          <EmailIcon fontSize="small" color="primary" />
-                          <Typography variant="caption">
-                            Email / Password
-                          </Typography>
+                          <GoogleIcon fontSize="small" color="error" />
+                          <Typography variant="caption">Google</Typography>
                         </Box>
                       )}
+                      {profileData?.isAppleAccount && (
+                        <Box
+                          sx={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 0.5,
+                            bgcolor: (theme: Theme) =>
+                              alpha(theme.palette.text.primary, 0.05),
+                            px: 1,
+                            py: 0.5,
+                            borderRadius: 1,
+                          }}
+                        >
+                          <AppleIcon fontSize="small" />
+                          <Typography variant="caption">Apple</Typography>
+                        </Box>
+                      )}
+                      {profileData?.isMicrosoftAccount && (
+                        <Box
+                          sx={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 0.5,
+                            bgcolor: (theme: Theme) =>
+                              alpha(theme.palette.text.primary, 0.05),
+                            px: 1,
+                            py: 0.5,
+                            borderRadius: 1,
+                          }}
+                        >
+                          <MicrosoftIcon />
+                          <Typography variant="caption">Microsoft</Typography>
+                        </Box>
+                      )}
+                      {!profileData?.isGoogleAccount &&
+                        !profileData?.isAppleAccount &&
+                        !profileData?.isMicrosoftAccount && (
+                          <Box
+                            sx={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 0.5,
+                              bgcolor: (theme: Theme) =>
+                                alpha(theme.palette.text.primary, 0.05),
+                              px: 1,
+                              py: 0.5,
+                              borderRadius: 1,
+                            }}
+                          >
+                            <EmailIcon fontSize="small" color="primary" />
+                            <Typography variant="caption">
+                              Email / Password
+                            </Typography>
+                          </Box>
+                        )}
+                    </Box>
                   </Box>
                 </Box>
-              </Box>
-            </Stack>
-
-            <Divider sx={{ width: "100%", mb: 2.5, opacity: 0.5 }} />
-
-            <Box sx={{ width: "100%", mb: 3 }}>
-              <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 1.5 }}>
-                <PaletteIcon color="action" />
-                <Typography variant="caption" color="text.secondary">
-                  Color Theme
-                </Typography>
-              </Box>
-              <Box sx={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 1 }}>
-                {THEME_PRESETS.map((preset) => {
-                  const selected = preset.id === themeId;
-                  return (
-                    <ButtonBase
-                      key={preset.id}
-                      onClick={() => setThemeId(preset.id)}
-                      aria-pressed={selected}
-                      sx={{
-                        display: "flex",
-                        flexDirection: "column",
-                        alignItems: "stretch",
-                        borderRadius: 2,
-                        border: "2px solid",
-                        borderColor: selected ? "primary.main" : "divider",
-                        overflow: "hidden",
-                      }}
-                    >
-                      {/* Preview: the preset background with its accent color */}
-                      <Box
-                        sx={{
-                          height: 36,
-                          bgcolor: preset.background,
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                        }}
-                      >
-                        {selected ? (
-                          <CheckIcon sx={{ fontSize: 18, color: preset.primary }} />
-                        ) : (
-                          <Box
-                            sx={{ width: 22, height: 8, borderRadius: 4, bgcolor: preset.primary }}
-                          />
-                        )}
-                      </Box>
-                      <Typography variant="caption" sx={{ py: 0.5, textAlign: "center" }}>
-                        {preset.name}
-                      </Typography>
-                    </ButtonBase>
-                  );
-                })}
-              </Box>
+              </Stack>
             </Box>
 
-            {canUseDebugPanel && (
+            {/* Right column: color theme and account actions */}
+            <Box sx={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
+              <Box sx={{ width: "100%", mb: 3 }}>
+                <Box
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 2,
+                    mb: 1.5,
+                  }}
+                >
+                  <PaletteIcon color="action" />
+                  <Typography variant="caption" color="text.secondary">
+                    Color Theme
+                  </Typography>
+                </Box>
+                <Box
+                  sx={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(3, 1fr)",
+                    gap: 1,
+                  }}
+                >
+                  {THEME_PRESETS.map((preset) => {
+                    const selected = preset.id === themeId;
+                    return (
+                      <ButtonBase
+                        key={preset.id}
+                        onClick={() => setThemeId(preset.id)}
+                        aria-pressed={selected}
+                        sx={{
+                          display: "flex",
+                          flexDirection: "column",
+                          alignItems: "stretch",
+                          borderRadius: 2,
+                          border: "2px solid",
+                          borderColor: selected ? "primary.main" : "divider",
+                          overflow: "hidden",
+                        }}
+                      >
+                        {/* Preview: the preset background with its accent color */}
+                        <Box
+                          sx={{
+                            height: 36,
+                            bgcolor: preset.background,
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                          }}
+                        >
+                          {selected ? (
+                            <CheckIcon
+                              sx={{ fontSize: 18, color: preset.primary }}
+                            />
+                          ) : (
+                            <Box
+                              sx={{
+                                width: 22,
+                                height: 8,
+                                borderRadius: 4,
+                                bgcolor: preset.primary,
+                              }}
+                            />
+                          )}
+                        </Box>
+                        <Typography
+                          variant="caption"
+                          sx={{ py: 0.5, textAlign: "center" }}
+                        >
+                          {preset.name}
+                        </Typography>
+                      </ButtonBase>
+                    );
+                  })}
+                </Box>
+              </Box>
+
+              {canUseDebugPanel && (
+                <Button
+                  variant="outlined"
+                  color="inherit"
+                  fullWidth
+                  startIcon={<BugIcon />}
+                  onClick={() => navigate("/debug")}
+                  sx={{
+                    mt: "auto",
+                    py: 1.2,
+                    mb: 1.5,
+                    borderColor: (theme: Theme) =>
+                      alpha(theme.palette.text.primary, 0.2),
+                    color: "text.secondary",
+                  }}
+                >
+                  Export Debug Logs
+                </Button>
+              )}
+
               <Button
                 variant="outlined"
-                color="inherit"
+                color="error"
                 fullWidth
-                startIcon={<BugIcon />}
-                onClick={() => navigate("/debug")}
-                sx={{
-                  mt: "auto",
-                  py: 1.2,
-                  mb: 1.5,
-                  borderColor: (theme: Theme) => alpha(theme.palette.text.primary, 0.2),
-                  color: "text.secondary",
-                }}
+                startIcon={<LogoutIcon />}
+                onClick={handleLogout}
+                // Keeps the buttons at the bottom when the debug button is hidden.
+                sx={{ mt: canUseDebugPanel ? 0 : "auto", py: 1.2, mb: 1 }}
               >
-                Export Debug Logs
+                Sign Out Securely
               </Button>
-            )}
 
-            <Button
-              variant="outlined"
-              color="error"
-              fullWidth
-              startIcon={<LogoutIcon />}
-              onClick={handleLogout}
-              // Keeps the buttons at the bottom when the debug button is hidden.
-              sx={{ mt: canUseDebugPanel ? 0 : "auto", py: 1.2, mb: 1 }}
-            >
-              Sign Out Securely
-            </Button>
-
-            <Button
-              variant="text"
-              color="error"
-              fullWidth
-              onClick={() => setDeleteConfirmOpen(true)}
-              sx={{
-                py: 1,
-                opacity: 0.8,
-                "&:hover": { opacity: 1 },
-                fontSize: "0.8rem",
-              }}
-            >
-              Delete Account Permanently
-            </Button>
-
-            {/* Delete Confirmation Dialog */}
-            <Dialog
-              open={deleteConfirmOpen}
-              onClose={() => !isDeleting && setDeleteConfirmOpen(false)}
-              PaperProps={{
-                sx: {
-                  bgcolor: "background.paper",
-                  backgroundImage: "none",
-                  borderRadius: 3,
-                },
-              }}
-            >
-              <DialogTitle
+              <Button
+                variant="text"
+                color="error"
+                fullWidth
+                onClick={() => setDeleteConfirmOpen(true)}
                 sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 1,
-                  color: "error.main",
+                  py: 1,
+                  opacity: 0.8,
+                  "&:hover": { opacity: 1 },
+                  fontSize: "0.8rem",
                 }}
               >
-                <WarningIcon />
-                Delete Account
-              </DialogTitle>
-              <DialogContent>
-                <DialogContentText sx={{ color: "text.secondary" }}>
-                  Are you absolutely sure you want to delete your account? This
-                  action is <b>permanent</b> and cannot be undone. All your
-                  transcripts, summaries, and data will be immediately erased.
-                </DialogContentText>
-              </DialogContent>
-              <DialogActions sx={{ p: 2, pt: 0 }}>
-                <Button
-                  onClick={() => setDeleteConfirmOpen(false)}
-                  disabled={isDeleting}
-                  color="inherit"
+                Delete Account Permanently
+              </Button>
+
+              {/* Delete Confirmation Dialog */}
+              <Dialog
+                open={deleteConfirmOpen}
+                onClose={() => !isDeleting && setDeleteConfirmOpen(false)}
+                PaperProps={{
+                  sx: {
+                    bgcolor: "background.paper",
+                    backgroundImage: "none",
+                    borderRadius: 3,
+                  },
+                }}
+              >
+                <DialogTitle
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 1,
+                    color: "error.main",
+                  }}
                 >
-                  Cancel
-                </Button>
-                <Button
-                  onClick={handleDeleteAccount}
-                  color="error"
-                  variant="contained"
-                  disabled={isDeleting}
-                  startIcon={
-                    isDeleting ? (
-                      <CircularProgress size={16} color="inherit" />
-                    ) : null
-                  }
-                >
-                  {isDeleting ? "Deleting..." : "Permanently Delete"}
-                </Button>
-              </DialogActions>
-            </Dialog>
+                  <WarningIcon />
+                  Delete Account
+                </DialogTitle>
+                <DialogContent>
+                  <DialogContentText sx={{ color: "text.secondary" }}>
+                    Are you absolutely sure you want to delete your account?
+                    This action is <b>permanent</b> and cannot be undone. All
+                    your transcripts, summaries, and data will be immediately
+                    erased.
+                  </DialogContentText>
+                </DialogContent>
+                <DialogActions sx={{ p: 2, pt: 0 }}>
+                  <Button
+                    onClick={() => setDeleteConfirmOpen(false)}
+                    disabled={isDeleting}
+                    color="inherit"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={handleDeleteAccount}
+                    color="error"
+                    variant="contained"
+                    disabled={isDeleting}
+                    startIcon={
+                      isDeleting ? (
+                        <CircularProgress size={16} color="inherit" />
+                      ) : null
+                    }
+                  >
+                    {isDeleting ? "Deleting..." : "Permanently Delete"}
+                  </Button>
+                </DialogActions>
+              </Dialog>
+            </Box>
           </Paper>
         )}
       </Box>

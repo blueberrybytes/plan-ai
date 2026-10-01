@@ -12073,6 +12073,15 @@
 						"schema": {
 							"type": "string"
 						}
+					},
+					{
+						"description": "List view. Each row carries only the first 300 characters of `transcript`\nand no `utterances`. Opt-in, because installed recorder and mobile\nversions read the full row from this endpoint.",
+						"in": "query",
+						"name": "lite",
+						"required": false,
+						"schema": {
+							"type": "boolean"
+						}
 					}
 				]
 			},

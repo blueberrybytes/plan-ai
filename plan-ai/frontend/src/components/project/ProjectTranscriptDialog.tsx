@@ -142,7 +142,7 @@ const ProjectTranscriptDialog: React.FC<ProjectTranscriptDialogProps> = ({
   const [importTranscript, { isLoading: isImporting }] = useImportProjectTranscriptMutation();
   const { data: contextsData, isLoading: isContextsLoading } = useListContextsQuery();
   const { data: recordingsData, isLoading: isRecordingsLoading } = useListGlobalTranscriptsQuery(
-    { source: "RECORDING", pageSize: 100 },
+    { source: "RECORDING", pageSize: 100, lite: true },
     { skip: mode !== "import" },
   );
 

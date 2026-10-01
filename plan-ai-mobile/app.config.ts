@@ -23,7 +23,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
   // Debug builds allow it anyway through android/app/src/debug, for Metro.
   const apiUrl = process.env.EXPO_PUBLIC_PLAN_AI_API_URL ?? "http://localhost:8080";
   const allowCleartext = !isProduction && apiUrl.startsWith("http://");
-  const appVersion = "4.4.1";
+  const appVersion = "4.4.2";
   const bundleIdentifier = "com.blueberrybytes.planai";
 
   return {

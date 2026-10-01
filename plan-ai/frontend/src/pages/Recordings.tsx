@@ -64,6 +64,7 @@ const Recordings: React.FC = () => {
     {
       page,
       pageSize: 20,
+      lite: true,
       source: "RECORDING",
       q: debouncedSearch || undefined,
       projectId: projectFilter !== "all_projects" ? projectFilter : undefined,

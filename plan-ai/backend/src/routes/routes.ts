@@ -4823,6 +4823,7 @@ export function RegisterRoutes(app: Router,opts?:{multer?:ReturnType<typeof mult
                 dateFilter: {"in":"query","name":"dateFilter","dataType":"string"},
                 sources: {"in":"query","name":"sources","dataType":"string"},
                 projectId: {"in":"query","name":"projectId","dataType":"string"},
+                lite: {"in":"query","name":"lite","dataType":"boolean"},
         };
         app.get('/api/transcripts',
             authenticateMiddleware([{"ClientLevel":[]}]),

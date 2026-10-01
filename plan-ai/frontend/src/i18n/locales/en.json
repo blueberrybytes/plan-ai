@@ -966,7 +966,14 @@
       "billing": "Billing",
       "trackers": "Trackers",
       "dailyReport": "Daily report",
-      "teamReport": "Team report"
+      "teamReport": "Team report",
+      "studio": "Studio",
+      "reports": "Reports",
+      "settings": "Settings",
+      "profile": "Profile",
+      "brandThemes": "Brand themes",
+      "apps": "Apps",
+      "admin": "Admin"
     },
     "tooltip": {
       "expand": "Expand sidebar",

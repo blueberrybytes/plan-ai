@@ -960,7 +960,16 @@
       "billing": "Facturación",
       "trackers": "Seguimiento",
       "dailyReport": "Parte diario",
-      "teamReport": "Resumen del equipo"
+      "teamReport": "Resumen del equipo",
+      "studio": "Studio",
+      "reports": "Informes",
+      "settings": "Ajustes",
+      "profile": "Perfil",
+      "brandThemes": "Temas de marca",
+      "apps": "Aplicaciones",
+      "admin": "Admin",
+      "documents": "Documentos",
+      "slides": "Presentaciones"
     },
     "tooltip": {
       "expand": "Expandir barra lateral",

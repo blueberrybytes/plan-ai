@@ -1,6 +1,7 @@
 import { createTheme, alpha, Theme } from "@mui/material/styles";
 
-const isHouseGroup = import.meta.env.VITE_APP_PROTOCOL === "housegroup-recorder";
+const isHouseGroup =
+  import.meta.env.VITE_APP_PROTOCOL === "housegroup-recorder";
 
 export interface ThemePreset {
   id: string;
@@ -116,7 +117,9 @@ const houseGroupPresets: ThemePreset[] = [
   },
 ];
 
-export const THEME_PRESETS: ThemePreset[] = isHouseGroup ? houseGroupPresets : blueberryBytesPresets;
+export const THEME_PRESETS: ThemePreset[] = isHouseGroup
+  ? houseGroupPresets
+  : blueberryBytesPresets;
 
 export const DEFAULT_THEME_ID = THEME_PRESETS[0].id;
 
@@ -141,8 +144,11 @@ export const storeThemeId = (id: string): void => {
 };
 
 export const buildTheme = (presetId: string): Theme => {
-  const preset = THEME_PRESETS.find((p) => p.id === presetId) ?? THEME_PRESETS[0];
-  const divider = preset.isLight ? "rgba(0, 0, 0, 0.08)" : "rgba(255, 255, 255, 0.07)";
+  const preset =
+    THEME_PRESETS.find((p) => p.id === presetId) ?? THEME_PRESETS[0];
+  const divider = preset.isLight
+    ? "rgba(0, 0, 0, 0.08)"
+    : "rgba(255, 255, 255, 0.07)";
   const scrollbar = alpha(preset.textPrimary, 0.12);
 
   return createTheme({
@@ -157,7 +163,9 @@ export const buildTheme = (presetId: string): Theme => {
       divider,
     },
     typography: {
-      fontFamily: isHouseGroup ? "'Inter', 'Manrope', sans-serif" : "'Inter', sans-serif",
+      fontFamily: isHouseGroup
+        ? "'Inter', 'Manrope', sans-serif"
+        : "'Inter', sans-serif",
       h4: { fontWeight: 700 },
       h5: { fontWeight: 600 },
       h6: { fontWeight: 600 },

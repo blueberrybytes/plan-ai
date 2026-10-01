@@ -29,6 +29,8 @@ export const transcriptApi = createApi({
         sentiment?: string;
         /** "all_dates" | "today" | "week" — applied server-side. */
         dateFilter?: string;
+        /** List view: rows carry a 300-character preview instead of the full text. */
+        lite?: boolean;
       }
     >({
       query: (params) => ({

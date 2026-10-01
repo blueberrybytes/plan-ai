@@ -7656,6 +7656,12 @@ export interface operations {
                 dateFilter?: string;
                 sources?: string;
                 projectId?: string;
+                /**
+                 * @description List view. Each row carries only the first 300 characters of `transcript`
+                 *     and no `utterances`. Opt-in, because installed recorder and mobile
+                 *     versions read the full row from this endpoint.
+                 */
+                lite?: boolean;
             };
             header?: never;
             path?: never;

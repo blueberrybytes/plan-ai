@@ -306,6 +306,12 @@ export class TranscriptsController extends BaseWorkspaceController {
     @Query() dateFilter?: string,
     @Query() sources?: string,
     @Query() projectId?: string,
+    /**
+     * List view. Each row carries only the first 300 characters of `transcript`
+     * and no `utterances`. Opt-in, because installed recorder and mobile
+     * versions read the full row from this endpoint.
+     */
+    @Query() lite?: boolean,
   ): Promise<ApiResponse<StandaloneTranscriptListResponse>> {
     const { user, workspaceId } = await this.getAuthorizedWorkspaceAccess(request);
 
@@ -333,6 +339,7 @@ export class TranscriptsController extends BaseWorkspaceController {
       // never reachable over HTTP, so every client had to filter client-side
       // (which silently only filtered the current page).
       projectId,
+      lite: lite === true,
     };
 
     const result = await transcriptCrudService.listTranscriptsForUser(user.id, options);

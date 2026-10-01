@@ -582,6 +582,8 @@ export const createPlanAiApi = (
         // and Berry's Telegram leads are inbound work. Filtering on RECORDING
         // alone hid every prospect from the app entirely.
         url.searchParams.set("sources", "RECORDING,TELEGRAM");
+        // Rows with a short preview instead of the full text and utterances.
+        url.searchParams.set("lite", "true");
         if (q) url.searchParams.set("q", q);
 
         return silentFetch(url.toString(), {

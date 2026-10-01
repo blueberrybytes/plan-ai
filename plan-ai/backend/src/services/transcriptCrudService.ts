@@ -20,7 +20,15 @@ export interface TranscriptListOptions {
   workspaceId: string;
   sentiment?: string;
   dateFilter?: string;
+  /**
+   * List view: skips the two heavy columns. `transcript` comes back cut to
+   * LITE_PREVIEW_CHARS and `utterances` as null. One hour of meeting is several
+   * MB between both, and a page of 50 made the list take many seconds.
+   */
+  lite?: boolean;
 }
+
+const LITE_PREVIEW_CHARS = 300;
 
 export interface CreateTranscriptInput {
   projectId?: string | null;
@@ -122,6 +130,41 @@ export class TranscriptCrudService {
         : {}),
       ...(andConditions.length > 0 ? { AND: andConditions } : {}),
     };
+
+    if (options.lite) {
+      const [rows, total] = await Promise.all([
+        prisma.transcript.findMany({
+          where,
+          orderBy: { createdAt: "desc" },
+          skip,
+          take: pageSize,
+          omit: { transcript: true, utterances: true },
+          include: {
+            project: { select: { id: true, title: true } },
+          },
+        }),
+        prisma.transcript.count({ where }),
+      ]);
+
+      // The preview is cut in the database, so the full text never leaves it.
+      const previews =
+        rows.length > 0
+          ? await prisma.$queryRaw<{ id: string; preview: string | null }[]>`
+              SELECT "id", LEFT("transcript", ${LITE_PREVIEW_CHARS}::int) AS "preview"
+              FROM "Transcript"
+              WHERE "id" IN (${Prisma.join(rows.map((row) => row.id))})`
+          : [];
+      const previewById = new Map(previews.map((p) => [p.id, p.preview]));
+
+      return {
+        transcripts: rows.map((row) => ({
+          ...row,
+          transcript: previewById.get(row.id) ?? null,
+          utterances: null,
+        })),
+        total,
+      };
+    }
 
     const [transcripts, total] = await Promise.all([
       prisma.transcript.findMany({

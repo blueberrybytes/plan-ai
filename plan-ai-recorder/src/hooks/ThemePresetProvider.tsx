@@ -1,4 +1,10 @@
-import React, { createContext, useCallback, useContext, useMemo, useState } from "react";
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useMemo,
+  useState,
+} from "react";
 import { ThemeProvider, CssBaseline } from "@mui/material";
 import { buildTheme, getStoredThemeId, storeThemeId } from "../theme";
 
@@ -13,7 +19,9 @@ const ThemePresetContext = createContext<ThemePresetContextValue | null>(null);
  * Holds the color theme the user picked. The choice lives in localStorage, so
  * it applies before sign-in and stays after sign-out.
  */
-export const ThemePresetProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const ThemePresetProvider: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
   const [themeId, setThemeIdState] = useState<string>(getStoredThemeId);
 
   const setThemeId = useCallback((id: string) => {
@@ -36,6 +44,7 @@ export const ThemePresetProvider: React.FC<{ children: React.ReactNode }> = ({ c
 
 export const useThemePreset = (): ThemePresetContextValue => {
   const ctx = useContext(ThemePresetContext);
-  if (!ctx) throw new Error("useThemePreset must be used inside ThemePresetProvider");
+  if (!ctx)
+    throw new Error("useThemePreset must be used inside ThemePresetProvider");
   return ctx;
 };

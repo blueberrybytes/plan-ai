@@ -129,9 +129,7 @@ const AppThemeSelector: React.FC = () => {
                   justifyContent: "center",
                 }}
               >
-                <Box
-                  sx={{ width: 20, height: 8, borderRadius: 4, bgcolor: preset.primaryColor }}
-                />
+                <Box sx={{ width: 20, height: 8, borderRadius: 4, bgcolor: preset.primaryColor }} />
               </Box>
               <Typography
                 variant="body1"
