@@ -2845,6 +2845,26 @@ const models: TsoaRoute.Models = {
         "type": {"dataType":"nestedObjectLiteral","nestedProperties":{"message":{"dataType":"string"},"data":{"dataType":"union","subSchemas":[{"dataType":"array","array":{"dataType":"refObject","ref":"WorkspaceUserUsageSummary"}},{"dataType":"enum","enums":[null]}],"required":true},"status":{"dataType":"double","required":true}},"validators":{}},
     },
     // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "AdminUserUsageSummary": {
+        "dataType": "refObject",
+        "properties": {
+            "userId": {"dataType":"string","required":true},
+            "name": {"dataType":"union","subSchemas":[{"dataType":"string"},{"dataType":"enum","enums":[null]}],"required":true},
+            "email": {"dataType":"string","required":true},
+            "lastActivityAt": {"dataType":"datetime","required":true},
+            "requestCount": {"dataType":"double","required":true},
+            "totalTokens": {"dataType":"double","required":true},
+            "estimatedCost": {"dataType":"double","required":true},
+            "blueberryTokens": {"dataType":"double","required":true},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "ApiResponse_AdminUserUsageSummary-Array_": {
+        "dataType": "refAlias",
+        "type": {"dataType":"nestedObjectLiteral","nestedProperties":{"message":{"dataType":"string"},"data":{"dataType":"union","subSchemas":[{"dataType":"array","array":{"dataType":"refObject","ref":"AdminUserUsageSummary"}},{"dataType":"enum","enums":[null]}],"required":true},"status":{"dataType":"double","required":true}},"validators":{}},
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
     "ApiResponse__models_58__id-string--promptPrice-number--completionPrice-number--maxTokens-number-or-null_-Array__": {
         "dataType": "refAlias",
         "type": {"dataType":"nestedObjectLiteral","nestedProperties":{"message":{"dataType":"string"},"data":{"dataType":"union","subSchemas":[{"dataType":"nestedObjectLiteral","nestedProperties":{"models":{"dataType":"array","array":{"dataType":"nestedObjectLiteral","nestedProperties":{"maxTokens":{"dataType":"union","subSchemas":[{"dataType":"double"},{"dataType":"enum","enums":[null]}],"required":true},"completionPrice":{"dataType":"double","required":true},"promptPrice":{"dataType":"double","required":true},"id":{"dataType":"string","required":true}}},"required":true}}},{"dataType":"enum","enums":[null]}],"required":true},"status":{"dataType":"double","required":true}},"validators":{}},
@@ -10032,6 +10052,7 @@ export function RegisterRoutes(app: Router,opts?:{multer?:ReturnType<typeof mult
                 model: {"in":"query","name":"model","dataType":"string"},
                 targetUserId: {"in":"query","name":"targetUserId","dataType":"string"},
                 currentMonthOnly: {"in":"query","name":"currentMonthOnly","dataType":"boolean"},
+                period: {"in":"query","name":"period","dataType":"string"},
         };
         app.get('/api/ai-usage',
             authenticateMiddleware([{"ClientLevel":[]}]),
@@ -10063,6 +10084,7 @@ export function RegisterRoutes(app: Router,opts?:{multer?:ReturnType<typeof mult
         // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
         const argsAiUsageController_getWorkspaceSummary: Record<string, TsoaRoute.ParameterSchema> = {
                 request: {"in":"request","name":"request","required":true,"dataType":"object"},
+                period: {"in":"query","name":"period","dataType":"string"},
         };
         app.get('/api/ai-usage/workspace-summary',
             authenticateMiddleware([{"ClientLevel":[]}]),
@@ -10081,6 +10103,37 @@ export function RegisterRoutes(app: Router,opts?:{multer?:ReturnType<typeof mult
 
               await templateService.apiHandler({
                 methodName: 'getWorkspaceSummary',
+                controller,
+                response,
+                next,
+                validatedArgs,
+                successStatus: undefined,
+              });
+            } catch (err) {
+                return next(err);
+            }
+        });
+        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+        const argsAiUsageController_getAdminRecentUsage: Record<string, TsoaRoute.ParameterSchema> = {
+                period: {"in":"query","name":"period","dataType":"string"},
+        };
+        app.get('/api/ai-usage/admin/recent',
+            authenticateMiddleware([{"AdminOnly":[]}]),
+            ...(fetchMiddlewares<RequestHandler>(AiUsageController)),
+            ...(fetchMiddlewares<RequestHandler>(AiUsageController.prototype.getAdminRecentUsage)),
+
+            async function AiUsageController_getAdminRecentUsage(request: ExRequest, response: ExResponse, next: any) {
+
+            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+
+            let validatedArgs: any[] = [];
+            try {
+                validatedArgs = templateService.getValidatedArgs({ args: argsAiUsageController_getAdminRecentUsage, request, response });
+
+                const controller = new AiUsageController();
+
+              await templateService.apiHandler({
+                methodName: 'getAdminRecentUsage',
                 controller,
                 response,
                 next,

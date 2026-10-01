@@ -8565,6 +8565,77 @@
 				],
 				"type": "object"
 			},
+			"AdminUserUsageSummary": {
+				"description": "One row of the platform-wide usage view (Plan AI admins only).",
+				"properties": {
+					"userId": {
+						"type": "string"
+					},
+					"name": {
+						"type": "string",
+						"nullable": true
+					},
+					"email": {
+						"type": "string"
+					},
+					"lastActivityAt": {
+						"type": "string",
+						"format": "date-time",
+						"description": "Last AI call inside the period."
+					},
+					"requestCount": {
+						"type": "number",
+						"format": "double"
+					},
+					"totalTokens": {
+						"type": "number",
+						"format": "double"
+					},
+					"estimatedCost": {
+						"type": "number",
+						"format": "double"
+					},
+					"blueberryTokens": {
+						"type": "number",
+						"format": "double"
+					}
+				},
+				"required": [
+					"userId",
+					"name",
+					"email",
+					"lastActivityAt",
+					"requestCount",
+					"totalTokens",
+					"estimatedCost",
+					"blueberryTokens"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"ApiResponse_AdminUserUsageSummary-Array_": {
+				"properties": {
+					"message": {
+						"type": "string"
+					},
+					"data": {
+						"items": {
+							"$ref": "#/components/schemas/AdminUserUsageSummary"
+						},
+						"type": "array",
+						"nullable": true
+					},
+					"status": {
+						"type": "number",
+						"format": "double"
+					}
+				},
+				"required": [
+					"data",
+					"status"
+				],
+				"type": "object"
+			},
 			"ApiResponse__models_58__id-string--promptPrice-number--completionPrice-number--maxTokens-number-or-null_-Array__": {
 				"properties": {
 					"message": {
@@ -9599,7 +9670,7 @@
 	},
 	"info": {
 		"title": "backend",
-		"version": "4.4.1",
+		"version": "4.4.2",
 		"license": {
 			"name": "BUSL-1.1"
 		},
@@ -18468,6 +18539,15 @@
 						"schema": {
 							"type": "boolean"
 						}
+					},
+					{
+						"description": "\"YYYY-MM\" for one month, \"30d\" for the last 30 days. Empty means all time.",
+						"in": "query",
+						"name": "period",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
 					}
 				]
 			}
@@ -18492,7 +18572,51 @@
 						"ClientLevel": []
 					}
 				],
-				"parameters": []
+				"parameters": [
+					{
+						"description": "\"YYYY-MM\" for one month, \"30d\" for the last 30 days. Empty means all time.",
+						"in": "query",
+						"name": "period",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					}
+				]
+			}
+		},
+		"/api/ai-usage/admin/recent": {
+			"get": {
+				"operationId": "GetAdminRecentUsage",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiResponse_AdminUserUsageSummary-Array_"
+								}
+							}
+						}
+					}
+				},
+				"description": "Who used the platform in a period and what it cost, across every\nworkspace. Most recent activity first. \"Activity\" is an AI call, so an\naccount that only signs in and reads does not show up here.",
+				"security": [
+					{
+						"AdminOnly": []
+					}
+				],
+				"parameters": [
+					{
+						"description": "\"YYYY-MM\" for one month, \"30d\" for the last 30 days. Empty means all time.",
+						"in": "query",
+						"name": "period",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					}
+				]
 			}
 		},
 		"/api/ai-usage/pricing": {

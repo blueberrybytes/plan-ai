@@ -32,6 +32,7 @@ import { format } from "date-fns";
 import { useParams, useLocation, NavLink } from "react-router-dom";
 import SidebarLayout from "../components/layout/SidebarLayout";
 import { useGetUsageMetricsQuery } from "../store/apis/aiUsageApi";
+import UsagePeriodSelect from "../components/usage/UsagePeriodSelect";
 import { selectUserDb } from "../store/slices/auth/authSelector";
 import { useSelector } from "react-redux";
 import { selectActiveWorkspaceId } from "../store/slices/app/appSelector";
@@ -44,6 +45,8 @@ export const AiUsageContent: React.FC<{ hideBreadcrumbs?: boolean }> = ({
   const { t } = useTranslation();
   const [tempFilters, setTempFilters] = useState({ feature: "", provider: "", model: "" });
   const [appliedFilters, setAppliedFilters] = useState({ feature: "", provider: "", model: "" });
+  // "" is all time. The totals, the breakdown and the log all follow it.
+  const [period, setPeriod] = useState("");
   const userDb = useSelector(selectUserDb);
   const activeWorkspaceId = useSelector(selectActiveWorkspaceId);
   // `isPlanAiAdmin` = global Plan AI internal admin (support / debugging
@@ -110,6 +113,7 @@ export const AiUsageContent: React.FC<{ hideBreadcrumbs?: boolean }> = ({
       feature: appliedFilters.feature || undefined,
       provider: appliedFilters.provider || undefined,
       model: appliedFilters.model || undefined,
+      period: period || undefined,
       targetUserId,
       workspaceId: activeWorkspaceId || "",
     },
@@ -155,7 +159,7 @@ export const AiUsageContent: React.FC<{ hideBreadcrumbs?: boolean }> = ({
         </Breadcrumbs>
       )}
 
-      <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 1 }}>
+      <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 1, flexWrap: "wrap" }}>
         <Typography variant="h4" sx={{ mb: 0 }}>
           {targetUserId ? (
             <>
@@ -187,6 +191,9 @@ export const AiUsageContent: React.FC<{ hideBreadcrumbs?: boolean }> = ({
         </Tooltip>
         {isByokTrack && <Chip label="BYOK" size="small" color="secondary" variant="outlined" />}
         {isManagedTrack && <Chip label="Managed" size="small" color="primary" variant="outlined" />}
+        <Box sx={{ ml: "auto" }}>
+          <UsagePeriodSelect value={period} onChange={setPeriod} />
+        </Box>
       </Box>
       <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
         {isByokTrack

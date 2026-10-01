@@ -64,6 +64,7 @@ import AdminPptxPreview from "./pages/AdminPptxPreview";
 import AdminEmails from "./pages/AdminEmails";
 import AdminMcp from "./pages/AdminMcp";
 import AdminDashboard from "./pages/admin/AdminDashboard";
+import AdminRecentUsage from "./pages/admin/AdminRecentUsage";
 import "./App.css";
 import "./i18n";
 import { useGetCurrentUserQuery } from "./store/apis/authApi";
@@ -166,6 +167,7 @@ const AppContent: React.FC = () => {
           <Route path="/admin" element={<AdminDashboard />} />
           <Route path="/admin/users" element={<Users />} />
           <Route path="/admin/users/:targetUserId/usage" element={<AiUsage />} />
+          <Route path="/admin/usage" element={<AdminRecentUsage />} />
           <Route path="/admin/pricing" element={<AiPricing />} />
           <Route path="/admin/pptx-preview" element={<AdminPptxPreview />} />
           <Route path="/admin/emails" element={<AdminEmails />} />

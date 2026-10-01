@@ -14,6 +14,10 @@ export type WorkspaceUserUsageSummary = components["schemas"]["WorkspaceUserUsag
 export type ApiResponseWorkspaceUserUsageSummary =
   components["schemas"]["ApiResponse_WorkspaceUserUsageSummary-Array_"];
 
+export type AdminUserUsageSummary = components["schemas"]["AdminUserUsageSummary"];
+export type ApiResponseAdminUserUsageSummary =
+  components["schemas"]["ApiResponse_AdminUserUsageSummary-Array_"];
+
 export const aiUsageApi = createApi({
   reducerPath: "aiUsageApi",
   baseQuery: baseQueryWithReauth,
@@ -29,6 +33,8 @@ export const aiUsageApi = createApi({
         model?: string;
         targetUserId?: string;
         currentMonthOnly?: boolean;
+        /** "YYYY-MM" for one month, "30d" for the last 30 days. Omit for all time. */
+        period?: string;
         workspaceId?: string; // Client-side cache busting
       }
     >({
@@ -54,16 +60,30 @@ export const aiUsageApi = createApi({
       providesTags: ["AiUsage"],
       transformResponse: (response: ApiResponseAiPricingResponse) => response.data,
     }),
-    getWorkspaceSummary: builder.query<WorkspaceUserUsageSummary[], void>({
-      query: () => ({
+    getWorkspaceSummary: builder.query<WorkspaceUserUsageSummary[], { period?: string } | void>({
+      query: (params) => ({
         url: "/api/ai-usage/workspace-summary",
         method: "GET",
+        params: params?.period ? { period: params.period } : undefined,
       }),
       providesTags: ["AiUsage"],
       transformResponse: (response: ApiResponseWorkspaceUserUsageSummary) => response.data || [],
     }),
+    getAdminRecentUsage: builder.query<AdminUserUsageSummary[], { period?: string }>({
+      query: ({ period }) => ({
+        url: "/api/ai-usage/admin/recent",
+        method: "GET",
+        params: period ? { period } : undefined,
+      }),
+      providesTags: ["AiUsage"],
+      transformResponse: (response: ApiResponseAdminUserUsageSummary) => response.data || [],
+    }),
   }),
 });
 
-export const { useGetUsageMetricsQuery, useGetAiPricingQuery, useGetWorkspaceSummaryQuery } =
-  aiUsageApi;
+export const {
+  useGetUsageMetricsQuery,
+  useGetAiPricingQuery,
+  useGetWorkspaceSummaryQuery,
+  useGetAdminRecentUsageQuery,
+} = aiUsageApi;

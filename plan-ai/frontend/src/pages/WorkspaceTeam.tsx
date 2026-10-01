@@ -47,6 +47,7 @@ import {
   UpdateWorkspaceSettingsRequest,
 } from "../store/apis/workspaceApi";
 import { useGetWorkspaceSummaryQuery } from "../store/apis/aiUsageApi";
+import UsagePeriodSelect from "../components/usage/UsagePeriodSelect";
 import { selectActiveWorkspaceId } from "../store/slices/app/appSelector";
 import { selectUserDb } from "../store/slices/auth/authSelector";
 import { setActiveWorkspaceId, setToastMessage } from "../store/slices/app/appSlice";
@@ -450,9 +451,12 @@ const WorkspaceTeam: React.FC = () => {
   const usedInvitations = usedSeats - 1;
   const isLimitReached = usedSeats >= totalSeats;
 
-  const { data: usageData, isLoading: usageLoading } = useGetWorkspaceSummaryQuery(undefined, {
-    skip: !activeWorkspaceId || !canViewUsage,
-  });
+  // "" is all time.
+  const [usagePeriod, setUsagePeriod] = useState("");
+  const { data: usageData, isLoading: usageLoading } = useGetWorkspaceSummaryQuery(
+    { period: usagePeriod || undefined },
+    { skip: !activeWorkspaceId || !canViewUsage },
+  );
 
   const handleCreateWorkspace = async () => {
     if (!newWorkspaceName.trim()) return;
@@ -762,6 +766,9 @@ const WorkspaceTeam: React.FC = () => {
           </>
         ) : tabs[tabValue]?.id === "usage" && canViewUsage ? (
           <>
+            <Box sx={{ display: "flex", justifyContent: "flex-end", mb: 2 }}>
+              <UsagePeriodSelect value={usagePeriod} onChange={setUsagePeriod} />
+            </Box>
             {usageLoading ? (
               <Box sx={{ display: "flex", justifyContent: "center", p: 4 }}>
                 <CircularProgress />

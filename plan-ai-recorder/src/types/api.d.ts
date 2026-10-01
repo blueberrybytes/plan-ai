@@ -3010,6 +3010,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/ai-usage/admin/recent": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description Who used the platform in a period and what it cost, across every
+         *     workspace. Most recent activity first. "Activity" is an AI call, so an
+         *     account that only signs in and reads does not show up here.
+         */
+        get: operations["GetAdminRecentUsage"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/ai-usage/pricing": {
         parameters: {
             query?: never;
@@ -5868,6 +5889,31 @@ export interface components {
         "ApiResponse_WorkspaceUserUsageSummary-Array_": {
             message?: string;
             data: components["schemas"]["WorkspaceUserUsageSummary"][] | null;
+            /** Format: double */
+            status: number;
+        };
+        /** @description One row of the platform-wide usage view (Plan AI admins only). */
+        AdminUserUsageSummary: {
+            userId: string;
+            name: string | null;
+            email: string;
+            /**
+             * Format: date-time
+             * @description Last AI call inside the period.
+             */
+            lastActivityAt: string;
+            /** Format: double */
+            requestCount: number;
+            /** Format: double */
+            totalTokens: number;
+            /** Format: double */
+            estimatedCost: number;
+            /** Format: double */
+            blueberryTokens: number;
+        };
+        "ApiResponse_AdminUserUsageSummary-Array_": {
+            message?: string;
+            data: components["schemas"]["AdminUserUsageSummary"][] | null;
             /** Format: double */
             status: number;
         };
@@ -11546,6 +11592,8 @@ export interface operations {
                 model?: string;
                 targetUserId?: string;
                 currentMonthOnly?: boolean;
+                /** @description "YYYY-MM" for one month, "30d" for the last 30 days. Empty means all time. */
+                period?: string;
             };
             header?: never;
             path?: never;
@@ -11566,7 +11614,10 @@ export interface operations {
     };
     GetWorkspaceSummary: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description "YYYY-MM" for one month, "30d" for the last 30 days. Empty means all time. */
+                period?: string;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -11580,6 +11631,29 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ApiResponse_WorkspaceUserUsageSummary-Array_"];
+                };
+            };
+        };
+    };
+    GetAdminRecentUsage: {
+        parameters: {
+            query?: {
+                /** @description "YYYY-MM" for one month, "30d" for the last 30 days. Empty means all time. */
+                period?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_AdminUserUsageSummary-Array_"];
                 };
             };
         };

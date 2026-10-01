@@ -41,6 +41,48 @@ export interface WorkspaceUserUsageSummary {
   blueberryTokens: number;
 }
 
+/** One row of the platform-wide usage view (Plan AI admins only). */
+export interface AdminUserUsageSummary {
+  userId: string;
+  name: string | null;
+  email: string;
+  /** Last AI call inside the period. */
+  lastActivityAt: Date;
+  requestCount: number;
+  totalTokens: number;
+  estimatedCost: number;
+  blueberryTokens: number;
+}
+
+/**
+ * Turns the `period` query value into a createdAt filter.
+ * "2026-09" is that calendar month (UTC), "30d" is the last 30 days, and an
+ * empty value means all time. Anything else is a 400, so a typo never shows
+ * all-time numbers under a month label.
+ */
+export function usagePeriodFilter(period?: string): Prisma.DateTimeFilter | undefined {
+  if (!period) return undefined;
+
+  const month = /^(\d{4})-(\d{2})$/.exec(period);
+  if (month) {
+    const year = Number(month[1]);
+    const monthIndex = Number(month[2]) - 1;
+    if (monthIndex >= 0 && monthIndex <= 11) {
+      return {
+        gte: new Date(Date.UTC(year, monthIndex, 1)),
+        lt: new Date(Date.UTC(year, monthIndex + 1, 1)),
+      };
+    }
+  }
+
+  const days = /^(\d{1,3})d$/.exec(period);
+  if (days && Number(days[1]) > 0) {
+    return { gte: new Date(Date.now() - Number(days[1]) * 24 * 60 * 60 * 1000) };
+  }
+
+  throw { status: 400, message: 'Invalid period. Use "YYYY-MM" or a number of days like "30d".' };
+}
+
 @Route("api/ai-usage")
 export class AiUsageController extends BaseWorkspaceController {
   @Get()
@@ -54,6 +96,8 @@ export class AiUsageController extends BaseWorkspaceController {
     @Query() model?: string,
     @Query() targetUserId?: string,
     @Query() currentMonthOnly?: boolean,
+    /** "YYYY-MM" for one month, "30d" for the last 30 days. Empty means all time. */
+    @Query() period?: string,
   ): Promise<ApiResponse<AiUsageMetricsResponse>> {
     const { user, workspaceId } = await this.getAuthorizedWorkspaceAccess(request);
 
@@ -113,6 +157,9 @@ export class AiUsageController extends BaseWorkspaceController {
       const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
       where.createdAt = { gte: firstDay };
     }
+
+    const periodFilter = usagePeriodFilter(period);
+    if (periodFilter) where.createdAt = periodFilter;
 
     const [logs, totalCount] = await Promise.all([
       prisma.aiUsageLog.findMany({
@@ -199,6 +246,8 @@ export class AiUsageController extends BaseWorkspaceController {
   @Security("ClientLevel")
   public async getWorkspaceSummary(
     @Request() request: AuthenticatedRequest,
+    /** "YYYY-MM" for one month, "30d" for the last 30 days. Empty means all time. */
+    @Query() period?: string,
   ): Promise<ApiResponse<WorkspaceUserUsageSummary[]>> {
     const { user, workspaceId } = await this.getAuthorizedWorkspaceAccess(request);
 
@@ -221,6 +270,8 @@ export class AiUsageController extends BaseWorkspaceController {
       };
     }
 
+    const periodFilter = usagePeriodFilter(period);
+
     // 1. Get all members in the workspace
     const members = await prisma.workspaceMember.findMany({
       where: { workspaceId },
@@ -230,7 +281,7 @@ export class AiUsageController extends BaseWorkspaceController {
     // 2. Get aggregate usage by user & model for cost calc
     const modelAggregates = await prisma.aiUsageLog.groupBy({
       by: ["userId", "model", "provider"],
-      where: { workspaceId },
+      where: { workspaceId, ...(periodFilter ? { createdAt: periodFilter } : {}) },
       _sum: {
         inputTokens: true,
         outputTokens: true,
@@ -279,6 +330,53 @@ export class AiUsageController extends BaseWorkspaceController {
       status: 200,
       data: summaries,
     };
+  }
+
+  /**
+   * Who used the platform in a period and what it cost, across every
+   * workspace. Most recent activity first. "Activity" is an AI call, so an
+   * account that only signs in and reads does not show up here.
+   */
+  @Get("admin/recent")
+  @Security("AdminOnly")
+  public async getAdminRecentUsage(
+    /** "YYYY-MM" for one month, "30d" for the last 30 days. Empty means all time. */
+    @Query() period?: string,
+  ): Promise<ApiResponse<AdminUserUsageSummary[]>> {
+    const periodFilter = usagePeriodFilter(period);
+
+    const perUser = await prisma.aiUsageLog.groupBy({
+      by: ["userId"],
+      where: periodFilter ? { createdAt: periodFilter } : {},
+      _sum: { totalTokens: true, estimatedCost: true, blueberryTokens: true },
+      _count: { _all: true },
+      _max: { createdAt: true },
+    });
+
+    const users = await prisma.user.findMany({
+      where: { id: { in: perUser.map((row) => row.userId) } },
+      select: { id: true, name: true, email: true },
+    });
+    const userById = new Map(users.map((u) => [u.id, u]));
+
+    const rows: AdminUserUsageSummary[] = [];
+    for (const row of perUser) {
+      const user = userById.get(row.userId);
+      if (!user || !row._max.createdAt) continue;
+      rows.push({
+        userId: user.id,
+        name: user.name,
+        email: user.email,
+        lastActivityAt: row._max.createdAt,
+        requestCount: row._count._all,
+        totalTokens: row._sum.totalTokens || 0,
+        estimatedCost: row._sum.estimatedCost || 0,
+        blueberryTokens: row._sum.blueberryTokens || 0,
+      });
+    }
+    rows.sort((a, b) => b.lastActivityAt.getTime() - a.lastActivityAt.getTime());
+
+    return { status: 200, data: rows };
   }
 
   @Get("pricing")

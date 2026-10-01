@@ -2226,5 +2226,25 @@
     "label": "Responsable",
     "nobody": "Nadie",
     "unknown": "Alguien que ya no está en este espacio"
+  },
+  "usagePeriod": {
+    "label": "Periodo",
+    "allTime": "Todo el tiempo",
+    "last30Days": "Últimos 30 días"
+  },
+  "adminUsage": {
+    "title": "Uso reciente",
+    "description": "Cuentas que han hecho alguna llamada de IA en el periodo, la más reciente primero. El coste es el estimado del proveedor en todos sus workspaces.",
+    "totalCost": "Coste estimado total",
+    "activeUsers": "Usuarios activos",
+    "empty": "Sin uso en este periodo.",
+    "error": "No se ha podido cargar el uso.",
+    "columns": {
+      "user": "Usuario",
+      "lastActivity": "Última actividad",
+      "requests": "Peticiones",
+      "tokens": "Tokens",
+      "cost": "Coste est."
+    }
   }
 }

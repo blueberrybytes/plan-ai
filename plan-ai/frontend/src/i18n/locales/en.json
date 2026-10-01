@@ -2230,5 +2230,25 @@
     "label": "Assigned to",
     "nobody": "Nobody",
     "unknown": "Someone no longer in this workspace"
+  },
+  "usagePeriod": {
+    "label": "Period",
+    "allTime": "All time",
+    "last30Days": "Last 30 days"
+  },
+  "adminUsage": {
+    "title": "Recent usage",
+    "description": "Accounts that made an AI call in the period, most recent first. Cost is the estimated provider cost across all their workspaces.",
+    "totalCost": "Total estimated cost",
+    "activeUsers": "Active users",
+    "empty": "No usage in this period.",
+    "error": "Could not load the usage.",
+    "columns": {
+      "user": "User",
+      "lastActivity": "Last activity",
+      "requests": "Requests",
+      "tokens": "Tokens",
+      "cost": "Est. cost"
+    }
   }
 }
