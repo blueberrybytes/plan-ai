@@ -150,9 +150,7 @@ const Login: React.FC = () => {
             variant="h5"
             sx={{
               fontWeight: 800,
-              background: "linear-gradient(135deg, #4361EE 0%, #7c9fff 100%)",
-              WebkitBackgroundClip: "text",
-              WebkitTextFillColor: "transparent",
+              color: "primary.main",
             }}
           >
             Plan AI Recorder

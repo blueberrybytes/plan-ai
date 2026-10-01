@@ -358,7 +358,7 @@ const ProjectTaskFormDialog: React.FC<ProjectTaskFormDialogProps> = ({
             disabled={isRefining || !title.trim()}
             sx={{ alignSelf: "flex-start", borderRadius: 4, textTransform: "none" }}
           >
-            {isRefining ? "Refining..." : "✨ Refine with AI"}
+            {isRefining ? "Refining..." : "Refine with AI"}
           </Button>
 
           {/* ── AI Suggestion Panel ── */}

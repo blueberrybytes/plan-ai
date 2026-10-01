@@ -487,7 +487,7 @@ const Billing: React.FC = () => {
       </Container>
 
       <Dialog open={showByokModal} onClose={() => setShowByokModal(false)} maxWidth="sm" fullWidth>
-        <DialogTitle sx={{ fontWeight: 800, pb: 1 }}>Welcome aboard! 🎉</DialogTitle>
+        <DialogTitle sx={{ fontWeight: 800, pb: 1 }}>Welcome aboard!</DialogTitle>
         <DialogContent>
           <Typography sx={{ mb: 3 }}>
             Your <b>Bring Your Own Key</b> plan is now active. To unlock AI features, recordings,

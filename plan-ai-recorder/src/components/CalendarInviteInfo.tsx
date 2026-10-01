@@ -1,4 +1,6 @@
 import React from "react";
+import type { Theme } from "@mui/material/styles";
+import { alpha } from "@mui/material/styles";
 import { Box, Chip, Link, Stack, Typography } from "@mui/material";
 import { CalendarMonthOutlined as CalendarIcon } from "@mui/icons-material";
 
@@ -43,7 +45,7 @@ const CalendarInviteInfo: React.FC<{ metadata: unknown }> = ({ metadata }) => {
         mb: 2,
         p: 1.5,
         borderRadius: 1,
-        border: "1px solid rgba(255,255,255,0.08)",
+        border: (theme: Theme) => `1px solid ${alpha(theme.palette.text.primary, 0.08)}`,
       }}
     >
       <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }}>

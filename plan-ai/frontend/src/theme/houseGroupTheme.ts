@@ -70,28 +70,32 @@ export const houseGroupThemeOptions: ThemeOptions = {
   },
   components: {
     MuiCssBaseline: {
-      styleOverrides: {
-        body: {
-          backgroundColor: "#FFFFFF",
-          color: "#1a1a1a",
-          scrollbarColor: "rgba(0, 0, 0, 0.1) transparent",
-          "&::-webkit-scrollbar": {
-            width: 8,
+      // Colors come from the palette so the dark and mocha presets apply too.
+      styleOverrides: (theme) => {
+        const thumb = alpha(theme.palette.text.primary, 0.12);
+        return {
+          body: {
+            backgroundColor: theme.palette.background.default,
+            color: theme.palette.text.primary,
+            scrollbarColor: `${thumb} transparent`,
+            "&::-webkit-scrollbar": {
+              width: 8,
+            },
+            "&::-webkit-scrollbar-thumb": {
+              backgroundColor: thumb,
+              borderRadius: 8,
+            },
           },
-          "&::-webkit-scrollbar-thumb": {
-            backgroundColor: "rgba(0, 0, 0, 0.1)",
-            borderRadius: 8,
-          },
-        },
+        };
       },
     },
     MuiPaper: {
       styleOverrides: {
-        root: {
+        root: ({ theme }) => ({
           boxShadow: "none !important",
-          border: "1px solid rgba(0,0,0,0.08)",
+          border: `1px solid ${theme.palette.divider}`,
           backgroundImage: "none",
-        },
+        }),
       },
     },
     MuiInputBase: {
@@ -130,25 +134,25 @@ export const houseGroupThemeOptions: ThemeOptions = {
     },
     MuiCard: {
       styleOverrides: {
-        root: {
+        root: ({ theme }) => ({
           borderRadius: "16px",
-          backgroundColor: "#ffffff",
-          border: "1px solid rgba(0,0,0,0.08)",
+          backgroundColor: theme.palette.background.paper,
+          border: `1px solid ${theme.palette.divider}`,
           boxShadow: "0 4px 12px rgba(0, 0, 0, 0.05)",
           "&:hover": {
             boxShadow: "0 8px 24px rgba(0, 0, 0, 0.08)",
           },
-        },
+        }),
       },
     },
     MuiDialog: {
       styleOverrides: {
-        paper: {
+        paper: ({ theme }) => ({
           borderRadius: "20px",
-          backgroundColor: "#ffffff",
-          border: "1px solid rgba(0, 0, 0, 0.08)",
+          backgroundColor: theme.palette.background.paper,
+          border: `1px solid ${theme.palette.divider}`,
           boxShadow: "0 12px 48px rgba(0, 0, 0, 0.15)",
-        },
+        }),
       },
     },
   },

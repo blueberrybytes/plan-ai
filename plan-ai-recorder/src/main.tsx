@@ -1,7 +1,6 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
-import { ThemeProvider, CssBaseline } from "@mui/material";
-import { theme } from "./theme";
+import { ThemePresetProvider } from "./hooks/ThemePresetProvider";
 import { AuthProvider } from "./hooks/AuthProvider";
 import App from "./App";
 import * as Sentry from "@sentry/electron/renderer";
@@ -20,11 +19,10 @@ if (sentryDsn && import.meta.env.PROD) {
 
 ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
   <React.StrictMode>
-    <ThemeProvider theme={theme}>
-      <CssBaseline />
+    <ThemePresetProvider>
       <AuthProvider>
         <App />
       </AuthProvider>
-    </ThemeProvider>
+    </ThemePresetProvider>
   </React.StrictMode>,
 );

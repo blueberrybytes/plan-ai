@@ -202,12 +202,12 @@
       "themeDescription": "Personaliza cómo se ve Plan AI para ti."
     },
     "themes": {
-      "blueberry": "Blueberry (Predeterminado)",
-      "crimson": "Ejecutivo Carmesí",
-      "emerald": "Crecimiento Esmeralda",
-      "hacker": "Hacker Consola",
-      "cloud": "Espacio Cloud (Claro)",
-      "sunrise": "Amanecer Marfil (Claro)",
+      "blueberry": "Blueberry (por defecto)",
+      "graphite": "Grafito",
+      "forest": "Bosque",
+      "garnet": "Granate",
+      "cloud": "Nube (claro)",
+      "sand": "Arena (claro)",
       "custom": "Personalizado"
     },
     "info": {

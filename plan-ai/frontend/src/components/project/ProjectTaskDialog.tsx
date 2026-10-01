@@ -345,7 +345,7 @@ const ProjectTaskDialog: React.FC<ProjectTaskDialogProps> = ({
               return (
                 <Stack spacing={1}>
                   <Typography variant="subtitle2" color="primary">
-                    ✨ AI Architecture Path (Proof of Work)
+                    AI Architecture Path (Proof of Work)
                   </Typography>
                   <Box sx={{ mt: 1 }}>
                     <ContextGraph height={250} nodes={trace.nodes} links={trace.links} />

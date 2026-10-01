@@ -37,14 +37,12 @@ const PageHeader: React.FC<PageHeaderProps> = ({ title, subtitle, icon, actions,
             sx={{
               width: 44,
               height: 44,
-              borderRadius: "12px",
-              background: (theme) =>
-                `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.25)} 0%, ${alpha(theme.palette.secondary.main, 0.18)} 100%)`,
-              border: (theme) => `1px solid ${alpha(theme.palette.primary.main, 0.3)}`,
+              borderRadius: "10px",
+              bgcolor: (theme) => alpha(theme.palette.primary.main, 0.12),
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              color: "primary.light",
+              color: "primary.main",
               flexShrink: 0,
               fontSize: 22,
             }}

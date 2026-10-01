@@ -14,6 +14,7 @@ import {
   InputLabel,
   Select,
   MenuItem,
+  alpha,
 } from "@mui/material";
 import {
   Add as AddIcon,
@@ -176,8 +177,7 @@ const Docs: React.FC = () => {
                 width: 80,
                 height: 80,
                 borderRadius: "50%",
-                background:
-                  "linear-gradient(135deg, rgba(67,97,238,0.15) 0%, rgba(167,139,250,0.15) 100%)",
+                bgcolor: (theme) => alpha(theme.palette.primary.main, 0.12),
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",

@@ -46,10 +46,7 @@ const ThinkingIndicator: React.FC = () => {
           variant="body2"
           sx={{
             fontWeight: 500,
-            background: (theme) =>
-              `linear-gradient(45deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main || theme.palette.primary.light})`,
-            WebkitBackgroundClip: "text",
-            WebkitTextFillColor: "transparent",
+            color: "text.secondary",
           }}
         >
           {THINKING_MESSAGES[index]}

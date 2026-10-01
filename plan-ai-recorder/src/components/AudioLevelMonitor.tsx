@@ -1,4 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
+import type { Theme } from "@mui/material/styles";
+import { alpha } from "@mui/material/styles";
 import { Box, Typography, LinearProgress, Stack } from "@mui/material";
 
 interface AudioLevelMonitorProps {
@@ -353,7 +355,7 @@ export const AudioLevelMonitor: React.FC<AudioLevelMonitorProps> = ({
           sx={{
             height: 6,
             borderRadius: 3,
-            bgcolor: "rgba(255,255,255,0.05)",
+            bgcolor: (theme: Theme) => alpha(theme.palette.text.primary, 0.05),
             "& .MuiLinearProgress-bar": {
               bgcolor: micLevel > 70 ? "warning.main" : "primary.main",
             },
@@ -397,7 +399,7 @@ export const AudioLevelMonitor: React.FC<AudioLevelMonitorProps> = ({
           sx={{
             height: 6,
             borderRadius: 3,
-            bgcolor: "rgba(255,255,255,0.05)",
+            bgcolor: (theme: Theme) => alpha(theme.palette.text.primary, 0.05),
             "& .MuiLinearProgress-bar": {
               bgcolor: sysLevel > 70 ? "warning.main" : "secondary.main",
             },

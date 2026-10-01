@@ -1,5 +1,5 @@
 import React from "react";
-import { Box, Typography, Button, Container, Card, CircularProgress } from "@mui/material";
+import { Box, Typography, Button, Container, Card, CircularProgress, alpha } from "@mui/material";
 import {
   HourglassEmpty as HourglassIcon,
   Mail as MailIcon,
@@ -53,10 +53,6 @@ const PendingReview: React.FC = () => {
           sx={{
             p: { xs: 4, md: 6 },
             textAlign: "center",
-            bgcolor: "rgba(22,25,32,0.8)",
-            border: "1px solid rgba(167,139,250,0.2)",
-            borderRadius: "24px",
-            boxShadow: "0 0 80px rgba(67,97,238,0.1)",
           }}
         >
           <Box
@@ -64,7 +60,7 @@ const PendingReview: React.FC = () => {
               width: 80,
               height: 80,
               borderRadius: "50%",
-              bgcolor: "rgba(167,139,250,0.1)",
+              bgcolor: (theme) => alpha(theme.palette.primary.main, 0.12),
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
@@ -72,14 +68,14 @@ const PendingReview: React.FC = () => {
               mb: 4,
             }}
           >
-            <HourglassIcon sx={{ fontSize: 40, color: "#a78bfa" }} />
+            <HourglassIcon sx={{ fontSize: 40, color: "primary.main" }} />
           </Box>
 
-          <Typography variant="h4" sx={{ fontWeight: 800, mb: 2, color: "#f8fafc" }}>
+          <Typography variant="h4" sx={{ fontWeight: 800, mb: 2 }}>
             {t("pending.title")}
           </Typography>
 
-          <Typography variant="body1" sx={{ color: "#94a3b8", mb: 4, lineHeight: 1.7 }}>
+          <Typography variant="body1" sx={{ color: "text.secondary", mb: 4, lineHeight: 1.7 }}>
             {t("pending.description")}
           </Typography>
 
@@ -94,13 +90,9 @@ const PendingReview: React.FC = () => {
               sx={{
                 px: 4,
                 py: 1.5,
-                background: "linear-gradient(135deg, #4361EE 0%, #a78bfa 100%)",
                 fontWeight: 600,
                 width: "100%",
                 maxWidth: 240,
-                "&:hover": {
-                  background: "linear-gradient(135deg, #5472f5 0%, #b89ffc 100%)",
-                },
               }}
             >
               Refresh Status

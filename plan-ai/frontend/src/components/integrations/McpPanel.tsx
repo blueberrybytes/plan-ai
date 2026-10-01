@@ -331,7 +331,7 @@ const McpPanel: React.FC<McpPanelProps> = ({ workspaceId }) => {
                 }}
               >
                 <Stack direction="row" justifyContent="space-between" alignItems="center">
-                  <Typography variant="h6">Claude Code — one command ⚡</Typography>
+                  <Typography variant="h6">Claude Code — one command</Typography>
                   <Tooltip title={copied ? "Copied!" : "Copy command"}>
                     <IconButton
                       size="small"
@@ -538,7 +538,7 @@ const McpPanel: React.FC<McpPanelProps> = ({ workspaceId }) => {
       {/* ── Create token dialog ─────────────────────────────────────── */}
       <Dialog open={createDialogOpen} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
         <DialogTitle sx={{ fontWeight: 700 }}>
-          {rawToken ? "🎉 Token Created — Copy it now" : "New MCP Token"}
+          {rawToken ? "Token Created — Copy it now" : "New MCP Token"}
         </DialogTitle>
         <DialogContent>
           {rawToken ? (
@@ -579,7 +579,7 @@ const McpPanel: React.FC<McpPanelProps> = ({ workspaceId }) => {
 
               <Divider />
               <Typography variant="subtitle2" fontWeight={600}>
-                Claude Code — one command ⚡
+                Claude Code — one command
               </Typography>
               <Typography variant="body2" color="text.secondary">
                 Run this in your terminal to connect instantly (token already filled in):

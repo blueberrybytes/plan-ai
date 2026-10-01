@@ -1,4 +1,6 @@
 import React, { useEffect, useState, useCallback, useRef } from "react";
+import type { Theme } from "@mui/material/styles";
+import { alpha } from "@mui/material/styles";
 import ReactJson from "react-json-view";
 import {
   Box,
@@ -111,7 +113,7 @@ const ExtractionReasoningPanel = ({ reasoning }: { reasoning?: string | null }) 
         border: 1,
         borderColor: "divider",
         borderRadius: 1.5,
-        bgcolor: "rgba(255,255,255,0.04)",
+        bgcolor: (theme: Theme) => alpha(theme.palette.text.primary, 0.04),
         overflow: "hidden",
       }}
     >
@@ -158,7 +160,7 @@ const ChatMessageItem = ({
       sx={{
         alignSelf: msg.role === "USER" ? "flex-end" : "flex-start",
         bgcolor:
-          msg.role === "USER" ? "primary.dark" : "rgba(255,255,255,0.05)",
+          msg.role === "USER" ? "primary.dark" : (theme: Theme) => alpha(theme.palette.text.primary, 0.05),
         p: 1.5,
         pr: 5,
         borderRadius: 2,
@@ -744,7 +746,7 @@ const TranscriptView: React.FC = () => {
                   mt: 1,
                   mb: 2,
                   fontStyle: "italic",
-                  borderLeft: "2px solid rgba(255,255,255,0.1)",
+                  borderLeft: (theme: Theme) => `2px solid ${alpha(theme.palette.text.primary, 0.1)}`,
                   pl: 2,
                   py: 0.5,
                 }}

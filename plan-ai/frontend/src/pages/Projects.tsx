@@ -10,6 +10,7 @@ import {
   Stack,
   Tooltip,
   Typography,
+  alpha,
 } from "@mui/material";
 import {
   Add as AddIcon,
@@ -257,7 +258,7 @@ const Projects: React.FC = () => {
                 width: 72,
                 height: 72,
                 borderRadius: "50%",
-                background: "linear-gradient(135deg, rgba(67,97,238,0.15), rgba(167,139,250,0.15))",
+                bgcolor: (theme) => alpha(theme.palette.primary.main, 0.12),
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",

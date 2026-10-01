@@ -1,4 +1,6 @@
 import React from "react";
+import type { Theme } from "@mui/material/styles";
+import { alpha } from "@mui/material/styles";
 import { Box, MenuItem, Select, Typography, type SelectChangeEvent } from "@mui/material";
 import { Business as BusinessIcon } from "@mui/icons-material";
 import { useAuth } from "../hooks/useAuth";
@@ -65,13 +67,13 @@ const WorkspaceSwitcher: React.FC<{ onSwitch?: () => void }> = ({ onSwitch }) =>
           );
         }}
         sx={{
-          bgcolor: "rgba(255,255,255,0.04)",
+          bgcolor: (theme: Theme) => alpha(theme.palette.text.primary, 0.04),
           borderRadius: 1.5,
           "& .MuiOutlinedInput-notchedOutline": {
-            borderColor: "rgba(255,255,255,0.08)",
+            borderColor: (theme: Theme) => alpha(theme.palette.text.primary, 0.08),
           },
           "&:hover .MuiOutlinedInput-notchedOutline": {
-            borderColor: "rgba(255,255,255,0.15)",
+            borderColor: (theme: Theme) => alpha(theme.palette.text.primary, 0.15),
           },
           "& .MuiSelect-select": {
             py: 0.75,

@@ -46,7 +46,7 @@ import {
 import { useGetWorkspaceMembersQuery } from "../store/apis/workspaceApi";
 import { useListIntegrationsQuery } from "../store/apis/integrationApi";
 import { useTranslation } from "react-i18next";
-import { getAppThemePresets } from "../utils/appThemes";
+import { getAppThemePresets, resolveAppThemePreset } from "../utils/appThemes";
 import { useBrandIdentity } from "../hooks/useBrandIdentity";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import TwoStepVerificationCard from "../components/profile/TwoStepVerificationCard";
@@ -66,13 +66,9 @@ const AppThemeSelector: React.FC = () => {
   const currentThemeId = useMemo(() => {
     if (!data?.data || !data.data.primaryColor) return activePresets[0]?.id || "custom";
 
-    // Attempt to match custom theme back to a preset by primaryColor
-    const matched = activePresets.find(
-      (p) => p.primaryColor.toLowerCase() === data.data?.primaryColor?.toLowerCase(),
-    );
-    console.log("Profile - Current Theme ID matched:", matched?.id || "custom");
+    const matched = resolveAppThemePreset(data.data, brandKey);
     return matched ? matched.id : "custom";
-  }, [data, activePresets]);
+  }, [data, activePresets, brandKey]);
 
   const handleSelectPreset = async (presetId: string) => {
     const preset = activePresets.find((p) => p.id === presetId);
@@ -87,7 +83,7 @@ const AppThemeSelector: React.FC = () => {
         textPrimaryColor: preset.textPrimaryColor || null,
         textSecondaryColor: preset.textSecondaryColor || null,
         borderRadius: preset.borderRadius || 12,
-        configJson: preset.isLight ? { isLight: true } : null,
+        configJson: { isLight: preset.isLight === true, id: preset.id },
       }).unwrap();
     } catch (e) {
       console.error("Failed to update theme:", e);
@@ -112,28 +108,37 @@ const AppThemeSelector: React.FC = () => {
               display: "flex",
               alignItems: "center",
               justifyContent: "space-between",
-              border: isSelected ? `2px solid ${preset.primaryColor}` : "2px solid transparent",
-              backgroundColor: preset.surfaceColor,
+              border: "2px solid",
+              borderColor: isSelected ? preset.primaryColor : "divider",
+              backgroundColor: preset.backgroundColor,
               opacity: isUpdating ? 0.6 : 1,
-              transition: "all 0.2s",
-              "&:hover": {
-                transform: "translateY(-2px)",
-                boxShadow: "0 4px 12px rgba(0,0,0,0.2)",
-              },
             }}
           >
             <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+              {/* Small preview: surface card with the accent color on it */}
               <Box
                 sx={{
-                  width: 32,
+                  width: 44,
                   height: 32,
-                  borderRadius: "50%",
-                  background: `linear-gradient(135deg, ${preset.primaryColor} 0%, ${preset.secondaryColor || preset.primaryColor} 100%)`,
+                  borderRadius: 1,
+                  bgcolor: preset.surfaceColor,
+                  border: "1px solid",
+                  borderColor: preset.isLight ? "rgba(0,0,0,0.1)" : "rgba(255,255,255,0.1)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
                 }}
-              />
+              >
+                <Box
+                  sx={{ width: 20, height: 8, borderRadius: 4, bgcolor: preset.primaryColor }}
+                />
+              </Box>
               <Typography
                 variant="body1"
-                sx={{ fontWeight: 600, color: preset.isLight ? "#1a1a1a" : "#ffffff" }}
+                sx={{
+                  fontWeight: 600,
+                  color: preset.textPrimaryColor || (preset.isLight ? "#1a1a1a" : "#ffffff"),
+                }}
               >
                 {t(preset.nameKey, preset.id.charAt(0).toUpperCase() + preset.id.slice(1))}
               </Typography>

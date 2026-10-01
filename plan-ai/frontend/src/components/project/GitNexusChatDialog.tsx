@@ -136,14 +136,13 @@ const GitNexusChatDialog: React.FC<GitNexusChatDialogProps> = ({ open, repoFullN
           px: 2.5,
           borderBottom: 1,
           borderColor: "divider",
-          background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.08)}, ${alpha(theme.palette.secondary.main, 0.08)})`,
           flexShrink: 0,
         }}
       >
         <BugReportIcon sx={{ color: "primary.main" }} />
         <Box sx={{ flex: 1 }}>
           <Typography variant="subtitle1" fontWeight={700} lineHeight={1.2}>
-            ✨ PlanAI Code Intelligence
+            PlanAI Code Intelligence
           </Typography>
           <Typography variant="caption" color="text.secondary">
             {repoFullName}
@@ -154,11 +153,11 @@ const GitNexusChatDialog: React.FC<GitNexusChatDialogProps> = ({ open, repoFullN
           label="AI Power Graph"
           icon={<AutoAwesomeIcon sx={{ fontSize: "0.75rem !important" }} />}
           sx={{
-            background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
-            color: "#fff",
+            bgcolor: "primary.main",
+            color: "primary.contrastText",
             fontWeight: 700,
             fontSize: "0.65rem",
-            "& .MuiChip-icon": { color: "#fff" },
+            "& .MuiChip-icon": { color: "primary.contrastText" },
           }}
         />
         <IconButton size="small" onClick={onClose}>
@@ -191,9 +190,7 @@ const GitNexusChatDialog: React.FC<GitNexusChatDialogProps> = ({ open, repoFullN
             <AutoAwesomeIcon
               sx={{
                 fontSize: 52,
-                background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
-                WebkitBackgroundClip: "text",
-                WebkitTextFillColor: "transparent",
+                color: "primary.main",
               }}
             />
             <Typography variant="h6" fontWeight={700} color="text.primary" textAlign="center">
@@ -249,7 +246,7 @@ const GitNexusChatDialog: React.FC<GitNexusChatDialogProps> = ({ open, repoFullN
                         width: 28,
                         height: 28,
                         borderRadius: "50%",
-                        background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+                        bgcolor: "primary.main",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
@@ -459,10 +456,10 @@ const GitNexusChatDialog: React.FC<GitNexusChatDialogProps> = ({ open, repoFullN
               type="submit"
               disabled={!input.trim() || isLoading}
               sx={{
-                background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
-                color: "#fff",
-                "&:hover": { opacity: 0.9 },
-                "&:disabled": { bgcolor: "action.disabledBackground", background: "none" },
+                bgcolor: "primary.main",
+                color: "primary.contrastText",
+                "&:hover": { bgcolor: "primary.dark" },
+                "&:disabled": { bgcolor: "action.disabledBackground" },
               }}
             >
               {isLoading ? <CircularProgress size={20} color="inherit" /> : <SendIcon />}

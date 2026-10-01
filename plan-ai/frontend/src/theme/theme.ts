@@ -1,5 +1,4 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
-import { alpha, createTheme, ThemeOptions, darken, lighten } from "@mui/material/styles";
+import { alpha, createTheme, ThemeOptions, lighten } from "@mui/material/styles";
 
 declare module "@mui/material/styles" {
   interface Palette {
@@ -59,32 +58,30 @@ declare module "@mui/material/Typography" {
   }
 }
 
+// Component styles read colors from the palette, never from literals. That way
+// a preset only has to swap the palette and every component follows, in dark
+// and in light mode.
 export const baseThemeOptions: ThemeOptions = {
   palette: {
     mode: "dark",
     primary: {
-      main: "#4361EE", // Vibrant blue - represents technology and innovation
-      light: "#6e85f2",
-      dark: "#2d4cdd",
-      contrastText: "#ffffff",
+      main: "#4361EE",
     },
     secondary: {
-      main: "#a78bfa", // Lavendar/Purple - AI flavor
-      light: "#c4b5fd",
-      dark: "#7c3aed",
+      main: "#8fa2f5",
     },
     secondary50: {
-      main: alpha("#a78bfa", 0.5),
+      main: alpha("#8fa2f5", 0.5),
     },
     background: {
-      default: "#000000", // Pure black for max contrast
-      paper: "#18181B", // Zinc-900 panel
+      default: "#0b0d11",
+      paper: "#13161e",
     },
     text: {
-      primary: "#f8fafc",
-      secondary: "#94a3b8",
+      primary: "#f1f5f9",
+      secondary: "#8b9ab0",
     },
-    divider: "rgba(255, 255, 255, 0.05)",
+    divider: "rgba(255, 255, 255, 0.07)",
     success: {
       main: "#10B981",
       light: "#34D399",
@@ -119,38 +116,34 @@ export const baseThemeOptions: ThemeOptions = {
     },
   },
   typography: {
-    fontFamily: "'Inter', 'Roboto', 'Arial', sans-serif",
+    fontFamily: "'Inter', 'Helvetica Neue', 'Arial', sans-serif",
     h1: {
-      fontFamily: "'Plus Jakarta Sans', 'Inter', sans-serif",
       fontSize: "3rem",
       fontWeight: 700,
       letterSpacing: "-0.02em",
       lineHeight: 1.2,
     },
     h2: {
-      fontFamily: "'Plus Jakarta Sans', 'Inter', sans-serif",
       fontSize: "2.25rem",
       fontWeight: 700,
       letterSpacing: "-0.02em",
       lineHeight: 1.3,
     },
     h3: {
-      fontFamily: "'Plus Jakarta Sans', 'Inter', sans-serif",
       fontSize: "1.75rem",
       fontWeight: 600,
+      letterSpacing: "-0.01em",
     },
     h4: {
-      fontFamily: "'Plus Jakarta Sans', 'Inter', sans-serif",
       fontSize: "1.375rem",
       fontWeight: 600,
+      letterSpacing: "-0.01em",
     },
     h5: {
-      fontFamily: "'Plus Jakarta Sans', 'Inter', sans-serif",
       fontSize: "1.125rem",
       fontWeight: 600,
     },
     h6: {
-      fontFamily: "'Plus Jakarta Sans', 'Inter', sans-serif",
       fontSize: "1rem",
       fontWeight: 600,
     },
@@ -168,144 +161,134 @@ export const baseThemeOptions: ThemeOptions = {
     },
   },
   shape: {
-    borderRadius: 16,
+    borderRadius: 12,
   },
   components: {
     MuiCssBaseline: {
-      styleOverrides: {
-        body: {
-          backgroundColor: "#000000",
-          color: "#f8fafc",
-          scrollbarColor: "rgba(255, 255, 255, 0.1) transparent",
-          "&::-webkit-scrollbar": {
-            width: 8,
+      styleOverrides: (theme) => {
+        const thumb = alpha(theme.palette.text.primary, 0.12);
+        return {
+          body: {
+            backgroundColor: theme.palette.background.default,
+            color: theme.palette.text.primary,
+            scrollbarColor: `${thumb} transparent`,
+            "&::-webkit-scrollbar": {
+              width: 8,
+            },
+            "&::-webkit-scrollbar-thumb": {
+              backgroundColor: thumb,
+              borderRadius: 8,
+            },
           },
-          "&::-webkit-scrollbar-thumb": {
-            backgroundColor: "rgba(255, 255, 255, 0.1)",
-            borderRadius: 8,
-          },
-        },
+        };
       },
     },
     MuiPaper: {
       styleOverrides: {
-        root: {
+        root: ({ theme }) => ({
           backgroundImage: "none",
-          backgroundColor: "#18181B",
-          border: "1px solid rgba(255, 255, 255, 0.05)",
-        },
+          border: `1px solid ${theme.palette.divider}`,
+        }),
         elevation1: {
-          boxShadow: "0 4px 20px rgba(0, 0, 0, 0.4)",
+          boxShadow: "none",
         },
       },
     },
     MuiDrawer: {
       styleOverrides: {
-        paper: {
-          backgroundColor: "#000000",
-          borderRight: "1px solid rgba(255, 255, 255, 0.05)",
-        },
+        paper: ({ theme }) => ({
+          backgroundColor: theme.palette.background.default,
+          borderRight: `1px solid ${theme.palette.divider}`,
+        }),
       },
     },
     MuiButton: {
+      defaultProps: {
+        disableElevation: true,
+      },
       styleOverrides: {
-        root: ({ theme }) => ({
-          borderRadius: "100px",
+        root: {
+          borderRadius: 10,
           padding: "8px 20px",
           fontWeight: 600,
-          transition: "all 0.2s ease",
-        }),
+        },
         containedPrimary: ({ theme }) => ({
           backgroundColor: theme.palette.primary.main,
           "&:hover": {
             backgroundColor: lighten(theme.palette.primary.main, 0.1),
           },
         }),
-        outlined: {
-          borderColor: "rgba(255, 255, 255, 0.15)",
+        outlined: ({ theme }) => ({
+          borderColor: alpha(theme.palette.text.primary, 0.15),
           "&:hover": {
-            borderColor: "rgba(255, 255, 255, 0.3)",
-            backgroundColor: "rgba(255, 255, 255, 0.05)",
+            borderColor: alpha(theme.palette.text.primary, 0.3),
+            backgroundColor: alpha(theme.palette.text.primary, 0.05),
           },
-        },
+        }),
       },
     },
     MuiCard: {
       styleOverrides: {
-        root: {
-          borderRadius: "20px",
-          backgroundColor: "#18181B",
-          border: "1px solid rgba(255, 255, 255, 0.05)",
-          boxShadow: "0 4px 12px rgba(0, 0, 0, 0.1)",
-          transition: "all 0.2s ease",
-          "&:hover": {
-            borderColor: "rgba(255, 255, 255, 0.1)",
-          },
-        },
-      },
-    },
-    MuiIconButton: {
-      styleOverrides: {
-        root: {
-          transition: "all 0.2s ease",
-          "&:hover": {
-            backgroundColor: "rgba(255, 255, 255, 0.06)",
-          },
-        },
+        root: ({ theme }) => ({
+          borderRadius: 14,
+          backgroundColor: theme.palette.background.paper,
+          border: `1px solid ${theme.palette.divider}`,
+          boxShadow: "none",
+        }),
       },
     },
     MuiTextField: {
       styleOverrides: {
-        root: {
+        root: ({ theme }) => ({
           "& .MuiOutlinedInput-root": {
-            borderRadius: "12px",
-            backgroundColor: "rgba(255, 255, 255, 0.03)",
-            transition: "all 0.2s ease",
-            "&:hover": {
-              backgroundColor: "rgba(255, 255, 255, 0.05)",
-            },
-            "&.Mui-focused": {
-              backgroundColor: "rgba(255, 255, 255, 0.02)",
-            },
+            borderRadius: 10,
+            backgroundColor: alpha(theme.palette.text.primary, 0.03),
           },
-        },
+        }),
+      },
+    },
+    MuiOutlinedInput: {
+      styleOverrides: {
+        root: ({ theme }) => ({
+          "& .MuiOutlinedInput-notchedOutline": {
+            borderColor: alpha(theme.palette.text.primary, 0.12),
+          },
+          "&:hover .MuiOutlinedInput-notchedOutline": {
+            borderColor: alpha(theme.palette.text.primary, 0.25),
+          },
+        }),
       },
     },
     MuiListItemButton: {
       styleOverrides: {
-        root: {
-          borderRadius: "10px",
+        root: ({ theme }) => ({
+          borderRadius: 8,
           margin: "4px 8px",
-          transition: "all 0.2s ease",
           "&.Mui-selected": {
-            backgroundColor: alpha("#4361EE", 0.15),
-            color: "#4361EE",
+            backgroundColor: alpha(theme.palette.primary.main, 0.15),
+            color: theme.palette.primary.main,
             "& .MuiListItemIcon-root": {
-              color: "#4361EE",
+              color: theme.palette.primary.main,
             },
             "&:hover": {
-              backgroundColor: alpha("#4361EE", 0.2),
+              backgroundColor: alpha(theme.palette.primary.main, 0.2),
             },
           },
-        },
+        }),
       },
     },
     MuiDialog: {
       styleOverrides: {
-        paper: {
-          borderRadius: "24px",
-          backgroundColor: "#18181B",
+        paper: ({ theme }) => ({
+          borderRadius: 16,
+          backgroundColor: theme.palette.background.paper,
           backgroundImage: "none",
-          border: "1px solid rgba(255, 255, 255, 0.05)",
-          boxShadow: "0 24px 64px rgba(0, 0, 0, 0.5)",
-        },
-      },
-    },
-    MuiDivider: {
-      styleOverrides: {
-        root: {
-          borderColor: "rgba(255, 255, 255, 0.05)",
-        },
+          border: `1px solid ${theme.palette.divider}`,
+          boxShadow:
+            theme.palette.mode === "light"
+              ? "0 12px 48px rgba(0, 0, 0, 0.15)"
+              : "0 24px 64px rgba(0, 0, 0, 0.5)",
+        }),
       },
     },
   },

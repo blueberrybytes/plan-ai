@@ -47,6 +47,7 @@ interface TaskBoardColumn {
   description: string;
 }
 
+// Archived tasks have no column: archiving a task takes it off the board.
 const COLUMNS: TaskBoardColumn[] = [
   {
     status: "BACKLOG",
@@ -67,11 +68,6 @@ const COLUMNS: TaskBoardColumn[] = [
     status: "COMPLETED",
     title: "Completed",
     description: "Finished work ready for review",
-  },
-  {
-    status: "ARCHIVED",
-    title: "Archived",
-    description: "Tasks no longer active",
   },
 ];
 

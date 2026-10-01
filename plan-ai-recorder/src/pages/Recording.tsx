@@ -1,4 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
+import type { Theme } from "@mui/material/styles";
+import { alpha } from "@mui/material/styles";
 import {
   Alert,
   Box,
@@ -123,7 +125,7 @@ const ChatMessageItem = ({
       sx={{
         alignSelf: msg.role === "user" ? "flex-end" : "flex-start",
         bgcolor:
-          msg.role === "user" ? "primary.dark" : "rgba(255,255,255,0.05)",
+          msg.role === "user" ? "primary.dark" : (theme: Theme) => alpha(theme.palette.text.primary, 0.05),
         p: 1.5,
         pr: 5,
         borderRadius: 2,
@@ -1882,7 +1884,7 @@ const Recording: React.FC = () => {
             width: "100%",
             maxWidth: 480,
             p: 2,
-            border: "1px solid rgba(255,255,255,0.1)",
+            border: (theme: Theme) => `1px solid ${alpha(theme.palette.text.primary, 0.1)}`,
             borderRadius: 2,
             bgcolor: "background.paper",
           }}
@@ -1975,7 +1977,7 @@ const Recording: React.FC = () => {
               width: "100%",
               maxWidth: 480,
               p: 2,
-              border: "1px solid rgba(255,255,255,0.1)",
+              border: (theme: Theme) => `1px solid ${alpha(theme.palette.text.primary, 0.1)}`,
               borderRadius: 2,
               bgcolor: "background.paper",
             }}
@@ -2151,7 +2153,7 @@ const Recording: React.FC = () => {
             width: "100%",
             maxWidth: 480,
             p: 2,
-            border: "1px solid rgba(255,255,255,0.1)",
+            border: (theme: Theme) => `1px solid ${alpha(theme.palette.text.primary, 0.1)}`,
             borderRadius: 2,
             bgcolor: "background.paper",
           }}
@@ -2423,7 +2425,7 @@ const Recording: React.FC = () => {
         sx={{
           px: 3,
           py: 1.5,
-          borderBottom: "1px solid rgba(255,255,255,0.06)",
+          borderBottom: (theme: Theme) => `1px solid ${alpha(theme.palette.text.primary, 0.06)}`,
         }}
       >
         <Stack direction="row" spacing={1.5} alignItems="center">
@@ -2496,7 +2498,7 @@ const Recording: React.FC = () => {
                 <TextField
                   {...params}
                   sx={{
-                    bgcolor: "rgba(255,255,255,0.05)",
+                    bgcolor: (theme: Theme) => alpha(theme.palette.text.primary, 0.05),
                     "& .MuiInputBase-root": {
                       height: 32,
                       fontSize: "0.8rem",
@@ -2732,7 +2734,7 @@ const Recording: React.FC = () => {
           justifyContent: "center",
           py: 3,
           px: 3,
-          borderBottom: "1px solid rgba(255,255,255,0.06)",
+          borderBottom: (theme: Theme) => `1px solid ${alpha(theme.palette.text.primary, 0.06)}`,
         }}
       >
         <Waveform active={!isPaused} />
@@ -2747,7 +2749,7 @@ const Recording: React.FC = () => {
             overflow: "hidden",
             display: "flex",
             flexDirection: "column",
-            borderRight: "1px solid rgba(255,255,255,0.06)",
+            borderRight: (theme: Theme) => `1px solid ${alpha(theme.palette.text.primary, 0.06)}`,
           }}
         >
           <Stack
@@ -2805,8 +2807,8 @@ const Recording: React.FC = () => {
             <Box
               sx={{
                 flexShrink: 0,
-                borderBottom: "1px solid rgba(255,255,255,0.1)",
-                bgcolor: "rgba(255,255,255,0.06)",
+                borderBottom: (theme: Theme) => `1px solid ${alpha(theme.palette.text.primary, 0.1)}`,
+                bgcolor: (theme: Theme) => alpha(theme.palette.text.primary, 0.06),
                 px: 3,
                 py: 1.25,
                 display: "flex",
@@ -2926,8 +2928,8 @@ const Recording: React.FC = () => {
             sx={{
               px: 2,
               py: 1.5,
-              borderBottom: "1px solid rgba(255,255,255,0.06)",
-              bgcolor: "rgba(255,255,255,0.02)",
+              borderBottom: (theme: Theme) => `1px solid ${alpha(theme.palette.text.primary, 0.06)}`,
+              bgcolor: (theme: Theme) => alpha(theme.palette.text.primary, 0.02),
             }}
           >
             <BotIcon fontSize="small" color="primary" />
@@ -2949,7 +2951,7 @@ const Recording: React.FC = () => {
             sx={{
               px: 2,
               py: 1.5,
-              borderBottom: "1px solid rgba(255,255,255,0.06)",
+              borderBottom: (theme: Theme) => `1px solid ${alpha(theme.palette.text.primary, 0.06)}`,
             }}
           >
             <FormControl fullWidth size="small" sx={{ mt: 1 }}>
@@ -3000,7 +3002,7 @@ const Recording: React.FC = () => {
             </FormControl>
           </Box>
 
-          <Box sx={{ borderBottom: 1, borderColor: "rgba(255,255,255,0.06)" }}>
+          <Box sx={{ borderBottom: 1, borderColor: (theme: Theme) => alpha(theme.palette.text.primary, 0.06) }}>
             <Tabs
               value={activeTab}
               onChange={(_, newValue) => setActiveTab(newValue)}
@@ -3158,7 +3160,7 @@ const Recording: React.FC = () => {
                 )}
               </Box>
 
-              <Box sx={{ p: 2, borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+              <Box sx={{ p: 2, borderTop: (theme: Theme) => `1px solid ${alpha(theme.palette.text.primary, 0.06)}` }}>
                 {(chatDocuments.length > 0 ||
                   chatAttaching ||
                   chatAttachError) && (
@@ -3292,7 +3294,7 @@ const Recording: React.FC = () => {
           sx={{
             px: 3,
             py: 1.5,
-            borderTop: "1px solid rgba(255,255,255,0.06)",
+            borderTop: (theme: Theme) => `1px solid ${alpha(theme.palette.text.primary, 0.06)}`,
             flexWrap: "wrap",
           }}
         >

@@ -1,4 +1,6 @@
 import React, { useEffect, useState } from "react";
+import type { Theme } from "@mui/material/styles";
+import { alpha } from "@mui/material/styles";
 import {
   Box,
   Typography,
@@ -196,8 +198,8 @@ const Debug: React.FC = () => {
             sx={{
               p: 3,
               borderRadius: 2,
-              border: "1px solid rgba(255,255,255,0.08)",
-              bgcolor: "rgba(255,255,255,0.02)",
+              border: (theme: Theme) => `1px solid ${alpha(theme.palette.text.primary, 0.08)}`,
+              bgcolor: (theme: Theme) => alpha(theme.palette.text.primary, 0.02),
             }}
           >
             <Typography
@@ -258,8 +260,8 @@ const Debug: React.FC = () => {
             sx={{
               p: 3,
               borderRadius: 2,
-              border: "1px solid rgba(255,255,255,0.08)",
-              bgcolor: "rgba(255,255,255,0.02)",
+              border: (theme: Theme) => `1px solid ${alpha(theme.palette.text.primary, 0.08)}`,
+              bgcolor: (theme: Theme) => alpha(theme.palette.text.primary, 0.02),
             }}
           >
             <Typography
@@ -373,8 +375,8 @@ const Debug: React.FC = () => {
             sx={{
               p: 3,
               borderRadius: 2,
-              border: "1px solid rgba(255,255,255,0.08)",
-              bgcolor: "rgba(255,255,255,0.02)",
+              border: (theme: Theme) => `1px solid ${alpha(theme.palette.text.primary, 0.08)}`,
+              bgcolor: (theme: Theme) => alpha(theme.palette.text.primary, 0.02),
               display: "flex",
               flexDirection: "column",
             }}
@@ -440,7 +442,7 @@ const Debug: React.FC = () => {
                     key={idx}
                     sx={{
                       mb: 1,
-                      borderBottom: "1px solid rgba(255,255,255,0.05)",
+                      borderBottom: (theme: Theme) => `1px solid ${alpha(theme.palette.text.primary, 0.05)}`,
                       pb: 0.5,
                     }}
                   >
@@ -477,8 +479,8 @@ const Debug: React.FC = () => {
             sx={{
               p: 3,
               borderRadius: 2,
-              border: "1px solid rgba(255,255,255,0.08)",
-              bgcolor: "rgba(255,255,255,0.02)",
+              border: (theme: Theme) => `1px solid ${alpha(theme.palette.text.primary, 0.08)}`,
+              bgcolor: (theme: Theme) => alpha(theme.palette.text.primary, 0.02),
             }}
           >
             <Typography

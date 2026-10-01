@@ -176,7 +176,7 @@ export const FloatingAssistant: React.FC = () => {
           m.id === aiTempId
             ? {
                 ...m,
-                content: `**⚠️ Error:**\n\n${error?.message || "Failed to generate AI response."}`,
+                content: `**Error:**\n\n${error?.message || "Failed to generate AI response."}`,
               }
             : m,
         ),

@@ -1,5 +1,5 @@
 import React from "react";
-import { Box, Grid, Paper, Typography, useTheme } from "@mui/material";
+import { Box, Grid, Paper, Typography, useTheme, alpha } from "@mui/material";
 import { AutoAwesome as AutoAwesomeIcon } from "@mui/icons-material";
 
 export interface ChatSuggestion {
@@ -42,8 +42,8 @@ const ChatEmptyState: React.FC<ChatEmptyStateProps> = ({
         sx={{
           width: 64,
           height: 64,
-          borderRadius: "20px",
-          bgcolor: "rgba(67,97,238,0.15)",
+          borderRadius: "14px",
+          bgcolor: alpha(theme.palette.primary.main, 0.12),
           color: "primary.main",
           display: "flex",
           alignItems: "center",
@@ -73,11 +73,9 @@ const ChatEmptyState: React.FC<ChatEmptyStateProps> = ({
                   bgcolor: "background.paper",
                   border: `1px solid ${theme.palette.divider}`,
                   borderRadius: 3,
-                  transition: "all 0.2s ease",
+                  transition: "border-color 0.15s ease",
                   "&:hover": {
                     borderColor: "primary.main",
-                    transform: "translateY(-2px)",
-                    boxShadow: theme.shadows[2],
                   },
                 }}
               >

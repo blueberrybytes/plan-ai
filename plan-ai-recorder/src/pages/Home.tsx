@@ -1,4 +1,6 @@
 import React, { useEffect, useState, useCallback } from "react";
+import type { Theme } from "@mui/material/styles";
+import { alpha } from "@mui/material/styles";
 import {
   Alert,
   Avatar,
@@ -754,7 +756,7 @@ const Home: React.FC = () => {
           display: "flex",
           flex: 1,
           overflow: "hidden",
-          borderTop: "1px solid rgba(255,255,255,0.06)",
+          borderTop: (theme: Theme) => `1px solid ${alpha(theme.palette.text.primary, 0.06)}`,
         }}
       >
         {/* ── LEFT: Transcripts list ────────────────────────────── */}
@@ -762,7 +764,7 @@ const Home: React.FC = () => {
           sx={{
             width: 260,
             flexShrink: 0,
-            borderRight: "1px solid rgba(255,255,255,0.06)",
+            borderRight: (theme: Theme) => `1px solid ${alpha(theme.palette.text.primary, 0.06)}`,
             display: "flex",
             flexDirection: "column",
           }}
@@ -885,9 +887,9 @@ const Home: React.FC = () => {
                 "&::-webkit-scrollbar": { width: 6 },
                 "&::-webkit-scrollbar-track": { bgcolor: "transparent" },
                 "&::-webkit-scrollbar-thumb": {
-                  bgcolor: "rgba(255,255,255,0.1)",
+                  bgcolor: (theme: Theme) => alpha(theme.palette.text.primary, 0.1),
                   borderRadius: 3,
-                  "&:hover": { bgcolor: "rgba(255,255,255,0.2)" },
+                  "&:hover": { bgcolor: (theme: Theme) => alpha(theme.palette.text.primary, 0.2) },
                 },
               }}
             >
@@ -964,12 +966,12 @@ const Home: React.FC = () => {
                                 </Typography>
                               )}
                               {t.durationSeconds && (
-                                <Typography variant="caption" sx={{ border: '1px solid rgba(255,255,255,0.2)', px: 0.5, py: 0.2, borderRadius: 1, fontSize: '0.65rem', color: "text.secondary" }}>
+                                <Typography variant="caption" sx={{ border: (theme: Theme) => `1px solid ${alpha(theme.palette.text.primary, 0.2)}`, px: 0.5, py: 0.2, borderRadius: 1, fontSize: '0.65rem', color: "text.secondary" }}>
                                   ⏱️ {Math.floor(t.durationSeconds / 60)}m {t.durationSeconds % 60}s
                                 </Typography>
                               )}
                               {t.speakerCount ? (
-                                <Typography variant="caption" sx={{ border: '1px solid rgba(255,255,255,0.2)', px: 0.5, py: 0.2, borderRadius: 1, fontSize: '0.65rem', color: "text.secondary" }}>
+                                <Typography variant="caption" sx={{ border: (theme: Theme) => `1px solid ${alpha(theme.palette.text.primary, 0.2)}`, px: 0.5, py: 0.2, borderRadius: 1, fontSize: '0.65rem', color: "text.secondary" }}>
                                   🎙️ {t.speakerCount}
                                 </Typography>
                               ) : null}
@@ -1162,7 +1164,7 @@ const Home: React.FC = () => {
               }}
               sx={{
                 color: "text.secondary",
-                borderColor: "rgba(255,255,255,0.1)",
+                borderColor: (theme: Theme) => alpha(theme.palette.text.primary, 0.1),
                 textTransform: "none",
                 fontSize: "0.75rem",
                 "&:hover": {
@@ -1192,7 +1194,7 @@ const Home: React.FC = () => {
                 p: 0.5,
                 borderRadius: 1,
                 minWidth: 0,
-                "&:hover": { bgcolor: "rgba(255,255,255,0.05)" },
+                "&:hover": { bgcolor: (theme: Theme) => alpha(theme.palette.text.primary, 0.05) },
               }}
             >
               <Avatar
@@ -1339,7 +1341,7 @@ const Home: React.FC = () => {
               p: 2,
               borderRadius: 2,
               bgcolor: "background.paper",
-              border: "1px solid rgba(255,255,255,0.1)",
+              border: (theme: Theme) => `1px solid ${alpha(theme.palette.text.primary, 0.1)}`,
               mb: 4,
             }}
           >
@@ -1433,7 +1435,7 @@ const Home: React.FC = () => {
                   {...params}
                   label="Spoken Language"
                   sx={{
-                    bgcolor: "rgba(255,255,255,0.05)",
+                    bgcolor: (theme: Theme) => alpha(theme.palette.text.primary, 0.05),
                   }}
                 />
               )}
@@ -1443,7 +1445,7 @@ const Home: React.FC = () => {
               select
               fullWidth
               size="small"
-              sx={{ mt: 2, bgcolor: "rgba(255,255,255,0.05)" }}
+              sx={{ mt: 2, bgcolor: (theme: Theme) => alpha(theme.palette.text.primary, 0.05) }}
               label="Project (Optional)"
               value={selectedProjectId || "none"}
               onChange={(e) =>

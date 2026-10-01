@@ -525,13 +525,13 @@ const ProjectTranscriptDetail: React.FC = () => {
                     <Stack spacing={2}>
                       {(transcript.metadata as any)?.processingStatus === "EXTRACTING_TASKS" && (
                         <Alert severity="info" sx={{ mb: 2 }}>
-                          🤖 AI is currently extracting tasks from this transcript in the
+                          AI is currently extracting tasks from this transcript in the
                           background. They will appear here shortly!
                         </Alert>
                       )}
                       {(transcript.metadata as any)?.processingStatus === "REFINING_TASKS" && (
                         <Alert severity="info" sx={{ mb: 2 }}>
-                          ✨ Enriching tickets with codebase context… Tasks are usable now and will
+                          Enriching tickets with codebase context… Tasks are usable now and will
                           be updated shortly.
                         </Alert>
                       )}
@@ -550,7 +550,7 @@ const ProjectTranscriptDetail: React.FC = () => {
                             (transcript.metadata as Record<string, unknown>)?.aiGraphTrace,
                           ) && (
                             <Tab
-                              label="✨ AI Context Graph"
+                              label="AI Context Graph"
                               value="context-graph"
                               sx={{ fontWeight: 600, color: "primary.main" }}
                             />

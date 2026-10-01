@@ -215,18 +215,6 @@ export default function LandingPage() {
           pt: { xs: 10, md: 16 },
           pb: { xs: 8, md: 14 },
           overflow: "hidden",
-          "&::before": {
-            content: '""',
-            position: "absolute",
-            top: "-30%",
-            left: "50%",
-            transform: "translateX(-50%)",
-            width: "900px",
-            height: "900px",
-            borderRadius: "50%",
-            background: `radial-gradient(ellipse at center, ${alpha(theme.palette.primary.main, 0.18)} 0%, ${alpha(theme.palette.secondary.main, 0.1)} 40%, transparent 70%)`,
-            pointerEvents: "none",
-          },
         }}
       >
         <Container maxWidth="md">
@@ -237,9 +225,9 @@ export default function LandingPage() {
               size="small"
               sx={{
                 mb: 3,
-                bgcolor: alpha(theme.palette.secondary.main, 0.12),
-                color: theme.palette.secondary.main,
-                border: `1px solid ${alpha(theme.palette.secondary.main, 0.25)}`,
+                bgcolor: alpha(theme.palette.primary.main, 0.12),
+                color: theme.palette.primary.main,
+                border: `1px solid ${alpha(theme.palette.primary.main, 0.25)}`,
                 fontWeight: 600,
                 fontSize: "0.75rem",
               }}
@@ -252,10 +240,7 @@ export default function LandingPage() {
                 letterSpacing: "-0.03em",
                 lineHeight: 1.1,
                 mb: 3,
-                background: `linear-gradient(135deg, ${theme.palette.text.primary} 0%, ${theme.palette.primary.main} 100%)`,
-                WebkitBackgroundClip: "text",
-                WebkitTextFillColor: "transparent",
-                backgroundClip: "text",
+                color: "text.primary",
               }}
             >
               {t("landingPage.hero.title")}
@@ -285,13 +270,6 @@ export default function LandingPage() {
                   py: 1.5,
                   fontSize: "1rem",
                   fontWeight: 700,
-                  background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)`,
-                  boxShadow: `0 0 32px ${alpha(theme.palette.primary.main, 0.4)}`,
-                  "&:hover": {
-                    background: `linear-gradient(135deg, ${theme.palette.primary.light} 0%, ${theme.palette.secondary.light} 100%)`,
-                    boxShadow: `0 0 48px ${alpha(theme.palette.primary.main, 0.6)}`,
-                    transform: "translateY(-2px)",
-                  },
                 }}
               >
                 {t("landingPage.hero.cta")}
@@ -311,10 +289,10 @@ export default function LandingPage() {
               sx={{
                 mt: { xs: 6, md: 8 },
                 position: "relative",
-                borderRadius: "20px",
+                borderRadius: "14px",
                 overflow: "hidden",
-                boxShadow: `0 24px 64px ${alpha(theme.palette.primary.main, 0.2)}`,
-                border: `1px solid ${alpha(theme.palette.primary.main, 0.2)}`,
+                boxShadow: "0 24px 64px rgba(0, 0, 0, 0.35)",
+                border: `1px solid ${theme.palette.divider}`,
                 bgcolor: "background.paper",
                 mx: "auto",
                 maxWidth: "800px",
@@ -370,8 +348,7 @@ export default function LandingPage() {
                   startIcon={<AppleIcon />}
                   sx={{
                     color: "text.primary",
-                    bgcolor: alpha(theme.palette.background.paper, 0.5),
-                    backdropFilter: "blur(10px)",
+                    bgcolor: "background.paper",
                     border: `1px solid ${theme.palette.divider}`,
                     borderRadius: "12px",
                     px: 3,
@@ -379,7 +356,6 @@ export default function LandingPage() {
                     "&:hover": {
                       bgcolor: "background.paper",
                       borderColor: "primary.main",
-                      transform: "translateY(-2px)",
                     },
                     transition: "all 0.2s ease-in-out",
                   }}
@@ -397,8 +373,7 @@ export default function LandingPage() {
                   startIcon={<WindowIcon />}
                   sx={{
                     color: "text.primary",
-                    bgcolor: alpha(theme.palette.background.paper, 0.5),
-                    backdropFilter: "blur(10px)",
+                    bgcolor: "background.paper",
                     border: `1px solid ${theme.palette.divider}`,
                     borderRadius: "12px",
                     px: 3,
@@ -406,7 +381,6 @@ export default function LandingPage() {
                     "&:hover": {
                       bgcolor: "background.paper",
                       borderColor: "primary.main",
-                      transform: "translateY(-2px)",
                     },
                     transition: "all 0.2s ease-in-out",
                   }}
@@ -424,8 +398,7 @@ export default function LandingPage() {
                   startIcon={<AndroidIcon sx={{ color: "#3DDC84" }} />}
                   sx={{
                     color: "text.primary",
-                    bgcolor: alpha(theme.palette.background.paper, 0.5),
-                    backdropFilter: "blur(10px)",
+                    bgcolor: "background.paper",
                     border: `1px solid ${theme.palette.divider}`,
                     borderRadius: "12px",
                     px: 3,
@@ -433,7 +406,6 @@ export default function LandingPage() {
                     "&:hover": {
                       bgcolor: "background.paper",
                       borderColor: "#3DDC84",
-                      transform: "translateY(-2px)",
                     },
                     transition: "all 0.2s ease-in-out",
                   }}
@@ -451,8 +423,7 @@ export default function LandingPage() {
                   startIcon={<AppleIcon />}
                   sx={{
                     color: "text.primary",
-                    bgcolor: alpha(theme.palette.background.paper, 0.5),
-                    backdropFilter: "blur(10px)",
+                    bgcolor: "background.paper",
                     border: `1px solid ${theme.palette.divider}`,
                     borderRadius: "12px",
                     px: 3,
@@ -460,7 +431,6 @@ export default function LandingPage() {
                     "&:hover": {
                       bgcolor: "background.paper",
                       borderColor: "primary.main",
-                      transform: "translateY(-2px)",
                     },
                     transition: "all 0.2s ease-in-out",
                   }}
@@ -490,10 +460,7 @@ export default function LandingPage() {
                   sx={{
                     fontSize: { xs: "2rem", md: "2.75rem" },
                     fontWeight: 800,
-                    background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
-                    WebkitBackgroundClip: "text",
-                    WebkitTextFillColor: "transparent",
-                    backgroundClip: "text",
+                    color: "primary.main",
                     lineHeight: 1,
                     mb: 0.5,
                   }}
@@ -537,14 +504,11 @@ export default function LandingPage() {
                     borderRadius: "16px",
                     border: `1px solid ${theme.palette.divider}`,
                     bgcolor: "background.paper",
-                    backdropFilter: "blur(8px)",
                     transition: "all 0.3s ease",
                     cursor: "default",
                     "&:hover": {
                       borderColor: `${feature.color}40`,
                       bgcolor: "background.default",
-                      transform: "translateY(-4px)",
-                      boxShadow: `0 16px 40px rgba(0,0,0,0.1), 0 0 0 1px ${feature.color}25`,
                     },
                   }}
                 >
@@ -605,7 +569,7 @@ export default function LandingPage() {
                       width: 56,
                       height: 56,
                       borderRadius: "50%",
-                      background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+                      bgcolor: "primary.main",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
@@ -614,7 +578,6 @@ export default function LandingPage() {
                       fontSize: "1.25rem",
                       fontWeight: 800,
                       color: "#fff",
-                      boxShadow: `0 0 24px ${alpha(theme.palette.primary.main, 0.4)}`,
                     }}
                   >
                     {step}
@@ -637,24 +600,14 @@ export default function LandingPage() {
 
       {/* CTA Section */}
       <Box sx={{ py: { xs: 10, md: 16 }, position: "relative", overflow: "hidden" }}>
-        <Box
-          sx={{
-            position: "absolute",
-            inset: 0,
-            background: `radial-gradient(ellipse at 50% 50%, ${alpha(theme.palette.primary.main, 0.12)} 0%, transparent 70%)`,
-            pointerEvents: "none",
-          }}
-        />
         <Container maxWidth="md">
           <Box
             sx={{
               textAlign: "center",
               p: { xs: 4, md: 7 },
-              borderRadius: "24px",
-              border: `1px solid ${alpha(theme.palette.primary.main, 0.25)}`,
-              bgcolor: alpha(theme.palette.background.paper, 0.8),
-              backdropFilter: "blur(16px)",
-              boxShadow: `0 0 80px ${alpha(theme.palette.primary.main, 0.12)}`,
+              borderRadius: "16px",
+              border: `1px solid ${theme.palette.divider}`,
+              bgcolor: "background.paper",
             }}
           >
             <GroupsIcon sx={{ fontSize: 44, color: theme.palette.secondary.main, mb: 2 }} />
@@ -701,13 +654,6 @@ export default function LandingPage() {
                 py: 1.75,
                 fontSize: "1.05rem",
                 fontWeight: 700,
-                background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)`,
-                boxShadow: `0 0 32px ${alpha(theme.palette.primary.main, 0.45)}`,
-                "&:hover": {
-                  background: `linear-gradient(135deg, ${theme.palette.primary.light} 0%, ${theme.palette.secondary.light} 100%)`,
-                  boxShadow: `0 0 48px ${alpha(theme.palette.primary.main, 0.65)}`,
-                  transform: "translateY(-2px)",
-                },
               }}
             >
               {t("landingPage.cta.button")}

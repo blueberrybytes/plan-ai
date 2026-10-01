@@ -202,12 +202,12 @@
       "themeDescription": "Personalize how Plan AI looks for you."
     },
     "themes": {
-      "blueberry": "Blueberry (Default)",
-      "crimson": "Crimson Executive",
-      "emerald": "Emerald Growth",
-      "hacker": "Terminal Hacker",
-      "cloud": "Cloud Workspace (Light)",
-      "sunrise": "Sunrise Ivory (Light)",
+      "blueberry": "Blueberry (default)",
+      "graphite": "Graphite",
+      "forest": "Forest",
+      "garnet": "Garnet",
+      "cloud": "Cloud (light)",
+      "sand": "Sand (light)",
       "custom": "Custom"
     },
     "info": {

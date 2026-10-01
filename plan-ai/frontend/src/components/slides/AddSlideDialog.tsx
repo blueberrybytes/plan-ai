@@ -103,7 +103,7 @@ const AddSlideDialog: React.FC<AddSlideDialogProps> = ({
             helperText="Select 'AI Decides' to automatically pick the best type for your prompt."
           >
             <MenuItem value="auto">
-              <Typography fontWeight="bold">✨ AI Decides (Recommended)</Typography>
+              <Typography fontWeight="bold">AI Decides (Recommended)</Typography>
             </MenuItem>
             {SLIDE_TYPES.map((type) => (
               <MenuItem key={type.key} value={type.key}>

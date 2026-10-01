@@ -1,10 +1,13 @@
 import React, { useEffect, useState } from "react";
+import type { Theme } from "@mui/material/styles";
+import { alpha } from "@mui/material/styles";
 import {
   Box,
   Typography,
   Avatar,
   IconButton,
   Button,
+  ButtonBase,
   Stack,
   Divider,
   CircularProgress,
@@ -24,6 +27,8 @@ import {
   Info as InfoIcon,
   Fingerprint as FingerprintIcon,
   BugReport as BugIcon,
+  Palette as PaletteIcon,
+  Check as CheckIcon,
 } from "@mui/icons-material";
 import AppleIcon from "@mui/icons-material/Apple";
 import GoogleIcon from "@mui/icons-material/Google";
@@ -32,10 +37,13 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 import pkg from "../../package.json";
 import { WorkspaceMemberResponse } from "../services/planAiApi";
+import { useThemePreset } from "../hooks/ThemePresetProvider";
+import { THEME_PRESETS } from "../theme";
 
 const Profile: React.FC = () => {
   const navigate = useNavigate();
   const { user, dbUser, signOut, api, token } = useAuth();
+  const { themeId, setThemeId } = useThemePreset();
   // Diagnostics and crash tools: development builds, or platform admins.
   const canUseDebugPanel = import.meta.env.DEV || dbUser?.role === "ADMIN";
 
@@ -174,12 +182,12 @@ const Profile: React.FC = () => {
               width: "100%",
               maxWidth: 400,
               p: { xs: 2.5, md: 3 },
-              border: "1px solid rgba(255,255,255,0.08)",
+              border: (theme: Theme) => `1px solid ${alpha(theme.palette.text.primary, 0.08)}`,
               borderRadius: 3,
               display: "flex",
               flexDirection: "column",
               alignItems: "center",
-              bgcolor: "rgba(255,255,255,0.02)",
+              bgcolor: (theme: Theme) => alpha(theme.palette.text.primary, 0.02),
             }}
           >
             <Avatar
@@ -342,7 +350,7 @@ const Profile: React.FC = () => {
                           display: "flex",
                           alignItems: "center",
                           gap: 0.5,
-                          bgcolor: "rgba(255,255,255,0.05)",
+                          bgcolor: (theme: Theme) => alpha(theme.palette.text.primary, 0.05),
                           px: 1,
                           py: 0.5,
                           borderRadius: 1,
@@ -358,7 +366,7 @@ const Profile: React.FC = () => {
                           display: "flex",
                           alignItems: "center",
                           gap: 0.5,
-                          bgcolor: "rgba(255,255,255,0.05)",
+                          bgcolor: (theme: Theme) => alpha(theme.palette.text.primary, 0.05),
                           px: 1,
                           py: 0.5,
                           borderRadius: 1,
@@ -374,7 +382,7 @@ const Profile: React.FC = () => {
                           display: "flex",
                           alignItems: "center",
                           gap: 0.5,
-                          bgcolor: "rgba(255,255,255,0.05)",
+                          bgcolor: (theme: Theme) => alpha(theme.palette.text.primary, 0.05),
                           px: 1,
                           py: 0.5,
                           borderRadius: 1,
@@ -392,7 +400,7 @@ const Profile: React.FC = () => {
                             display: "flex",
                             alignItems: "center",
                             gap: 0.5,
-                            bgcolor: "rgba(255,255,255,0.05)",
+                            bgcolor: (theme: Theme) => alpha(theme.palette.text.primary, 0.05),
                             px: 1,
                             py: 0.5,
                             borderRadius: 1,
@@ -409,6 +417,60 @@ const Profile: React.FC = () => {
               </Box>
             </Stack>
 
+            <Divider sx={{ width: "100%", mb: 2.5, opacity: 0.5 }} />
+
+            <Box sx={{ width: "100%", mb: 3 }}>
+              <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 1.5 }}>
+                <PaletteIcon color="action" />
+                <Typography variant="caption" color="text.secondary">
+                  Color Theme
+                </Typography>
+              </Box>
+              <Box sx={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 1 }}>
+                {THEME_PRESETS.map((preset) => {
+                  const selected = preset.id === themeId;
+                  return (
+                    <ButtonBase
+                      key={preset.id}
+                      onClick={() => setThemeId(preset.id)}
+                      aria-pressed={selected}
+                      sx={{
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "stretch",
+                        borderRadius: 2,
+                        border: "2px solid",
+                        borderColor: selected ? "primary.main" : "divider",
+                        overflow: "hidden",
+                      }}
+                    >
+                      {/* Preview: the preset background with its accent color */}
+                      <Box
+                        sx={{
+                          height: 36,
+                          bgcolor: preset.background,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                        }}
+                      >
+                        {selected ? (
+                          <CheckIcon sx={{ fontSize: 18, color: preset.primary }} />
+                        ) : (
+                          <Box
+                            sx={{ width: 22, height: 8, borderRadius: 4, bgcolor: preset.primary }}
+                          />
+                        )}
+                      </Box>
+                      <Typography variant="caption" sx={{ py: 0.5, textAlign: "center" }}>
+                        {preset.name}
+                      </Typography>
+                    </ButtonBase>
+                  );
+                })}
+              </Box>
+            </Box>
+
             {canUseDebugPanel && (
               <Button
                 variant="outlined"
@@ -420,7 +482,7 @@ const Profile: React.FC = () => {
                   mt: "auto",
                   py: 1.2,
                   mb: 1.5,
-                  borderColor: "rgba(255,255,255,0.2)",
+                  borderColor: (theme: Theme) => alpha(theme.palette.text.primary, 0.2),
                   color: "text.secondary",
                 }}
               >

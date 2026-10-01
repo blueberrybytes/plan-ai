@@ -332,7 +332,7 @@ const ChatMessageItemInner: React.FC<ChatMessageItemProps> = ({
                 color="primary.main"
                 sx={{ display: "block", mb: 1, fontWeight: 600 }}
               >
-                ✨ AI Graph Trace
+                AI Graph Trace
               </Typography>
               <ContextGraph height={250} nodes={aiGraphTrace.nodes} links={aiGraphTrace.links} />
             </Box>

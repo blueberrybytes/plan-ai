@@ -212,21 +212,6 @@ const Dashboard: React.FC = () => {
           position: "relative",
         }}
       >
-        {/* Background glow effects for premium feel */}
-        <Box
-          sx={{
-            position: "absolute",
-            top: 0,
-            left: 0,
-            width: "100%",
-            height: 300,
-            background:
-              "radial-gradient(ellipse at 50% -50%, rgba(67,97,238,0.1) 0%, rgba(0,0,0,0) 80%)",
-            pointerEvents: "none",
-            zIndex: 0,
-          }}
-        />
-
         {/* Header */}
         <Box
           sx={{ mb: 6, position: "relative", zIndex: 1, textAlign: { xs: "center", md: "left" } }}
@@ -237,9 +222,6 @@ const Dashboard: React.FC = () => {
               fontWeight: 800,
               mb: 1,
               letterSpacing: "-0.02em",
-              background: "linear-gradient(90deg, #4361EE 0%, #a78bfa 100%)",
-              WebkitBackgroundClip: "text",
-              WebkitTextFillColor: "transparent",
             }}
           >
             {greeting}
@@ -250,7 +232,7 @@ const Dashboard: React.FC = () => {
           </Typography>
         </Box>
 
-        {/* Quick Actions (Premium Glassmorphism Style) */}
+        {/* Quick Actions */}
         <Typography variant="h5" sx={{ fontWeight: 700, mb: 3, position: "relative", zIndex: 1 }}>
           {t("home.quickActions.heading")}
         </Typography>
@@ -265,27 +247,20 @@ const Dashboard: React.FC = () => {
                   display: "block",
                   textDecoration: "none",
                   height: "100%",
-                  bgcolor: alpha(action.color, 0.05),
-                  border: `1px solid ${alpha(action.color, 0.1)}`,
-                  borderRadius: 4,
-                  backdropFilter: "blur(10px)",
-                  transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+                  transition: "border-color 0.15s ease",
                   "&:hover": {
-                    bgcolor: alpha(action.color, 0.1),
-                    borderColor: alpha(action.color, 0.3),
-                    transform: "translateY(-4px)",
-                    boxShadow: `0 12px 30px ${alpha(action.color, 0.15)}, 0 4px 10px ${alpha(action.color, 0.1)}`,
+                    borderColor: alpha(action.color, 0.5),
                   },
                 }}
               >
-                <CardContent sx={{ p: 4 }}>
+                <CardContent sx={{ p: 3 }}>
                   <Box
                     sx={{
-                      width: 56,
-                      height: 56,
-                      borderRadius: "16px",
-                      bgcolor: alpha(action.color, 0.15),
-                      mb: 3,
+                      width: 44,
+                      height: 44,
+                      borderRadius: "10px",
+                      bgcolor: alpha(action.color, 0.12),
+                      mb: 2.5,
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
@@ -322,8 +297,8 @@ const Dashboard: React.FC = () => {
                   border: "1px solid",
                   borderColor: "divider",
                   textDecoration: "none",
-                  transition: "all 0.2s ease",
-                  "&:hover": { borderColor: alpha(stat.color, 0.5), transform: "scale(1.02)" },
+                  transition: "border-color 0.15s ease",
+                  "&:hover": { borderColor: alpha(stat.color, 0.5) },
                 }}
               >
                 <Typography
@@ -394,7 +369,6 @@ const Dashboard: React.FC = () => {
                             borderRadius: 2,
                             "&:hover": {
                               borderColor: alpha("#0ea5e9", 0.4),
-                              transform: "translateY(-2px)",
                             },
                           }}
                         >
@@ -462,7 +436,6 @@ const Dashboard: React.FC = () => {
                             borderRadius: 2,
                             "&:hover": {
                               borderColor: alpha("#EC4899", 0.4),
-                              transform: "translateY(-2px)",
                             },
                           }}
                         >
@@ -532,7 +505,6 @@ const Dashboard: React.FC = () => {
                             borderRadius: 2,
                             "&:hover": {
                               borderColor: alpha("#a78bfa", 0.4),
-                              transform: "translateY(-2px)",
                             },
                           }}
                         >

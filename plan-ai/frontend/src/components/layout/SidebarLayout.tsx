@@ -272,9 +272,9 @@ const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children, fullHeight = fa
             width: isCollapsed ? 64 : 200,
             flexShrink: 0,
             bgcolor: "background.paper",
-            borderRadius: "20px",
+            borderRadius: "14px",
             border: "1px solid",
-            borderColor: "rgba(255, 255, 255, 0.05)",
+            borderColor: "divider",
             display: "flex",
             flexDirection: "column",
             py: 3,
@@ -315,7 +315,7 @@ const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children, fullHeight = fa
                 sx={{
                   color: "text.secondary",
                   flexShrink: 0,
-                  "&:hover": { bgcolor: "rgba(255, 255, 255, 0.08)" },
+                  "&:hover": { bgcolor: "action.selected" },
                 }}
               >
                 {isCollapsed ? <ChevronRightIcon /> : <ChevronLeftIcon />}
@@ -361,7 +361,7 @@ const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children, fullHeight = fa
                   py: 0.5,
                   transition: "background-color 0.2s",
                   "&:hover": {
-                    bgcolor: "rgba(255, 255, 255, 0.04)",
+                    bgcolor: "action.hover",
                   },
                 }}
               >
@@ -415,7 +415,7 @@ const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children, fullHeight = fa
               overflowX: "hidden",
               "&::-webkit-scrollbar": { width: 4 },
               "&::-webkit-scrollbar-thumb": {
-                backgroundColor: "rgba(255, 255, 255, 0.1)",
+                backgroundColor: "divider",
                 borderRadius: 4,
               },
             }}
@@ -434,9 +434,9 @@ const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children, fullHeight = fa
                     justifyContent: isCollapsed ? "center" : "flex-start",
                     padding: isCollapsed ? "10px" : "10px 16px",
                     "&.Mui-selected": {
-                      bgcolor: alpha("#4361EE", 0.12),
+                      bgcolor: (theme) => alpha(theme.palette.primary.main, 0.12),
                       color: "primary.light",
-                      border: "1px solid rgba(67, 97, 238, 0.2)",
+                      border: (theme) => `1px solid ${alpha(theme.palette.primary.main, 0.2)}`,
                       "& .MuiListItemIcon-root": {
                         color: "primary.light",
                       },
@@ -449,11 +449,10 @@ const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children, fullHeight = fa
                         width: "3px",
                         bgcolor: "primary.main",
                         borderRadius: "0 4px 4px 0",
-                        boxShadow: "0 0 10px rgba(67, 97, 238, 0.8)",
                       },
                     },
                     "&:hover": {
-                      bgcolor: "rgba(255, 255, 255, 0.04)",
+                      bgcolor: "action.hover",
                     },
                   }}
                 >
@@ -501,9 +500,9 @@ const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children, fullHeight = fa
                     justifyContent: isCollapsed ? "center" : "flex-start",
                     padding: isCollapsed ? "10px" : "10px 16px",
                     "&.Mui-selected": {
-                      bgcolor: alpha("#4361EE", 0.12),
+                      bgcolor: (theme) => alpha(theme.palette.primary.main, 0.12),
                       color: "primary.light",
-                      border: "1px solid rgba(67, 97, 238, 0.2)",
+                      border: (theme) => `1px solid ${alpha(theme.palette.primary.main, 0.2)}`,
                       "& .MuiListItemIcon-root": {
                         color: "primary.light",
                       },
@@ -516,11 +515,10 @@ const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children, fullHeight = fa
                         width: "3px",
                         bgcolor: "primary.main",
                         borderRadius: "0 4px 4px 0",
-                        boxShadow: "0 0 10px rgba(67, 97, 238, 0.8)",
                       },
                     },
                     "&:hover": {
-                      bgcolor: "rgba(255, 255, 255, 0.04)",
+                      bgcolor: "action.hover",
                     },
                   }}
                 >
@@ -565,9 +563,9 @@ const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children, fullHeight = fa
                 justifyContent: isCollapsed ? "center" : "flex-start",
                 padding: isCollapsed ? "10px" : "10px 16px",
                 "&.Mui-selected": {
-                  bgcolor: alpha("#4361EE", 0.12),
+                  bgcolor: (theme) => alpha(theme.palette.primary.main, 0.12),
                   color: "primary.light",
-                  border: "1px solid rgba(67, 97, 238, 0.2)",
+                  border: (theme) => `1px solid ${alpha(theme.palette.primary.main, 0.2)}`,
                   "& .MuiListItemIcon-root": {
                     color: "primary.light",
                   },
@@ -580,11 +578,10 @@ const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children, fullHeight = fa
                     width: "3px",
                     bgcolor: "primary.main",
                     borderRadius: "0 4px 4px 0",
-                    boxShadow: "0 0 10px rgba(67, 97, 238, 0.8)",
                   },
                 },
                 "&:hover": {
-                  bgcolor: "rgba(255, 255, 255, 0.04)",
+                  bgcolor: "action.hover",
                 },
               }}
             >
@@ -634,9 +631,9 @@ const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children, fullHeight = fa
                         padding: isCollapsed ? "10px" : "10px 16px",
                         pl: !isCollapsed ? 4 : undefined,
                         "&.Mui-selected": {
-                          bgcolor: alpha("#4361EE", 0.12),
+                          bgcolor: (theme) => alpha(theme.palette.primary.main, 0.12),
                           color: "primary.light",
-                          border: "1px solid rgba(67, 97, 238, 0.2)",
+                          border: (theme) => `1px solid ${alpha(theme.palette.primary.main, 0.2)}`,
                           "& .MuiListItemIcon-root": {
                             color: "primary.light",
                           },
@@ -649,11 +646,10 @@ const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children, fullHeight = fa
                             width: "3px",
                             bgcolor: "primary.main",
                             borderRadius: "0 4px 4px 0",
-                            boxShadow: "0 0 10px rgba(67, 97, 238, 0.8)",
                           },
                         },
                         "&:hover": {
-                          bgcolor: "rgba(255, 255, 255, 0.04)",
+                          bgcolor: "action.hover",
                         },
                       }}
                     >
@@ -704,9 +700,9 @@ const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children, fullHeight = fa
                         justifyContent: isCollapsed ? "center" : "flex-start",
                         padding: isCollapsed ? "10px" : "10px 16px",
                         "&.Mui-selected": {
-                          bgcolor: alpha("#4361EE", 0.12),
+                          bgcolor: (theme) => alpha(theme.palette.primary.main, 0.12),
                           color: "primary.light",
-                          border: "1px solid rgba(67, 97, 238, 0.2)",
+                          border: (theme) => `1px solid ${alpha(theme.palette.primary.main, 0.2)}`,
                           "& .MuiListItemIcon-root": {
                             color: "primary.light",
                           },
@@ -719,11 +715,10 @@ const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children, fullHeight = fa
                             width: "3px",
                             bgcolor: "primary.main",
                             borderRadius: "0 4px 4px 0",
-                            boxShadow: "0 0 10px rgba(67, 97, 238, 0.8)",
                           },
                         },
                         "&:hover": {
-                          bgcolor: "rgba(255, 255, 255, 0.04)",
+                          bgcolor: "action.hover",
                         },
                       }}
                     >
@@ -773,10 +768,10 @@ const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children, fullHeight = fa
                 theme.transitions.create(["background-color", "color"], { duration: 200 }),
               "&.active": {
                 color: "primary.light",
-                bgcolor: alpha("#4361EE", 0.08),
+                bgcolor: (theme) => alpha(theme.palette.primary.main, 0.08),
               },
               "&:hover": {
-                bgcolor: "rgba(255, 255, 255, 0.04)",
+                bgcolor: "action.hover",
                 color: "text.primary",
               },
               justifyContent: isCollapsed ? "center" : "flex-start",
@@ -808,7 +803,7 @@ const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children, fullHeight = fa
               transition: (theme) =>
                 theme.transitions.create(["background-color"], { duration: 200 }),
               "&:hover": {
-                bgcolor: "rgba(255, 255, 255, 0.04)",
+                bgcolor: "action.hover",
               },
               justifyContent: isCollapsed ? "center" : "flex-start",
             }}
@@ -822,7 +817,6 @@ const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children, fullHeight = fa
                 height: 36,
                 fontSize: "0.875rem",
                 fontWeight: 700,
-                boxShadow: "0 0 15px rgba(67, 97, 238, 0.2)",
               }}
             >
               {profileInitials || <PersonIcon fontSize="small" />}
@@ -855,76 +849,12 @@ const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children, fullHeight = fa
             height: "100%",
             overflow: fullHeight ? "hidden" : "auto",
             bgcolor: "background.paper",
-            borderRadius: "20px",
-            border: "1px solid rgba(255, 255, 255, 0.05)",
+            borderRadius: "14px",
+            border: "1px solid",
+            borderColor: "divider",
             position: "relative",
           }}
         >
-          {/* Ambient orbs — decorative only, pointer-events:none */}
-          <Box
-            aria-hidden="true"
-            sx={{
-              position: "absolute",
-              inset: 0,
-              overflow: "hidden",
-              pointerEvents: "none",
-              zIndex: 0,
-            }}
-          >
-            {/* Primary orb — top right */}
-            <Box
-              sx={{
-                position: "absolute",
-                top: "-10%",
-                right: "-5%",
-                width: 600,
-                height: 600,
-                borderRadius: "50%",
-                background:
-                  "radial-gradient(circle, rgba(67,97,238,0.13) 0%, rgba(67,97,238,0.04) 45%, transparent 70%)",
-                animation: "orb-drift 18s ease-in-out infinite alternate",
-                "@keyframes orb-drift": {
-                  "0%": { transform: "translate(0, 0) scale(1)" },
-                  "50%": { transform: "translate(-40px, 30px) scale(1.06)" },
-                  "100%": { transform: "translate(-20px, 60px) scale(0.97)" },
-                },
-              }}
-            />
-            {/* Secondary orb — bottom left */}
-            <Box
-              sx={{
-                position: "absolute",
-                bottom: "-15%",
-                left: "-5%",
-                width: 480,
-                height: 480,
-                borderRadius: "50%",
-                background:
-                  "radial-gradient(circle, rgba(167,139,250,0.10) 0%, rgba(167,139,250,0.03) 45%, transparent 70%)",
-                animation: "orb-drift-b 22s ease-in-out infinite alternate",
-                "@keyframes orb-drift-b": {
-                  "0%": { transform: "translate(0, 0) scale(1)" },
-                  "50%": { transform: "translate(30px, -40px) scale(1.08)" },
-                  "100%": { transform: "translate(50px, -20px) scale(0.95)" },
-                },
-              }}
-            />
-            {/* Tiny accent orb — mid-left */}
-            <Box
-              sx={{
-                position: "absolute",
-                top: "40%",
-                left: "20%",
-                width: 220,
-                height: 220,
-                borderRadius: "50%",
-                background: "radial-gradient(circle, rgba(16,185,129,0.06) 0%, transparent 70%)",
-                animation: "orb-drift 28s ease-in-out infinite alternate-reverse",
-              }}
-            />
-          </Box>
-
-          {/* Page content sits above orbs */}
           <Box
             sx={{
               position: "relative",
@@ -952,7 +882,7 @@ const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children, fullHeight = fa
                     }}
                   >
                     <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                      ⚠️ Your workspace is missing required API keys. AI features (Transcriptions,
+                      Your workspace is missing required API keys. AI features (Transcriptions,
                       Insights) will not work.
                     </Typography>
                     <Button
