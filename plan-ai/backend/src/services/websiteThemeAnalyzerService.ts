@@ -112,7 +112,11 @@ export class WebsiteThemeAnalyzerService {
    * Scrapes the target URL to extract text, CSS colors, images, and fonts,
    * then uses the AI to deduce the brand theme parameters.
    */
-  public async analyzeUrl(url: string, workspaceId: string) {
+  public async analyzeUrl(rawUrl: string, workspaceId: string) {
+    // People type "example.com". Without a scheme the URL parser rejects it.
+    const trimmed = rawUrl.trim();
+    const url = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+
     // 1. Fetch HTML
     let html = "";
     try {
