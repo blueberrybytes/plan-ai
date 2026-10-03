@@ -1,8 +1,6 @@
 import { Router, Request, Response } from "express";
-import { randomUUID } from "node:crypto";
 import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
-import { isInitializeRequest } from "@modelcontextprotocol/sdk/types.js";
 import { createPlanAiMcpServer } from "../mcp/planAiMcpServer";
 import { isMcpTokenActive, validateMcpToken } from "../services/mcpTokenService";
 
@@ -24,94 +22,52 @@ const jsonRpcError = (code: number, message: string) => ({
 
 // ─── Streamable HTTP transport (recommended) ────────────────────────────────
 //
-// Single endpoint at /mcp handling POST (JSON-RPC requests), GET (the
-// server→client SSE notification stream) and DELETE (session teardown).
-// Auth happens once, on the `initialize` request; subsequent requests are
-// routed by the `mcp-session-id` header that the transport assigns.
+// Single endpoint at /mcp, stateless: every POST carries the Bearer token and
+// gets its own server + transport, so nothing lives in memory between requests.
+// A deploy or a restart does not drop anyone, and no request stays open long
+// enough to hit Railway's 15 minute limit on HTTP requests.
+//
+// Clients that opened a session before this change still send `mcp-session-id`.
+// The header is ignored, so they keep working.
 //
 //   claude mcp add --transport http plan-ai https://.../mcp --header "Authorization: Bearer <token>"
 
-const httpTransports = new Map<string, StreamableHTTPServerTransport>();
-// Token behind each open session, re-checked on every request.
-const sessionTokens = new Map<string, string>();
-
-/** False (and the session closed) once its token was revoked or the member removed. */
-async function sessionStillAllowed(sessionId: string, close: () => unknown): Promise<boolean> {
-  const tokenId = sessionTokens.get(sessionId);
-  if (tokenId && (await isMcpTokenActive(tokenId))) return true;
-  sessionTokens.delete(sessionId);
-  await Promise.resolve(close()).catch(() => undefined);
-  return false;
-}
-
 mcpRouter.post("/", async (req: Request, res: Response) => {
-  const sessionId = req.headers["mcp-session-id"] as string | undefined;
-
-  // Existing session → route to its transport.
-  if (sessionId) {
-    const existing = httpTransports.get(sessionId);
-    if (existing) {
-      if (!(await sessionStillAllowed(sessionId, () => existing.close()))) {
-        res.status(401).json(jsonRpcError(-32001, "The token was revoked"));
-        return;
-      }
-      await existing.handleRequest(req, res, req.body);
-      return;
-    }
+  const authCtx = await authenticate(req);
+  if (!authCtx) {
+    res.status(401).json(jsonRpcError(-32001, "Missing or invalid Authorization: Bearer <token>"));
+    return;
   }
 
-  // New connection → must be an `initialize` request and must authenticate.
-  if (!sessionId && isInitializeRequest(req.body)) {
-    const authCtx = await authenticate(req);
-    if (!authCtx) {
-      res
-        .status(401)
-        .json(jsonRpcError(-32001, "Missing or invalid Authorization: Bearer <token>"));
-      return;
-    }
+  const transport = new StreamableHTTPServerTransport({
+    sessionIdGenerator: undefined,
+    enableJsonResponse: true,
+  });
+  const server = createPlanAiMcpServer(authCtx.userId, authCtx.workspaceId);
+  res.on("close", () => {
+    void transport.close();
+    void server.close();
+  });
 
-    const transport = new StreamableHTTPServerTransport({
-      sessionIdGenerator: () => randomUUID(),
-      onsessioninitialized: (sid) => {
-        httpTransports.set(sid, transport);
-        sessionTokens.set(sid, authCtx.tokenId);
-      },
-    });
-    transport.onclose = () => {
-      if (transport.sessionId) {
-        httpTransports.delete(transport.sessionId);
-        sessionTokens.delete(transport.sessionId);
-      }
-    };
-
-    const server = createPlanAiMcpServer(authCtx.userId, authCtx.workspaceId);
+  try {
     await server.connect(transport);
     await transport.handleRequest(req, res, req.body);
-    return;
+  } catch (error) {
+    console.error("[mcp] request failed", error);
+    if (!res.headersSent) {
+      res.status(500).json(jsonRpcError(-32603, "Internal server error"));
+    }
   }
-
-  res
-    .status(400)
-    .json(jsonRpcError(-32000, "Bad Request: provide mcp-session-id or an initialize request"));
 });
 
-// GET (open the notification stream) + DELETE (terminate) for an existing session.
-const handleSessionRequest = async (req: Request, res: Response) => {
-  const sessionId = req.headers["mcp-session-id"] as string | undefined;
-  const transport = sessionId ? httpTransports.get(sessionId) : undefined;
-  if (!transport) {
-    res.status(400).json(jsonRpcError(-32000, "Invalid or missing mcp-session-id"));
-    return;
-  }
-  if (!(await sessionStillAllowed(sessionId!, () => transport.close()))) {
-    res.status(401).json(jsonRpcError(-32001, "The token was revoked"));
-    return;
-  }
-  await transport.handleRequest(req, res);
+// No server to client stream and no session to close in stateless mode.
+// 405 is what the spec asks for; clients carry on with POST only.
+const methodNotAllowed = (_req: Request, res: Response) => {
+  res.set("Allow", "POST").status(405).json(jsonRpcError(-32000, "Method not allowed"));
 };
 
-mcpRouter.get("/", handleSessionRequest);
-mcpRouter.delete("/", handleSessionRequest);
+mcpRouter.get("/", methodNotAllowed);
+mcpRouter.delete("/", methodNotAllowed);
 
 // ─── Legacy SSE transport (DEPRECATED — kept for backward compatibility) ─────
 //
@@ -123,6 +79,17 @@ mcpRouter.delete("/", handleSessionRequest);
 //   POST /mcp/messages   → delivers JSON-RPC messages for an open stream
 
 const sseSessions = new Map<string, SSEServerTransport>();
+// Token behind each open SSE session, re-checked on every message.
+const sessionTokens = new Map<string, string>();
+
+/** False (and the session closed) once its token was revoked or the member removed. */
+async function sessionStillAllowed(sessionId: string, close: () => unknown): Promise<boolean> {
+  const tokenId = sessionTokens.get(sessionId);
+  if (tokenId && (await isMcpTokenActive(tokenId))) return true;
+  sessionTokens.delete(sessionId);
+  await Promise.resolve(close()).catch(() => undefined);
+  return false;
+}
 
 mcpRouter.get("/sse", async (req: Request, res: Response) => {
   const authCtx = await authenticate(req);
