@@ -10685,6 +10685,8 @@ export function RegisterRoutes(app: Router,opts?:{multer?:ReturnType<typeof mult
                 limit: {"in":"query","name":"limit","dataType":"double"},
                 cursor: {"in":"query","name":"cursor","dataType":"string"},
                 action: {"in":"query","name":"action","dataType":"string"},
+                targetId: {"in":"query","name":"targetId","dataType":"string"},
+                actorUserId: {"in":"query","name":"actorUserId","dataType":"string"},
         };
         app.get('/api/workspaces/audit-log',
             authenticateMiddleware([{"ClientLevel":[]}]),

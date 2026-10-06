@@ -780,7 +780,8 @@ export class WorkspaceController extends BaseWorkspaceController {
 
   /**
    * Who did what in the workspace, newest first. Owners and admins only.
-   * Pass `nextCursor` back as `cursor` to read older entries.
+   * Pass `nextCursor` back as `cursor` to read older entries. `targetId`
+   * narrows it to one meeting, document or member, `actorUserId` to one person.
    */
   @Get("/audit-log")
   @Security("ClientLevel")
@@ -789,13 +790,15 @@ export class WorkspaceController extends BaseWorkspaceController {
     @Query() limit?: number,
     @Query() cursor?: string,
     @Query() action?: string,
+    @Query() targetId?: string,
+    @Query() actorUserId?: string,
   ): Promise<AuditLogResponse> {
     const { workspaceId, role } = await this.getAuthorizedWorkspaceAccess(request);
     if (role !== "OWNER" && role !== "ADMIN") {
       this.setStatus(403);
       throw { status: 403, message: "Only workspace owners and admins can read the audit log." };
     }
-    const page = await listAudit(workspaceId, { limit, cursor, action });
+    const page = await listAudit(workspaceId, { limit, cursor, action, targetId, actorUserId });
     return {
       entries: page.entries.map((e) => ({
         ...e,

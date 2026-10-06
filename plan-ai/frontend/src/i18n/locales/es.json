@@ -1593,7 +1593,11 @@
         "integration_disconnected": "Integración desconectada",
         "assistant_task_status_changed": "Estado de tarea cambiado por el asistente",
         "assistant_task_assigned": "Tarea asignada por el asistente",
-        "platform_admin_access": "Acceso de un administrador de la plataforma"
+        "platform_admin_access": "Acceso de un administrador de la plataforma",
+        "meeting_viewed": "Reunión abierta",
+        "meeting_audio_accessed": "Audio de la reunión abierto",
+        "meeting_notes_sent": "Notas de la reunión enviadas por email",
+        "meeting_translated": "Reunión traducida"
       },
       "groups": {
         "member": "Miembros",

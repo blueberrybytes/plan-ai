@@ -72,13 +72,23 @@ export interface AuditLogPage {
 /** Newest first, `limit` entries at most, starting after `cursor`. */
 export async function listAudit(
   workspaceId: string,
-  options: { limit?: number; cursor?: string; action?: string } = {},
+  options: {
+    limit?: number;
+    cursor?: string;
+    action?: string;
+    /** Only entries about this target, e.g. one meeting. */
+    targetId?: string;
+    /** Only entries of this person. */
+    actorUserId?: string;
+  } = {},
 ): Promise<AuditLogPage> {
   const limit = Math.min(Math.max(options.limit ?? 50, 1), 200);
   const rows = await prisma.auditLog.findMany({
     where: {
       workspaceId,
       ...(options.action ? { action: { startsWith: options.action } } : {}),
+      ...(options.targetId ? { targetId: options.targetId } : {}),
+      ...(options.actorUserId ? { actorUserId: options.actorUserId } : {}),
     },
     orderBy: [{ createdAt: "desc" }, { id: "desc" }],
     take: limit + 1,

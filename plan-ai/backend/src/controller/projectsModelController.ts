@@ -53,6 +53,7 @@ import { deleteContextFileFromFirebaseStorage } from "../firebase/firebaseStorag
 import { removeContextVectors } from "../vector/contextFileVectorService";
 import { deleteProjectArtifacts } from "../services/dataDeletionService";
 import { recordAudit } from "../services/auditLogService";
+import { recordMeetingAccess } from "../services/meetingAccessAudit";
 
 interface ProjectResponse {
   id: string;
@@ -740,13 +741,21 @@ export class ProjectsModelController extends BaseWorkspaceController {
     @Path() projectId: string,
     @Path() transcriptId: string,
   ): Promise<ApiResponse<TranscriptResponse>> {
-    const { workspaceId } = await this.getAuthorizedWorkspaceAccess(request);
+    const { user, workspaceId } = await this.getAuthorizedWorkspaceAccess(request);
     await this.getProjectForWorkspace(request, projectId, workspaceId);
 
     const transcript = await transcriptCrudService.getTranscriptForWorkspace(
       workspaceId,
       transcriptId,
     );
+    void recordMeetingAccess({
+      workspaceId,
+      actor: user,
+      transcriptId,
+      kind: "viewed",
+      title: transcript.title,
+      request,
+    });
 
     return {
       status: 200,

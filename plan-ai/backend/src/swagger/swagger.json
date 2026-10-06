@@ -19299,7 +19299,7 @@
 						}
 					}
 				},
-				"description": "Who did what in the workspace, newest first. Owners and admins only.\nPass `nextCursor` back as `cursor` to read older entries.",
+				"description": "Who did what in the workspace, newest first. Owners and admins only.\nPass `nextCursor` back as `cursor` to read older entries. `targetId`\nnarrows it to one meeting, document or member, `actorUserId` to one person.",
 				"tags": [
 					"Workspaces"
 				],
@@ -19329,6 +19329,22 @@
 					{
 						"in": "query",
 						"name": "action",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"in": "query",
+						"name": "targetId",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"in": "query",
+						"name": "actorUserId",
 						"required": false,
 						"schema": {
 							"type": "string"

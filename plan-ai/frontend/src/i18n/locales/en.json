@@ -1597,7 +1597,11 @@
         "integration_disconnected": "Integration disconnected",
         "assistant_task_status_changed": "Task status changed by the assistant",
         "assistant_task_assigned": "Task assigned by the assistant",
-        "platform_admin_access": "Access by a platform admin"
+        "platform_admin_access": "Access by a platform admin",
+        "meeting_viewed": "Meeting opened",
+        "meeting_audio_accessed": "Meeting audio opened",
+        "meeting_notes_sent": "Meeting notes sent by email",
+        "meeting_translated": "Meeting translated"
       },
       "groups": {
         "member": "Members",
