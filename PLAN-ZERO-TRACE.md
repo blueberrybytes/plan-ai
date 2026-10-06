@@ -13,7 +13,7 @@ Cada punto del análisis se comprueba en el código antes de tocar nada. Lo que 
 | 0 | Aislamiento entre workspaces en Qdrant | Hecho el 6 de octubre (`40f5cea`) |
 | 0b | Segunda capa: `workspaceId` en los puntos de Qdrant | Hecho el 6 de octubre. Falta pulsar el relleno en producción, desde Admin |
 | 1 | Reuniones y proyectos confidenciales | Pendiente, hay decisiones abiertas |
-| 2 | Retención de transcripciones, embeddings y chats | Aparcada. Xavier, 7 de octubre: de momento no se borra nada |
+| 2 | Retención de transcripciones, embeddings y chats | Aparcada. Xavier, 6 de octubre: de momento no se borra nada |
 | 3 | Auditoría de lectura y exportación | Hecho, con filtro por persona y por reunión en la web |
 | 4 | Detección y marcado de datos personales | Pendiente |
 | 5 | Modelo por función y por sensibilidad | Pendiente |
@@ -65,7 +65,7 @@ Esfuerzo: 4 a 6 días. Es la de más riesgo, porque toca todas las lecturas.
 
 ## Fase 2. Retención de transcripciones, embeddings y chats (aparcada)
 
-Decisión de Xavier del 7 de octubre: de momento no se borra nada de forma automática. No empezar esta fase hasta que él lo pida.
+Decisión de Xavier del 6 de octubre: de momento no se borra nada de forma automática. No empezar esta fase hasta que él lo pida.
 
 Para cuando se retome: hoy solo se borra el audio (`audioRetentionDays`). La propuesta era `transcriptRetentionDays` y `chatRetentionDays` por workspace, apagados por defecto, con el mismo trabajo diario que ya borra audio. Quedaba por decidir qué pasa con las tareas y documentos que salieron de una reunión borrada.
 
@@ -119,7 +119,7 @@ Calidad del RAG:
 
 - Las citas apuntan a líneas del markdown reescrito, no al minuto de la reunión ni a la página.
 - No hay reranking.
-- La búsqueda para extraer tareas usa solo los primeros 500 caracteres de la transcripción.
+- Hecho el 6 de octubre: la búsqueda para extraer tareas usaba solo los primeros 500 caracteres de la transcripción, que suelen ser saludos. Ahora usa hasta 5 ventanas de 600 caracteres repartidas por toda la reunión y mezcla los resultados (`utils/ragQueries.ts`). Sin medir todavía con reuniones reales: falta comparar las tareas que salen antes y después.
 
 ## Orden recomendado
 
