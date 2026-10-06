@@ -56,6 +56,12 @@ import {
 import { saveAndUpload } from "@/services/recordingUploader";
 import { readManifest, type MeetingCalendarEvent } from "@/services/recordingSessions";
 import { loadLastLanguage, saveLastLanguage } from "@/utils/recordingPrefs";
+import { useLiveTranslation } from "@/hooks/useLiveTranslation";
+import {
+  LiveTranslationNotice,
+  LiveTranslationSelector,
+} from "@/components/LiveTranslationSelector";
+import type { TranslationLines } from "@/utils/liveTranslation";
 
 const formatDuration = (ms: number): string => {
   const total = Math.max(0, Math.floor(ms / 1000));
@@ -282,19 +288,24 @@ const WaveformBox = ({
   );
 };
 
-/** One live line: "[Speaker] text" as a bubble, plain text otherwise. */
+/**
+ * One live line: "[Speaker] text" as a bubble, plain text otherwise. The live
+ * translation, when the line has one, goes under the text in a muted colour.
+ */
 const TranscriptLine = ({
   block,
   theme,
   interim = false,
+  translation,
 }: {
   block: string;
   theme: any;
   interim?: boolean;
+  translation?: string;
 }) => {
   const match = block.match(/^\[(.*?)\]\s*(.*)/);
   if (!match) {
-    return (
+    const original = (
       <Text
         variant="bodyLarge"
         style={
@@ -305,6 +316,18 @@ const TranscriptLine = ({
       >
         {block}
       </Text>
+    );
+    if (!translation) return original;
+    return (
+      <View>
+        {original}
+        <Text
+          variant="bodyMedium"
+          style={{ color: theme.colors.onSurfaceVariant, lineHeight: 22 }}
+        >
+          {translation}
+        </Text>
+      </View>
     );
   }
   const speaker = match[1];
@@ -338,6 +361,14 @@ const TranscriptLine = ({
         {speakerLabel}
       </Text>
       <Text style={{ color: theme.colors.onSurface, lineHeight: 22 }}>{text}</Text>
+      {translation ? (
+        <Text
+          variant="bodySmall"
+          style={{ color: theme.colors.onSurfaceVariant, lineHeight: 18, marginTop: 4 }}
+        >
+          {translation}
+        </Text>
+      ) : null}
     </Surface>
   );
 };
@@ -346,9 +377,11 @@ const TranscriptLine = ({
 // changes several times a second and is drawn on its own.
 const FinalLines = memo(function FinalLines({
   transcript,
+  translations,
   theme,
 }: {
   transcript: string;
+  translations: TranslationLines;
   theme: any;
 }) {
   return (
@@ -357,7 +390,7 @@ const FinalLines = memo(function FinalLines({
         .split("\n")
         .filter(Boolean)
         .map((block, i) => (
-          <TranscriptLine key={i} block={block} theme={theme} />
+          <TranscriptLine key={i} block={block} theme={theme} translation={translations[i]} />
         ))}
     </>
   );
@@ -365,15 +398,17 @@ const FinalLines = memo(function FinalLines({
 
 const TranscriptLines = ({
   transcript,
+  translations,
   interim,
   theme,
 }: {
   transcript: string;
+  translations: TranslationLines;
   interim: string;
   theme: any;
 }) => (
   <View style={{ gap: 12 }}>
-    <FinalLines transcript={transcript} theme={theme} />
+    <FinalLines transcript={transcript} translations={translations} theme={theme} />
     {interim ? <TranscriptLine block={interim} theme={theme} interim /> : null}
   </View>
 );
@@ -510,6 +545,7 @@ export default function RecordScreen() {
     return s.isRecording || s.stoppedSessionId ? s.language : loadLastLanguage();
   });
   const [languageMenuVisible, setLanguageMenuVisible] = useState(false);
+  const liveTranslation = useLiveTranslation();
   const [languageSearchQuery, setLanguageSearchQuery] = useState("");
 
   const filteredLanguages = LANGUAGE_OPTIONS.filter((lang) =>
@@ -1712,6 +1748,8 @@ export default function RecordScreen() {
         </View>
       )}
 
+      <LiveTranslationNotice translation={liveTranslation} />
+
       {isRecording && isPaused && (
         <View
           style={{
@@ -1891,6 +1929,7 @@ export default function RecordScreen() {
             flex: 1,
           }}
         >
+          <LiveTranslationSelector translation={liveTranslation} />
           <ScrollView
             ref={scrollViewRef}
             contentContainerStyle={{ padding: 24, paddingBottom: 40 }}
@@ -1973,7 +2012,12 @@ export default function RecordScreen() {
               </View>
             )}
 
-            <TranscriptLines transcript={transcript} interim={interim} theme={theme} />
+            <TranscriptLines
+              transcript={transcript}
+              translations={liveTranslation.lines}
+              interim={interim}
+              theme={theme}
+            />
           </ScrollView>
         </View>
 

@@ -2250,5 +2250,14 @@
       "tokens": "Tokens",
       "cost": "Est. cost"
     }
+  },
+  "transcriptTranslation": {
+    "label": "Translate to",
+    "original": "Original",
+    "loading": "Translating. A long meeting can take up to a minute.",
+    "summary": "Summary",
+    "failed": "The translation could not be made. Try again.",
+    "missingKey": "The workspace needs an AI key configured to translate.",
+    "tooLong": "This transcript is too long to translate in one go."
   }
 }

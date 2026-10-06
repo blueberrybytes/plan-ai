@@ -9,6 +9,8 @@ import { File, Paths } from "expo-file-system";
  */
 interface RecordingPrefs {
   language?: string;
+  /** Live translation target, "" or missing when off. */
+  translateTo?: string;
 }
 
 const prefsFile = () => new File(Paths.document, "recording_prefs.json");
@@ -29,6 +31,18 @@ export function loadLastLanguage(): string {
 export function saveLastLanguage(language: string): void {
   try {
     prefsFile().write(JSON.stringify({ ...read(), language }));
+  } catch {
+    // a preference, never worth an error
+  }
+}
+
+export function loadLastTranslateTo(): string {
+  return read().translateTo ?? "";
+}
+
+export function saveLastTranslateTo(translateTo: string): void {
+  try {
+    prefsFile().write(JSON.stringify({ ...read(), translateTo }));
   } catch {
     // a preference, never worth an error
   }

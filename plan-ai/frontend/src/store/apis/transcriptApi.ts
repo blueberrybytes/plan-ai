@@ -11,6 +11,10 @@ type ApiResponseTranscriptAudio = components["schemas"]["ApiResponse_TranscriptA
 export type SendMeetingNotesRequest = components["schemas"]["SendMeetingNotesRequest"];
 export type ApiResponseSendMeetingNotes =
   components["schemas"]["ApiResponse_SendMeetingNotesResponse_"];
+export type TranscriptTranslation = components["schemas"]["TranscriptTranslationResult"];
+type ApiResponseTranscriptTranslation =
+  components["schemas"]["ApiResponse_TranscriptTranslationResponse_"];
+type TranslateTranscriptRequest = components["schemas"]["TranslateTranscriptRequest"];
 
 export const transcriptApi = createApi({
   reducerPath: "transcriptApi",
@@ -117,6 +121,18 @@ export const transcriptApi = createApi({
       // PENDING status (and any active polling picks it up).
       invalidatesTags: (_result, _error, id: string) => [{ type: "Transcript", id }, "Transcript"],
     }),
+    // The first call for a language runs the model; later ones return the
+    // stored copy. Changes nothing on the transcript, so no tags.
+    translateTranscript: builder.mutation<
+      ApiResponseTranscriptTranslation,
+      { id: string; body: TranslateTranscriptRequest }
+    >({
+      query: ({ id, body }) => ({
+        url: `/api/transcripts/${id}/translate`,
+        method: "POST",
+        body,
+      }),
+    }),
   }),
 });
 
@@ -127,6 +143,7 @@ export const {
   useUpdateTranscriptSpeakersMutation,
   useRetryPostMeetingTaskMutation,
   useReprocessTranscriptMutation,
+  useTranslateTranscriptMutation,
   useGetTranscriptAudioQuery,
   useDeleteTranscriptAudioMutation,
   useSendMeetingNotesMutation,

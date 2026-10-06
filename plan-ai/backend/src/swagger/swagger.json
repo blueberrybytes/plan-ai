@@ -3385,6 +3385,80 @@
 				"type": "object",
 				"additionalProperties": false
 			},
+			"TranscriptTranslationResult": {
+				"properties": {
+					"language": {
+						"type": "string"
+					},
+					"summary": {
+						"type": "string",
+						"nullable": true
+					},
+					"lines": {
+						"items": {
+							"type": "string"
+						},
+						"type": "array",
+						"description": "One string per utterance when the transcript has utterances, else one per\nline of the flat transcript (speaker labels kept as they are)."
+					},
+					"cached": {
+						"type": "boolean",
+						"description": "True when it came from the stored copy and no model was called."
+					}
+				},
+				"required": [
+					"language",
+					"summary",
+					"lines",
+					"cached"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"TranscriptTranslationResponse": {
+				"$ref": "#/components/schemas/TranscriptTranslationResult"
+			},
+			"ApiResponse_TranscriptTranslationResponse_": {
+				"properties": {
+					"message": {
+						"type": "string"
+					},
+					"data": {
+						"allOf": [
+							{
+								"$ref": "#/components/schemas/TranscriptTranslationResponse"
+							}
+						],
+						"nullable": true
+					},
+					"status": {
+						"type": "number",
+						"format": "double"
+					}
+				},
+				"required": [
+					"data",
+					"status"
+				],
+				"type": "object"
+			},
+			"TranslateTranscriptRequest": {
+				"properties": {
+					"language": {
+						"type": "string",
+						"description": "Language code to translate to, for example \"en\"."
+					},
+					"force": {
+						"type": "boolean",
+						"description": "Translate again even when a stored translation exists."
+					}
+				},
+				"required": [
+					"language"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
 			"PostMeetingTaskKind": {
 				"type": "string",
 				"enum": [
@@ -9670,7 +9744,7 @@
 	},
 	"info": {
 		"title": "backend",
-		"version": "4.4.2",
+		"version": "4.4.3",
 		"license": {
 			"name": "BUSL-1.1"
 		},
@@ -12708,6 +12782,52 @@
 						"application/json": {
 							"schema": {
 								"$ref": "#/components/schemas/UpdateSpeakerNamesBody"
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/transcripts/{id}/translate": {
+			"post": {
+				"operationId": "TranslateTranscript",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiResponse_TranscriptTranslationResponse_"
+								}
+							}
+						}
+					}
+				},
+				"description": "The transcript and its summary in another language. The first call for a\nlanguage translates and stores it; later calls return the stored copy.",
+				"tags": [
+					"Transcripts"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": [
+					{
+						"in": "path",
+						"name": "id",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/TranslateTranscriptRequest"
 							}
 						}
 					}

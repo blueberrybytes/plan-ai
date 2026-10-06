@@ -50,6 +50,12 @@ import {
   saveLanguagePreference,
 } from "../utils/recorderConfig";
 import {
+  translationForPhrases,
+  withPhraseId,
+} from "../utils/liveTranslation";
+import { useLiveTranslation } from "../hooks/useLiveTranslation";
+import TranslationLanguageSelect from "../components/TranslationLanguageSelect";
+import {
   persistUnsavedTranscript,
   clearUnsavedTranscript,
   startUnsavedMeeting,
@@ -94,6 +100,11 @@ export interface TranscriptBlock {
    * reads in true conversation order even when text consolidates late.
    */
   ts: number;
+  /**
+   * Ids of the finished phrases merged into this bubble, in spoken order.
+   * Used to show their live translations. Never saved.
+   */
+  phraseIds?: string[];
 }
 
 // Same limit the backend applies to the files sent with a live chat question.
@@ -645,6 +656,15 @@ const Recording: React.FC = () => {
   );
 
   const recorderRef = useRef<AudioRecorder | null>(null);
+  const {
+    translateTo,
+    changeTranslateTo,
+    translations,
+    translationNotice,
+    clearTranslationNotice,
+    handleTranslation,
+    handleTranslationError,
+  } = useLiveTranslation(recorderRef);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   // Crash-recovery session: the text record and the on-disk audio share it.
   // Home checks the calendar every 3 minutes, so its event can be one that
@@ -847,7 +867,7 @@ const Recording: React.FC = () => {
   const recentSysSegmentsRef = useRef<{ text: string; ts: number }[]>([]);
   // Mic finals waiting out the grace period (far side active) before painting.
   const pendingMicRef = useRef<
-    { text: string; normalized: string; ts: number }[]
+    { text: string; normalized: string; ts: number; id?: string }[]
   >([]);
   // Last time ANY system audio activity (interim or final) was observed.
   const lastSysSeenRef = useRef(0);
@@ -957,7 +977,7 @@ const Recording: React.FC = () => {
   // The ONLY place that paints final text. Deferred commits from the grace
   // queue land where they were actually said — never misordered at the end.
   const appendBlock = useCallback(
-    (source: "mic" | "sys", text: string, ts: number) => {
+    (source: "mic" | "sys", text: string, ts: number, phraseId?: string) => {
       setBlocks((prev) => {
         // Position: after every block spoken at or before `ts`.
         let idx = prev.length;
@@ -967,6 +987,7 @@ const Recording: React.FC = () => {
           updated[idx - 1] = {
             ...updated[idx - 1],
             text: `${updated[idx - 1].text} ${text}`,
+            phraseIds: withPhraseId(updated[idx - 1].phraseIds, phraseId),
           };
           return updated;
         }
@@ -976,6 +997,7 @@ const Recording: React.FC = () => {
           source,
           text,
           ts,
+          phraseIds: withPhraseId(undefined, phraseId),
         });
         return updated;
       });
@@ -984,7 +1006,12 @@ const Recording: React.FC = () => {
   );
 
   const handleTranscript = useCallback(
-    (source: "mic" | "sys", text: string, isFinal: boolean) => {
+    (
+      source: "mic" | "sys",
+      text: string,
+      isFinal: boolean,
+      phraseId?: string,
+    ) => {
       const cleanText = text.trim();
       const lowerText = cleanText.toLowerCase();
 
@@ -1068,6 +1095,7 @@ const Recording: React.FC = () => {
               text: cleanText,
               normalized,
               ts: now,
+              id: phraseId,
             });
             echoDbg(
               `  mic verdict: DEFERRED ${ECHO_PENDING_GRACE_MS / 1000}s (far side active) pending=${pendingMicRef.current.length}`,
@@ -1079,7 +1107,7 @@ const Recording: React.FC = () => {
           );
         }
 
-        appendBlock(source, cleanText, now);
+        appendBlock(source, cleanText, now, phraseId);
         if (source === "mic") setMicDelta("");
         if (source === "sys") setSysDelta("");
         setChunkCount((n) => n + 1);
@@ -1127,7 +1155,7 @@ const Recording: React.FC = () => {
           );
         } else {
           echoDbg(`flush COMMIT "${p.text}"`);
-          appendBlock("mic", p.text, p.ts);
+          appendBlock("mic", p.text, p.ts, p.id);
           setChunkCount((n) => n + 1);
         }
       }
@@ -1611,6 +1639,8 @@ const Recording: React.FC = () => {
       api,
       recoverySessionId: recoverySessionRef.current.sessionId,
       onTranscript: handleTranscript,
+      onTranslation: handleTranslation,
+      onTranslationError: handleTranslationError,
       onSpeechEvent: (source, eventType) => {
         const isSpeaking = eventType === "speech_started";
         if (source === "mic") setIsMicSpeaking(isSpeaking);
@@ -2513,6 +2543,12 @@ const Recording: React.FC = () => {
             />
           </FormControl>
 
+          <TranslationLanguageSelect
+            compact
+            value={translateTo}
+            onChange={changeTranslateTo}
+          />
+
           <Tooltip
             title={
               speakerMode
@@ -2726,6 +2762,12 @@ const Recording: React.FC = () => {
         </Alert>
       )}
 
+      {translationNotice && (
+        <Alert severity="info" onClose={clearTranslationNotice} sx={{ m: 2 }}>
+          {translationNotice}
+        </Alert>
+      )}
+
       {/* Waveform */}
       <Box
         sx={{
@@ -2884,29 +2926,48 @@ const Recording: React.FC = () => {
               </Typography>
             )}
 
-            {blocks.map((block) => (
-              <Box key={block.id}>
-                <Typography
-                  variant="caption"
-                  color={
-                    block.source === "mic" ? "primary.main" : "secondary.main"
-                  }
-                  sx={{ fontWeight: "bold" }}
-                >
-                  {block.source === "mic" ? "Me" : "Others"}
-                </Typography>
-                <Typography
-                  variant="body2"
-                  sx={{
-                    lineHeight: 1.8,
-                    color: "text.primary",
-                    whiteSpace: "pre-wrap",
-                  }}
-                >
-                  {block.text}
-                </Typography>
-              </Box>
-            ))}
+            {blocks.map((block) => {
+              const translation = translationForPhrases(
+                block.phraseIds,
+                translations,
+              );
+              return (
+                <Box key={block.id}>
+                  <Typography
+                    variant="caption"
+                    color={
+                      block.source === "mic" ? "primary.main" : "secondary.main"
+                    }
+                    sx={{ fontWeight: "bold" }}
+                  >
+                    {block.source === "mic" ? "Me" : "Others"}
+                  </Typography>
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      lineHeight: 1.8,
+                      color: "text.primary",
+                      whiteSpace: "pre-wrap",
+                    }}
+                  >
+                    {block.text}
+                  </Typography>
+                  {translation && (
+                    <Typography
+                      variant="body2"
+                      dir="auto"
+                      sx={{
+                        lineHeight: 1.6,
+                        color: "text.secondary",
+                        whiteSpace: "pre-wrap",
+                      }}
+                    >
+                      {translation}
+                    </Typography>
+                  )}
+                </Box>
+              );
+            })}
           </Box>
         </Box>
 

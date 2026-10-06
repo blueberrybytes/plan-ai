@@ -325,6 +325,7 @@ export const createPlanAiApi = (
       language?: string,
       contextIds?: string[],
       projectIds?: string[],
+      translateTo?: string,
     ): Promise<WebSocket> {
       const token = await getToken(false);
       if (!token) throw apiError("No auth token available", 401);
@@ -343,6 +344,11 @@ export const createPlanAiApi = (
       }
       if (projectIds && projectIds.length > 0) {
         wsUrl.searchParams.set("projectIds", projectIds.join(","));
+      }
+      // Live translation target. Left out when off, so the URL stays the same
+      // as before for meetings that do not use it.
+      if (translateTo) {
+        wsUrl.searchParams.set("translateTo", translateTo);
       }
 
       const wsId = getWorkspaceId();

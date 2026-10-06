@@ -637,6 +637,7 @@ export const createPlanAiApi = (
       language?: string,
       contextIds?: string[],
       projectIds?: string[],
+      translateTo?: string,
     ): Promise<WebSocket> {
       const token = await getToken(false);
       if (!token) throw new Error("No auth token available");
@@ -653,6 +654,10 @@ export const createPlanAiApi = (
       }
       if (projectIds && projectIds.length > 0) {
         wsUrl.searchParams.set("projectIds", projectIds.join(","));
+      }
+      // Live translation of the meeting transcript. Dictation never sends it.
+      if (translateTo) {
+        wsUrl.searchParams.set("translateTo", translateTo);
       }
 
       const wsId = getWorkspaceId();

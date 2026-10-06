@@ -23,6 +23,12 @@ import {
   type MeetingCalendarEvent,
   type RecordingBookmark,
 } from "./recordingSessions";
+import { liveTranslationStore } from "./liveTranslationStore";
+import {
+  PhraseLineMap,
+  parseTranslationErrorCode,
+  parseTranslationMessage,
+} from "../utils/liveTranslation";
 
 // Using the global object so the foreground-service handle survives React
 // Native Fast Refresh (HMR) without being dropped.
@@ -45,6 +51,7 @@ export interface RecordingApi {
     language: string,
     contextIds: string[],
     projectIds?: string[],
+    translateTo?: string,
   ) => Promise<WebSocket>;
 }
 
@@ -383,10 +390,13 @@ class RecordingService {
     const stale = () =>
       generation !== this.wsGeneration || !this.snapshot.isRecording || this.snapshot.isPaused;
     try {
+      // Read on every connect, so the target survives a reconnect.
+      const translateTo = liveTranslationStore.getState().target;
       const ws = await this.api.startAudioStream(
         this.snapshot.language,
         this.snapshot.contextIds,
         this.snapshot.projectId ? [this.snapshot.projectId] : undefined,
+        translateTo || undefined,
       );
       // Paused, stopped or replaced while the socket was being created.
       if (stale()) {
@@ -399,12 +409,19 @@ class RecordingService {
       }
       this.connectingGeneration = null;
       this.ws = ws;
+      // Phrase ids start again on every connection.
+      const phraseLines = new PhraseLineMap();
 
       ws.onopen = () => {
         console.log("✅ WebSocket Connected!");
         this.reconnectAttempts = 0;
         this.lastPongAt = Date.now();
         this.set({ isWsConnected: true, isConnectingWs: false });
+        // The target changed while the socket was connecting.
+        const target = liveTranslationStore.getState().target;
+        if (target !== translateTo) {
+          ws.send(JSON.stringify({ type: "set_translation", language: target || null }));
+        }
       };
 
       ws.onmessage = (event: MessageEvent) => {
@@ -420,10 +437,21 @@ class RecordingService {
             // everyone. Names come from the batch pass after upload.
             const line = msg.speaker ? `[${msg.speaker}] ${text}` : text;
             if (msg.isFinal) {
+              phraseLines.remember(msg.id, this.snapshot.transcript);
               this.commitLine(line);
             } else {
               this.set({ interim: line });
             }
+          } else if (msg.type === "translation") {
+            // Shown under its phrase. Kept in memory only, never on disk.
+            const translation = parseTranslationMessage(msg);
+            const lineIndex = translation ? phraseLines.lineOf(translation.id) : null;
+            if (translation && lineIndex !== null) {
+              liveTranslationStore.setLine(lineIndex, translation.text);
+            }
+          } else if (msg.type === "translation_error") {
+            // Not fatal: the recording and the transcript carry on.
+            liveTranslationStore.fail(parseTranslationErrorCode(msg));
           } else if (msg.type === "speech_started") {
             this.set({ isSpeaking: true });
           } else if (msg.type === "utterance_end") {
@@ -777,6 +805,7 @@ class RecordingService {
       });
       this.resampler = new Resampler24To16();
       this.savedSamples = 0;
+      liveTranslationStore.resetLines();
 
       this.chunkCount = 0;
       this.diskWriteFailures = 0;
@@ -991,6 +1020,18 @@ class RecordingService {
     if (id) safeUpdateManifest(id, { language });
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
       this.ws.send(JSON.stringify({ type: "change_language", language }));
+    }
+  }
+
+  /**
+   * Turns live translation on, off ("") or to another language. It applies
+   * to the next phrases. With no open socket the next connection carries it.
+   */
+  setTranslation(language: string) {
+    liveTranslationStore.setTarget(language);
+    const target = liveTranslationStore.getState().target;
+    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      this.ws.send(JSON.stringify({ type: "set_translation", language: target || null }));
     }
   }
 

@@ -1,5 +1,9 @@
 import { createPlanAiApi } from "./planAiApi";
 import { loadConfig } from "../utils/recorderConfig";
+import {
+  normalizeTranslateTo,
+  type TranslationErrorCode,
+} from "../utils/liveTranslation";
 import { appendRecoveryAudio } from "../utils/recoveryAudio";
 import * as Sentry from "@sentry/electron/renderer";
 
@@ -82,8 +86,24 @@ export interface AudioRecorderOptions {
    * disk so a crash can be recovered with its audio (see recoveryAudio.ts).
    */
   recoverySessionId?: string;
-  /** Called when a real-time transcript delta or final sentence arrives */
-  onTranscript: (source: "mic" | "sys", text: string, isFinal: boolean) => void;
+  /**
+   * Called when a real-time transcript delta or final sentence arrives. `id`
+   * names a final phrase so its translation can be matched to it. It is
+   * missing on interim text and with a backend that has no live translation.
+   */
+  onTranscript: (
+    source: "mic" | "sys",
+    text: string,
+    isFinal: boolean,
+    id?: string,
+  ) => void;
+  /** Called with the translation of the final phrase that has this id. */
+  onTranslation?: (id: string, text: string) => void;
+  /**
+   * Called when the backend turned live translation off. Not fatal: the
+   * recording and the transcript go on.
+   */
+  onTranslationError?: (code: TranslationErrorCode) => void;
   /** Called when VAD detects speech starting or stopping */
   onSpeechEvent?: (
     source: "mic" | "sys",
@@ -167,6 +187,13 @@ export class AudioRecorder {
   // recording throughout, so audio is never lost — only the live transcript of
   // the disconnected window, which the server recovers by diarizing the
   // uploaded audio at the end.
+  /** Sockets opened so far in this recording. Makes phrase ids unique. */
+  private wsSeq = 0;
+  /**
+   * Live translation target set during this recording ("" is off). Undefined
+   * until it is set, and then the one saved in the config is used.
+   */
+  private translateTo: string | undefined;
   private reconnectAttempts = 0;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   // 10 s, not 30: after a long outage the backoff sits at the cap, so this is
@@ -1465,6 +1492,24 @@ export class AudioRecorder {
   }
 
   /**
+   * Turn live translation on, change its target or turn it off ("" or null).
+   * The choice is kept here as well, because the socket is rebuilt after a
+   * drop or a pause and the target has to go out again with each new one.
+   */
+  setTranslation(language: string | null): void {
+    this.translateTo = normalizeTranslateTo(language);
+    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      this.ws.send(
+        JSON.stringify({
+          type: "set_translation",
+          language: this.translateTo || null,
+        }),
+      );
+    }
+    // Socket not open: the next one is built with the new target in its URL.
+  }
+
+  /**
    * Flip browser AEC on/off live during a recording (speaker ↔ headphones).
    * AEC is baked into the device at getUserMedia time, so we re-acquire the mic
    * with the new constraint and hot-swap the source feeding micWorkletNode
@@ -1527,11 +1572,18 @@ export class AudioRecorder {
   }
   private async initializeWebSocket(): Promise<void> {
     const config = loadConfig();
+    // A target set during this recording wins over the one it started with.
+    const translateTo =
+      this.translateTo ?? normalizeTranslateTo(config?.translateTo);
     this.ws = await this.options.api.startAudioStream(
       config?.language,
       config?.contextIds,
       config?.projectIds,
+      translateTo || undefined,
     );
+    // The backend numbers phrases per connection, so the ids start again
+    // after a reconnect. The prefix keeps them unique for the whole meeting.
+    const idPrefix = `${++this.wsSeq}:`;
 
     if (this.ws) {
       this.ws.onopen = () => {
@@ -1546,7 +1598,25 @@ export class AudioRecorder {
         try {
           const data = JSON.parse(event.data);
           if (data.type === "transcript") {
-            this.options.onTranscript(data.source, data.text, data.isFinal);
+            this.options.onTranscript(
+              data.source,
+              data.text,
+              data.isFinal,
+              typeof data.id === "string" ? idPrefix + data.id : undefined,
+            );
+          } else if (data.type === "translation") {
+            if (typeof data.id === "string" && typeof data.text === "string") {
+              this.options.onTranslation?.(idPrefix + data.id, data.text);
+            }
+          } else if (data.type === "translation_error") {
+            // The backend has turned translation off. Do not ask for it again
+            // on the next reconnect.
+            this.translateTo = "";
+            this.options.onTranslationError?.(
+              data.code === "MISSING_API_KEY"
+                ? "MISSING_API_KEY"
+                : "TRANSLATION_UNAVAILABLE",
+            );
           } else if (
             data.type === "speech_started" ||
             data.type === "utterance_end"

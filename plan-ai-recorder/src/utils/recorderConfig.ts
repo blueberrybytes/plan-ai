@@ -13,6 +13,8 @@ export interface RecordingConfig {
    * localStorage key (only "false" disables it).
    */
   speakerMode?: boolean;
+  /** Target language of the live translation. Missing or "" means off. */
+  translateTo?: string;
   /** Legacy: direct context IDs. Prefer `projectIds`. */
   contextIds?: string[];
   /** User-facing project IDs. Backend resolves to internal contextIds. */
@@ -26,6 +28,7 @@ export type CalendarEvent = components["schemas"]["CurrentMeeting"];
 
 const CONFIG_KEY = "recorder-config";
 const LANGUAGE_KEY = "planai_language";
+const TRANSLATE_TO_KEY = "planai_translate_to";
 
 export const saveConfig = (config: RecordingConfig) => {
   sessionStorage.setItem(CONFIG_KEY, JSON.stringify(config));
@@ -52,3 +55,15 @@ export const saveLanguagePreference = (language: string) => {
 
 export const loadLanguagePreference = (): string | null =>
   localStorage.getItem(LANGUAGE_KEY);
+
+/**
+ * The chosen live translation target, kept the same way as the language
+ * above and for the same reason: Home remounts after every meeting. "" is a
+ * real value here (translation off) and must round-trip.
+ */
+export const saveTranslationPreference = (translateTo: string) => {
+  localStorage.setItem(TRANSLATE_TO_KEY, translateTo);
+};
+
+export const loadTranslationPreference = (): string | null =>
+  localStorage.getItem(TRANSLATE_TO_KEY);

@@ -47,8 +47,12 @@ import {
   loadConfig,
   saveLanguagePreference,
   loadLanguagePreference,
+  saveTranslationPreference,
+  loadTranslationPreference,
   type RecordingConfig,
 } from "../utils/recorderConfig";
+import { normalizeTranslateTo } from "../utils/liveTranslation";
+import TranslationLanguageSelect from "../components/TranslationLanguageSelect";
 import {
   loadUnsavedMeetings,
   clearUnsavedTranscript,
@@ -136,6 +140,13 @@ const Home: React.FC = () => {
   // auto-detect, then overwrote the saved config with it on the next Start.
   const [language, setLanguage] = useState<string>(
     () => loadLanguagePreference() ?? loadConfig()?.language ?? "",
+  );
+  // Live translation target, "" = off. Restored the same way as the language
+  // above, so it does not go back to Off when Home remounts after a meeting.
+  const [translateTo, setTranslateTo] = useState<string>(() =>
+    normalizeTranslateTo(
+      loadTranslationPreference() ?? loadConfig()?.translateTo,
+    ),
   );
   const [micInputs, setMicInputs] = useState<MediaDeviceInfo[]>([]);
   const [micDeviceId, setMicDeviceId] = useState<string>(() => {
@@ -699,6 +710,7 @@ const Home: React.FC = () => {
       language,
       micDeviceId,
       speakerMode,
+      translateTo: translateTo || undefined,
       projectIds: selectedProjectId ? [selectedProjectId] : undefined,
       // Checked up to 3 minutes ago: a meeting that has ended since is left
       // out, and the recording screen asks the calendar again.
@@ -712,6 +724,7 @@ const Home: React.FC = () => {
     // was only recovered from the session config (sign-out clears localStorage
     // but not sessionStorage) rather than read back from its own key.
     saveLanguagePreference(language);
+    saveTranslationPreference(translateTo);
     navigate(`/recording`);
   };
 
@@ -1523,6 +1536,16 @@ const Home: React.FC = () => {
                 />
               )}
             />
+
+            <Box sx={{ mt: 2 }}>
+              <TranslationLanguageSelect
+                value={translateTo}
+                onChange={(code) => {
+                  setTranslateTo(code);
+                  saveTranslationPreference(code);
+                }}
+              />
+            </Box>
 
             <TextField
               select

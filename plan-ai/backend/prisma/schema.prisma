@@ -534,7 +534,8 @@ model Transcript {
   project    Project?             @relation(fields: [projectId], references: [id], onDelete: Cascade)
   user       User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  notes Note[]
+  notes        Note[]
+  translations TranscriptTranslation[]
 
   @@index([projectId])
   @@index([workspaceId])
@@ -1232,4 +1233,24 @@ model TaskUpdateProposal {
   @@index([noteId])
   @@index([taskId])
   @@index([projectId])
+}
+
+/// A saved transcript translated into one language. Made on request from the
+/// transcript page and kept, so reading it again costs nothing. Goes away with
+/// its transcript.
+model TranscriptTranslation {
+  id           String   @id @default(cuid())
+  transcriptId String
+  language     String   @db.VarChar(8)
+  /// Hash of the text that was translated, to notice when the transcript changed.
+  sourceHash   String   @db.VarChar(64)
+  summary      String?
+  /// One string per line of the transcript, in the same order.
+  lines        Json
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  source Transcript @relation(fields: [transcriptId], references: [id], onDelete: Cascade)
+
+  @@unique([transcriptId, language])
 }

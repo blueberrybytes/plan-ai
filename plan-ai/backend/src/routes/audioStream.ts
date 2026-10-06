@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
+import { randomBytes } from "node:crypto";
 import { WebSocketServer, WebSocket as WSWebSocket } from "ws";
 import { IncomingMessage, Server } from "http";
 import { signInInfoFromToken, verifyFirebaseIdToken } from "../middleware/authMiddleware";
@@ -24,6 +25,11 @@ import { checkSubscription } from "../services/subscriptionGuard";
 import { checkUsageLimit, UsageLimitExceededError } from "../services/usageLimitGuard";
 import { deepgramPrivacyOptions } from "../utils/deepgramPrivacy";
 import { deepgramKeyFor } from "../services/platformKeys";
+import {
+  LiveTranslator,
+  normalizeTranslationLanguage,
+  workspaceTranslateFn,
+} from "../services/liveTranslationService";
 
 export function setupAudioStream(server: Server) {
   const wss = new WebSocketServer({ noServer: true });
@@ -72,6 +78,37 @@ export function setupAudioStream(server: Server) {
     let liveTranscriber: LiveTranscriber | undefined;
     let setupDgListeners: (dgConn: LiveTranscriptionConnection, source: "mic" | "sys") => void;
 
+    // Live translation. Only for clients that ask for it (`translateTo` in the
+    // URL or a `set_translation` message), so installed versions that know
+    // nothing about it get exactly the messages they always got.
+    let translator: LiveTranslator | null = null;
+    let translationHint: string | undefined;
+    // Ids are unique across reconnects of the same meeting, so a client can
+    // keep one map for the whole recording.
+    const phrasePrefix = randomBytes(4).toString("hex");
+    let phraseSeq = 0;
+    const setTranslation = (language: string | null) => {
+      if (translator) {
+        translator.setLanguage(language);
+        return;
+      }
+      if (!language || !currentWorkspaceId || currentWorkspaceId === "placeholder") return;
+      translator = new LiveTranslator({
+        userId: currentUserId,
+        workspaceId: currentWorkspaceId,
+        targetLanguage: language,
+        translate: workspaceTranslateFn(currentWorkspaceId),
+        hint: translationHint,
+        onTranslation: (t) => {
+          if (ws.readyState === ws.OPEN) ws.send(JSON.stringify({ type: "translation", ...t }));
+        },
+        onError: (code) => {
+          if (ws.readyState === ws.OPEN)
+            ws.send(JSON.stringify({ type: "translation_error", code }));
+        },
+      });
+    };
+
     // We define this higher up so it can be called dynamically
     ws.on("message", (message: Buffer | string) => {
       // Temporarily buffer early packets if deepgram isn't ready
@@ -93,6 +130,8 @@ export function setupAudioStream(server: Server) {
             console.error("Failed to close Deepgram connections:", e);
           }
 
+          void translator?.close();
+
           const totalSecs = Math.max(totalAudioSeconds.mic, totalAudioSeconds.sys);
           if (totalSecs > 0 && currentWorkspaceId && currentWorkspaceId !== "placeholder") {
             const usage = liveTranscriber?.usage ?? { provider: "DEEPGRAM", model: "nova-3-live" };
@@ -108,6 +147,11 @@ export function setupAudioStream(server: Server) {
               })
               .catch((e) => logger.error("Usage logging error", e));
           }
+          return;
+        }
+
+        if (data.type === "set_translation") {
+          setTranslation(normalizeTranslationLanguage(data.language));
           return;
         }
 
@@ -192,6 +236,7 @@ export function setupAudioStream(server: Server) {
 
     ws.on("close", (code?: number, reason?: Buffer) => {
       isClientEnding = true;
+      void translator?.close();
       // Log the close code/reason so we can tell WHY a live session dropped:
       //  1000 = normal (user stopped) · 1001 = server going away (redeploy/restart)
       //  1006 = abnormal close (network/proxy drop, e.g. Railway edge recycling)
@@ -377,6 +422,9 @@ export function setupAudioStream(server: Server) {
         console.log(`[DEBUG WS] Loaded ${keyterms.length} keyterms from contexts.`);
       }
 
+      translationHint = keyterms.slice(0, 40).join(", ") || undefined;
+      setTranslation(normalizeTranslationLanguage(url.searchParams.get("translateTo")));
+
       dgConfig = {
         ...deepgramPrivacyOptions(),
         model: "nova-3",
@@ -520,14 +568,21 @@ export function setupAudioStream(server: Server) {
                     outText = sub.keptText;
                   }
                 }
+                // Finished phrases get an id, so a translation that arrives a
+                // second later can be placed next to its original.
+                const phraseId = data.is_final
+                  ? `${phrasePrefix}-${source}-${++phraseSeq}`
+                  : undefined;
                 ws.send(
                   JSON.stringify({
                     type: "transcript",
                     source,
                     isFinal: data.is_final,
                     text: outText,
+                    ...(phraseId ? { id: phraseId } : {}),
                   }),
                 );
+                if (phraseId) translator?.push(phraseId, source, outText);
               }
             }
           },

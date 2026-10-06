@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import React, { useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Box, Chip, Typography } from "@mui/material";
 import BookmarkIcon from "@mui/icons-material/BookmarkBorder";
 import { useTranslation } from "react-i18next";
@@ -10,6 +10,9 @@ import RecordingAudioPlayer, {
 } from "./RecordingAudioPlayer";
 import type { SpeakerInsight } from "./SpeakerInsightsTab";
 import { parseSpeakerBlocks } from "./speakerBlocks";
+import TranscriptTranslationBar from "./TranscriptTranslationBar";
+import { applyTranslation } from "./transcriptTranslation";
+import type { TranscriptTranslation } from "../../store/apis/transcriptApi";
 
 const formatTimestamp = (seconds?: number | null) => {
   if (seconds == null) return "";
@@ -33,6 +36,12 @@ const formatTimestamp = (seconds?: number | null) => {
 const TranscriptBody = ({ transcript }: { transcript: any }) => {
   const { t } = useTranslation();
   const playerRef = useRef<RecordingAudioPlayerHandle>(null);
+  // Only on screen: the stored transcript is never replaced by its translation.
+  const [translation, setTranslation] = useState<TranscriptTranslation | null>(null);
+  useEffect(() => setTranslation(null), [transcript?.id]);
+  const hasText =
+    (Array.isArray(transcript?.utterances) && transcript.utterances.length > 0) ||
+    !!transcript?.transcript;
   const bookmarks: { atSeconds: number; note?: string }[] =
     (transcript?.metadata as { bookmarks?: { atSeconds: number; note?: string }[] } | null)
       ?.bookmarks ?? [];
@@ -67,7 +76,33 @@ const TranscriptBody = ({ transcript }: { transcript: any }) => {
           </Box>
         </Box>
       )}
-      <TranscriptText transcript={transcript} playerRef={playerRef} />
+      {transcript?.id && hasText && (
+        <TranscriptTranslationBar
+          key={transcript.id}
+          transcriptId={transcript.id}
+          onChange={setTranslation}
+        />
+      )}
+      {translation?.summary && (
+        <Box sx={{ mb: 3 }}>
+          <Typography variant="subtitle2" sx={{ mb: 0.5 }}>
+            {t("transcriptTranslation.summary")}
+          </Typography>
+          <Typography
+            variant="body2"
+            dir="auto"
+            sx={{ whiteSpace: "pre-wrap", lineHeight: 1.6, color: "text.secondary" }}
+          >
+            {translation.summary}
+          </Typography>
+        </Box>
+      )}
+      <Box dir={translation ? "auto" : undefined}>
+        <TranscriptText
+          transcript={applyTranslation(transcript, translation)}
+          playerRef={playerRef}
+        />
+      </Box>
     </>
   );
 };

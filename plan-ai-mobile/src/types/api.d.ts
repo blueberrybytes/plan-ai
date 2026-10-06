@@ -798,6 +798,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/transcripts/{id}/translate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description The transcript and its summary in another language. The first call for a
+         *     language translates and stores it; later calls return the stored copy.
+         */
+        post: operations["TranslateTranscript"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/transcripts/{id}/reprocess": {
         parameters: {
             query?: never;
@@ -4446,6 +4466,30 @@ export interface components {
             /** @description Diarization label ("Speaker 0", "User 1") → corrected name. Blank name clears the identification. */
             overrides: components["schemas"]["Record_string.string_"];
         };
+        TranscriptTranslationResult: {
+            language: string;
+            summary: string | null;
+            /**
+             * @description One string per utterance when the transcript has utterances, else one per
+             *     line of the flat transcript (speaker labels kept as they are).
+             */
+            lines: string[];
+            /** @description True when it came from the stored copy and no model was called. */
+            cached: boolean;
+        };
+        TranscriptTranslationResponse: components["schemas"]["TranscriptTranslationResult"];
+        ApiResponse_TranscriptTranslationResponse_: {
+            message?: string;
+            data: components["schemas"]["TranscriptTranslationResponse"] | null;
+            /** Format: double */
+            status: number;
+        };
+        TranslateTranscriptRequest: {
+            /** @description Language code to translate to, for example "en". */
+            language: string;
+            /** @description Translate again even when a stored translation exists. */
+            force?: boolean;
+        };
         /** @enum {string} */
         PostMeetingTaskKind: "jira" | "linear" | "trello" | "notion" | "asana" | "googleDrive" | "oneDrive" | "doc" | "slides" | "twenty";
         /** @enum {string} */
@@ -8038,6 +8082,32 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ApiResponse_StandaloneTranscriptResponse_"];
+                };
+            };
+        };
+    };
+    TranslateTranscript: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TranslateTranscriptRequest"];
+            };
+        };
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_TranscriptTranslationResponse_"];
                 };
             };
         };

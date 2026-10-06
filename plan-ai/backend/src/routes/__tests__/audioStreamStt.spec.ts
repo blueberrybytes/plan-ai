@@ -14,6 +14,7 @@ const mocks = vi.hoisted(() => ({
   workspace: { id: "ws_1", deepgramKey: null as string | null, isCourtesy: false },
   whisperConn: null as unknown,
   createDeepgram: vi.fn(),
+  translate: vi.fn(),
 }));
 
 vi.mock("../../firebase/firebaseAdmin", () => ({
@@ -108,6 +109,12 @@ vi.mock("../../services/stt/liveTranscriber", () => ({
   }),
 }));
 
+// The translator itself is real. Only the model call behind it is replaced.
+vi.mock("../../services/liveTranslationService", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../services/liveTranslationService")>()),
+  workspaceTranslateFn: () => mocks.translate,
+}));
+
 import { setupAudioStream } from "../audioStream";
 
 let server: http.Server;
@@ -136,6 +143,12 @@ beforeEach(async () => {
   mocks.whisperConn = null;
   mocks.logUsage.mockClear();
   mocks.createDeepgram.mockReset();
+  mocks.translate.mockReset();
+  mocks.translate.mockImplementation(async (req: { text: string; targetLanguage: string }) => ({
+    text: `[${req.targetLanguage}] ${req.text}`,
+    inputTokens: 10,
+    outputTokens: 5,
+  }));
   mocks.workspace = { id: "ws_1", deepgramKey: null, isCourtesy: false };
   server = http.createServer();
   setupAudioStream(server);
@@ -176,13 +189,117 @@ describe("recorder audio stream with STT_PROVIDER=whisper", () => {
       source: "mic",
       isFinal: true,
       text: "Hola equipo",
+      id: expect.stringMatching(/^[0-9a-f]{8}-mic-1$/),
     });
+    // Nobody asked for a translation, so the model is never called.
+    expect(mocks.translate).not.toHaveBeenCalled();
 
     ws.send(JSON.stringify({ type: "end_stream" }));
     await vi.waitFor(() => expect(mocks.logUsage).toHaveBeenCalled());
     expect(mocks.logUsage).toHaveBeenCalledWith(
       expect.objectContaining({ provider: "WHISPER", model: "turbo", feature: "RECORDER" }),
     );
+    ws.close();
+  });
+});
+
+describe("live translation on the recorder audio stream", () => {
+  const final = (text: string) => ({
+    type: "Results",
+    is_final: true,
+    start: 0,
+    channel: { alternatives: [{ transcript: text, words: [] }] },
+  });
+
+  it("sends the translation of each finished phrase with the phrase id", async () => {
+    process.env.STT_PROVIDER = "whisper";
+    const { ws, messages, waitFor } = connect(
+      "token=t&workspaceId=ws_1&language=es&translateTo=en",
+    );
+    await waitFor((m) => m.type === "ready" && m.source === "mic");
+    const conn = mocks.whisperConn as FakeConnection;
+
+    // Interim text is shown but not translated.
+    conn.emit("Results", { ...final("Hola"), is_final: false });
+    conn.emit("Results", final("Hola equipo"));
+    const caption = await waitFor((m) => m.type === "transcript" && m.isFinal === true);
+    const translation = await waitFor((m) => m.type === "translation");
+    expect(translation).toEqual({
+      type: "translation",
+      id: caption.id,
+      source: "mic",
+      text: "[en] Hola equipo",
+      language: "en",
+    });
+    expect(mocks.translate).toHaveBeenCalledTimes(1);
+
+    // Change the target in the middle of the meeting.
+    ws.send(JSON.stringify({ type: "set_translation", language: "fr" }));
+    await new Promise((r) => setTimeout(r, 30));
+    conn.emit("Results", final("Empezamos"));
+    const second = await waitFor((m) => m.type === "translation" && m.language === "fr");
+    expect(second.text).toBe("[fr] Empezamos");
+    expect(mocks.translate.mock.calls[1][0]).toMatchObject({ context: ["Hola equipo"] });
+
+    // Turn it off: phrases keep coming, translations stop.
+    ws.send(JSON.stringify({ type: "set_translation", language: null }));
+    await new Promise((r) => setTimeout(r, 30));
+    conn.emit("Results", final("Hasta luego"));
+    await waitFor((m) => m.type === "transcript" && m.text === "Hasta luego");
+    await new Promise((r) => setTimeout(r, 50));
+    expect(messages.filter((m) => m.type === "translation")).toHaveLength(2);
+    expect(mocks.translate).toHaveBeenCalledTimes(2);
+
+    ws.send(JSON.stringify({ type: "end_stream" }));
+    await vi.waitFor(() =>
+      expect(mocks.logUsage).toHaveBeenCalledWith(
+        expect.objectContaining({ feature: "LIVE_TRANSLATION", inputTokens: 20, outputTokens: 10 }),
+      ),
+    );
+    ws.close();
+  });
+
+  it("can be turned on after the stream started", async () => {
+    process.env.STT_PROVIDER = "whisper";
+    const { ws, waitFor } = connect("token=t&workspaceId=ws_1&language=es");
+    await waitFor((m) => m.type === "ready" && m.source === "mic");
+    ws.send(JSON.stringify({ type: "set_translation", language: "en" }));
+    await new Promise((r) => setTimeout(r, 30));
+    (mocks.whisperConn as FakeConnection).emit("Results", final("Buenos días"));
+    const translation = await waitFor((m) => m.type === "translation");
+    expect(translation.text).toBe("[en] Buenos días");
+    ws.close();
+  });
+
+  it("ignores a language that is not on offer", async () => {
+    process.env.STT_PROVIDER = "whisper";
+    const { ws, messages, waitFor } = connect(
+      "token=t&workspaceId=ws_1&language=es&translateTo=klingon",
+    );
+    await waitFor((m) => m.type === "ready" && m.source === "mic");
+    (mocks.whisperConn as FakeConnection).emit("Results", final("Hola equipo"));
+    await waitFor((m) => m.type === "transcript");
+    await new Promise((r) => setTimeout(r, 50));
+    expect(mocks.translate).not.toHaveBeenCalled();
+    expect(messages.some((m) => m.type === "translation")).toBe(false);
+    ws.close();
+  });
+
+  it("tells the client when the workspace has no AI key and keeps recording", async () => {
+    process.env.STT_PROVIDER = "whisper";
+    const { MissingApiKeyError } = await import("../../utils/aiModelUtils");
+    mocks.translate.mockRejectedValue(new MissingApiKeyError());
+    const { ws, waitFor } = connect("token=t&workspaceId=ws_1&language=es&translateTo=en");
+    await waitFor((m) => m.type === "ready" && m.source === "mic");
+    const conn = mocks.whisperConn as FakeConnection;
+    conn.emit("Results", final("Hola equipo"));
+    expect(await waitFor((m) => m.type === "translation_error")).toEqual({
+      type: "translation_error",
+      code: "MISSING_API_KEY",
+    });
+    conn.emit("Results", final("Seguimos"));
+    await waitFor((m) => m.type === "transcript" && m.text === "Seguimos");
+    expect(ws.readyState).toBe(WebSocket.OPEN);
     ws.close();
   });
 });

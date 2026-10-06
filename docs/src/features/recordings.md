@@ -66,6 +66,21 @@ The meeting page (web, desktop and mobile) has a player. Click any line of the t
 
 Limits: 30 people per send, 5 sends per meeting and 200 recipients per person per day.
 
+## Translate While You Record
+
+If a meeting is held in a language you do not speak well, the desktop recorder and the mobile app can translate it as it happens.
+
+*   Pick a language under **Translate to**, before you start or during the meeting. The default is **Off**.
+*   Each finished phrase shows its translation under the original, about one to two seconds later. Phrases already in your language are left as they are.
+*   You can change the language or turn it off at any time. The recording and the transcript are not affected.
+*   The live translation is only on your screen. It is not saved and the other people in the call do not see it.
+
+The text of each phrase goes to the same AI provider that writes the summaries, with the workspace AI key. No audio is sent for translation. If the workspace has no AI key, the app says so and keeps recording.
+
+## Translate a Saved Transcript
+
+On the page of a meeting, **Translate to** above the transcript shows the transcript and its summary in another language. The first time takes a few seconds, or up to a minute for a long meeting. After that the translation is stored and opens at once. The original transcript is never changed, and the translation is deleted with the meeting.
+
 ## Import Audio on the Phone
 
 The mobile app can import an audio file you already have (m4a, mp4, aac, mp3, wav, ogg, opus, webm, flac or caf) and process it like a recording.

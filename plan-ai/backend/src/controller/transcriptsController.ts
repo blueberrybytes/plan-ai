@@ -118,6 +118,10 @@ import { DocDocumentResponse } from "./docController";
 import { TranscriptMetadata, type PostMeetingTaskKind } from "../services/transcriptMetadataTypes";
 import { logger } from "../utils/logger";
 import { recordAudit } from "../services/auditLogService";
+import {
+  translateTranscript,
+  type TranscriptTranslationResult,
+} from "../services/transcriptTranslationService";
 
 interface TranscriptContextSummary {
   id: string;
@@ -215,6 +219,15 @@ interface UpdateSpeakerNamesBody {
   /** Diarization label ("Speaker 0", "User 1") → corrected name. Blank name clears the identification. */
   overrides: Record<string, string>;
 }
+
+export interface TranslateTranscriptRequest {
+  /** Language code to translate to, for example "en". */
+  language: string;
+  /** Translate again even when a stored translation exists. */
+  force?: boolean;
+}
+
+export type TranscriptTranslationResponse = TranscriptTranslationResult;
 
 @Route("api/transcripts")
 @Tags("Transcripts")
@@ -1219,6 +1232,34 @@ export class TranscriptsController extends BaseWorkspaceController {
       status: 200,
       data: this.mapTranscriptResponse(transcript),
     };
+  }
+
+  /**
+   * The transcript and its summary in another language. The first call for a
+   * language translates and stores it; later calls return the stored copy.
+   */
+  @Post("{id}/translate")
+  @Security("ClientLevel")
+  public async translateTranscript(
+    @Request() request: AuthenticatedRequest,
+    @Path() id: string,
+    @Body() body: TranslateTranscriptRequest,
+  ): Promise<ApiResponse<TranscriptTranslationResponse>> {
+    const { user, workspaceId } = await this.getPaidLlmAccess(request);
+    try {
+      const data = await translateTranscript({
+        workspaceId,
+        userId: user.id,
+        transcriptId: id,
+        language: body.language,
+        force: body.force,
+      });
+      return { status: 200, data };
+    } catch (err) {
+      const status = (err as { status?: number })?.status;
+      if (typeof status === "number") this.setStatus(status);
+      throw err;
+    }
   }
 
   @Post("{id}/reprocess")

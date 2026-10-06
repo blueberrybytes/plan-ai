@@ -2246,5 +2246,14 @@
       "tokens": "Tokens",
       "cost": "Coste est."
     }
+  },
+  "transcriptTranslation": {
+    "label": "Traducir a",
+    "original": "Original",
+    "loading": "Traduciendo. Una reunión larga puede tardar hasta un minuto.",
+    "summary": "Resumen",
+    "failed": "No se ha podido traducir. Vuelve a intentarlo.",
+    "missingKey": "El workspace necesita una clave de IA configurada para traducir.",
+    "tooLong": "Esta transcripción es demasiado larga para traducirla de una vez."
   }
 }
