@@ -3,7 +3,7 @@ import { baseQueryWithReauth } from "../../utils/baseQuery";
 import { components } from "../../types/api";
 
 type AdminEmailTemplatesResponse = components["schemas"]["AdminEmailTemplatesResponse"];
-export type QdrantWorkspaceBackfill = components["schemas"]["QdrantWorkspaceBackfillResult"];
+export type QdrantWorkspaceBackfill = components["schemas"]["QdrantWorkspaceBackfillStatus"];
 
 export const adminApi = createApi({
   reducerPath: "adminApi",
@@ -14,11 +14,18 @@ export const adminApi = createApi({
       query: () => "/api/admin/emails/templates",
       providesTags: ["AdminEmails"],
     }),
-    // Counts the Qdrant points that still lack their workspace. Changes nothing.
+    // The job runs in the background on the server. This reads how far it is
+    // and answers at once; the page polls it while a run is going.
     getQdrantWorkspaceStatus: builder.query<QdrantWorkspaceBackfill, void>({
       query: () => "/api/admin/maintenance/qdrant-workspace",
       providesTags: ["QdrantWorkspace"],
     }),
+    // Starts a count. Changes nothing.
+    checkQdrantWorkspace: builder.mutation<QdrantWorkspaceBackfill, void>({
+      query: () => ({ url: "/api/admin/maintenance/qdrant-workspace/check", method: "POST" }),
+      invalidatesTags: ["QdrantWorkspace"],
+    }),
+    // Starts the stamping.
     applyQdrantWorkspaceBackfill: builder.mutation<QdrantWorkspaceBackfill, void>({
       query: () => ({ url: "/api/admin/maintenance/qdrant-workspace/apply", method: "POST" }),
       invalidatesTags: ["QdrantWorkspace"],
@@ -29,5 +36,6 @@ export const adminApi = createApi({
 export const {
   useGetAdminEmailTemplatesQuery,
   useGetQdrantWorkspaceStatusQuery,
+  useCheckQdrantWorkspaceMutation,
   useApplyQdrantWorkspaceBackfillMutation,
 } = adminApi;

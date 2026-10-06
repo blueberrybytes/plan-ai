@@ -3134,10 +3134,27 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description How many Qdrant points still lack their workspace. Changes nothing. */
-        get: operations["CheckQdrantWorkspace"];
+        /** @description Where the last run is. Reads memory only. */
+        get: operations["GetQdrantWorkspaceStatus"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/maintenance/qdrant-workspace/check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Starts counting the Qdrant points that lack their workspace. Changes nothing. */
+        post: operations["CheckQdrantWorkspace"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3154,8 +3171,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * @description Stamps the Qdrant points that lack their workspace. Safe to repeat and to
-         *     run while the platform is in use.
+         * @description Starts stamping the Qdrant points that lack their workspace. Safe to
+         *     repeat and to run while the platform is in use.
          */
         post: operations["ApplyQdrantWorkspace"];
         delete?: never;
@@ -6152,41 +6169,45 @@ export interface components {
          *     Points whose context no longer exists in the database are counted and left
          *     alone. No read can reach them, because every read starts from a Context row.
          *
-         *     Run from the admin maintenance page, or with `yarn qdrant:backfill-workspace`.
+         *     It runs in the background. On a real collection each step takes from
+         *     seconds to minutes, longer than a browser waits for one request (the first
+         *     version did the work inside the request and the page never got an answer).
+         *     The admin page starts it and then asks for the status every few seconds.
          */
-        QdrantWorkspaceBackfillResult: {
+        QdrantWorkspaceBackfillStatus: {
+            /** @enum {string} */
+            state: "idle" | "running" | "done" | "failed";
+            /**
+             * @description What the last run was: a count, or the count and the stamping.
+             * @enum {string|null}
+             */
+            mode: "check" | "apply" | null;
+            /** @description What it is doing right now, in plain words. Null when not running. */
+            step: string | null;
+            /** Format: double */
+            workspacesDone: number;
+            /** Format: double */
+            workspacesTotal: number;
             collection: string;
-            /** @description False when the collection does not exist yet (nothing was ever indexed). */
-            collectionExists: boolean;
+            /** @description Null until a run has looked. */
+            collectionExists: boolean | null;
             /** Format: double */
-            totalPoints: number;
+            totalPoints: number | null;
             /**
              * Format: double
-             * @description Points without `workspaceId` before this run.
+             * @description Points without `workspaceId`, as of the last count.
              */
-            missingBefore: number;
+            missing: number | null;
             /**
              * Format: double
-             * @description Points stamped by this run, or that a run with `apply` would stamp.
+             * @description Points stamped by the last `apply` run.
              */
-            stamped: number;
-            /** Format: double */
-            contextsTouched: number;
-            /** Format: double */
-            contextsTotal: number;
-            /**
-             * Format: double
-             * @description Points without stamp whose context is gone from the database.
-             */
-            orphans: number;
-            /**
-             * Format: double
-             * @description Points without `workspaceId` after this run. Equal to `missingBefore` on a dry run.
-             */
-            missingAfter: number;
-            applied: boolean;
+            stamped: number | null;
+            startedAt: string | null;
+            finishedAt: string | null;
+            error: string | null;
         };
-        QdrantWorkspaceBackfillResponse: components["schemas"]["QdrantWorkspaceBackfillResult"];
+        QdrantWorkspaceBackfillResponse: components["schemas"]["QdrantWorkspaceBackfillStatus"];
         AdminEmailTemplatesResponse: {
             status: string;
             data: {
@@ -12036,6 +12057,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AiModelResponse"][];
+                };
+            };
+        };
+    };
+    GetQdrantWorkspaceStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QdrantWorkspaceBackfillResponse"];
                 };
             };
         };

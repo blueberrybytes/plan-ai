@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   Alert,
   Box,
@@ -23,34 +23,63 @@ import { NavLink } from "react-router-dom";
 import SidebarLayout from "../../components/layout/SidebarLayout";
 import {
   useApplyQdrantWorkspaceBackfillMutation,
+  useCheckQdrantWorkspaceMutation,
   useGetQdrantWorkspaceStatusQuery,
   type QdrantWorkspaceBackfill,
 } from "../../store/apis/adminApi";
 
-const rowsOf = (r: QdrantWorkspaceBackfill): Array<[string, number | string]> => [
-  ["Collection", r.collection],
-  ["Points in total", r.totalPoints],
-  ["Points without workspace", r.missingAfter],
-  [r.applied ? "Points stamped in this run" : "Points a run would stamp", r.stamped],
-  ["Contexts with points to stamp", `${r.contextsTouched} of ${r.contextsTotal}`],
-  ["Points of contexts that no longer exist", r.orphans],
+const POLL_MS = 2000;
+
+const rowsOf = (s: QdrantWorkspaceBackfill): Array<[string, number | string]> => [
+  ["Collection", s.collection],
+  ["Points in total", s.totalPoints ?? "not counted yet"],
+  ["Points without workspace", s.missing ?? "not counted yet"],
+  ...(s.stamped === null
+    ? []
+    : ([["Points stamped in the last run", s.stamped]] as Array<[string, number]>)),
 ];
+
+const progressOf = (s: QdrantWorkspaceBackfill): string =>
+  s.workspacesTotal > 0
+    ? `${s.step ?? "Working"} (${s.workspacesDone} of ${s.workspacesTotal} workspaces)`
+    : (s.step ?? "Working");
 
 /** Admin page for one-off data jobs. Admin pages are in English only. */
 const AdminMaintenance: React.FC = () => {
-  const { data: status, isFetching, error, refetch } = useGetQdrantWorkspaceStatusQuery();
-  const [apply, { data: lastRun, isLoading: isApplying, error: applyError }] =
-    useApplyQdrantWorkspaceBackfillMutation();
+  // The job runs on the server. The page only starts it and reads how far it is.
+  const [polling, setPolling] = useState(false);
+  const { data: status, error } = useGetQdrantWorkspaceStatusQuery(undefined, {
+    pollingInterval: polling ? POLL_MS : 0,
+  });
+  const [check, { isLoading: isStartingCheck }] = useCheckQdrantWorkspaceMutation();
+  const [apply, { isLoading: isStartingApply }] = useApplyQdrantWorkspaceBackfillMutation();
+  const [startFailed, setStartFailed] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
 
-  const nothingToDo = !!status && status.stamped === 0;
+  const running = status?.state === "running";
+  useEffect(() => setPolling(running), [running]);
 
-  const handleApply = async () => {
-    setConfirmOpen(false);
-    await apply()
-      .unwrap()
-      .catch(() => undefined);
+  // Count once on arrival, so the numbers are there without pressing anything.
+  // After a server restart the status is empty again and this fills it.
+  const countedOnArrival = useRef(false);
+  useEffect(() => {
+    if (!status || countedOnArrival.current) return;
+    countedOnArrival.current = true;
+    if (status.state === "idle") void check();
+  }, [status, check]);
+
+  const start = async (run: () => { unwrap: () => Promise<unknown> }) => {
+    setStartFailed(false);
+    try {
+      await run().unwrap();
+    } catch {
+      setStartFailed(true);
+    }
   };
+
+  const busy = running || isStartingCheck || isStartingApply;
+  const lastApplyDone = status?.state === "done" && status.mode === "apply";
+  const nothingToStamp = status?.missing === 0;
 
   return (
     <SidebarLayout>
@@ -79,34 +108,40 @@ const AdminMaintenance: React.FC = () => {
             <Typography variant="body2" color="text.secondary" sx={{ mt: 1, mb: 2 }}>
               All workspaces share one Qdrant collection. New points carry the workspace that owns
               them, and searches refuse a point stamped with another workspace. Points indexed
-              before October 2026 have no stamp. This job adds it. It is safe to run while the
-              platform is in use and to run more than once.
+              before October 2026 have no stamp. This job adds it. It runs on the server, is safe
+              while the platform is in use and can be run more than once.
             </Typography>
 
             {error && (
               <Alert severity="error" sx={{ mb: 2 }}>
-                Could not read the status. Check that you are a platform admin and that Qdrant is
-                reachable.
+                Could not read the status. Check that you are a platform admin.
               </Alert>
             )}
-            {applyError && (
+            {startFailed && (
               <Alert severity="error" sx={{ mb: 2 }}>
-                The run failed. Nothing is left half done: run it again to finish.
+                The job could not be started. Try again.
               </Alert>
             )}
-            {lastRun && !applyError && (
+            {status?.state === "failed" && (
+              <Alert severity="error" sx={{ mb: 2 }}>
+                The last run failed: {status.error}. Nothing is left half done: run it again to
+                finish.
+              </Alert>
+            )}
+            {lastApplyDone && (
               <Alert severity="success" sx={{ mb: 2 }}>
-                Stamped {lastRun.stamped} points. {lastRun.missingAfter} points are still without
-                workspace{lastRun.missingAfter > 0 ? " (their contexts no longer exist)" : ""}.
+                Stamped {status.stamped ?? 0} points. {status.missing ?? 0} points are still without
+                workspace
+                {(status.missing ?? 0) > 0 ? " (their contexts no longer exist)" : ""}.
               </Alert>
             )}
-            {status && !status.collectionExists && (
+            {status?.collectionExists === false && (
               <Alert severity="info" sx={{ mb: 2 }}>
                 The collection does not exist yet. Nothing has been indexed.
               </Alert>
             )}
 
-            {status && status.collectionExists && (
+            {status && status.collectionExists !== false && (
               <Table size="small" sx={{ mb: 2 }}>
                 <TableBody>
                   {rowsOf(status).map(([label, value]) => (
@@ -121,28 +156,24 @@ const AdminMaintenance: React.FC = () => {
               </Table>
             )}
 
-            <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-              <Button
-                variant="outlined"
-                onClick={() => refetch()}
-                disabled={isFetching || isApplying}
-              >
-                Check again
+            <Box sx={{ display: "flex", alignItems: "center", gap: 2, flexWrap: "wrap" }}>
+              <Button variant="outlined" onClick={() => void start(check)} disabled={busy}>
+                Count again
               </Button>
               <Button
                 variant="contained"
                 onClick={() => setConfirmOpen(true)}
-                disabled={!status || nothingToDo || isFetching || isApplying}
+                disabled={busy || !status || status.missing === null || nothingToStamp}
               >
                 Run backfill
               </Button>
-              {(isFetching || isApplying) && <CircularProgress size={20} />}
-              {isApplying && (
+              {busy && <CircularProgress size={20} />}
+              {running && status && (
                 <Typography variant="body2" color="text.secondary">
-                  Running. Keep this page open.
+                  {progressOf(status)}. It keeps running if you leave this page.
                 </Typography>
               )}
-              {status && nothingToDo && !isFetching && (
+              {!busy && nothingToStamp && (
                 <Typography variant="body2" color="text.secondary">
                   Nothing to stamp.
                 </Typography>
@@ -156,13 +187,19 @@ const AdminMaintenance: React.FC = () => {
         <DialogTitle>Run the backfill?</DialogTitle>
         <DialogContent>
           <DialogContentText>
-            This writes the workspace on {status?.stamped ?? 0} points in production. It only adds a
-            field and can be repeated.
+            {status?.missing ?? 0} points in production have no workspace. This writes it on the
+            ones whose context still exists. It only adds a field and can be repeated.
           </DialogContentText>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setConfirmOpen(false)}>Cancel</Button>
-          <Button variant="contained" onClick={() => void handleApply()}>
+          <Button
+            variant="contained"
+            onClick={() => {
+              setConfirmOpen(false);
+              void start(apply);
+            }}
+          >
             Run
           </Button>
         </DialogActions>
