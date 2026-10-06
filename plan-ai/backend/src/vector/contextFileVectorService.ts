@@ -185,6 +185,7 @@ export const indexRawText = async (args: IndexRawTextArgs): Promise<void> => {
         vector: batchVectors[index],
         payload: {
           contextId,
+          workspaceId: contextRecord.workspaceId,
           fileId,
           chunkIndex: i + index,
           text: chunk,
@@ -295,7 +296,12 @@ export const getFullContextPayloads = async (
   contextIds: string[],
 ): Promise<string[]> => {
   const allowed = await contextsOfWorkspace(workspaceId, contextIds);
-  return allowed.length ? storeFullContextPayloads(allowed.map((c) => c.id)) : [];
+  return allowed.length
+    ? storeFullContextPayloads(
+        workspaceId,
+        allowed.map((c) => c.id),
+      )
+    : [];
 };
 
 /** The chunks of one repository file, for contexts that belong to the workspace. */
@@ -307,6 +313,7 @@ export const getRepomixContextPayloads = async (
   const allowed = await contextsOfWorkspace(workspaceId, contextIds);
   return allowed.length
     ? storeRepomixContextPayloads(
+        workspaceId,
         allowed.map((c) => c.id),
         fileId,
       )
@@ -341,7 +348,7 @@ export const queryContexts = async (
     }
 
     const vector = await embeddings.embedQuery(safeQueryText);
-    const points = await queryVectors(allowedIds, vector, limit);
+    const points = await queryVectors(workspaceId, allowedIds, vector, limit);
 
     // Track AI Usage centrally for querying embeddings
     {

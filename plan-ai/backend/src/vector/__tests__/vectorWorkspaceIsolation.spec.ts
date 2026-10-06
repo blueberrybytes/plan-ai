@@ -75,11 +75,15 @@ beforeEach(() => {
   mocks.embeddingConfig.mockResolvedValue({ apiKey: "k", model: "text-embedding-3-small" });
   mocks.embedQuery.mockResolvedValue([0.1, 0.2]);
   mocks.logUsage.mockResolvedValue(undefined);
-  mocks.queryVectors.mockImplementation(async (ids: string[]) =>
+  mocks.queryVectors.mockImplementation(async (_ws: string, ids: string[]) =>
     ids.map((id) => ({ id, vector: [], payload: { text: `chunk of ${id}` } })),
   );
-  mocks.fullPayloads.mockImplementation(async (ids: string[]) => ids.map((id) => `full ${id}`));
-  mocks.repomixPayloads.mockImplementation(async (ids: string[]) => ids.map((id) => `repo ${id}`));
+  mocks.fullPayloads.mockImplementation(async (_ws: string, ids: string[]) =>
+    ids.map((id) => `full ${id}`),
+  );
+  mocks.repomixPayloads.mockImplementation(async (_ws: string, ids: string[]) =>
+    ids.map((id) => `repo ${id}`),
+  );
 });
 
 describe("project and context ids from the client", () => {
@@ -108,7 +112,7 @@ describe("project and context ids from the client", () => {
 describe("reads from the shared vector collection", () => {
   it("searches only the contexts of the caller's workspace", async () => {
     const chunks = await queryContexts("ws_ana", ["ctx_x", "ctx_ana"], "contract terms", 5);
-    expect(mocks.queryVectors).toHaveBeenCalledWith(["ctx_ana"], [0.1, 0.2], 5);
+    expect(mocks.queryVectors).toHaveBeenCalledWith("ws_ana", ["ctx_ana"], [0.1, 0.2], 5);
     expect(chunks).toEqual(["chunk of ctx_ana"]);
   });
 
@@ -167,6 +171,6 @@ describe("MCP semantic_search", () => {
   it("still searches the token's own projects", async () => {
     const out = await callSemanticSearch("ws_ana", "proj_ana");
     expect(out.results).toEqual(["chunk of ctx_ana"]);
-    expect(mocks.queryVectors).toHaveBeenCalledWith(["ctx_ana"], [0.1, 0.2], 8);
+    expect(mocks.queryVectors).toHaveBeenCalledWith("ws_ana", ["ctx_ana"], [0.1, 0.2], 8);
   });
 });
