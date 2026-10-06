@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Box, useTheme } from "@mui/material";
 import { fetchProxiedSlideImage } from "./slideImageCache";
+import { useThemeFonts } from "../useThemeFonts";
 
 /**
  * Renders a 16:9 slide frame that looks like a real presentation slide.
@@ -21,9 +22,17 @@ export interface SlideFrameProps {
     body?: string;
   };
   scale?: number;
+  /** No logo in the corner: for layouts with their own logo or an image under it. */
+  hideLogo?: boolean;
 }
 
-const SlideFrame: React.FC<SlideFrameProps> = ({ children, brandColors, fonts, scale = 1 }) => {
+const SlideFrame: React.FC<SlideFrameProps> = ({
+  children,
+  brandColors,
+  fonts,
+  scale = 1,
+  hideLogo = false,
+}) => {
   const bg = brandColors?.background || "#0f172a";
   const muiTheme = useTheme();
   const textColor = muiTheme.palette.getContrastText(bg);
@@ -33,9 +42,11 @@ const SlideFrame: React.FC<SlideFrameProps> = ({ children, brandColors, fonts, s
 
   const [proxiedLogoUri, setProxiedLogoUri] = useState<string | null>(null);
 
+  useThemeFonts(fonts?.heading, fonts?.body);
+
   useEffect(() => {
     let isMounted = true;
-    if (!brandColors?.logoUrl) {
+    if (!brandColors?.logoUrl || hideLogo) {
       setProxiedLogoUri(null);
       return;
     }
@@ -47,7 +58,7 @@ const SlideFrame: React.FC<SlideFrameProps> = ({ children, brandColors, fonts, s
     return () => {
       isMounted = false;
     };
-  }, [brandColors?.logoUrl]);
+  }, [brandColors?.logoUrl, hideLogo]);
 
   let backgroundImage = "none";
   if (bgStyle === "gradient") {
@@ -106,9 +117,13 @@ const SlideFrame: React.FC<SlideFrameProps> = ({ children, brandColors, fonts, s
           color: textColor,
           fontFamily: `'${fonts?.body || "Inter"}', sans-serif`,
           position: "relative",
+          // MUI Typography sets the app font on itself, so the body font of
+          // the theme would never apply. Titles keep their own heading font
+          // (AnimatedText marks them with the slide-heading class).
+          "& .MuiTypography-root:not(.slide-heading)": { fontFamily: "inherit" },
         }}
       >
-        {proxiedLogoUri && (
+        {proxiedLogoUri && !hideLogo && (
           <Box
             component="img"
             src={proxiedLogoUri}
@@ -117,8 +132,8 @@ const SlideFrame: React.FC<SlideFrameProps> = ({ children, brandColors, fonts, s
               position: "absolute",
               top: 32,
               right: 32,
-              height: 48,
-              maxWidth: 200,
+              height: 36,
+              maxWidth: 140,
               objectFit: "contain",
               zIndex: 10,
             }}

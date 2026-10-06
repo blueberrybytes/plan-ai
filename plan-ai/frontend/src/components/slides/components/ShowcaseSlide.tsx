@@ -5,6 +5,7 @@ import SlideFrame from "./SlideFrame";
 import AnimatedText from "./AnimatedText";
 import SlideBadge from "./SlideBadge";
 import { SlideProps } from "../SlideRenderer";
+import { slideTitleColor } from "../slideColors";
 
 // Showcase
 export const ShowcaseSlide: React.FC<SlideProps> = ({
@@ -15,6 +16,7 @@ export const ShowcaseSlide: React.FC<SlideProps> = ({
   animate,
 }) => {
   const primary = brandColors?.primary || "#6366f1";
+  const titleColor = slideTitleColor(brandColors);
   return (
     <SlideFrame brandColors={brandColors} fonts={fonts} scale={scale}>
       <Box sx={{ textAlign: "center" }}>
@@ -25,7 +27,7 @@ export const ShowcaseSlide: React.FC<SlideProps> = ({
             fontSize: 32,
             fontWeight: 700,
             mb: 3,
-            color: primary,
+            color: titleColor,
             fontFamily: `'${fonts?.heading || "Inter"}', sans-serif`,
           }}
         >
@@ -45,7 +47,6 @@ export const ShowcaseSlide: React.FC<SlideProps> = ({
         <SlideImage
           src={(data.imageUrl as string) || ""}
           alt={String(data.imageQuery || "Featured Image")}
-          query={String(data.imageQuery || "")}
           primary={primary}
           style={{ width: "100%", height: "100%", objectFit: "cover" }}
         />

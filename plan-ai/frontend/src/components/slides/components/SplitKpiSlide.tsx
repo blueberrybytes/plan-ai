@@ -5,6 +5,7 @@ import SlideFrame from "./SlideFrame";
 import AnimatedText from "./AnimatedText";
 import SlideBadge from "./SlideBadge";
 import { SlideProps } from "../SlideRenderer";
+import { capList } from "../slideCaps";
 
 // Split KPI
 export const SplitKpiSlide: React.FC<SlideProps> = ({
@@ -15,36 +16,38 @@ export const SplitKpiSlide: React.FC<SlideProps> = ({
   animate,
 }) => {
   const primary = brandColors?.primary || "#6366f1";
-  const rawKpis = data.kpis;
-  const kpis: { value: string; label: string; description?: string }[] = Array.isArray(rawKpis)
-    ? rawKpis.map((k: unknown) => {
-        const obj = k as Record<string, unknown>;
-        return {
-          value: String(obj.value || ""),
-          label: String(obj.label || ""),
-          description: obj.description ? String(obj.description) : undefined,
-        };
-      })
-    : [];
+  const kpis: { value: string; label: string; description?: string }[] = capList(
+    "split_kpi",
+    data.kpis,
+  ).map((k: unknown) => {
+    const obj = (k || {}) as Record<string, unknown>;
+    return {
+      value: String(obj.value || ""),
+      label: String(obj.label || ""),
+      description: obj.description ? String(obj.description) : undefined,
+    };
+  });
 
   return (
-    <SlideFrame brandColors={brandColors} fonts={fonts} scale={scale}>
+    <SlideFrame brandColors={brandColors} fonts={fonts} scale={scale} hideLogo>
       <Box
         sx={{
+          // Out of the padded flow of the frame so the image reaches the top,
+          // bottom and left edges of the slide. The right gutter stays.
+          position: "absolute",
+          top: 0,
+          bottom: 0,
+          left: 0,
+          right: 48,
           display: "flex",
           gap: 6,
           alignItems: "stretch",
-          height: "100%",
-          ml: -6,
-          mt: -6,
-          mb: -6,
         }}
       >
         <Box sx={{ width: "45%", position: "relative" }}>
           <SlideImage
             src={(data.imageUrl as string) || ""}
             alt={String(data.imageQuery || "Featured Image")}
-            query={String(data.imageQuery || "")}
             primary={primary}
             style={{
               width: "100%",

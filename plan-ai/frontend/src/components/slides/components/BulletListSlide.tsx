@@ -4,6 +4,7 @@ import SlideFrame from "./SlideFrame";
 import AnimatedText from "./AnimatedText";
 import SlideBadge from "./SlideBadge";
 import { SlideProps } from "../SlideRenderer";
+import { slideTitleColor } from "../slideColors";
 
 // Bullet List
 export const BulletListSlide: React.FC<SlideProps> = ({
@@ -14,10 +15,11 @@ export const BulletListSlide: React.FC<SlideProps> = ({
   animate,
 }) => {
   const primary = brandColors?.primary || "#6366f1";
+  const titleColor = slideTitleColor(brandColors);
   const rawBullets = data.bullets;
   let bullets: string[] = [];
   if (Array.isArray(rawBullets)) {
-    bullets = rawBullets.map(String);
+    bullets = rawBullets.filter((b) => b !== null && b !== undefined).map(String);
   } else if (typeof rawBullets === "string") {
     bullets = rawBullets
       .split("\n")
@@ -68,7 +70,7 @@ export const BulletListSlide: React.FC<SlideProps> = ({
           fontSize: 36,
           fontWeight: 700,
           mb: titleMb,
-          color: primary,
+          color: titleColor,
           fontFamily: `'${fonts?.heading || "Inter"}', sans-serif`,
         }}
       >

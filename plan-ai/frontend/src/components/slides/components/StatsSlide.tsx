@@ -4,6 +4,7 @@ import SlideFrame from "./SlideFrame";
 import AnimatedText from "./AnimatedText";
 import SlideBadge from "./SlideBadge";
 import { SlideProps } from "../SlideRenderer";
+import { capList } from "../slideCaps";
 
 // Stats
 export const StatsSlide: React.FC<SlideProps> = ({
@@ -18,13 +19,12 @@ export const StatsSlide: React.FC<SlideProps> = ({
   const muiTheme = useTheme();
   const bg = brandColors?.background || "#0f172a";
   const isDark = muiTheme.palette.getContrastText(bg) === "#fff";
-  const rawStats = data.stats;
-  const stats: { label: string; value: string }[] = Array.isArray(rawStats)
-    ? rawStats.map((s: unknown) => {
-        const obj = s as Record<string, unknown>;
-        return { label: String(obj.label || ""), value: String(obj.value || "") };
-      })
-    : [];
+  const stats: { label: string; value: string }[] = capList("stats", data.stats).map(
+    (s: unknown) => {
+      const obj = (s || {}) as Record<string, unknown>;
+      return { label: String(obj.label || ""), value: String(obj.value || "") };
+    },
+  );
   const cardBg =
     brandColors?.cardStyle === "glass"
       ? isDark

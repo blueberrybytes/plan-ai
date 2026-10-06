@@ -15,7 +15,14 @@ import { logger } from "../utils/logger";
 import prisma from "../prisma/prismaClient";
 import { queryContexts } from "../vector/contextFileVectorService";
 import { slideTemplateService, TemplateWithSlideTypes } from "./slideTemplateService";
-import { buildSlideTypeCatalog, getSlideTypeDefinition } from "./slideTypeRegistry";
+import {
+  applySlideCaps,
+  buildSlideTypeCatalog,
+  getSlideTypeDefinition,
+  SLIDE_LIST_CAPS,
+  SLIDE_TYPE_KEYS,
+  SlideTypeDefinition,
+} from "./slideTypeRegistry";
 import { MERMAID_SYNTAX_RULES } from "../prompts/mermaidRules";
 import { imageGenerationService } from "./imageGenerationService";
 import { aiUsageService } from "./aiUsageService";
@@ -24,14 +31,22 @@ import { publicLinkWhere, shareTokenUpdate } from "../utils/shareToken";
 import { assertThemeInWorkspace } from "./brandThemeAccess";
 import { unsignSlideImages } from "../utils/slideImages";
 import { recordAudit } from "./auditLogService";
+import { mapWithConcurrency } from "../utils/concurrency";
 
-// Schema for the Pass 1 Outline strategy
-const SlideOutlineSchema = z.object({
+// Image requests in flight for one deck. A deck has up to 15 images.
+const IMAGE_CONCURRENCY = 4;
+
+type SlideModel = ReturnType<typeof getConfiguredModel>;
+type FilledSlide = { slideTypeKey: string; parameters: Record<string, unknown> };
+
+// Schema for the Pass 1 Outline strategy. The key is an enum of the registered
+// types so the model cannot invent one ("title_slide", "bullet-list").
+export const SlideOutlineSchema = z.object({
   title: z.string().describe("Overall presentation title"),
   slides: z.array(
     z.object({
       slideTypeKey: z
-        .string()
+        .enum(SLIDE_TYPE_KEYS)
         .describe("Must exactly match an available slideTypeKey from the catalog"),
       intent: z
         .string()
@@ -233,7 +248,7 @@ export class SlideGenerationService {
         where: { id: presentationId },
         data: {
           title: title,
-          slidesJson: slidesOutline.map((s: any) => ({
+          slidesJson: slidesOutline.map((s) => ({
             slideTypeKey: s.slideTypeKey,
             parameters: {},
           })) as Prisma.InputJsonValue,
@@ -242,72 +257,53 @@ export class SlideGenerationService {
 
       // 4. PASS 2: Concurrently generate specific parameters for each slide
       logger.info(`[Slide Gen Debug] PASS 2: Generating Parameters concurrently...`);
-      const parameterPromises = slidesOutline.map(async (slideOutline: any, index: number) => {
-        const slideDef = getSlideTypeDefinition(slideOutline.slideTypeKey);
-        if (!slideDef) {
-          logger.warn(`[Slide Gen Debug] Unknown slide type: ${slideOutline.slideTypeKey}`);
-          return { slideTypeKey: slideOutline.slideTypeKey, parameters: {} };
-        }
-
-        const slidePrompt = `You are filling in specific parameters for slide #${index + 1} of a presentation.
-Presentation Title: "${title}"
-Slide Type: "${slideDef.name}" (${slideOutline.slideTypeKey})
-Slide Intent: "${slideOutline.intent}"
-
-Template Brand Context: "${template?.name || "Standard Core Blueprint"}"
-${contextText ? `Source Context:\n${contextText}` : ""}
-
-Provide ONLY the required JSON parameters for this slide type matching the schema exactly.
-CRITICAL PRESENTATION RULE: Slides must be easily readable. Do NOT write long paragraphs. Keep text extremely concise. Summarize lengthy text into short, punchy bullet points where possible.${
-          slideOutline.slideTypeKey === "diagram_slide"
-            ? `\n\nWhen producing the \`mermaidCode\` field, follow these rules exactly:\n${MERMAID_SYNTAX_RULES}`
-            : ""
-        }`;
-
-        let parameters = {};
-        for (let attempt = 1; attempt <= 2; attempt++) {
-          try {
-            const slideGen = await generateText({
-              model,
-              providerOptions: getStructuredProviderOptions(),
-              output: Output.object({
-                name: "SlideParameters",
-                description:
-                  "Generates specific structured content parameters for a single presentation slide.",
-                schema: slideDef.parametersSchema,
-              }),
-              prompt: slidePrompt,
-              temperature: 0.2 + attempt * 0.1,
-              maxRetries: 3,
-            });
-            parameters = slideGen.output;
-
-            if (slideGen.totalUsage) {
-              aiUsageService
-                .logUsage({
-                  userId,
-                  workspaceId,
-                  feature: "SLIDES",
-                  provider: "openrouter",
-                  model: activeModel,
-                  inputTokens: slideGen.totalUsage.inputTokens || 0,
-                  outputTokens: slideGen.totalUsage.outputTokens || 0,
-                })
-                .catch(() => {});
-            }
-            break; // Success
-          } catch (err) {
-            logger.warn(
-              `[Slide Gen Debug] Slide ${index + 1} parameter generation attempt ${attempt} failed:`,
-              err,
-            );
+      const parameterPromises = slidesOutline.map(
+        async (slideOutline, index: number): Promise<FilledSlide | null> => {
+          const slideDef = getSlideTypeDefinition(slideOutline.slideTypeKey);
+          if (!slideDef) {
+            logger.warn(`[Slide Gen Debug] Unknown slide type: ${slideOutline.slideTypeKey}`);
+            return null;
           }
-        }
 
-        return { slideTypeKey: slideOutline.slideTypeKey, parameters };
-      });
+          const slidePrompt = this.buildSlidePrompt(
+            `You are filling in specific parameters for slide #${index + 1} of a presentation.`,
+            title,
+            slideDef,
+            slideOutline.intent,
+            template?.name,
+            contextText,
+          );
+          const parameters = await this.fillSlideParameters(
+            model,
+            activeModel,
+            slideDef,
+            slidePrompt,
+            userId,
+            workspaceId,
+            `Slide ${index + 1}`,
+          );
+          return parameters ? { slideTypeKey: slideOutline.slideTypeKey, parameters } : null;
+        },
+      );
 
-      const fullyPopulatedSlides = await Promise.all(parameterPromises);
+      const slideResults = await Promise.all(parameterPromises);
+      let fullyPopulatedSlides = slideResults.filter((s): s is FilledSlide => s !== null);
+      const dropped = slideResults.length - fullyPopulatedSlides.length;
+      if (dropped > 0 && fullyPopulatedSlides.length > 0) {
+        // A slide without content renders as an empty frame, so it is left out.
+        logger.warn(
+          `[Slide Gen Debug] Dropped ${dropped} of ${slideResults.length} slides that could not be filled for ${presentationId}.`,
+        );
+      } else if (dropped > 0) {
+        // Nothing could be filled. Keep the outline so the deck is not empty.
+        logger.error(
+          `[Slide Gen Debug] No slide could be filled for ${presentationId}. Keeping the empty outline.`,
+        );
+        fullyPopulatedSlides = slidesOutline.map((s) => ({
+          slideTypeKey: s.slideTypeKey,
+          parameters: {},
+        }));
+      }
 
       logger.info(
         `[Slide Gen Debug] PASS 2 Complete. ${fullyPopulatedSlides.length} fully structured slides built.`,
@@ -324,12 +320,7 @@ CRITICAL PRESENTATION RULE: Slides must be easily readable. Do NOT write long pa
 
       // 6. Generate Images
       if (fullyPopulatedSlides.length > 0) {
-        await this.processSlideImages(
-          userId,
-          presentationId,
-          fullyPopulatedSlides as { slideTypeKey: string; parameters: Record<string, unknown> }[],
-          theme,
-        );
+        await this.processSlideImages(userId, presentationId, fullyPopulatedSlides, theme);
       }
 
       // 7. Complete
@@ -425,7 +416,7 @@ Select ONLY ONE slide type that best fits this request, and define a clear inten
               "Decides the most appropriate slide type and intent for a new slide based on the user's request.",
             schema: z.object({
               slideTypeKey: z
-                .string()
+                .enum(SLIDE_TYPE_KEYS)
                 .describe("Must exactly match a slideTypeKey from the available catalog"),
               intent: z
                 .string()
@@ -463,76 +454,40 @@ Select ONLY ONE slide type that best fits this request, and define a clear inten
       throw new Error(`Unknown slide type: ${finalSlideTypeKey}`);
     }
 
-    const slidePrompt = `You are generating content for a new slide to be inserted into a presentation.
-Presentation Title: "${presentation.title}"
-Slide Type: "${slideDef.name}" (${finalSlideTypeKey})
-Slide Intent: "${slideIntent}"
+    const slidePrompt = this.buildSlidePrompt(
+      "You are generating content for a new slide to be inserted into a presentation.",
+      presentation.title,
+      slideDef,
+      slideIntent,
+      presentation.template?.name,
+      contextText,
+    );
 
-Template Brand Context: "${presentation.template?.name || "Standard Core Blueprint"}"
-${contextText ? `Source Context:\n${contextText}` : ""}
-
-Provide ONLY the required JSON parameters for this slide type matching the schema exactly.
-CRITICAL PRESENTATION RULE: Slides must be easily readable. Do NOT write long paragraphs. Keep text extremely concise. Summarize lengthy text into short, punchy bullet points where possible.${
-      finalSlideTypeKey === "diagram_slide"
-        ? `\n\nWhen producing the \`mermaidCode\` field, follow these rules exactly:\n${MERMAID_SYNTAX_RULES}`
-        : ""
-    }`;
-
-    let parameters = {};
-    for (let attempt = 1; attempt <= 2; attempt++) {
-      try {
-        const slideGen = await generateText({
-          model,
-          providerOptions: getStructuredProviderOptions(),
-          output: Output.object({
-            name: "SlideParameters",
-            description:
-              "Generates specific structured content parameters for a single presentation slide.",
-            schema: slideDef.parametersSchema,
-          }),
-          prompt: slidePrompt,
-          temperature: 0.2 + attempt * 0.1,
-          maxRetries: 3,
-        });
-        parameters = slideGen.output;
-
-        if (slideGen.totalUsage) {
-          aiUsageService
-            .logUsage({
-              userId,
-              workspaceId,
-              feature: "SLIDES",
-              provider: "openrouter",
-              model: this.modelName,
-              inputTokens: slideGen.totalUsage.inputTokens || 0,
-              outputTokens: slideGen.totalUsage.outputTokens || 0,
-            })
-            .catch(() => {});
-        }
-        break;
-      } catch (err) {
-        logger.warn(`Single slide parameter generation attempt ${attempt} failed:`, err);
-        if (attempt === 2) throw err;
-      }
+    const parameters = await this.fillSlideParameters(
+      model,
+      this.modelName,
+      slideDef,
+      slidePrompt,
+      userId,
+      workspaceId,
+      "Single slide",
+    );
+    if (!parameters) {
+      throw new Error("Failed to generate the slide content");
     }
 
-    const newSlide = { slideTypeKey: finalSlideTypeKey, parameters };
+    const newSlide: FilledSlide = { slideTypeKey: slideDef.key, parameters };
 
     // 3. Generate image if needed
     // Using cast because we didn't strongly type the whole returned schema locally
-    await this.processSlideImages(
-      userId,
-      presentationId,
-      [newSlide] as { slideTypeKey: string; parameters: Record<string, unknown> }[],
-      presentation.theme as any,
-    );
+    await this.processSlideImages(userId, presentationId, [newSlide], presentation.theme as any);
 
     // 4. Insert into presentation
     const slides = Array.isArray(presentation.slidesJson) ? [...presentation.slidesJson] : [];
 
     // Clamp position
     const validPosition = Math.max(0, Math.min(position, slides.length));
-    slides.splice(validPosition, 0, newSlide);
+    slides.splice(validPosition, 0, newSlide as Prisma.JsonObject);
 
     // 5. Update presentation
     const updated = await prisma.presentation.update({
@@ -673,6 +628,91 @@ CRITICAL PRESENTATION RULE: Slides must be easily readable. Do NOT write long pa
     return updated;
   }
 
+  /**
+   * Prompt for the parameters of one slide. It carries the description of the
+   * type, which is where the limits of the layout are written.
+   */
+  private buildSlidePrompt(
+    intro: string,
+    presentationTitle: string,
+    slideDef: SlideTypeDefinition,
+    intent: string,
+    templateName: string | undefined,
+    contextText: string,
+  ): string {
+    const cap = SLIDE_LIST_CAPS[slideDef.key];
+    const capRule = cap ? ` "${cap.field}" has at most ${cap.max} items.` : "";
+    return `${intro}
+Presentation Title: "${presentationTitle}"
+Slide Type: "${slideDef.name}" (${slideDef.key})
+Slide Type Description: ${slideDef.description}
+Slide Intent: "${intent}"
+
+Template Brand Context: "${templateName || "Standard Core Blueprint"}"
+${contextText ? `Source Context:\n${contextText}` : ""}
+
+Provide ONLY the required JSON parameters for this slide type matching the schema exactly.
+CRITICAL PRESENTATION RULE: Slides must be easily readable. Do NOT write long paragraphs. Keep text extremely concise. Summarize lengthy text into short, punchy bullet points where possible.
+FORMAT RULES: Plain text only, no markdown. Do not start a single text field with "- " or a bullet mark. Keep titles under about 60 characters. Follow the length given for each field.${capRule}${
+      slideDef.key === "diagram_slide"
+        ? `\n\nWhen producing the \`mermaidCode\` field, follow these rules exactly:\n${MERMAID_SYNTAX_RULES}`
+        : ""
+    }`;
+  }
+
+  /**
+   * Asks the model for the parameters of one slide, twice at most. Returns null
+   * when both attempts fail, so the caller decides what to do with the slide.
+   */
+  private async fillSlideParameters(
+    model: SlideModel,
+    modelName: string,
+    slideDef: SlideTypeDefinition,
+    slidePrompt: string,
+    userId: string,
+    workspaceId: string,
+    label: string,
+  ): Promise<Record<string, unknown> | null> {
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      try {
+        const slideGen = await generateText({
+          model,
+          providerOptions: getStructuredProviderOptions(),
+          output: Output.object({
+            name: "SlideParameters",
+            description:
+              "Generates specific structured content parameters for a single presentation slide.",
+            schema: slideDef.parametersSchema,
+          }),
+          prompt: slidePrompt,
+          temperature: 0.2 + attempt * 0.1,
+          maxRetries: 3,
+        });
+
+        if (slideGen.totalUsage) {
+          aiUsageService
+            .logUsage({
+              userId,
+              workspaceId,
+              feature: "SLIDES",
+              provider: "openrouter",
+              model: modelName,
+              inputTokens: slideGen.totalUsage.inputTokens || 0,
+              outputTokens: slideGen.totalUsage.outputTokens || 0,
+            })
+            .catch(() => {});
+        }
+        return applySlideCaps(slideDef.key, slideGen.output as Record<string, unknown>);
+      } catch (err) {
+        logger.warn(
+          `[Slide Gen Debug] ${label} parameter generation attempt ${attempt} failed:`,
+          err,
+        );
+      }
+    }
+    return null;
+  }
+
   private buildOutlinePrompt(
     template: TemplateWithSlideTypes | null,
     contextText: string,
@@ -726,40 +766,41 @@ ${userPrompt}`;
   ) {
     logger.info(`Processing images for presentation ${presentationId}`);
 
-    // Parallel with limit is better, but map is fine for small batches
-    const imagePromises = slides.map(async (slide) => {
-      const params = slide.parameters as Record<string, unknown>;
+    const withImage = slides.filter(
+      (slide) =>
+        typeof slide.parameters.imageQuery === "string" &&
+        slide.parameters.imageQuery.trim().length > 0,
+    );
 
-      if (typeof params.imageQuery === "string" && params.imageQuery.trim().length > 0) {
-        // Enhance prompt with theme context
-        let themeContext = "";
-        if (theme) {
-          themeContext = `Style: ${theme.name}. Visually incorporate these dominant colors: ${theme.primaryColor}, ${theme.secondaryColor}, ${theme.backgroundColor}. (CRITICAL: Do NOT draw a literal color palette, color swatches, color spots, UI mockups, or borders on the image canvas. Draw only the requested scene/subject).`;
+    // A few at a time: 15 requests at once ran into the provider's rate limit
+    // and the 30 s timeout. The retry is inside generateAndStoreImage.
+    await mapWithConcurrency(withImage, IMAGE_CONCURRENCY, async (slide) => {
+      const params = slide.parameters;
+
+      // Enhance prompt with theme context
+      let themeContext = "";
+      if (theme) {
+        themeContext = `Style: ${theme.name}. Visually incorporate these dominant colors: ${theme.primaryColor}, ${theme.secondaryColor}, ${theme.backgroundColor}. (CRITICAL: Do NOT draw a literal color palette, color swatches, color spots, UI mockups, or borders on the image canvas. Draw only the requested scene/subject).`;
+      }
+      const fullPrompt = themeContext ? `${params.imageQuery}. ${themeContext}` : params.imageQuery;
+
+      try {
+        // Generate image
+        const imageUrl = await imageGenerationService.generateAndStoreImage(
+          fullPrompt as string,
+          userId,
+          presentationId,
+        );
+
+        if (imageUrl) {
+          params.imageUrl = imageUrl;
         }
-        const fullPrompt = themeContext
-          ? `${params.imageQuery}. ${themeContext}`
-          : params.imageQuery;
-
-        try {
-          // Generate image
-          const imageUrl = await imageGenerationService.generateAndStoreImage(
-            fullPrompt,
-            userId,
-            presentationId,
-          );
-
-          if (imageUrl) {
-            params.imageUrl = imageUrl;
-          }
-        } catch (error) {
-          logger.warn(`Failed to generate slide image for prompt "${params.imageQuery}":`, error);
-          // Fallback to a placeholder or skip so we don't crash the presentation
-          params.imageUrl = undefined;
-        }
+      } catch (error) {
+        logger.warn(`Failed to generate slide image for prompt "${params.imageQuery}":`, error);
+        // Fallback to a placeholder or skip so we don't crash the presentation
+        params.imageUrl = undefined;
       }
     });
-
-    await Promise.all(imagePromises);
   }
 }
 

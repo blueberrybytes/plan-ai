@@ -39,6 +39,7 @@ import { setToastMessage } from "../store/slices/app/appSlice";
 import { reportUnexpectedError } from "../utils/reportError";
 import { useGetBrandThemesQuery } from "../store/apis/brandThemeApi";
 import { exportToPptx } from "../services/pptxExportService";
+import { DEFAULT_SLIDE_COLORS, DEFAULT_SLIDE_FONT } from "../components/slides/slideColors";
 import EditSlideTextDialog from "../components/slides/EditSlideTextDialog";
 import AddSlideDialog from "../components/slides/AddSlideDialog";
 interface SlideData {
@@ -189,21 +190,30 @@ const SlideView: React.FC = () => {
   const slide = slides[currentSlide];
 
   const handleDownload = async () => {
-    if (!presentation || !slides.length || !brandColors || !fonts) return;
+    if (!presentation || !slides.length) return;
     setIsExporting(true);
     try {
-      await exportToPptx({
+      // A deck without a theme exports with the colours and fonts it has on screen.
+      const { skippedDiagramSlides } = await exportToPptx({
         title: presentation.title,
         slides,
         theme: {
-          primaryColor: brandColors.primary,
-          secondaryColor: brandColors.secondary,
-          backgroundColor: brandColors.background,
-          headingFont: fonts.heading,
-          bodyFont: fonts.body,
-          logoUrl: brandColors.logoUrl || undefined,
+          primaryColor: brandColors?.primary || DEFAULT_SLIDE_COLORS.primary,
+          secondaryColor: brandColors?.secondary || DEFAULT_SLIDE_COLORS.secondary,
+          backgroundColor: brandColors?.background || DEFAULT_SLIDE_COLORS.background,
+          headingFont: fonts?.heading || DEFAULT_SLIDE_FONT,
+          bodyFont: fonts?.body || DEFAULT_SLIDE_FONT,
+          logoUrl: brandColors?.logoUrl || undefined,
         },
       });
+      if (skippedDiagramSlides > 0) {
+        dispatch(
+          setToastMessage({
+            severity: "info",
+            message: t("slides.export.diagramsSkipped", { count: skippedDiagramSlides }),
+          }),
+        );
+      }
     } catch (error) {
       console.error("Failed to export PPTX", error);
       alert("Failed to export presentation.");
