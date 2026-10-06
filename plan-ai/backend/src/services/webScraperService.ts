@@ -6,6 +6,7 @@ import { JSDOM, VirtualConsole } from "jsdom";
 import { Readability } from "@mozilla/readability";
 import { parseStringPromise } from "xml2js";
 import { logger } from "../utils/logger";
+import { openWebRenderer } from "./webRenderService";
 
 interface ScrapedPage {
   url: string;
@@ -200,7 +201,65 @@ export class WebScraperService {
       results.push(scraped);
     }
 
+    // 3. Nothing readable in the HTML: the site is drawn by JavaScript. Run
+    // it in a browser and read what a visitor would see.
+    if (results.length === 0 || results.every((page) => page.metaOnly)) {
+      const rendered = await this.scrapeRendered(rootUrl, maxPages);
+      if (rendered.length > 0) return rendered;
+    }
+
     return results;
+  }
+
+  /**
+   * Reads a JavaScript site through a headless browser: the root page first,
+   * then the pages it links to, up to `maxPages`. Returns nothing when there
+   * is no browser on this machine or the pages have no text either.
+   */
+  private async scrapeRendered(rootUrl: string, maxPages: number): Promise<ScrapedPage[]> {
+    const renderer = await openWebRenderer();
+    if (!renderer) return [];
+    const pages: ScrapedPage[] = [];
+    try {
+      const queue = [rootUrl];
+      const visited = new Set<string>();
+      const seenContent = new Set<string>();
+      while (queue.length > 0 && visited.size < maxPages) {
+        const target = queue.shift() as string;
+        const key = target.replace(/\/$/, "");
+        if (visited.has(key)) continue;
+        visited.add(key);
+
+        const page = await renderer.render(target);
+        if (!page) continue;
+        for (const link of page.links) {
+          if (!visited.has(link.replace(/\/$/, ""))) queue.push(link);
+        }
+        // What the visitor reads, line by line. Readability glues the words of
+        // neighbouring elements together on these pages, so it is the fallback.
+        const content = page.text || this.readableText(page.html, page.url);
+        const clean = content.replace(/[ \t]+/g, " ").trim();
+        if (clean.length <= MIN_ARTICLE_CHARS || seenContent.has(clean)) continue;
+        seenContent.add(clean);
+        pages.push({ url: page.url, title: page.title || "Untitled Page", content: clean });
+      }
+    } finally {
+      await renderer.close();
+    }
+    logger.info(`Rendered scrape of ${rootUrl}: ${pages.length} page(s) with text`);
+    return pages;
+  }
+
+  /** The article text of some HTML, or "" when Readability finds too little. */
+  private readableText(html: string, url: string): string {
+    try {
+      const dom = new JSDOM(html, { url, virtualConsole: new VirtualConsole() });
+      const article = new Readability(dom.window.document).parse();
+      const text = article?.textContent?.replace(/\s+/g, " ").trim() ?? "";
+      return text.length >= MIN_ARTICLE_CHARS ? text : "";
+    } catch {
+      return "";
+    }
   }
 }
 
