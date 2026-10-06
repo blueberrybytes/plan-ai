@@ -380,6 +380,9 @@ const DocView: React.FC = () => {
         @media print {
           /* Reset all ancestor containers that clip content */
           html, body { height: auto !important; overflow: visible !important; }
+          /* Browsers drop backgrounds when printing. A light logo on a dark theme
+             would print white on white. */
+          #pdf-content, #pdf-content * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
           body * { visibility: hidden; }
           #pdf-content, #pdf-content * { visibility: visible; }
           #pdf-content { position: static !important; width: 100% !important; max-width: 100% !important; margin: 0 !important; padding: 20px !important; }
