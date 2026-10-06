@@ -1616,7 +1616,10 @@
         "integration": "Integrations",
         "assistant": "Assistant",
         "platform_admin": "Platform admin"
-      }
+      },
+      "filteredBy": "Showing only: {{what}}",
+      "clearFilter": "Show all",
+      "filterHint": "Show only the entries of this one"
     },
     "signInRules": {
       "title": "Sign-in rules",

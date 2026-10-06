@@ -80,6 +80,8 @@ import { AiUsageController } from './../controller/aiUsageController';
 // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
 import { AiController } from './../controller/aiController';
 // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+import { AdminMaintenanceController } from './../controller/adminMaintenanceController';
+// WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
 import { AdminEmailController } from './../controller/adminEmailController';
 // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
 import { AccountController } from './../controller/accountController';
@@ -2910,6 +2912,28 @@ const models: TsoaRoute.Models = {
             "tags": {"dataType":"array","array":{"dataType":"string"},"required":true},
         },
         "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "QdrantWorkspaceBackfillResult": {
+        "dataType": "refObject",
+        "properties": {
+            "collection": {"dataType":"string","required":true},
+            "collectionExists": {"dataType":"boolean","required":true},
+            "totalPoints": {"dataType":"double","required":true},
+            "missingBefore": {"dataType":"double","required":true},
+            "stamped": {"dataType":"double","required":true},
+            "contextsTouched": {"dataType":"double","required":true},
+            "contextsTotal": {"dataType":"double","required":true},
+            "orphans": {"dataType":"double","required":true},
+            "missingAfter": {"dataType":"double","required":true},
+            "applied": {"dataType":"boolean","required":true},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "QdrantWorkspaceBackfillResponse": {
+        "dataType": "refAlias",
+        "type": {"ref":"QdrantWorkspaceBackfillResult","validators":{}},
     },
     // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
     "AdminEmailTemplatesResponse": {
@@ -10257,6 +10281,67 @@ export function RegisterRoutes(app: Router,opts?:{multer?:ReturnType<typeof mult
 
               await templateService.apiHandler({
                 methodName: 'getModels',
+                controller,
+                response,
+                next,
+                validatedArgs,
+                successStatus: undefined,
+              });
+            } catch (err) {
+                return next(err);
+            }
+        });
+        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+        const argsAdminMaintenanceController_checkQdrantWorkspace: Record<string, TsoaRoute.ParameterSchema> = {
+        };
+        app.get('/api/admin/maintenance/qdrant-workspace',
+            authenticateMiddleware([{"AdminOnly":[]}]),
+            ...(fetchMiddlewares<RequestHandler>(AdminMaintenanceController)),
+            ...(fetchMiddlewares<RequestHandler>(AdminMaintenanceController.prototype.checkQdrantWorkspace)),
+
+            async function AdminMaintenanceController_checkQdrantWorkspace(request: ExRequest, response: ExResponse, next: any) {
+
+            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+
+            let validatedArgs: any[] = [];
+            try {
+                validatedArgs = templateService.getValidatedArgs({ args: argsAdminMaintenanceController_checkQdrantWorkspace, request, response });
+
+                const controller = new AdminMaintenanceController();
+
+              await templateService.apiHandler({
+                methodName: 'checkQdrantWorkspace',
+                controller,
+                response,
+                next,
+                validatedArgs,
+                successStatus: undefined,
+              });
+            } catch (err) {
+                return next(err);
+            }
+        });
+        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+        const argsAdminMaintenanceController_applyQdrantWorkspace: Record<string, TsoaRoute.ParameterSchema> = {
+                request: {"in":"request","name":"request","required":true,"dataType":"object"},
+        };
+        app.post('/api/admin/maintenance/qdrant-workspace/apply',
+            authenticateMiddleware([{"AdminOnly":[]}]),
+            ...(fetchMiddlewares<RequestHandler>(AdminMaintenanceController)),
+            ...(fetchMiddlewares<RequestHandler>(AdminMaintenanceController.prototype.applyQdrantWorkspace)),
+
+            async function AdminMaintenanceController_applyQdrantWorkspace(request: ExRequest, response: ExResponse, next: any) {
+
+            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+
+            let validatedArgs: any[] = [];
+            try {
+                validatedArgs = templateService.getValidatedArgs({ args: argsAdminMaintenanceController_applyQdrantWorkspace, request, response });
+
+                const controller = new AdminMaintenanceController();
+
+              await templateService.apiHandler({
+                methodName: 'applyQdrantWorkspace',
                 controller,
                 response,
                 next,

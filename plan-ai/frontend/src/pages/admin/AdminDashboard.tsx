@@ -15,6 +15,7 @@ import MonetizationOnIcon from "@mui/icons-material/MonetizationOn";
 import MailIcon from "@mui/icons-material/MailOutline";
 import QueryStatsIcon from "@mui/icons-material/QueryStats";
 import ElectricalServicesIcon from "@mui/icons-material/ElectricalServices";
+import BuildIcon from "@mui/icons-material/BuildOutlined";
 import SidebarLayout from "../../components/layout/SidebarLayout";
 
 const AdminDashboard: React.FC = () => {
@@ -48,6 +49,12 @@ const AdminDashboard: React.FC = () => {
       description: "Monitor tokens and test the MCP SSE endpoint.",
       path: "/admin/mcp",
       icon: <ElectricalServicesIcon fontSize="large" color="primary" />,
+    },
+    {
+      title: "Maintenance",
+      description: "Run one-off data jobs that used to need a shell on the server.",
+      path: "/admin/maintenance",
+      icon: <BuildIcon fontSize="large" color="primary" />,
     },
   ];
 

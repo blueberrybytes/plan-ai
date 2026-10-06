@@ -27,6 +27,7 @@ import {
 import {
   AUDIT_ACTION_GROUPS,
   auditActionLabelKey,
+  auditTargetTitle,
   buildAuditCsv,
   formatAuditDetails,
   formatAuditTarget,
@@ -40,10 +41,40 @@ interface AuditLogPanelProps {
   workspaceName: string;
 }
 
-/** Audit log of the active workspace: filter by action, load older pages, export as CSV. */
+/** Text in a row that narrows the log to that person or target when clicked. */
+const FilterLink: React.FC<{ title: string; onClick: () => void; children: React.ReactNode }> = ({
+  title,
+  onClick,
+  children,
+}) => (
+  <Box
+    component="button"
+    type="button"
+    title={title}
+    onClick={onClick}
+    sx={{
+      all: "unset",
+      cursor: "pointer",
+      wordBreak: "inherit",
+      "&:hover": { textDecoration: "underline" },
+      "&:focus-visible": { outline: "2px solid", outlineColor: "primary.main" },
+    }}
+  >
+    {children}
+  </Box>
+);
+
+/**
+ * Audit log of the active workspace: filter by action, by person or by target,
+ * load older pages, export as CSV.
+ */
 const AuditLogPanel: React.FC<AuditLogPanelProps> = ({ workspaceName }) => {
   const { t } = useTranslation();
   const [actionGroup, setActionGroup] = useState("");
+  // Narrow the log to one person or one target (a meeting, a document) by
+  // clicking it in a row. `label` is what the row showed.
+  const [actorFilter, setActorFilter] = useState<{ id: string; label: string } | null>(null);
+  const [targetFilter, setTargetFilter] = useState<{ id: string; label: string } | null>(null);
   const [entries, setEntries] = useState<AuditLogEntryResponse[]>([]);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [hasError, setHasError] = useState(false);
@@ -60,6 +91,8 @@ const AuditLogPanel: React.FC<AuditLogPanelProps> = ({ workspaceName }) => {
           limit: PAGE_SIZE,
           cursor,
           action: actionGroup ? `${actionGroup}.` : undefined,
+          actorUserId: actorFilter?.id,
+          targetId: targetFilter?.id,
         }).unwrap();
         if (id !== requestId.current) return;
         setEntries((previous) => (cursor ? [...previous, ...page.entries] : page.entries));
@@ -69,7 +102,7 @@ const AuditLogPanel: React.FC<AuditLogPanelProps> = ({ workspaceName }) => {
         if (id === requestId.current) setHasError(true);
       }
     },
-    [fetchPage, actionGroup],
+    [fetchPage, actionGroup, actorFilter, targetFilter],
   );
 
   useEffect(() => {
@@ -152,6 +185,25 @@ const AuditLogPanel: React.FC<AuditLogPanelProps> = ({ workspaceName }) => {
         </Box>
       </Box>
 
+      {actorFilter || targetFilter ? (
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1, flexWrap: "wrap", mb: 2 }}>
+          <Typography variant="body2" color="text.secondary">
+            {t("workspaceSecurity.auditLog.filteredBy", {
+              what: [actorFilter?.label, targetFilter?.label].filter(Boolean).join(", "),
+            })}
+          </Typography>
+          <Button
+            size="small"
+            onClick={() => {
+              setActorFilter(null);
+              setTargetFilter(null);
+            }}
+          >
+            {t("workspaceSecurity.auditLog.clearFilter")}
+          </Button>
+        </Box>
+      ) : null}
+
       {hasError ? (
         <Alert
           severity="error"
@@ -183,9 +235,41 @@ const AuditLogPanel: React.FC<AuditLogPanelProps> = ({ workspaceName }) => {
                 <TableCell sx={{ whiteSpace: "nowrap" }}>
                   {format(new Date(entry.createdAt), "yyyy-MM-dd HH:mm")}
                 </TableCell>
-                <TableCell>{actorLabel(entry)}</TableCell>
+                <TableCell>
+                  {entry.actorUserId ? (
+                    <FilterLink
+                      title={t("workspaceSecurity.auditLog.filterHint")}
+                      onClick={() =>
+                        setActorFilter({
+                          id: entry.actorUserId as string,
+                          label: actorLabel(entry),
+                        })
+                      }
+                    >
+                      {actorLabel(entry)}
+                    </FilterLink>
+                  ) : (
+                    actorLabel(entry)
+                  )}
+                </TableCell>
                 <TableCell>{actionLabel(entry.action)}</TableCell>
-                <TableCell sx={{ wordBreak: "break-all" }}>{formatAuditTarget(entry)}</TableCell>
+                <TableCell sx={{ wordBreak: "break-all" }}>
+                  {entry.targetId ? (
+                    <FilterLink
+                      title={t("workspaceSecurity.auditLog.filterHint")}
+                      onClick={() =>
+                        setTargetFilter({
+                          id: entry.targetId as string,
+                          label: auditTargetTitle(entry) || formatAuditTarget(entry),
+                        })
+                      }
+                    >
+                      {formatAuditTarget(entry)}
+                    </FilterLink>
+                  ) : (
+                    formatAuditTarget(entry)
+                  )}
+                </TableCell>
                 <TableCell sx={{ wordBreak: "break-word", maxWidth: 360 }}>
                   {formatAuditDetails(entry.metadata)}
                 </TableCell>
