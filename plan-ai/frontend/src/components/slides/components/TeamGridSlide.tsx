@@ -4,6 +4,8 @@ import SlideFrame from "./SlideFrame";
 import AnimatedText from "./AnimatedText";
 import SlideBadge from "./SlideBadge";
 import { SlideProps } from "../SlideRenderer";
+import { slideTitleColor } from "../slideColors";
+import { capList } from "../slideCaps";
 
 // Team Grid
 export const TeamGridSlide: React.FC<SlideProps> = ({
@@ -14,17 +16,18 @@ export const TeamGridSlide: React.FC<SlideProps> = ({
   animate,
 }) => {
   const primary = brandColors?.primary || "#6366f1";
-  const rawMembers = data.members;
-  const members: { name: string; role: string; bio: string }[] = Array.isArray(rawMembers)
-    ? rawMembers.map((m: unknown) => {
-        const obj = m as Record<string, unknown>;
-        return {
-          name: String(obj.name || ""),
-          role: String(obj.role || ""),
-          bio: String(obj.bio || ""),
-        };
-      })
-    : [];
+  const titleColor = slideTitleColor(brandColors);
+  const members: { name: string; role: string; bio: string }[] = capList(
+    "team_grid",
+    data.members,
+  ).map((m: unknown) => {
+    const obj = (m || {}) as Record<string, unknown>;
+    return {
+      name: String(obj.name || ""),
+      role: String(obj.role || ""),
+      bio: String(obj.bio || ""),
+    };
+  });
   const cardBg =
     brandColors?.cardStyle === "glass"
       ? "rgba(255,255,255,0.03)"
@@ -51,7 +54,7 @@ export const TeamGridSlide: React.FC<SlideProps> = ({
             fontSize: 36,
             fontWeight: 700,
             mb: 4,
-            color: primary,
+            color: titleColor,
             fontFamily: `'${fonts?.heading || "Inter"}', sans-serif`,
           }}
         >
@@ -61,7 +64,7 @@ export const TeamGridSlide: React.FC<SlideProps> = ({
       <Box
         sx={{
           display: "grid",
-          gridTemplateColumns: `repeat(${Math.min(members.length, 4)}, 1fr)`,
+          gridTemplateColumns: `repeat(${Math.max(members.length, 1)}, 1fr)`,
           gap: 3,
         }}
       >

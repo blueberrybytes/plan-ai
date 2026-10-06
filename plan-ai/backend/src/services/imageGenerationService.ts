@@ -7,6 +7,7 @@ import { privacyProviderPrefs, resolveWorkspaceApiKey } from "../utils/aiModelUt
 import { uploadPrivateFile } from "../firebase/privateStorage";
 
 const IMAGE_MODEL = "black-forest-labs/flux.2-klein-4b";
+const IMAGE_ATTEMPTS = 2;
 
 export class ImageGenerationService {
   /**
@@ -27,63 +28,86 @@ export class ImageGenerationService {
     // Self-hosted deployments have no image model, and the prompt is built
     // from the meeting's content, so it must not go to OpenRouter.
     if (getLlmProvider() === "local") return null;
+    let workspaceId: string;
+    let apiKey: string;
     try {
       const presentation = await prisma.presentation.findUnique({
         where: { id: presentationId },
         select: { workspaceId: true },
       });
       if (!presentation?.workspaceId) return null;
-      const apiKey = await resolveWorkspaceApiKey(presentation.workspaceId);
-
-      const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: IMAGE_MODEL,
-          messages: [{ role: "user", content: prompt }],
-          provider: privacyProviderPrefs(),
-        }),
-        signal: AbortSignal.timeout(30000),
-      });
-      if (!response.ok) {
-        logger.error(`[ImageGeneration] OpenRouter answered ${response.status}`);
-        return null;
-      }
-
-      const data = await response.json();
-      const imageUrl: unknown = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
-      if (typeof imageUrl !== "string" || !imageUrl.startsWith("data:image/")) {
-        logger.error("[ImageGeneration] No image data returned");
-        return null;
-      }
-
-      const buffer = Buffer.from(imageUrl.split(",")[1] ?? "", "base64");
-      const ref = await uploadPrivateFile(
-        `presentations/${userId}/${presentationId}/${uuidv4()}.png`,
-        buffer,
-        "image/png",
-      );
-
-      await aiUsageService
-        .logUsage({
-          userId,
-          workspaceId: presentation.workspaceId,
-          feature: "SLIDES",
-          provider: "openrouter",
-          model: IMAGE_MODEL,
-          inputTokens: 0,
-          outputTokens: 1,
-        })
-        .catch((usageErr) => logger.warn("Failed to log image generation usage", usageErr));
-
-      return ref;
+      workspaceId = presentation.workspaceId;
+      apiKey = await resolveWorkspaceApiKey(workspaceId);
     } catch (error) {
-      logger.error("Failed to generate and store image", error);
+      logger.error("Failed to prepare the image generation", error);
       return null;
     }
+
+    // One retry: most failures are a timeout or a rate limit that clears.
+    for (let attempt = 1; attempt <= IMAGE_ATTEMPTS; attempt++) {
+      try {
+        return await this.requestAndStore(prompt, apiKey, userId, presentationId, workspaceId);
+      } catch (error) {
+        logger.error(
+          `[ImageGeneration] Attempt ${attempt} of ${IMAGE_ATTEMPTS} failed`,
+          error instanceof Error ? error.message : error,
+        );
+      }
+    }
+    return null;
+  }
+
+  /** One request to the image model. Throws when no image comes back. */
+  private async requestAndStore(
+    prompt: string,
+    apiKey: string,
+    userId: string,
+    presentationId: string,
+    workspaceId: string,
+  ): Promise<string> {
+    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: IMAGE_MODEL,
+        messages: [{ role: "user", content: prompt }],
+        provider: privacyProviderPrefs(),
+      }),
+      signal: AbortSignal.timeout(30000),
+    });
+    if (!response.ok) {
+      throw new Error(`OpenRouter answered ${response.status}`);
+    }
+
+    const data = await response.json();
+    const imageUrl: unknown = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+    if (typeof imageUrl !== "string" || !imageUrl.startsWith("data:image/")) {
+      throw new Error("No image data returned");
+    }
+
+    const buffer = Buffer.from(imageUrl.split(",")[1] ?? "", "base64");
+    const ref = await uploadPrivateFile(
+      `presentations/${userId}/${presentationId}/${uuidv4()}.png`,
+      buffer,
+      "image/png",
+    );
+
+    await aiUsageService
+      .logUsage({
+        userId,
+        workspaceId,
+        feature: "SLIDES",
+        provider: "openrouter",
+        model: IMAGE_MODEL,
+        inputTokens: 0,
+        outputTokens: 1,
+      })
+      .catch((usageErr) => logger.warn("Failed to log image generation usage", usageErr));
+
+    return ref;
   }
 }
 

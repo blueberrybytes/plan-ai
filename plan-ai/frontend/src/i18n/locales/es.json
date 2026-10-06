@@ -1240,6 +1240,10 @@
       "editSlide": "Editar Diapositiva",
       "back": "Volver"
     },
+    "export": {
+      "diagramsSkipped_one": "{{count}} diapositiva de diagrama no se incluye en el archivo de PowerPoint.",
+      "diagramsSkipped_other": "{{count}} diapositivas de diagrama no se incluyen en el archivo de PowerPoint."
+    },
     "slideTypesPage": {
       "title": "Tipos de Diapositiva"
     },

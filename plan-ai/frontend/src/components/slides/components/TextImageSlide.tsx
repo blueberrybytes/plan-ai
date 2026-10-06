@@ -5,6 +5,7 @@ import SlideFrame from "./SlideFrame";
 import AnimatedText from "./AnimatedText";
 import SlideBadge from "./SlideBadge";
 import { SlideProps } from "../SlideRenderer";
+import { slideTitleColor } from "../slideColors";
 
 export const TextImageSlide: React.FC<SlideProps> = ({
   data = {},
@@ -14,6 +15,7 @@ export const TextImageSlide: React.FC<SlideProps> = ({
   animate,
 }) => {
   const primary = brandColors?.primary || "#6366f1";
+  const titleColor = slideTitleColor(brandColors);
 
   const titleStr = String(data.title || "");
   const bodyStr = String(data.body || "");
@@ -37,7 +39,7 @@ export const TextImageSlide: React.FC<SlideProps> = ({
               fontSize: titleSize,
               fontWeight: 700,
               mb: 2,
-              color: primary,
+              color: titleColor,
               fontFamily: `'${fonts?.heading || "Inter"}', sans-serif`,
             }}
           >
@@ -68,7 +70,6 @@ export const TextImageSlide: React.FC<SlideProps> = ({
           <SlideImage
             src={(data.imageUrl as string) || ""}
             alt={String(data.imageQuery || "Featured Image")}
-            query={String(data.imageQuery || "")}
             primary={primary}
             style={{ width: "100%", height: "100%", objectFit: "cover" }}
           />

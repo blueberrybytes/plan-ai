@@ -22,6 +22,81 @@ const fetchProxiedImage = async (url: string): Promise<string> => {
   }
 };
 
+export interface ImageSize {
+  width: number;
+  height: number;
+}
+
+export interface ImageBox {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+// Where the theme logo goes, in inches. The corner box ends 0.3 in from the
+// right edge of the slide.
+export const CORNER_LOGO_BOX: ImageBox = { x: 8.2, y: 0.3, w: 1.5, h: 0.6 };
+export const TITLE_LOGO_BOX: ImageBox = { x: 4.0, y: 0.8, w: 2, h: 1 };
+
+const round3 = (n: number) => Math.round(n * 1000) / 1000;
+
+/**
+ * Position and size of an image drawn inside `box` with its own aspect ratio.
+ * pptxgenjs does not read the size of an image: with `sizing` and no real
+ * width and height it assumes a square and squashes a wide logo. Without a
+ * known size the image fills the box.
+ */
+export const fitImageInBox = (
+  natural: ImageSize | null,
+  box: ImageBox,
+  align: "center" | "right" = "center",
+): ImageBox => {
+  if (!natural || !(natural.width > 0) || !(natural.height > 0)) return { ...box };
+  const scale = Math.min(box.w / natural.width, box.h / natural.height);
+  const w = natural.width * scale;
+  const h = natural.height * scale;
+  return {
+    x: round3(align === "right" ? box.x + box.w - w : box.x + (box.w - w) / 2),
+    y: round3(box.y + (box.h - h) / 2),
+    w: round3(w),
+    h: round3(h),
+  };
+};
+
+/**
+ * `w` and `h` that give pptxgenjs the aspect ratio of an image placed with
+ * `sizing` (cover or contain). It uses them only as a ratio for the crop; the
+ * drawn size is the one in `sizing`. Empty when the size is unknown.
+ */
+export const imageAspectProps = (natural: ImageSize | null): { w?: number; h?: number } =>
+  natural && natural.width > 0 && natural.height > 0
+    ? { w: round3(natural.width / natural.height), h: 1 }
+    : {};
+
+/** Real width and height of an image, or null when the browser cannot load it. */
+const measureImage = (src: string): Promise<ImageSize | null> =>
+  new Promise((resolve) => {
+    if (!src || typeof Image === "undefined") {
+      resolve(null);
+      return;
+    }
+    const img = new Image();
+    img.onload = () =>
+      resolve(
+        img.naturalWidth > 0 && img.naturalHeight > 0
+          ? { width: img.naturalWidth, height: img.naturalHeight }
+          : null,
+      );
+    img.onerror = () => resolve(null);
+    img.src = src;
+  });
+
+export interface ExportResult {
+  /** Diagram slides left out of the file: PowerPoint cannot draw Mermaid. */
+  skippedDiagramSlides: number;
+}
+
 interface SlideData {
   slideTypeKey: string;
   parameters: Record<string, unknown>;
@@ -100,7 +175,7 @@ export const tintShadeHex = (hex: string, percent: number): string => {
   return ((1 << 24) + (R << 16) + (G << 8) + B).toString(16).slice(1).toUpperCase();
 };
 
-export const exportToPptx = async (options: ExportOptions) => {
+export const exportToPptx = async (options: ExportOptions): Promise<ExportResult> => {
   const pptx = new PptxGenJS();
   pptx.layout = "LAYOUT_16x9";
   pptx.title = options.title;
@@ -124,25 +199,21 @@ export const exportToPptx = async (options: ExportOptions) => {
 
   const objectsArray: Exclude<PptxGenJS.SlideMasterProps["objects"], undefined> = [];
 
+  // The logo is fetched and measured once. It goes in the corner of every
+  // slide and, larger, in the middle of the title slides.
+  let logoSource: { data: string } | { path: string } | null = null;
+  let logoSize: ImageSize | null = null;
   if (options.theme.logoUrl) {
     const proxiedLogo = await fetchProxiedImage(options.theme.logoUrl);
     if (proxiedLogo) {
-      objectsArray.push({
-        image: {
-          x: 8.2,
-          y: 0.3,
-          sizing: { type: "contain", w: 1.5, h: 0.6 },
-          data: proxiedLogo,
-        },
-      });
+      logoSource = { data: proxiedLogo };
     } else if (!options.theme.logoUrl.startsWith("http")) {
+      logoSource = { path: options.theme.logoUrl };
+    }
+    if (logoSource) {
+      logoSize = await measureImage(proxiedLogo || options.theme.logoUrl);
       objectsArray.push({
-        image: {
-          x: 8.2,
-          y: 0.3,
-          sizing: { type: "contain", w: 1.5, h: 0.6 },
-          path: options.theme.logoUrl,
-        },
+        image: { ...logoSource, ...fitImageInBox(logoSize, CORNER_LOGO_BOX, "right") },
       });
     }
   }
@@ -155,32 +226,28 @@ export const exportToPptx = async (options: ExportOptions) => {
 
   // Define master slide with background and standard objects
   pptx.defineSlideMaster(masterProps);
+  // Title slides draw the logo in the middle, so they get a master without
+  // the corner logo.
+  pptx.defineSlideMaster({ title: "MASTER_SLIDE_NO_LOGO", background: { color: bgHex } });
+
+  let skippedDiagramSlides = 0;
 
   for (const slide of options.slides) {
     if (slide.slideTypeKey === "diagram_slide") {
+      skippedDiagramSlides++;
       continue; // Mermaid diagrams cannot be rendered in PPTX natively
     }
-    const slidePage = pptx.addSlide({ masterName: "MASTER_SLIDE" });
+    const slidePage = pptx.addSlide({
+      masterName:
+        slide.slideTypeKey === "title_only" && logoSource ? "MASTER_SLIDE_NO_LOGO" : "MASTER_SLIDE",
+    });
     const params = slide.parameters;
 
     switch (slide.slideTypeKey) {
       case "title_only":
         if (options.theme.logoUrl) {
-          const proxiedLogo = await fetchProxiedImage(options.theme.logoUrl);
-          if (proxiedLogo) {
-            slidePage.addImage({
-              data: proxiedLogo,
-              x: 4.0,
-              y: 0.8,
-              sizing: { type: "contain", w: 2, h: 1 },
-            });
-          } else if (!options.theme.logoUrl.startsWith("http")) {
-            slidePage.addImage({
-              path: options.theme.logoUrl,
-              x: 4.0,
-              y: 0.8,
-              sizing: { type: "contain", w: 2, h: 1 },
-            });
+          if (logoSource) {
+            slidePage.addImage({ ...logoSource, ...fitImageInBox(logoSize, TITLE_LOGO_BOX) });
           }
         } else if (params.iconName && typeof params.iconName === "string") {
           slidePage.addShape(pptx.ShapeType.ellipse, {
@@ -343,11 +410,15 @@ export const exportToPptx = async (options: ExportOptions) => {
         });
         if (params.imageUrl) {
           const proxiedData = await fetchProxiedImage(params.imageUrl as string);
+          const imageAspect = imageAspectProps(
+            await measureImage(proxiedData || (params.imageUrl as string)),
+          );
           if (proxiedData) {
             slidePage.addImage({
               data: proxiedData,
               x: 5.5,
               y: 0.5,
+              ...imageAspect,
               sizing: { type: "cover", w: 4.0, h: 4.5 },
             });
           } else {
@@ -355,6 +426,7 @@ export const exportToPptx = async (options: ExportOptions) => {
               path: params.imageUrl as string,
               x: 5.5,
               y: 0.5,
+              ...imageAspect,
               sizing: { type: "cover", w: 4.0, h: 4.5 },
             });
           }
@@ -643,11 +715,15 @@ export const exportToPptx = async (options: ExportOptions) => {
         });
         if (params.imageUrl) {
           const proxiedData = await fetchProxiedImage(params.imageUrl as string);
+          const imageAspect = imageAspectProps(
+            await measureImage(proxiedData || (params.imageUrl as string)),
+          );
           if (proxiedData) {
             slidePage.addImage({
               data: proxiedData,
               x: 1.5,
               y: 1.2,
+              ...imageAspect,
               sizing: { type: "contain", w: 7, h: 3.5 },
             });
           } else {
@@ -655,6 +731,7 @@ export const exportToPptx = async (options: ExportOptions) => {
               path: params.imageUrl as string,
               x: 1.5,
               y: 1.2,
+              ...imageAspect,
               sizing: { type: "contain", w: 7, h: 3.5 },
             });
           }
@@ -781,11 +858,15 @@ export const exportToPptx = async (options: ExportOptions) => {
         // Left column Image (45% -> 4.5 inches wide)
         if (params.imageUrl) {
           const proxiedData = await fetchProxiedImage(params.imageUrl as string);
+          const imageAspect = imageAspectProps(
+            await measureImage(proxiedData || (params.imageUrl as string)),
+          );
           if (proxiedData) {
             slidePage.addImage({
               data: proxiedData,
               x: 0,
               y: 0,
+              ...imageAspect,
               sizing: { type: "cover", w: 4.5, h: 5.625 },
             });
           } else {
@@ -793,6 +874,7 @@ export const exportToPptx = async (options: ExportOptions) => {
               path: params.imageUrl as string,
               x: 0,
               y: 0,
+              ...imageAspect,
               sizing: { type: "cover", w: 4.5, h: 5.625 },
             });
           }
@@ -972,11 +1054,15 @@ export const exportToPptx = async (options: ExportOptions) => {
         // Left image
         if (params.imageUrl) {
           const proxiedData = await fetchProxiedImage(params.imageUrl as string);
+          const imageAspect = imageAspectProps(
+            await measureImage(proxiedData || (params.imageUrl as string)),
+          );
           if (proxiedData) {
             slidePage.addImage({
               data: proxiedData,
               x: 0.6,
               y: 1.5,
+              ...imageAspect,
               sizing: { type: "cover", w: 4, h: 3.5 },
             });
           } else {
@@ -984,6 +1070,7 @@ export const exportToPptx = async (options: ExportOptions) => {
               path: params.imageUrl as string,
               x: 0.6,
               y: 1.5,
+              ...imageAspect,
               sizing: { type: "cover", w: 4, h: 3.5 },
             });
           }
@@ -1471,4 +1558,5 @@ export const exportToPptx = async (options: ExportOptions) => {
   }
 
   await pptx.writeFile({ fileName: `${options.title.replace(/[^a-z0-9-_]/gi, "_")}.pptx` });
+  return { skippedDiagramSlides };
 };

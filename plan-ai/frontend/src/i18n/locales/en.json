@@ -1244,6 +1244,10 @@
       "editSlide": "Edit Slide",
       "back": "Back"
     },
+    "export": {
+      "diagramsSkipped_one": "{{count}} diagram slide is not included in the PowerPoint file.",
+      "diagramsSkipped_other": "{{count}} diagram slides are not included in the PowerPoint file."
+    },
     "slideTypesPage": {
       "title": "Slide Types"
     },

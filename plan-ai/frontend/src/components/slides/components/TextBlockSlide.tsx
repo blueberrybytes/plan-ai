@@ -5,25 +5,39 @@ import AnimatedText from "./AnimatedText";
 import SlideBadge from "./SlideBadge";
 import DynamicIcon from "./DynamicIcon";
 import { SlideProps } from "../SlideRenderer";
+import { slideTitleColor } from "../slideColors";
 
 // Text Block
 export const TextBlockSlide: React.FC<SlideProps> = ({
   data = {},
   brandColors,
+  fonts,
   scale,
   animate,
 }) => {
   const primary = brandColors?.primary || "#6366f1";
+  const titleColor = slideTitleColor(brandColors);
   return (
-    <SlideFrame brandColors={brandColors} scale={scale}>
+    <SlideFrame brandColors={brandColors} fonts={fonts} scale={scale}>
       <SlideBadge text={data.badge as string} primary={primary} animate={animate} />
       <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 3 }}>
         {data.iconName && typeof data.iconName === "string" ? (
           <DynamicIcon name={data.iconName} sx={{ fontSize: 40, color: primary }} />
         ) : null}
-        <AnimatedText animate={animate} sx={{ fontSize: 36, fontWeight: 700, color: primary }}>
-          {data.title as string}
-        </AnimatedText>
+        {/* The wrapper lets a long title wrap next to the icon. */}
+        <Box sx={{ flex: 1, minWidth: 0 }}>
+          <AnimatedText
+            animate={animate}
+            sx={{
+              fontSize: 36,
+              fontWeight: 700,
+              color: titleColor,
+              fontFamily: `'${fonts?.heading || "Inter"}', sans-serif`,
+            }}
+          >
+            {data.title as string}
+          </AnimatedText>
+        </Box>
       </Box>
       {data.subtitle && typeof data.subtitle === "string" ? (
         <AnimatedText

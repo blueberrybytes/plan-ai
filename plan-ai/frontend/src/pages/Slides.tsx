@@ -131,7 +131,7 @@ const Slides: React.FC = () => {
             body: "Inter",
           };
 
-      await exportToPptx({
+      const { skippedDiagramSlides } = await exportToPptx({
         title: pres.title,
         slides: pres.slidesJson as SlideData[],
         theme: {
@@ -143,6 +143,14 @@ const Slides: React.FC = () => {
           logoUrl: brandColors.logoUrl || undefined,
         },
       });
+      if (skippedDiagramSlides > 0) {
+        dispatch(
+          setToastMessage({
+            severity: "info",
+            message: t("slides.export.diagramsSkipped", { count: skippedDiagramSlides }),
+          }),
+        );
+      }
     } catch (e) {
       console.error("Export failed", e);
       alert("Failed to export presentation.");

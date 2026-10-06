@@ -5,6 +5,7 @@ import AnimatedText from "./AnimatedText";
 import SlideBadge from "./SlideBadge";
 import DynamicIcon from "./DynamicIcon";
 import { SlideProps } from "../SlideRenderer";
+import { capList } from "../slideCaps";
 
 // Three Columns
 export const ThreeColumnsSlide: React.FC<SlideProps> = ({
@@ -15,17 +16,17 @@ export const ThreeColumnsSlide: React.FC<SlideProps> = ({
   animate,
 }) => {
   const primary = brandColors?.primary || "#6366f1";
-  const rawCols = data.columns;
-  const columns: { title: string; body: string; iconName?: string }[] = Array.isArray(rawCols)
-    ? rawCols.map((c: unknown) => {
-        const obj = c as Record<string, unknown>;
-        return {
-          title: String(obj.title || ""),
-          body: String(obj.body || ""),
-          iconName: obj.iconName ? String(obj.iconName) : undefined,
-        };
-      })
-    : [];
+  const columns: { title: string; body: string; iconName?: string }[] = capList(
+    "three_columns",
+    data.columns,
+  ).map((c: unknown) => {
+    const obj = (c || {}) as Record<string, unknown>;
+    return {
+      title: String(obj.title || ""),
+      body: String(obj.body || ""),
+      iconName: obj.iconName ? String(obj.iconName) : undefined,
+    };
+  });
 
   return (
     <SlideFrame brandColors={brandColors} fonts={fonts} scale={scale}>

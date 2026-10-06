@@ -1,6 +1,7 @@
 import React from "react";
 import { Box } from "@mui/material";
 import { SlideProps } from "../SlideRenderer";
+import { slideTitleColor } from "../slideColors";
 import SlideFrame from "./SlideFrame";
 import SlideBadge from "./SlideBadge";
 import DynamicIcon from "./DynamicIcon";
@@ -15,8 +16,9 @@ export const TitleOnlySlide: React.FC<SlideProps> = ({
   animate,
 }) => {
   const primary = brandColors?.primary || "#6366f1";
+  const titleColor = slideTitleColor(brandColors);
   return (
-    <SlideFrame brandColors={brandColors} fonts={fonts} scale={scale}>
+    <SlideFrame brandColors={brandColors} fonts={fonts} scale={scale} hideLogo>
       <Box sx={{ textAlign: "center" }}>
         <SlideBadge text={data.badge as string} primary={primary} animate={animate} />
         {brandColors?.logoUrl ? (
@@ -24,7 +26,6 @@ export const TitleOnlySlide: React.FC<SlideProps> = ({
             component="img"
             src={brandColors.logoUrl}
             alt="Brand Logo"
-            crossOrigin="anonymous"
             sx={{
               display: "block",
               margin: "0 auto",
@@ -55,9 +56,7 @@ export const TitleOnlySlide: React.FC<SlideProps> = ({
             letterSpacing: "-0.02em",
             lineHeight: 1.1,
             mb: 4,
-            background: `linear-gradient(135deg, ${primary}, #a78bfa)`,
-            WebkitBackgroundClip: "text",
-            WebkitTextFillColor: "transparent",
+            color: titleColor,
             fontFamily: `'${fonts?.heading || "Inter"}', sans-serif`,
           }}
         >

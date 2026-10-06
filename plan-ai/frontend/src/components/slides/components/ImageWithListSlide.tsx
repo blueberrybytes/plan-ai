@@ -6,6 +6,7 @@ import AnimatedText from "./AnimatedText";
 import SlideBadge from "./SlideBadge";
 import DynamicIcon from "./DynamicIcon";
 import { SlideProps } from "../SlideRenderer";
+import { capList } from "../slideCaps";
 
 // Image Width List
 export const ImageWithListSlide: React.FC<SlideProps> = ({
@@ -16,19 +17,17 @@ export const ImageWithListSlide: React.FC<SlideProps> = ({
   animate,
 }) => {
   const primary = brandColors?.primary || "#6366f1";
-  const rawFeatures = data.features;
-  const features: { title: string; description?: string; iconName?: string }[] = Array.isArray(
-    rawFeatures,
-  )
-    ? rawFeatures.map((f: unknown) => {
-        const obj = f as Record<string, unknown>;
-        return {
-          title: String(obj.title || ""),
-          description: obj.description ? String(obj.description) : undefined,
-          iconName: obj.iconName ? String(obj.iconName) : undefined,
-        };
-      })
-    : [];
+  const features: { title: string; description?: string; iconName?: string }[] = capList(
+    "image_with_list",
+    data.features,
+  ).map((f: unknown) => {
+    const obj = (f || {}) as Record<string, unknown>;
+    return {
+      title: String(obj.title || ""),
+      description: obj.description ? String(obj.description) : undefined,
+      iconName: obj.iconName ? String(obj.iconName) : undefined,
+    };
+  });
 
   return (
     <SlideFrame brandColors={brandColors} fonts={fonts} scale={scale}>
@@ -74,7 +73,6 @@ export const ImageWithListSlide: React.FC<SlideProps> = ({
           <SlideImage
             src={(data.imageUrl as string) || ""}
             alt={String(data.imageQuery || "Featured Image")}
-            query={String(data.imageQuery || "")}
             primary={primary}
             style={{ width: "100%", height: "100%", objectFit: "cover" }}
           />

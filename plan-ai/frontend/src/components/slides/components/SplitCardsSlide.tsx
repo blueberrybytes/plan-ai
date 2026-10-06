@@ -6,6 +6,7 @@ import AnimatedText from "./AnimatedText";
 import SlideBadge from "./SlideBadge";
 import DynamicIcon from "./DynamicIcon";
 import { SlideProps } from "../SlideRenderer";
+import { capList } from "../slideCaps";
 
 // Split Cards
 export const SplitCardsSlide: React.FC<SlideProps> = ({
@@ -22,38 +23,40 @@ export const SplitCardsSlide: React.FC<SlideProps> = ({
 
   const cardBg = isDark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.03)";
 
-  const rawCards = data.cards;
-  const cards: { title: string; body: string; iconName?: string }[] = Array.isArray(rawCards)
-    ? rawCards.map((c: unknown) => {
-        const obj = c as Record<string, unknown>;
-        return {
-          title: String(obj.title || ""),
-          body: String(obj.body || ""),
-          iconName: obj.iconName ? String(obj.iconName) : undefined,
-        };
-      })
-    : [];
+  const cards: { title: string; body: string; iconName?: string }[] = capList(
+    "split_cards",
+    data.cards,
+  ).map((c: unknown) => {
+    const obj = (c || {}) as Record<string, unknown>;
+    return {
+      title: String(obj.title || ""),
+      body: String(obj.body || ""),
+      iconName: obj.iconName ? String(obj.iconName) : undefined,
+    };
+  });
 
   const isCramped = cards.length >= 3;
 
   return (
-    <SlideFrame brandColors={brandColors} fonts={fonts} scale={scale}>
+    <SlideFrame brandColors={brandColors} fonts={fonts} scale={scale} hideLogo>
       <Box
         sx={{
+          // Out of the padded flow of the frame so the image reaches the top,
+          // bottom and left edges of the slide. The right gutter stays.
+          position: "absolute",
+          top: 0,
+          bottom: 0,
+          left: 0,
+          right: 48,
           display: "flex",
           gap: 6,
           alignItems: "stretch",
-          height: "100%",
-          ml: -6,
-          mt: -6,
-          mb: -6,
         }}
       >
         <Box sx={{ width: "45%" }}>
           <SlideImage
             src={(data.imageUrl as string) || ""}
             alt={String(data.imageQuery || "Featured Image")}
-            query={String(data.imageQuery || "")}
             primary={primary}
             style={{
               width: "100%",
