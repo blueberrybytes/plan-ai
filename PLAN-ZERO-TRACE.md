@@ -15,7 +15,7 @@ Cada punto del análisis se comprueba en el código antes de tocar nada. Lo que 
 | 1 | Reuniones y proyectos confidenciales | Hecho el 6 de octubre. Falta probarlo en la web con dos usuarios |
 | 2 | Retención de transcripciones, embeddings y chats | Aparcada. Xavier, 6 de octubre: de momento no se borra nada |
 | 3 | Auditoría de lectura y exportación | Hecho, con filtro por persona y por reunión en la web |
-| 4 | Detección y marcado de datos personales | Pendiente |
+| 4 | Detección y marcado de datos personales | Primer paso hecho el 6 de octubre: detección por reglas y ocultar en la web. Falta medir con reuniones reales |
 | 5 | Modelo por función y por sensibilidad | Pendiente |
 | 6 | Desplegar sin Google | Pendiente, es la más grande |
 | 7 | Producto y calidad del RAG | Pendiente |
@@ -99,11 +99,26 @@ Pendiente:
 - Las exportaciones automáticas a Notion, Drive y OneDrive no se registran.
 - El control de repeticiones vive en memoria de cada proceso. Con más de una réplica del backend puede salir una entrada por réplica.
 
-## Fase 4. Datos personales en las transcripciones
+## Fase 4. Datos personales en las transcripciones (primer paso hecho)
 
-No hay nada hoy. Propuesta en dos pasos: primero detectar y marcar (correos, teléfonos, documentos de identidad, cuentas bancarias, datos de salud) con reglas y un pase de modelo, y después una opción de ocultarlos en la vista y en las exportaciones. El texto original no se toca salvo que el workspace lo pida.
+Hecho:
 
-Esfuerzo: 3 a 4 días. Hay que medir la calidad con transcripciones reales en catalán, castellano e inglés antes de prometer nada.
+- Detector por reglas en `utils/personalData.ts`, sin modelo y sin que nada salga del servidor. Encuentra correos, teléfonos (con prefijo, españoles y móviles de Emiratos), IBAN, tarjetas y números de identidad (DNI, NIE y Emirates ID). Donde hay dígito de control se comprueba (IBAN, tarjeta, letra del DNI), para no marcar cifras cualesquiera.
+- `GET /api/transcripts/{id}/personal-data` devuelve cuántos hay de cada tipo y la transcripción con ellos cambiados por etiquetas como `[email]`. Se calcula en cada petición. No se guarda nada y la transcripción no se modifica.
+- En la página de una reunión, si se encuentra algo, sale un aviso con el recuento y un interruptor para ocultarlos en la transcripción.
+
+Límites:
+
+- No encuentra nombres, direcciones, datos de salud ni nada que exija entender la frase. Tampoco números dichos con palabras, que es como a veces los escribe el reconocimiento de voz.
+- Solo oculta en la vista de la transcripción. El resumen que enseña la página, las exportaciones, las notas por email, el chat y MCP siguen con el texto original.
+- Mientras hay una traducción en pantalla no se puede ocultar, porque las posiciones son del texto original.
+- Sin medir con reuniones reales: la base local solo tiene una transcripción. Hay tests con casos en castellano e inglés, incluidos falsos positivos típicos (importes, fechas, años).
+
+Pendiente:
+
+- Medir falsos positivos y negativos con transcripciones reales en catalán, castellano e inglés.
+- Un pase con modelo para nombres y datos sensibles, que debería poder ir con modelo local (fase 5).
+- Aplicar el ocultado en exportaciones, notas por email y MCP, como opción del workspace.
 
 ## Fase 5. Modelo por función y por sensibilidad
 
@@ -139,4 +154,4 @@ Calidad del RAG:
 
 ## Orden recomendado
 
-Hechas la 0, la 0b, la 1 y la 3. La 2 está aparcada. Sigue la 5, que dependía de la 1. La 4 puede ir en paralelo. La 6 solo con un cliente detrás. La búsqueda en todas las reuniones de la fase 7 conviene hacerla después de la 1, para que nazca respetando la visibilidad.
+Hechas la 0, la 0b, la 1 y la 3, y el primer paso de la 4. La 2 está aparcada. Sigue la 5, que dependía de la 1. La 4 puede ir en paralelo. La 6 solo con un cliente detrás. La búsqueda en todas las reuniones de la fase 7 conviene hacerla después de la 1, para que nazca respetando la visibilidad.

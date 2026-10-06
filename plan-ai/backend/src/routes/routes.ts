@@ -1233,6 +1233,37 @@ const models: TsoaRoute.Models = {
         "additionalProperties": false,
     },
     // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "Record_PersonalDataType.number_": {
+        "dataType": "refAlias",
+        "type": {"dataType":"nestedObjectLiteral","nestedProperties":{"EMAIL":{"dataType":"double","required":true},"PHONE":{"dataType":"double","required":true},"IBAN":{"dataType":"double","required":true},"CARD":{"dataType":"double","required":true},"NATIONAL_ID":{"dataType":"double","required":true}},"validators":{}},
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "PersonalDataCounts": {
+        "dataType": "refAlias",
+        "type": {"ref":"Record_PersonalDataType.number_","validators":{}},
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "TranscriptPersonalData": {
+        "dataType": "refObject",
+        "properties": {
+            "counts": {"ref":"PersonalDataCounts","required":true},
+            "total": {"dataType":"double","required":true},
+            "summary": {"dataType":"union","subSchemas":[{"dataType":"string"},{"dataType":"enum","enums":[null]}],"required":true},
+            "lines": {"dataType":"array","array":{"dataType":"string"},"required":true},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "TranscriptPersonalDataResponse": {
+        "dataType": "refAlias",
+        "type": {"ref":"TranscriptPersonalData","validators":{}},
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "ApiResponse_TranscriptPersonalDataResponse_": {
+        "dataType": "refAlias",
+        "type": {"dataType":"nestedObjectLiteral","nestedProperties":{"message":{"dataType":"string"},"data":{"dataType":"union","subSchemas":[{"ref":"TranscriptPersonalDataResponse"},{"dataType":"enum","enums":[null]}],"required":true},"status":{"dataType":"double","required":true}},"validators":{}},
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
     "TranscriptTranslationResult": {
         "dataType": "refObject",
         "properties": {
@@ -5410,6 +5441,38 @@ export function RegisterRoutes(app: Router,opts?:{multer?:ReturnType<typeof mult
 
               await templateService.apiHandler({
                 methodName: 'updateTranscriptSpeakers',
+                controller,
+                response,
+                next,
+                validatedArgs,
+                successStatus: undefined,
+              });
+            } catch (err) {
+                return next(err);
+            }
+        });
+        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+        const argsTranscriptsController_getTranscriptPersonalData: Record<string, TsoaRoute.ParameterSchema> = {
+                request: {"in":"request","name":"request","required":true,"dataType":"object"},
+                id: {"in":"path","name":"id","required":true,"dataType":"string"},
+        };
+        app.get('/api/transcripts/:id/personal-data',
+            authenticateMiddleware([{"ClientLevel":[]}]),
+            ...(fetchMiddlewares<RequestHandler>(TranscriptsController)),
+            ...(fetchMiddlewares<RequestHandler>(TranscriptsController.prototype.getTranscriptPersonalData)),
+
+            async function TranscriptsController_getTranscriptPersonalData(request: ExRequest, response: ExResponse, next: any) {
+
+            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+
+            let validatedArgs: any[] = [];
+            try {
+                validatedArgs = templateService.getValidatedArgs({ args: argsTranscriptsController_getTranscriptPersonalData, request, response });
+
+                const controller = new TranscriptsController();
+
+              await templateService.apiHandler({
+                methodName: 'getTranscriptPersonalData',
                 controller,
                 response,
                 next,
