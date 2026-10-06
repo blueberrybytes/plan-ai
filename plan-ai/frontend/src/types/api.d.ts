@@ -3278,7 +3278,8 @@ export interface paths {
         };
         /**
          * @description Who did what in the workspace, newest first. Owners and admins only.
-         *     Pass `nextCursor` back as `cursor` to read older entries.
+         *     Pass `nextCursor` back as `cursor` to read older entries. `targetId`
+         *     narrows it to one meeting, document or member, `actorUserId` to one person.
          */
         get: operations["GetAuditLog"];
         put?: never;
@@ -12077,6 +12078,8 @@ export interface operations {
                 limit?: number;
                 cursor?: string;
                 action?: string;
+                targetId?: string;
+                actorUserId?: string;
             };
             header?: never;
             path?: never;

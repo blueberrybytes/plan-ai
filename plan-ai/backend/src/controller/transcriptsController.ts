@@ -118,6 +118,7 @@ import { DocDocumentResponse } from "./docController";
 import { TranscriptMetadata, type PostMeetingTaskKind } from "../services/transcriptMetadataTypes";
 import { logger } from "../utils/logger";
 import { recordAudit } from "../services/auditLogService";
+import { recordMeetingAccess } from "../services/meetingAccessAudit";
 import {
   translateTranscript,
   type TranscriptTranslationResult,
@@ -1056,6 +1057,15 @@ export class TranscriptsController extends BaseWorkspaceController {
     if (result.sent.length === 0) {
       throw { status: 502, message: "The email could not be sent. Try again later." };
     }
+    void recordMeetingAccess({
+      workspaceId,
+      actor: user,
+      transcriptId: id,
+      kind: "notes_sent",
+      title: transcript.title,
+      detail: { recipients: result.sent.length },
+      request,
+    });
     return { status: 200, data: result };
   }
 
@@ -1065,9 +1075,19 @@ export class TranscriptsController extends BaseWorkspaceController {
     @Request() request: AuthenticatedRequest,
     @Path() id: string,
   ): Promise<ApiResponse<TranscriptAudioResponse>> {
-    const { workspaceId } = await this.getAuthorizedWorkspaceAccess(request);
+    const { user, workspaceId } = await this.getAuthorizedWorkspaceAccess(request);
     const transcript = await transcriptCrudService.getTranscriptForWorkspace(workspaceId, id);
     const meta = (transcript.metadata as Prisma.JsonObject | null) ?? {};
+    if (transcript.rawMicUrl || transcript.rawSysUrl) {
+      void recordMeetingAccess({
+        workspaceId,
+        actor: user,
+        transcriptId: id,
+        kind: "audio_accessed",
+        title: transcript.title,
+        request,
+      });
+    }
     const [micUrl, sysUrl] = await Promise.all([
       transcript.rawMicUrl ? readableUrl(transcript.rawMicUrl, DISPLAY_URL_TTL_MS) : undefined,
       transcript.rawSysUrl ? readableUrl(transcript.rawSysUrl, DISPLAY_URL_TTL_MS) : undefined,
@@ -1143,6 +1163,14 @@ export class TranscriptsController extends BaseWorkspaceController {
     const { user, workspaceId } = await this.getAuthorizedWorkspaceAccess(request);
 
     const transcript = await transcriptCrudService.getTranscriptForWorkspace(workspaceId, id);
+    void recordMeetingAccess({
+      workspaceId,
+      actor: user,
+      transcriptId: id,
+      kind: "viewed",
+      title: transcript.title,
+      request,
+    });
 
     const rawTasks = await prisma.task.findMany({
       where: {
@@ -1253,6 +1281,14 @@ export class TranscriptsController extends BaseWorkspaceController {
         transcriptId: id,
         language: body.language,
         force: body.force,
+      });
+      void recordMeetingAccess({
+        workspaceId,
+        actor: user,
+        transcriptId: id,
+        kind: "translated",
+        detail: { language: data.language },
+        request,
       });
       return { status: 200, data };
     } catch (err) {

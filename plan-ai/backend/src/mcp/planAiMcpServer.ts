@@ -6,6 +6,7 @@ import { taskCrudService } from "../services/taskCrudService";
 import { queryContexts } from "../vector/contextFileVectorService";
 import { mergeProjectAndContextIds } from "../services/projectContextResolver";
 import { docGenerationService } from "../services/docGenerationService";
+import { recordMeetingAccess } from "../services/meetingAccessAudit";
 
 // Enum value tuples shared by the task tools (kept in sync with schema.prisma).
 const TASK_STATUSES = ["BACKLOG", "IN_PROGRESS", "BLOCKED", "COMPLETED", "ARCHIVED"] as const;
@@ -143,6 +144,15 @@ export function createPlanAiMcpServer(userId: string, workspaceId: string): McpS
           isError: true,
         };
       }
+
+      void recordMeetingAccess({
+        workspaceId,
+        actor: { id: userId },
+        transcriptId: transcript.id,
+        kind: "viewed",
+        channel: "mcp",
+        title: transcript.title,
+      });
 
       return {
         content: [

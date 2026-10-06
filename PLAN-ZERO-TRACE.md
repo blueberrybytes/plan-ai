@@ -10,11 +10,11 @@ Cada punto del análisis se comprueba en el código antes de tocar nada. Lo que 
 
 | Fase | Qué | Estado |
 | --- | --- | --- |
-| 0 | Aislamiento entre workspaces en Qdrant | Hecho el 6 de octubre, sin commit |
-| 0b | Segunda capa: `workspaceId` en los puntos de Qdrant | Pendiente |
+| 0 | Aislamiento entre workspaces en Qdrant | Hecho el 6 de octubre (`40f5cea`) |
+| 0b | Segunda capa: `workspaceId` en los puntos de Qdrant | Hecho el 6 de octubre. Falta ejecutar el relleno en producción |
 | 1 | Reuniones y proyectos confidenciales | Pendiente, hay decisiones abiertas |
 | 2 | Retención de transcripciones, embeddings y chats | Pendiente, hay decisiones abiertas |
-| 3 | Auditoría de lectura y exportación | Pendiente |
+| 3 | Auditoría de lectura y exportación | Backend hecho el 6 de octubre. Falta el filtro por reunión en la web |
 | 4 | Detección y marcado de datos personales | Pendiente |
 | 5 | Modelo por función y por sensibilidad | Pendiente |
 | 6 | Desplegar sin Google | Pendiente, es la más grande |
@@ -35,16 +35,21 @@ Se actualizaron las 23 llamadas. Tests nuevos en `vector/__tests__/vectorWorkspa
 
 Efecto visible: un chat o documento antiguo que tuviera guardado un `contextId` de otro workspace deja de recibir esos fragmentos. Queda un aviso en el log cada vez que se descarta uno.
 
-## Fase 0b. Segunda capa en Qdrant
+## Fase 0b. Segunda capa en Qdrant (hecho)
 
-Hoy el aislamiento depende de la comprobación en base de datos. Para que Qdrant lo imponga por sí solo:
+Cada punto nuevo de Qdrant guarda su `workspaceId`. Todas las lecturas rechazan un punto marcado con otro workspace, pidan los `contextIds` que pidan. Los puntos antiguos no llevan marca y siguen pasando hasta que se rellenen.
 
-- Guardar `workspaceId` en el payload de cada punto nuevo.
-- Script para rellenarlo en los puntos existentes (hay que ejecutarlo en producción).
-- Añadir `workspaceId` al filtro de todas las búsquedas, una vez rellenado.
-- Revisar las otras consultas de `Context` que no filtran por workspace: `githubContextWorker.ts`, `contextDocumentWorker.ts`, `gitnexusRouter.ts`, `mcpClientService.ts`, `githubIntegrationService.ts`. Sin comprobar. `audioStream.ts` sí está cubierto, porque los términos clave se leen filtrando por workspace.
+Comprobado contra el Qdrant local con una colección temporal: un punto marcado con otro workspace no vuelve, y uno antiguo sin marca sí.
 
-Esfuerzo: 1 día.
+Pendiente de hacer a mano en producción, después de desplegar:
+
+```bash
+yarn qdrant:backfill-workspace
+```
+
+Eso solo cuenta. Con `--apply` escribe la marca y crea el índice. Se puede ejecutar con el backend en marcha y más de una vez. Cuando esté hecho en producción, se puede quitar la rama `is_empty` del filtro en `contextVectorStore.ts`, y entonces Qdrant impone el aislamiento por sí solo.
+
+Revisadas las otras consultas de `Context` que no filtran por workspace. Ninguna es un hueco: `gitnexusRouter.ts` sí filtra, todos los llamadores de `repoNameForContexts` pasan el workspace, el webhook de GitHub busca por repositorio a propósito, y los workers reciben el `contextId` de trabajos que encola el propio backend. `transcriptsController.ts` y `projectsModelController.ts` filtran por usuario y no por workspace: un usuario podría adjuntar un contexto suyo de otro workspace, pero la capa de vectores ya lo descarta.
 
 ## Fase 1. Reuniones y proyectos confidenciales
 
@@ -70,13 +75,20 @@ Decisiones abiertas: qué pasa con las tareas y documentos que salieron de una r
 
 Esfuerzo: 2 días.
 
-## Fase 3. Auditoría de lectura y exportación
+## Fase 3. Auditoría de lectura y exportación (backend hecho)
 
-`AuditLog` solo registra acciones de administración. Falta registrar quién abre, exporta o descarga qué reunión, y quién la consulta por MCP o por el chat.
+El registro de auditoría ya guarda quién lee cada reunión, con cuatro acciones nuevas: `meeting.viewed`, `meeting.audio_accessed`, `meeting.notes_sent` y `meeting.translated`. Se registran al abrir el detalle (también desde un proyecto), al pedir el audio, al enviar las notas, al traducir y al leer una reunión por MCP (`get_meeting_detail`, marcado con `via: mcp`).
 
-Propuesta: registrar lectura de detalle, descarga de audio, exportación, envío de notas y lecturas por MCP. Vista para owners con filtro por reunión y por persona. Con cuidado de no escribir una fila por cada refresco de pantalla.
+La página de una reunión consulta el detalle cada pocos segundos mientras se procesa. Por eso abrir y pedir audio se registran una vez por persona, reunión y canal cada 30 minutos. Los envíos y las traducciones se registran siempre.
 
-Esfuerzo: 2 días.
+Aparecen en el panel de auditoría de la web, en el grupo "meeting", con etiqueta en inglés y en español. El endpoint acepta ahora `targetId` y `actorUserId` para filtrar por reunión o por persona.
+
+Pendiente:
+
+- Un filtro por reunión y por persona en el panel de la web. El backend ya lo soporta.
+- Las búsquedas por MCP (`search_meetings`, `get_recent_meetings`) y el chat sobre una reunión no se registran.
+- Las exportaciones automáticas a Notion, Drive y OneDrive no se registran.
+- El control de repeticiones vive en memoria de cada proceso. Con más de una réplica del backend puede salir una entrada por réplica.
 
 ## Fase 4. Datos personales en las transcripciones
 
