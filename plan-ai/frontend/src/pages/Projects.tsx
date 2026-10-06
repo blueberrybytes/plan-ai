@@ -1,3 +1,4 @@
+import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
 import React from "react";
 import {
   Alert,
@@ -335,6 +336,18 @@ const Projects: React.FC = () => {
                     <Typography variant="subtitle2" fontWeight={600} noWrap>
                       {project.title}
                     </Typography>
+                    {project.visibility === "RESTRICTED" && (
+                      <Tooltip
+                        title={"Restricted: only the workspace owners and the people added see it"}
+                      >
+                        <LockOutlinedIcon
+                          aria-label={
+                            "Restricted: only the workspace owners and the people added see it"
+                          }
+                          sx={{ fontSize: 14, color: "text.secondary" }}
+                        />
+                      </Tooltip>
+                    )}
                     {project.hasFiles && (
                       <Tooltip
                         title={`${project.fileCount} file${project.fileCount === 1 ? "" : "s"}`}
