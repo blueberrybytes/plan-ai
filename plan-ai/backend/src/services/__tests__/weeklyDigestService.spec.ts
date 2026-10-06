@@ -20,6 +20,11 @@ const { sendWeeklyDigestEmail } = vi.hoisted(() => ({
   sendWeeklyDigestEmail: vi.fn(),
 }));
 
+// Restricted projects are worked out with the unfiltered client. Not under test here.
+vi.mock("../projectAccess", () => ({
+  hiddenFromMember: async () => ({ projectIds: [], contextIds: [] }),
+  hiddenFromOutsiders: async () => ({ projectIds: [], contextIds: [] }),
+}));
 vi.mock("../../prisma/prismaClient", () => ({ default: db }));
 vi.mock("../emailService", () => ({ sendWeeklyDigestEmail }));
 

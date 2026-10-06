@@ -17,6 +17,11 @@ const mocks = vi.hoisted(() => ({
   translate: vi.fn(),
 }));
 
+// Restricted projects are worked out with the unfiltered client. Not under test here.
+vi.mock("../../services/projectAccess", () => ({
+  hiddenFromMember: async () => ({ projectIds: [], contextIds: [] }),
+  hiddenFromOutsiders: async () => ({ projectIds: [], contextIds: [] }),
+}));
 vi.mock("../../firebase/firebaseAdmin", () => ({
   firebaseAdmin: {
     auth: () => ({

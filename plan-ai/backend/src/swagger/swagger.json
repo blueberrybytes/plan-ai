@@ -780,6 +780,16 @@
 				],
 				"nullable": true
 			},
+			"_36_Enums.ProjectVisibility": {
+				"type": "string",
+				"enum": [
+					"WORKSPACE",
+					"RESTRICTED"
+				]
+			},
+			"ProjectVisibility": {
+				"$ref": "#/components/schemas/_36_Enums.ProjectVisibility"
+			},
 			"ProjectResponse": {
 				"properties": {
 					"id": {
@@ -839,6 +849,10 @@
 						"type": "string",
 						"nullable": true,
 						"description": "Default brand theme for AI-generated docs & slides. Null = unthemed."
+					},
+					"visibility": {
+						"$ref": "#/components/schemas/ProjectVisibility",
+						"description": "RESTRICTED: only the workspace owners, the creator and the people added see it."
 					}
 				},
 				"required": [
@@ -854,7 +868,8 @@
 					"contextId",
 					"hasFiles",
 					"fileCount",
-					"themeId"
+					"themeId",
+					"visibility"
 				],
 				"type": "object",
 				"additionalProperties": false
@@ -1938,6 +1953,112 @@
 				},
 				"required": [
 					"title"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"ProjectAccessPerson": {
+				"properties": {
+					"userId": {
+						"type": "string"
+					},
+					"name": {
+						"type": "string",
+						"nullable": true
+					},
+					"email": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"userId",
+					"name",
+					"email"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"ProjectAccess": {
+				"properties": {
+					"visibility": {
+						"type": "string",
+						"enum": [
+							"WORKSPACE",
+							"RESTRICTED"
+						]
+					},
+					"creator": {
+						"allOf": [
+							{
+								"$ref": "#/components/schemas/ProjectAccessPerson"
+							}
+						],
+						"nullable": true,
+						"description": "The person who created the project. Always sees it."
+					},
+					"members": {
+						"items": {
+							"$ref": "#/components/schemas/ProjectAccessPerson"
+						},
+						"type": "array",
+						"description": "People added to the project. Only counts while it is RESTRICTED."
+					},
+					"canManage": {
+						"type": "boolean",
+						"description": "Whether the caller may change this."
+					}
+				},
+				"required": [
+					"visibility",
+					"creator",
+					"members",
+					"canManage"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"ProjectAccessResponse": {
+				"$ref": "#/components/schemas/ProjectAccess"
+			},
+			"ApiResponse_ProjectAccessResponse_": {
+				"properties": {
+					"message": {
+						"type": "string"
+					},
+					"data": {
+						"allOf": [
+							{
+								"$ref": "#/components/schemas/ProjectAccessResponse"
+							}
+						],
+						"nullable": true
+					},
+					"status": {
+						"type": "number",
+						"format": "double"
+					}
+				},
+				"required": [
+					"data",
+					"status"
+				],
+				"type": "object"
+			},
+			"SetProjectAccessRequest": {
+				"properties": {
+					"visibility": {
+						"$ref": "#/components/schemas/ProjectVisibility"
+					},
+					"memberUserIds": {
+						"items": {
+							"type": "string"
+						},
+						"type": "array",
+						"description": "The full list of people with access, besides the creator. Leave out to keep the current one."
+					}
+				},
+				"required": [
+					"visibility"
 				],
 				"type": "object",
 				"additionalProperties": false
@@ -11853,6 +11974,86 @@
 						}
 					}
 				]
+			}
+		},
+		"/api/projects/{projectId}/access": {
+			"get": {
+				"operationId": "GetProjectAccess",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiResponse_ProjectAccessResponse_"
+								}
+							}
+						}
+					}
+				},
+				"description": "Who sees this project.",
+				"tags": [
+					"Projects"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": [
+					{
+						"in": "path",
+						"name": "projectId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				]
+			},
+			"put": {
+				"operationId": "SetProjectAccess",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiResponse_ProjectAccessResponse_"
+								}
+							}
+						}
+					}
+				},
+				"description": "Opens the project to the whole workspace or restricts it to its creator,\nthe workspace owners and the people listed. Its meetings, tasks, files and\nchats follow. Only a workspace owner or the creator can change it.",
+				"tags": [
+					"Projects"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": [
+					{
+						"in": "path",
+						"name": "projectId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/SetProjectAccessRequest"
+							}
+						}
+					}
+				}
 			}
 		},
 		"/api/projects/{projectId}/digest": {

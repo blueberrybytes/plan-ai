@@ -3,6 +3,9 @@ import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { createPlanAiMcpServer } from "../mcp/planAiMcpServer";
 import { isMcpTokenActive, validateMcpToken } from "../services/mcpTokenService";
+import { rawPrisma } from "../prisma/prismaClient";
+import { setHiddenForRequest } from "../services/accessScope";
+import { hiddenFromMember, hiddenFromOutsiders } from "../services/projectAccess";
 
 const mcpRouter = Router();
 
@@ -12,6 +15,23 @@ async function authenticate(req: Request) {
   const raw = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
   if (!raw) return null;
   return validateMcpToken(raw);
+}
+
+/**
+ * A token acts as its user in its workspace, so it sees what that member
+ * sees: the restricted projects they are not part of stay hidden. Must run
+ * in every request that executes tools.
+ */
+async function scopeToMember(userId: string, workspaceId: string): Promise<void> {
+  const member = await rawPrisma.workspaceMember.findUnique({
+    where: { workspaceId_userId: { workspaceId, userId } },
+    select: { role: true },
+  });
+  setHiddenForRequest(
+    member
+      ? await hiddenFromMember(workspaceId, userId, member.role)
+      : await hiddenFromOutsiders(workspaceId),
+  );
 }
 
 const jsonRpcError = (code: number, message: string) => ({
@@ -38,6 +58,8 @@ mcpRouter.post("/", async (req: Request, res: Response) => {
     res.status(401).json(jsonRpcError(-32001, "Missing or invalid Authorization: Bearer <token>"));
     return;
   }
+
+  await scopeToMember(authCtx.userId, authCtx.workspaceId);
 
   const transport = new StreamableHTTPServerTransport({
     sessionIdGenerator: undefined,
@@ -81,6 +103,9 @@ mcpRouter.delete("/", methodNotAllowed);
 const sseSessions = new Map<string, SSEServerTransport>();
 // Token behind each open SSE session, re-checked on every message.
 const sessionTokens = new Map<string, string>();
+// Who each SSE session acts as. The tools run inside the POST that carries
+// the message, so that request is the one that needs the scope.
+const sessionMembers = new Map<string, { userId: string; workspaceId: string }>();
 
 /** False (and the session closed) once its token was revoked or the member removed. */
 async function sessionStillAllowed(sessionId: string, close: () => unknown): Promise<boolean> {
@@ -102,6 +127,10 @@ mcpRouter.get("/sse", async (req: Request, res: Response) => {
   const transport = new SSEServerTransport("/mcp/messages", res);
   sseSessions.set(transport.sessionId, transport);
   sessionTokens.set(transport.sessionId, authCtx.tokenId);
+  sessionMembers.set(transport.sessionId, {
+    userId: authCtx.userId,
+    workspaceId: authCtx.workspaceId,
+  });
 
   // Heartbeat: the SDK's SSE transport sends no keep-alive, so idle proxies
   // (Railway / Cloudflare) close the stream after a short idle period →
@@ -119,6 +148,7 @@ mcpRouter.get("/sse", async (req: Request, res: Response) => {
     clearInterval(heartbeat);
     sseSessions.delete(transport.sessionId);
     sessionTokens.delete(transport.sessionId);
+    sessionMembers.delete(transport.sessionId);
   });
   await server.connect(transport);
 });
@@ -138,6 +168,12 @@ mcpRouter.post("/messages", async (req: Request, res: Response) => {
     res.status(401).json({ error: "The token was revoked" });
     return;
   }
+  const member = sessionMembers.get(sessionId);
+  if (!member) {
+    res.status(404).json({ error: "Session not found or expired" });
+    return;
+  }
+  await scopeToMember(member.userId, member.workspaceId);
   await transport.handlePostMessage(req, res, req.body);
 });
 

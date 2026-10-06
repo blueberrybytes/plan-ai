@@ -70,11 +70,26 @@ Platform admins (users with the global `ADMIN` role) have no access to customer 
 
 These are rules in the application. The people who run the servers can still reach the database directly, as with any hosted service.
 
+## Restricted projects
+
+A project is open to the whole workspace by default. A workspace owner or the person who created the project can restrict it. A restricted project is seen only by the workspace owners, its creator and the people added to it. Workspace admins who were not added do not see it.
+
+Everything that belongs to the project follows it: its meetings, transcripts, tasks, files, notes, chats and the documents, slides and diagrams made from its files. To anyone else they do not exist. They are left out of lists, search, the AI assistant, the knowledge base, MCP and the weekly emails, and opening one by its id answers "not found".
+
+The rule is applied in one place, in the layer that talks to the database, so a new screen or endpoint gets it without extra work. Each change of who sees a project is written to the audit log.
+
+Limits to know about:
+
+*   A meeting saved without a project is visible to the workspace, as before. Put sensitive meetings in a restricted project.
+*   A document that someone with access generated from a restricted meeting and saved outside the project follows its own sharing, not the project's.
+*   Tasks of a restricted project still sync to a connected tool (Jira, Linear, Trello and the like) when sync is on, and are then visible there.
+*   With support access turned on, a platform admin does not see restricted projects.
+
 ## Audit log
 
 Each workspace keeps an audit log. Owners and admins can read it.
 
-It records invitations, joins, removals and role changes. It records settings changes with the names of the settings that changed, never the key values. It records ownership transfers, exports and the deletion of the workspace. It records the deletion of projects, meetings and meeting audio. It records when documents, presentations and diagrams are shared or unshared, and when an integration is disconnected. It also records task edits made by the AI assistant.
+It records invitations, joins, removals and role changes. It records settings changes with the names of the settings that changed, never the key values. It records ownership transfers, exports and the deletion of the workspace. It records the deletion of projects, meetings and meeting audio. It records when documents, presentations and diagrams are shared or unshared, and when an integration is disconnected. It also records task edits made by the AI assistant. It records who opens a meeting, gets its audio, sends its notes by email or translates it, including reads through MCP. Opening a meeting is written once per person and meeting every 30 minutes.
 
 Each entry keeps who did it, their IP address and their browser's user agent. Entries are kept when the user or the workspace is deleted.
 

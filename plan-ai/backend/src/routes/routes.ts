@@ -390,6 +390,16 @@ const models: TsoaRoute.Models = {
         "type": {"dataType":"union","subSchemas":[{"dataType":"nestedObjectLiteral","nestedProperties":{},"additionalProperties":{"dataType":"any"}},{"dataType":"array","array":{"dataType":"any"}},{"dataType":"string"},{"dataType":"double"},{"dataType":"boolean"},{"dataType":"enum","enums":[null]}],"validators":{}},
     },
     // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "_36_Enums.ProjectVisibility": {
+        "dataType": "refAlias",
+        "type": {"dataType":"union","subSchemas":[{"dataType":"enum","enums":["WORKSPACE"]},{"dataType":"enum","enums":["RESTRICTED"]}],"validators":{}},
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "ProjectVisibility": {
+        "dataType": "refAlias",
+        "type": {"ref":"_36_Enums.ProjectVisibility","validators":{}},
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
     "ProjectResponse": {
         "dataType": "refObject",
         "properties": {
@@ -406,6 +416,7 @@ const models: TsoaRoute.Models = {
             "hasFiles": {"dataType":"boolean","required":true},
             "fileCount": {"dataType":"double","required":true},
             "themeId": {"dataType":"union","subSchemas":[{"dataType":"string"},{"dataType":"enum","enums":[null]}],"required":true},
+            "visibility": {"ref":"ProjectVisibility","required":true},
         },
         "additionalProperties": false,
     },
@@ -770,6 +781,46 @@ const models: TsoaRoute.Models = {
             "startedAt": {"dataType":"union","subSchemas":[{"dataType":"datetime"},{"dataType":"enum","enums":[null]}]},
             "metadata": {"dataType":"union","subSchemas":[{"ref":"TsoaJsonObject"},{"dataType":"enum","enums":[null]}]},
             "themeId": {"dataType":"union","subSchemas":[{"dataType":"string"},{"dataType":"enum","enums":[null]}]},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "ProjectAccessPerson": {
+        "dataType": "refObject",
+        "properties": {
+            "userId": {"dataType":"string","required":true},
+            "name": {"dataType":"union","subSchemas":[{"dataType":"string"},{"dataType":"enum","enums":[null]}],"required":true},
+            "email": {"dataType":"string","required":true},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "ProjectAccess": {
+        "dataType": "refObject",
+        "properties": {
+            "visibility": {"dataType":"union","subSchemas":[{"dataType":"enum","enums":["WORKSPACE"]},{"dataType":"enum","enums":["RESTRICTED"]}],"required":true},
+            "creator": {"dataType":"union","subSchemas":[{"ref":"ProjectAccessPerson"},{"dataType":"enum","enums":[null]}],"required":true},
+            "members": {"dataType":"array","array":{"dataType":"refObject","ref":"ProjectAccessPerson"},"required":true},
+            "canManage": {"dataType":"boolean","required":true},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "ProjectAccessResponse": {
+        "dataType": "refAlias",
+        "type": {"ref":"ProjectAccess","validators":{}},
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "ApiResponse_ProjectAccessResponse_": {
+        "dataType": "refAlias",
+        "type": {"dataType":"nestedObjectLiteral","nestedProperties":{"message":{"dataType":"string"},"data":{"dataType":"union","subSchemas":[{"ref":"ProjectAccessResponse"},{"dataType":"enum","enums":[null]}],"required":true},"status":{"dataType":"double","required":true}},"validators":{}},
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "SetProjectAccessRequest": {
+        "dataType": "refObject",
+        "properties": {
+            "visibility": {"ref":"ProjectVisibility","required":true},
+            "memberUserIds": {"dataType":"array","array":{"dataType":"string"}},
         },
         "additionalProperties": false,
     },
@@ -4511,6 +4562,71 @@ export function RegisterRoutes(app: Router,opts?:{multer?:ReturnType<typeof mult
 
               await templateService.apiHandler({
                 methodName: 'createSession',
+                controller,
+                response,
+                next,
+                validatedArgs,
+                successStatus: undefined,
+              });
+            } catch (err) {
+                return next(err);
+            }
+        });
+        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+        const argsProjectsModelController_getProjectAccess: Record<string, TsoaRoute.ParameterSchema> = {
+                request: {"in":"request","name":"request","required":true,"dataType":"object"},
+                projectId: {"in":"path","name":"projectId","required":true,"dataType":"string"},
+        };
+        app.get('/api/projects/:projectId/access',
+            authenticateMiddleware([{"ClientLevel":[]}]),
+            ...(fetchMiddlewares<RequestHandler>(ProjectsModelController)),
+            ...(fetchMiddlewares<RequestHandler>(ProjectsModelController.prototype.getProjectAccess)),
+
+            async function ProjectsModelController_getProjectAccess(request: ExRequest, response: ExResponse, next: any) {
+
+            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+
+            let validatedArgs: any[] = [];
+            try {
+                validatedArgs = templateService.getValidatedArgs({ args: argsProjectsModelController_getProjectAccess, request, response });
+
+                const controller = new ProjectsModelController();
+
+              await templateService.apiHandler({
+                methodName: 'getProjectAccess',
+                controller,
+                response,
+                next,
+                validatedArgs,
+                successStatus: undefined,
+              });
+            } catch (err) {
+                return next(err);
+            }
+        });
+        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+        const argsProjectsModelController_setProjectAccess: Record<string, TsoaRoute.ParameterSchema> = {
+                request: {"in":"request","name":"request","required":true,"dataType":"object"},
+                projectId: {"in":"path","name":"projectId","required":true,"dataType":"string"},
+                body: {"in":"body","name":"body","required":true,"ref":"SetProjectAccessRequest"},
+        };
+        app.put('/api/projects/:projectId/access',
+            authenticateMiddleware([{"ClientLevel":[]}]),
+            ...(fetchMiddlewares<RequestHandler>(ProjectsModelController)),
+            ...(fetchMiddlewares<RequestHandler>(ProjectsModelController.prototype.setProjectAccess)),
+
+            async function ProjectsModelController_setProjectAccess(request: ExRequest, response: ExResponse, next: any) {
+
+            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+
+            let validatedArgs: any[] = [];
+            try {
+                validatedArgs = templateService.getValidatedArgs({ args: argsProjectsModelController_setProjectAccess, request, response });
+
+                const controller = new ProjectsModelController();
+
+              await templateService.apiHandler({
+                methodName: 'setProjectAccess',
                 controller,
                 response,
                 next,

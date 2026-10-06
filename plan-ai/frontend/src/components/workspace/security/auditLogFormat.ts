@@ -13,6 +13,7 @@ const KNOWN_ACTIONS = new Set([
   "workspace.ownership_transferred",
   "workspace.deleted",
   "project.deleted",
+  "project.access_changed",
   "meeting.deleted",
   "meeting.audio_deleted",
   "meeting.viewed",
