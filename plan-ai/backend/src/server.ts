@@ -16,6 +16,7 @@ import { RegisterRoutes } from "./routes/routes";
 import chatRouter from "./routes/chatRouter";
 import gitnexusRouter from "./routes/gitnexusRouter";
 import { mcpRouter } from "./routes/mcpRouter";
+import { accessScopeMiddleware } from "./services/accessScope";
 import { initializeContextVectorStore } from "./vector/contextFileVectorService";
 import { setupAudioStream } from "./routes/audioStream";
 import { microsoftMobileStart, microsoftMobileCallback } from "./controller/sessionController";
@@ -56,6 +57,9 @@ const QDRANT_URL = EnvUtils.get("QDRANT_URL") || "http://127.0.0.1:6333";
 // work correctly behind a reverse proxy.
 app.set("trust proxy", 1);
 app.use(helmet());
+// First of all: each request gets the scope that later holds what the caller
+// must not see (restricted projects). See services/accessScope.ts.
+app.use(accessScopeMiddleware);
 
 // CORS — in production set CORS_ORIGINS="https://plan-ai.blueberrybytes.com,https://other.domain"
 // The desktop recorder serves its UI from app://recorder, so that origin is

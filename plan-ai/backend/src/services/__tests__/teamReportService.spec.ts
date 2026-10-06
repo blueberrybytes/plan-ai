@@ -11,6 +11,11 @@ const mocks = vi.hoisted(() => {
   };
   return { db, generateText: vi.fn(), sendEmail: vi.fn(), emailConfigured: vi.fn(() => true) };
 });
+// Restricted projects are worked out with the unfiltered client. Not under test here.
+vi.mock("../projectAccess", () => ({
+  hiddenFromMember: async () => ({ projectIds: [], contextIds: [] }),
+  hiddenFromOutsiders: async () => ({ projectIds: [], contextIds: [] }),
+}));
 vi.mock("../../prisma/prismaClient", () => ({ default: mocks.db }));
 vi.mock("ai", async (importOriginal) => ({
   ...(await importOriginal<typeof import("ai")>()),

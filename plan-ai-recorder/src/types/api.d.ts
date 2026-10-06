@@ -560,6 +560,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/projects/{projectId}/access": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Who sees this project. */
+        get: operations["GetProjectAccess"];
+        /**
+         * @description Opens the project to the whole workspace or restricts it to its creator,
+         *     the workspace owners and the people listed. Its meetings, tasks, files and
+         *     chats follow. Only a workspace owner or the creator can change it.
+         */
+        put: operations["SetProjectAccess"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/projects/{projectId}/digest": {
         parameters: {
             query?: never;
@@ -3709,6 +3731,9 @@ export interface components {
         TsoaJsonObject: ({
             [key: string]: unknown;
         } | unknown[] | string | number | boolean) | null;
+        /** @enum {string} */
+        "_36_Enums.ProjectVisibility": "WORKSPACE" | "RESTRICTED";
+        ProjectVisibility: components["schemas"]["_36_Enums.ProjectVisibility"];
         ProjectResponse: {
             id: string;
             title: string;
@@ -3734,6 +3759,8 @@ export interface components {
             fileCount: number;
             /** @description Default brand theme for AI-generated docs & slides. Null = unthemed. */
             themeId: string | null;
+            /** @description RESTRICTED: only the workspace owners, the creator and the people added see it. */
+            visibility: components["schemas"]["ProjectVisibility"];
         };
         ProjectListResponse: {
             projects: components["schemas"]["ProjectResponse"][];
@@ -4020,6 +4047,33 @@ export interface components {
             metadata?: components["schemas"]["TsoaJsonObject"] | null;
             /** @description Default brand theme for AI-generated docs & slides from this project's meetings. */
             themeId?: string | null;
+        };
+        ProjectAccessPerson: {
+            userId: string;
+            name: string | null;
+            email: string;
+        };
+        ProjectAccess: {
+            /** @enum {string} */
+            visibility: "WORKSPACE" | "RESTRICTED";
+            /** @description The person who created the project. Always sees it. */
+            creator: components["schemas"]["ProjectAccessPerson"] | null;
+            /** @description People added to the project. Only counts while it is RESTRICTED. */
+            members: components["schemas"]["ProjectAccessPerson"][];
+            /** @description Whether the caller may change this. */
+            canManage: boolean;
+        };
+        ProjectAccessResponse: components["schemas"]["ProjectAccess"];
+        ApiResponse_ProjectAccessResponse_: {
+            message?: string;
+            data: components["schemas"]["ProjectAccessResponse"] | null;
+            /** Format: double */
+            status: number;
+        };
+        SetProjectAccessRequest: {
+            visibility: components["schemas"]["ProjectVisibility"];
+            /** @description The full list of people with access, besides the creator. Leave out to keep the current one. */
+            memberUserIds?: string[];
         };
         UpdateProjectRequest: {
             title?: string;
@@ -7619,6 +7673,54 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ApiResponse_null_"];
+                };
+            };
+        };
+    };
+    GetProjectAccess: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                projectId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_ProjectAccessResponse_"];
+                };
+            };
+        };
+    };
+    SetProjectAccess: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                projectId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetProjectAccessRequest"];
+            };
+        };
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_ProjectAccessResponse_"];
                 };
             };
         };

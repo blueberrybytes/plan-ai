@@ -7,6 +7,11 @@ const prismaMock = vi.hoisted(() => ({
   workspace: { findUnique: vi.fn() },
   auditLog: { create: vi.fn() },
 }));
+// Restricted projects are worked out with the unfiltered client. Not under test here.
+vi.mock("../projectAccess", () => ({
+  hiddenFromMember: async () => ({ projectIds: [], contextIds: [] }),
+  hiddenFromOutsiders: async () => ({ projectIds: [], contextIds: [] }),
+}));
 vi.mock("../../prisma/prismaClient", () => ({ default: prismaMock }));
 
 import { checkWorkspacePolicy, resolveWorkspaceAccess } from "../workspaceAccess";

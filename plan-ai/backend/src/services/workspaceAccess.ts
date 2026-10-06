@@ -1,4 +1,6 @@
 import type { User, WorkspaceRole } from "@prisma/client";
+import { setHiddenForRequest } from "./accessScope";
+import { hiddenFromMember, hiddenFromOutsiders } from "./projectAccess";
 import prisma from "../prisma/prismaClient";
 import { recordAudit, type AuditRequestInfo } from "./auditLogService";
 
@@ -140,6 +142,9 @@ export async function resolveWorkspaceAccess(params: {
       });
       if (exists) {
         await auditSupportAccess(user, workspaceId, request);
+        // Support sees the workspace as its owner would, except the restricted
+        // projects: nobody of the platform was added to those.
+        setHiddenForRequest(await hiddenFromOutsiders(workspaceId));
         return { user, workspaceId, role: "OWNER" };
       }
     }
@@ -152,6 +157,10 @@ export async function resolveWorkspaceAccess(params: {
     signIn,
   );
   if (policyError) throw policyError;
+
+  // From here on, every query of this request leaves out the restricted
+  // projects this member is not part of (see services/accessScope.ts).
+  setHiddenForRequest(await hiddenFromMember(workspaceId, user.id, membership.role));
 
   return { user, workspaceId, role: membership.role };
 }

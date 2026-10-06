@@ -12,7 +12,7 @@ Cada punto del análisis se comprueba en el código antes de tocar nada. Lo que 
 | --- | --- | --- |
 | 0 | Aislamiento entre workspaces en Qdrant | Hecho el 6 de octubre (`40f5cea`) |
 | 0b | Segunda capa: `workspaceId` en los puntos de Qdrant | Hecho el 6 de octubre. Falta pulsar el relleno en producción, desde Admin |
-| 1 | Reuniones y proyectos confidenciales | Pendiente, hay decisiones abiertas |
+| 1 | Reuniones y proyectos confidenciales | Hecho el 6 de octubre. Falta probarlo en la web con dos usuarios |
 | 2 | Retención de transcripciones, embeddings y chats | Aparcada. Xavier, 6 de octubre: de momento no se borra nada |
 | 3 | Auditoría de lectura y exportación | Hecho, con filtro por persona y por reunión en la web |
 | 4 | Detección y marcado de datos personales | Pendiente |
@@ -49,19 +49,35 @@ Cuando esté hecho en producción, se puede quitar la rama `is_empty` del filtro
 
 Revisadas las otras consultas de `Context` que no filtran por workspace. Ninguna es un hueco: `gitnexusRouter.ts` sí filtra, todos los llamadores de `repoNameForContexts` pasan el workspace, el webhook de GitHub busca por repositorio a propósito, y los workers reciben el `contextId` de trabajos que encola el propio backend. `transcriptsController.ts` y `projectsModelController.ts` filtran por usuario y no por workspace: un usuario podría adjuntar un contexto suyo de otro workspace, pero la capa de vectores ya lo descarta.
 
-## Fase 1. Reuniones y proyectos confidenciales
+## Fase 1. Proyectos restringidos (hecho)
 
-Hoy todo es visible para todo el workspace. No hay forma de tener una reunión de RRHH, de consejo o de una compra que solo vean algunos.
+Decisiones (Xavier aceptó la propuesta el 6 de octubre): la restricción va por proyecto y todo lo del proyecto la hereda. Ven un proyecto restringido los owners del workspace, quien lo creó y las personas añadidas. Los admins que no estén añadidos no lo ven. Lo puede cambiar un owner o el creador.
 
-Propuesta: un campo de visibilidad en `Project` y en `Transcript` con dos valores, workspace o restringido, y una tabla de miembros con acceso. Una reunión hereda la visibilidad de su proyecto. La regla tiene que aplicarse en un solo sitio y cubrir listados, detalle, búsqueda, chat, RAG, MCP, parte de equipo y exportaciones.
+Cómo está hecho:
 
-Decisiones abiertas:
+- `Project.visibility` (`WORKSPACE` o `RESTRICTED`) y la tabla `ProjectMember`.
+- La regla se aplica en un solo sitio. Al resolver el acceso al workspace se calculan los proyectos ocultos para quien llama (`services/projectAccess.ts`) y se guardan para el resto de la petición (`services/accessScope.ts`). El cliente de Prisma (`prisma/prismaClient.ts`) añade el filtro a todas las lecturas y a las escrituras con `where` de 13 modelos: proyectos, reuniones, tareas, contextos y sus archivos, notas, chats, documentos, presentaciones, diagramas, puntos de dolor, enlaces tarea-reunión y traducciones. Ningún controlador tiene que acordarse de la regla.
+- El RAG queda cubierto por la misma vía, porque toda lectura de Qdrant empieza por la tabla `Context`.
+- MCP: cada petición se limita a lo que ve el usuario del token.
+- Correos semanales: el resumen personal se construye con lo que ve cada persona. El informe de equipo, que va a varios a la vez, excluye los proyectos restringidos.
+- Acceso de soporte de la plataforma: no ve proyectos restringidos.
+- Web: en la página del proyecto, "Quién puede ver este proyecto", con la lista de personas. Cada cambio queda en la auditoría (`project.access_changed`).
+- Migración `project_visibility_lists`: las listas `contextIds` pasan a tener valor por defecto y se rellenan las filas antiguas, que tenían NULL. Sin eso el filtro ocultaba de más.
 
-- ¿Los owners y admins ven siempre lo restringido, o tampoco?
-- ¿La restricción es por proyecto, por reunión, o las dos?
-- ¿Qué pasa con las tareas que salen de una reunión restringida?
+Comprobado con datos reales en la base local (`yarn smoke:restricted-projects`): crea un workspace con un proyecto abierto y otro restringido y lee los 13 modelos como owner, admin, creador, invitado y ajeno, por listado, por id y con escrituras. También prueba la gestión de acceso. Hay un test de peticiones solapadas a través de Express que confirma que el ámbito de una petición no se cruza con el de otra.
 
-Esfuerzo: 4 a 6 días. Es la de más riesgo, porque toca todas las lecturas.
+Límites conocidos:
+
+- Una reunión guardada sin proyecto sigue siendo visible para todo el workspace.
+- Un documento generado desde una reunión restringida y guardado fuera del proyecto (solo con `transcriptIds`) no hereda la restricción.
+- Los datos traídos con `include` desde un modelo no filtrado no pasan por el filtro. Revisé las consultas actuales y no hay ninguna así, pero es la regla a recordar al escribir consultas nuevas.
+- Las tareas de un proyecto restringido se siguen sincronizando con Jira, Linear o Trello si la sincronización está activa.
+- El registro de uso de IA guarda el `projectId`. No he revisado si alguna vista de uso enseña el título de un proyecto restringido.
+- El stream de audio del recorder no pasa por el filtro. Solo usa los términos clave del proyecto para Deepgram, no devuelve nada al usuario.
+- Los trabajos en segundo plano ven todo, a propósito. Si uno nuevo genera algo para que lo lean personas, tiene que usar `runWithHidden`.
+- La lista de proyectos de la web no marca todavía cuáles son restringidos.
+
+Sin probar: la pantalla en el navegador y el recorrido completo con dos usuarios reales. El recorder y el móvil no cambian: reciben la lista de proyectos ya filtrada.
 
 ## Fase 2. Retención de transcripciones, embeddings y chats (aparcada)
 
@@ -123,4 +139,4 @@ Calidad del RAG:
 
 ## Orden recomendado
 
-Hechas la 0, la 0b y la 3. La 2 está aparcada. Sigue la 1, y con la 1 hecha la 5. La 4 puede ir en paralelo. La 6 solo con un cliente detrás. La búsqueda en todas las reuniones de la fase 7 conviene hacerla después de la 1, para que nazca respetando la visibilidad.
+Hechas la 0, la 0b, la 1 y la 3. La 2 está aparcada. Sigue la 5, que dependía de la 1. La 4 puede ir en paralelo. La 6 solo con un cliente detrás. La búsqueda en todas las reuniones de la fase 7 conviene hacerla después de la 1, para que nazca respetando la visibilidad.

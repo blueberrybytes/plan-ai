@@ -885,6 +885,22 @@
       "projectNotFound": "Project not found.",
       "noTranscripts": "No transcripts have been captured for this session yet.",
       "noMetadata": "No metadata provided."
+    },
+    "access": {
+      "label": "Who can see this project",
+      "everyone": "Everyone in the workspace",
+      "restricted": "Only the people chosen here",
+      "explain": "The meetings, tasks, files and chats of a restricted project are hidden from everyone else, admins included.",
+      "always": "The workspace owners and {{creator}} always have access.",
+      "alwaysNoCreator": "The workspace owners always have access.",
+      "people": "People with access",
+      "noOthers": "There is nobody else in the workspace to add.",
+      "save": "Save",
+      "saved": "Saved.",
+      "failed": "The change could not be saved. Try again.",
+      "readOnlyOpen": "Everyone in the workspace sees this project.",
+      "readOnlyRestricted": "Restricted. Only the workspace owners and the people added see it.",
+      "onlyManagers": "Only a workspace owner or the person who created the project can change this."
     }
   },
   "painPoints": {
@@ -1601,7 +1617,8 @@
         "meeting_viewed": "Meeting opened",
         "meeting_audio_accessed": "Meeting audio opened",
         "meeting_notes_sent": "Meeting notes sent by email",
-        "meeting_translated": "Meeting translated"
+        "meeting_translated": "Meeting translated",
+        "project_access_changed": "Project access changed"
       },
       "groups": {
         "member": "Members",

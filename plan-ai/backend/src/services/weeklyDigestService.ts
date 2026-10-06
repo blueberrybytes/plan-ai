@@ -1,3 +1,5 @@
+import { runWithHidden } from "./accessScope";
+import { hiddenFromMember } from "./projectAccess";
 import prisma from "../prisma/prismaClient";
 import { logger } from "../utils/logger";
 import { sendWeeklyDigestEmail } from "./emailService";
@@ -155,6 +157,7 @@ export const runWeeklyDigest = async (now: Date = new Date()): Promise<WeeklyDig
     where: { user: { weeklyDigestEmail: true, role: { not: "PENDING" } } },
     select: {
       workspaceId: true,
+      role: true,
       user: { select: { id: true, email: true, name: true } },
       workspace: { select: { name: true } },
     },
@@ -169,7 +172,11 @@ export const runWeeklyDigest = async (now: Date = new Date()): Promise<WeeklyDig
 
   for (const member of members) {
     try {
-      const digest = await buildWeeklyDigest(member.user.id, member.workspaceId, now);
+      // The email is this member's: it holds what they would see in the app.
+      const hidden = await hiddenFromMember(member.workspaceId, member.user.id, member.role);
+      const digest = await runWithHidden(hidden, () =>
+        buildWeeklyDigest(member.user.id, member.workspaceId, now),
+      );
       if (!digest) {
         result.skipped += 1;
         continue;

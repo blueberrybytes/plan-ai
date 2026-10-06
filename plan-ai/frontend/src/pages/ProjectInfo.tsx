@@ -35,6 +35,7 @@ import { useTranslation } from "react-i18next";
 import { useDispatch } from "react-redux";
 import { setToastMessage } from "../store/slices/app/appSlice";
 import ThemeSelect from "../components/theme/ThemeSelect";
+import ProjectAccessCard from "../components/project/ProjectAccessCard";
 
 const ProjectInfo: React.FC = () => {
   const params = useParams();
@@ -277,6 +278,8 @@ const ProjectInfo: React.FC = () => {
                       )}
                     />
                   </Box>
+
+                  {projectId ? <ProjectAccessCard projectId={projectId} /> : null}
 
                   <Box>
                     <Typography variant="overline" color="text.secondary">

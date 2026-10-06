@@ -1,3 +1,5 @@
+import { runWithHidden } from "./accessScope";
+import { hiddenFromOutsiders } from "./projectAccess";
 import { generateText, Output } from "ai";
 import { z } from "zod";
 import prisma from "../prisma/prismaClient";
@@ -361,7 +363,11 @@ export async function runTeamWeeklyReport(now = new Date()): Promise<TeamReportR
       continue;
     }
     try {
-      let report = await buildTeamReport(ws.id, weekStart);
+      // One email goes to every owner and admin, so it leaves out the
+      // restricted projects: not all of them are in each one.
+      let report = await runWithHidden(await hiddenFromOutsiders(ws.id), () =>
+        buildTeamReport(ws.id, weekStart),
+      );
       if (!report.members.some(hasActivity)) {
         result.skipped += 1;
         continue;

@@ -19,6 +19,7 @@
     "stt:diarize-eval": "env-cmd -f .env ts-node --transpile-only src/scripts/sttDiarizeEval.ts",
     "local-ai:smoke": "env-cmd -f .env ts-node --transpile-only src/scripts/localAiSmoke.ts",
     "storage:make-private": "env-cmd -f .env ts-node --transpile-only src/scripts/makeStoragePrivate.ts",
+    "smoke:restricted-projects": "env-cmd -f .env ts-node --transpile-only src/scripts/restrictedProjectsSmoke.ts",
     "qdrant:backfill-workspace": "env-cmd -f .env ts-node --transpile-only src/scripts/backfillQdrantWorkspace.ts",
     "secrets:encrypt": "env-cmd -f .env ts-node --transpile-only src/scripts/encryptSecrets.ts",
     "storage:smoke": "env-cmd -f .env ts-node --transpile-only src/scripts/storageSmoke.ts",

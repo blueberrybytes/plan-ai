@@ -348,6 +348,7 @@ model WorkspaceInvitation {
 }
 
 model User {
+  projectMemberships   ProjectMember[]       @relation("ProjectMemberUser")
   id                   String                @id @default(cuid())
   firebaseUid          String                @unique
   email                String                @unique
@@ -472,21 +473,26 @@ model CustomTheme {
 }
 
 model Project {
-  id          String        @id @default(cuid())
+  id          String            @id @default(cuid())
   userId      String
   title       String
   description String?
-  status      ProjectStatus @default(ACTIVE)
+  status      ProjectStatus     @default(ACTIVE)
   startedAt   DateTime?
   endedAt     DateTime?
   metadata    Json?
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
   workspaceId String
   // Default brand theme for AI-generated docs & slides created from this
   // project's meetings. SetNull so deleting the theme just unlinks it.
   themeId     String?
+  /// WORKSPACE: every member of the workspace sees it. RESTRICTED: only the
+  /// workspace owners, the person who created it and the people in `members`.
+  /// Its meetings, tasks, files and chats follow it.
+  visibility  ProjectVisibility @default(WORKSPACE)
 
+  members             ProjectMember[]
   workspace           Workspace            @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   theme               BrandTheme?          @relation(fields: [themeId], references: [id], onDelete: SetNull)
   tasks               Task[]
@@ -523,7 +529,7 @@ model Transcript {
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
   projectId       String?
-  contextIds      String[]
+  contextIds      String[]         @default([])
   userId          String
   workspaceId     String
 
@@ -688,7 +694,7 @@ model ChatThread {
   id              String   @id @default(cuid())
   userId          String
   title           String   @default("New Chat")
-  contextIds      String[]
+  contextIds      String[] @default([])
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
   complexityLevel String?
@@ -758,7 +764,7 @@ model Presentation {
   title       String
   prompt      String?  @db.Text
   slidesJson  Json
-  contextIds  String[]
+  contextIds  String[] @default([])
   status      String   @default("DRAFT") @db.VarChar(24)
   /// Readable by anyone at /p/<id> only while true. Set by "Public link".
   isPublic    Boolean  @default(false)
@@ -818,7 +824,7 @@ model DocDocument {
   isPublic      Boolean  @default(false)
   /// Random secret in the public link. See Prototype.shareToken.
   shareToken    String?  @unique
-  contextIds    String[]
+  contextIds    String[] @default([])
   transcriptIds String[]
   prompt        String?
   createdAt     DateTime @default(now())
@@ -872,7 +878,7 @@ model Diagram {
   type          DiagramType
   status        DiagramStatus @default(DRAFT)
   themeId       String?
-  contextIds    String[]
+  contextIds    String[]      @default([])
   transcriptIds String[]
   isPublic      Boolean       @default(false)
   /// Random secret in the public link. See Prototype.shareToken.
@@ -1253,4 +1259,25 @@ model TranscriptTranslation {
   source Transcript @relation(fields: [transcriptId], references: [id], onDelete: Cascade)
 
   @@unique([transcriptId, language])
+}
+
+enum ProjectVisibility {
+  WORKSPACE
+  RESTRICTED
+}
+
+/// Who can see a RESTRICTED project, besides the workspace owners and the
+/// person who created it. Not used while the project is WORKSPACE.
+model ProjectMember {
+  id        String   @id @default(cuid())
+  projectId String
+  userId    String
+  addedById String?
+  createdAt DateTime @default(now())
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user    User    @relation("ProjectMemberUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, userId])
+  @@index([userId])
 }

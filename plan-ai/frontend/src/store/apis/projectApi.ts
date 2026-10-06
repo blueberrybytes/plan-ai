@@ -80,6 +80,10 @@ export type RefineTaskRequest =
 export type ApiResponseRefineTaskResponse =
   components["schemas"]["ApiResponse_RefineTaskResponse_"];
 
+export type ProjectAccess = components["schemas"]["ProjectAccess"];
+type ApiResponseProjectAccess = components["schemas"]["ApiResponse_ProjectAccessResponse_"];
+export type SetProjectAccessRequest = components["schemas"]["SetProjectAccessRequest"];
+
 export const projectApi = createApi({
   reducerPath: "projectApi",
   baseQuery: baseQueryWithReauth,
@@ -123,6 +127,26 @@ export const projectApi = createApi({
     >({
       query: ({ projectId, body }) => ({
         url: `/api/projects/${projectId}`,
+        method: "PUT",
+        body,
+      }),
+      invalidatesTags: (result, error, { projectId }) => [
+        { type: "Project" as const, id: "LIST" },
+        { type: "Project" as const, id: projectId },
+      ],
+    }),
+    getProjectAccess: builder.query<ApiResponseProjectAccess, string>({
+      query: (projectId) => `/api/projects/${projectId}/access`,
+      providesTags: (result, error, projectId) => [{ type: "Project" as const, id: projectId }],
+    }),
+    // Restricting or opening a project changes which meetings and tasks the
+    // caller's colleagues see, so everything cached about projects goes.
+    setProjectAccess: builder.mutation<
+      ApiResponseProjectAccess,
+      { projectId: string; body: SetProjectAccessRequest }
+    >({
+      query: ({ projectId, body }) => ({
+        url: `/api/projects/${projectId}/access`,
         method: "PUT",
         body,
       }),
@@ -421,6 +445,8 @@ export const {
   useGetProjectQuery,
   useCreateProjectMutation,
   useUpdateProjectMutation,
+  useGetProjectAccessQuery,
+  useSetProjectAccessMutation,
   useDeleteProjectMutation,
   useCreateProjectTranscriptMutation,
   useUploadProjectTranscriptMutation,

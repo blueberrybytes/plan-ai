@@ -17,6 +17,7 @@ import {
 import {
   Prisma,
   ProjectStatus,
+  ProjectVisibility,
   TranscriptSource,
   TaskPriority,
   TaskStatus,
@@ -54,6 +55,7 @@ import { removeContextVectors } from "../vector/contextFileVectorService";
 import { deleteProjectArtifacts } from "../services/dataDeletionService";
 import { recordAudit } from "../services/auditLogService";
 import { recordMeetingAccess } from "../services/meetingAccessAudit";
+import { getProjectAccess, setProjectAccess, type ProjectAccess } from "../services/projectAccess";
 
 interface ProjectResponse {
   id: string;
@@ -73,6 +75,16 @@ interface ProjectResponse {
   fileCount: number;
   /** Default brand theme for AI-generated docs & slides. Null = unthemed. */
   themeId: string | null;
+  /** RESTRICTED: only the workspace owners, the creator and the people added see it. */
+  visibility: ProjectVisibility;
+}
+
+export type ProjectAccessResponse = ProjectAccess;
+
+export interface SetProjectAccessRequest {
+  visibility: ProjectVisibility;
+  /** The full list of people with access, besides the creator. Leave out to keep the current one. */
+  memberUserIds?: string[];
 }
 
 interface ProjectListResponse {
@@ -1182,6 +1194,59 @@ export class ProjectsModelController extends BaseWorkspaceController {
     };
   }
 
+  /** Who sees this project. */
+  @Get("{projectId}/access")
+  @Security("ClientLevel")
+  public async getProjectAccess(
+    @Request() request: AuthenticatedRequest,
+    @Path() projectId: string,
+  ): Promise<ApiResponse<ProjectAccessResponse>> {
+    const { user, workspaceId, role } = await this.getAuthorizedWorkspaceAccess(request);
+    try {
+      const data = await getProjectAccess({ workspaceId, userId: user.id, role }, projectId);
+      return { status: 200, data };
+    } catch (err) {
+      const status = (err as { status?: number })?.status;
+      if (typeof status === "number") this.setStatus(status);
+      throw err;
+    }
+  }
+
+  /**
+   * Opens the project to the whole workspace or restricts it to its creator,
+   * the workspace owners and the people listed. Its meetings, tasks, files and
+   * chats follow. Only a workspace owner or the creator can change it.
+   */
+  @Put("{projectId}/access")
+  @Security("ClientLevel")
+  public async setProjectAccess(
+    @Request() request: AuthenticatedRequest,
+    @Path() projectId: string,
+    @Body() body: SetProjectAccessRequest,
+  ): Promise<ApiResponse<ProjectAccessResponse>> {
+    const { user, workspaceId, role } = await this.getAuthorizedWorkspaceAccess(request);
+    try {
+      const result = await setProjectAccess({ workspaceId, userId: user.id, role }, projectId, {
+        visibility: body.visibility,
+        memberUserIds: body.memberUserIds,
+      });
+      await recordAudit({
+        workspaceId,
+        actor: user,
+        action: "project.access_changed",
+        targetType: "project",
+        targetId: projectId,
+        metadata: { title: result.title, ...result.change },
+        request,
+      });
+      return { status: 200, data: result.access };
+    } catch (err) {
+      const status = (err as { status?: number })?.status;
+      if (typeof status === "number") this.setStatus(status);
+      throw err;
+    }
+  }
+
   @Put("{projectId}")
   @Security("ClientLevel")
   public async updateSession(
@@ -1422,6 +1487,7 @@ export class ProjectsModelController extends BaseWorkspaceController {
     createdAt: Date;
     updatedAt: Date;
     themeId?: string | null;
+    visibility?: ProjectVisibility;
     context?: { id: string; _count?: { files: number } } | null;
   }): ProjectResponse {
     const fileCount = project.context?._count?.files ?? 0;
@@ -1439,6 +1505,7 @@ export class ProjectsModelController extends BaseWorkspaceController {
       hasFiles: fileCount > 0,
       fileCount,
       themeId: project.themeId ?? null,
+      visibility: project.visibility ?? "WORKSPACE",
     };
   }
 

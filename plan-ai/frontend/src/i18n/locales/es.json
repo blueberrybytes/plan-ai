@@ -879,6 +879,22 @@
       "sessionNotFound": "Sesión no encontrada.",
       "noTranscripts": "Aún no se han capturado transcripciones para esta sesión.",
       "noMetadata": "No se proporcionaron metadatos."
+    },
+    "access": {
+      "label": "Quién puede ver este proyecto",
+      "everyone": "Todo el workspace",
+      "restricted": "Solo las personas elegidas aquí",
+      "explain": "Las reuniones, tareas, archivos y chats de un proyecto restringido quedan ocultos para los demás, incluidos los admins.",
+      "always": "Los owners del workspace y {{creator}} siempre tienen acceso.",
+      "alwaysNoCreator": "Los owners del workspace siempre tienen acceso.",
+      "people": "Personas con acceso",
+      "noOthers": "No hay nadie más en el workspace para añadir.",
+      "save": "Guardar",
+      "saved": "Guardado.",
+      "failed": "No se ha podido guardar el cambio. Vuelve a intentarlo.",
+      "readOnlyOpen": "Todo el workspace ve este proyecto.",
+      "readOnlyRestricted": "Restringido. Solo lo ven los owners del workspace y las personas añadidas.",
+      "onlyManagers": "Solo un owner del workspace o quien creó el proyecto puede cambiar esto."
     }
   },
   "painPoints": {
@@ -1597,7 +1613,8 @@
         "meeting_viewed": "Reunión abierta",
         "meeting_audio_accessed": "Audio de la reunión abierto",
         "meeting_notes_sent": "Notas de la reunión enviadas por email",
-        "meeting_translated": "Reunión traducida"
+        "meeting_translated": "Reunión traducida",
+        "project_access_changed": "Acceso al proyecto cambiado"
       },
       "groups": {
         "member": "Miembros",
