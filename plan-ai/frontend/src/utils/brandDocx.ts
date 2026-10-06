@@ -247,9 +247,13 @@ interface LogoData {
   height?: number;
 }
 
-/** Header box the logo must fit in (points ≈ px here): max 40 tall, 150 wide. */
-const LOGO_MAX_H = 40;
-const LOGO_MAX_W = 150;
+/**
+ * Header box the logo must fit in, in pixels at 96 dpi (the unit the docx
+ * library takes): 56 px is 1.5 cm tall, 200 px is 5.3 cm wide. The old 40 px
+ * box made a square icon barely a centimetre.
+ */
+const LOGO_MAX_H = 56;
+const LOGO_MAX_W = 200;
 
 /**
  * Fit natural dimensions into the header box PRESERVING aspect ratio. A wide
@@ -260,6 +264,27 @@ const fitLogo = (w?: number, h?: number): { width: number; height: number } => {
   if (!w || !h || w <= 0 || h <= 0) return { width: LOGO_MAX_H, height: LOGO_MAX_H };
   const scale = Math.min(LOGO_MAX_H / h, LOGO_MAX_W / w);
   return { width: Math.max(1, Math.round(w * scale)), height: Math.max(1, Math.round(h * scale)) };
+};
+
+const SVG_RASTER_WIDTH = 800;
+
+/**
+ * Width divided by height of an SVG, read from its viewBox or, without one,
+ * from its width and height attributes. Null when the file says neither.
+ */
+export const svgAspect = (svg: string): number | null => {
+  const root = svg.match(/<svg\b[^>]*>/i)?.[0];
+  if (!root) return null;
+  const viewBox = root.match(/\bviewBox\s*=\s*["']\s*([^"']+)["']/i)?.[1];
+  if (viewBox) {
+    const [, , w, h] = viewBox.split(/[\s,]+/).map(Number);
+    if (w > 0 && h > 0) return w / h;
+  }
+  const size = (name: string) =>
+    parseFloat(root.match(new RegExp(`\\b${name}\\s*=\\s*["']\\s*([\\d.]+)`, "i"))?.[1] ?? "");
+  const w = size("width");
+  const h = size("height");
+  return w > 0 && h > 0 ? w / h : null;
 };
 
 /** Decode natural pixel size of an image blob in the browser. Null off-DOM. */
@@ -293,9 +318,16 @@ const rasterizeToPng = async (
       img.onerror = () => reject(new Error("image decode failed"));
       img.src = url;
     });
-    // SVGs without intrinsic size report 0×0 — fall back to a square canvas.
-    const w = img.naturalWidth || 240;
-    const h = img.naturalHeight || 240;
+    // An SVG with only a viewBox reports no size in some browsers. Drawn on a
+    // square it comes out as a small strip in the middle, so take the shape
+    // from the viewBox. Vectors are also drawn large: at their natural size
+    // (often 120 px wide) they print blurry.
+    const svgShape = /svg/i.test(blob.type) ? svgAspect(await blob.text()) : null;
+    const natural = svgShape
+      ? { w: SVG_RASTER_WIDTH, h: Math.round(SVG_RASTER_WIDTH / svgShape) }
+      : { w: img.naturalWidth, h: img.naturalHeight };
+    const w = natural.w || 240;
+    const h = natural.h || 240;
     const canvas = document.createElement("canvas");
     canvas.width = w;
     canvas.height = h;
@@ -338,20 +370,25 @@ const buildHeader = (theme: BrandDocxTheme, s: ResolvedStyle, logo: LogoData | n
   const name = (theme.name || "").trim();
   if (!name && !logo) return undefined;
 
-  // NO tab stops here: Google Docs ignores a right tab in headers (name+logo
-  // collapse together on the left) while Pages honours it (split to the sides)
-  // — inconsistent. A plain RIGHT-aligned paragraph with name + logo side by
-  // side renders identically everywhere, and matches the classic brand-template
-  // look (name and logo together at the top right).
-  // Aspect-correct logo box: a wide wordmark logo forced into 40×40 rendered
-  // visibly squashed (reported distortion). Fit within 150×40 preserving ratio.
-  const logoBox = logo ? fitLogo(logo.width, logo.height) : null;
-
+  // The header holds the logo, or the brand name when there is no logo. Not
+  // both. They used to share one line, with the name pushed up by a baseline
+  // offset to sit level with the logo. Each viewer reads that offset its own
+  // way: in Pages the name floated above and the logo hung below it. (The
+  // offset was also worked out in pixels and applied as points, so it was too
+  // big.) A logo on its own line looks the same in Word, Pages, Google Docs
+  // and LibreOffice, and a logo that already spells the name no longer repeats it.
   const children: (TextRun | ImageRun)[] = [];
-  if (name) {
-    // Raise the name so it centres against the logo's actual height (inline
-    // images sit ON the baseline; text otherwise renders visibly lower).
-    const raisePt = logoBox ? Math.max(0, Math.round((logoBox.height - 11) / 2)) : 0;
+  if (logo) {
+    children.push(
+      new ImageRun({
+        type: logo.type,
+        data: logo.data,
+        // Fits the box keeping the logo's shape: a wide wordmark forced into
+        // a square used to come out squashed.
+        transformation: fitLogo(logo.width, logo.height),
+      }),
+    );
+  } else {
     children.push(
       new TextRun({
         text: name,
@@ -359,17 +396,6 @@ const buildHeader = (theme: BrandDocxTheme, s: ResolvedStyle, logo: LogoData | n
         font: s.headingFont,
         size: hp(11),
         color: s.accent,
-        position: raisePt > 0 ? (`${raisePt}pt` as const) : undefined,
-      }),
-    );
-  }
-  if (logo && logoBox) {
-    if (name) children.push(new TextRun({ text: "  ", font: s.bodyFont }));
-    children.push(
-      new ImageRun({
-        type: logo.type,
-        data: logo.data,
-        transformation: logoBox,
       }),
     );
   }
