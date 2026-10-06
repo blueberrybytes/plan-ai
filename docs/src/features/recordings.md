@@ -81,6 +81,12 @@ The text of each phrase goes to the same AI provider that writes the summaries, 
 
 On the page of a meeting, **Translate to** above the transcript shows the transcript and its summary in another language. The first time takes a few seconds, or up to a minute for a long meeting. After that the translation is stored and opens at once. The original transcript is never changed, and the translation is deleted with the meeting.
 
+## Personal Data in a Transcript
+
+When a meeting holds email addresses, phone numbers, bank accounts (IBAN), card numbers or identity numbers, its page says how many of each it found. A switch hides them in the transcript, showing a label such as `[email]` in their place.
+
+They are found by their shape, on the server, without sending the text to an AI provider. Names, addresses and numbers said in words are not detected. The stored transcript is not changed: the switch only changes what is on screen, and exports and emailed notes keep the original text.
+
 ## Import Audio on the Phone
 
 The mobile app can import an audio file you already have (m4a, mp4, aac, mp3, wav, ogg, opus, webm, flac or caf) and process it like a recording.

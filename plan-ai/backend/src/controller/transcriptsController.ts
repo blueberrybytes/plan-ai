@@ -120,6 +120,10 @@ import { logger } from "../utils/logger";
 import { recordAudit } from "../services/auditLogService";
 import { recordMeetingAccess } from "../services/meetingAccessAudit";
 import {
+  getTranscriptPersonalData,
+  type TranscriptPersonalData,
+} from "../services/transcriptPersonalDataService";
+import {
   translateTranscript,
   type TranscriptTranslationResult,
 } from "../services/transcriptTranslationService";
@@ -229,6 +233,7 @@ export interface TranslateTranscriptRequest {
 }
 
 export type TranscriptTranslationResponse = TranscriptTranslationResult;
+export type TranscriptPersonalDataResponse = TranscriptPersonalData;
 
 @Route("api/transcripts")
 @Tags("Transcripts")
@@ -1260,6 +1265,27 @@ export class TranscriptsController extends BaseWorkspaceController {
       status: 200,
       data: this.mapTranscriptResponse(transcript),
     };
+  }
+
+  /**
+   * The personal data found in the transcript (emails, phones, bank accounts,
+   * cards, identity numbers) and the transcript with it hidden. Found with
+   * rules on the server. Nothing is stored and the transcript is not changed.
+   */
+  @Get("{id}/personal-data")
+  @Security("ClientLevel")
+  public async getTranscriptPersonalData(
+    @Request() request: AuthenticatedRequest,
+    @Path() id: string,
+  ): Promise<ApiResponse<TranscriptPersonalDataResponse>> {
+    const { workspaceId } = await this.getAuthorizedWorkspaceAccess(request);
+    try {
+      return { status: 200, data: await getTranscriptPersonalData(workspaceId, id) };
+    } catch (err) {
+      const status = (err as { status?: number })?.status;
+      if (typeof status === "number") this.setStatus(status);
+      throw err;
+    }
   }
 
   /**

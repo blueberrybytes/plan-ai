@@ -3506,6 +3506,102 @@
 				"type": "object",
 				"additionalProperties": false
 			},
+			"Record_PersonalDataType.number_": {
+				"properties": {
+					"EMAIL": {
+						"type": "number",
+						"format": "double"
+					},
+					"PHONE": {
+						"type": "number",
+						"format": "double"
+					},
+					"IBAN": {
+						"type": "number",
+						"format": "double"
+					},
+					"CARD": {
+						"type": "number",
+						"format": "double"
+					},
+					"NATIONAL_ID": {
+						"type": "number",
+						"format": "double"
+					}
+				},
+				"required": [
+					"EMAIL",
+					"PHONE",
+					"IBAN",
+					"CARD",
+					"NATIONAL_ID"
+				],
+				"type": "object",
+				"description": "Construct a type with a set of properties K of type T"
+			},
+			"PersonalDataCounts": {
+				"$ref": "#/components/schemas/Record_PersonalDataType.number_"
+			},
+			"TranscriptPersonalData": {
+				"description": "Personal data in a saved transcript: how much there is, and the same\ntranscript with it hidden. Worked out on request with rules, never stored,\nand the transcript itself is not changed.",
+				"properties": {
+					"counts": {
+						"$ref": "#/components/schemas/PersonalDataCounts",
+						"description": "How many pieces of each kind were found in the transcript and its summary."
+					},
+					"total": {
+						"type": "number",
+						"format": "double"
+					},
+					"summary": {
+						"type": "string",
+						"nullable": true,
+						"description": "The summary with the personal data replaced by labels."
+					},
+					"lines": {
+						"items": {
+							"type": "string"
+						},
+						"type": "array",
+						"description": "The transcript with the personal data replaced by labels: one string per\nutterance, or one per line of the flat transcript. Same shape as a\ntranslation, so the same code can show it."
+					}
+				},
+				"required": [
+					"counts",
+					"total",
+					"summary",
+					"lines"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"TranscriptPersonalDataResponse": {
+				"$ref": "#/components/schemas/TranscriptPersonalData"
+			},
+			"ApiResponse_TranscriptPersonalDataResponse_": {
+				"properties": {
+					"message": {
+						"type": "string"
+					},
+					"data": {
+						"allOf": [
+							{
+								"$ref": "#/components/schemas/TranscriptPersonalDataResponse"
+							}
+						],
+						"nullable": true
+					},
+					"status": {
+						"type": "number",
+						"format": "double"
+					}
+				},
+				"required": [
+					"data",
+					"status"
+				],
+				"type": "object"
+			},
 			"TranscriptTranslationResult": {
 				"properties": {
 					"language": {
@@ -13051,6 +13147,42 @@
 						}
 					}
 				}
+			}
+		},
+		"/api/transcripts/{id}/personal-data": {
+			"get": {
+				"operationId": "GetTranscriptPersonalData",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiResponse_TranscriptPersonalDataResponse_"
+								}
+							}
+						}
+					}
+				},
+				"description": "The personal data found in the transcript (emails, phones, bank accounts,\ncards, identity numbers) and the transcript with it hidden. Found with\nrules on the server. Nothing is stored and the transcript is not changed.",
+				"tags": [
+					"Transcripts"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": [
+					{
+						"in": "path",
+						"name": "id",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				]
 			}
 		},
 		"/api/transcripts/{id}/translate": {

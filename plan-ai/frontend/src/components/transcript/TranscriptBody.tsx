@@ -11,6 +11,7 @@ import RecordingAudioPlayer, {
 import type { SpeakerInsight } from "./SpeakerInsightsTab";
 import { parseSpeakerBlocks } from "./speakerBlocks";
 import TranscriptTranslationBar from "./TranscriptTranslationBar";
+import TranscriptPersonalDataBar from "./TranscriptPersonalDataBar";
 import { applyTranslation } from "./transcriptTranslation";
 import type { TranscriptTranslation } from "../../store/apis/transcriptApi";
 
@@ -38,7 +39,12 @@ const TranscriptBody = ({ transcript }: { transcript: any }) => {
   const playerRef = useRef<RecordingAudioPlayerHandle>(null);
   // Only on screen: the stored transcript is never replaced by its translation.
   const [translation, setTranslation] = useState<TranscriptTranslation | null>(null);
-  useEffect(() => setTranslation(null), [transcript?.id]);
+  // The transcript with its personal data hidden, when the reader asks for it.
+  const [hidden, setHidden] = useState<{ lines: string[] } | null>(null);
+  useEffect(() => {
+    setTranslation(null);
+    setHidden(null);
+  }, [transcript?.id]);
   const hasText =
     (Array.isArray(transcript?.utterances) && transcript.utterances.length > 0) ||
     !!transcript?.transcript;
@@ -83,6 +89,14 @@ const TranscriptBody = ({ transcript }: { transcript: any }) => {
           onChange={setTranslation}
         />
       )}
+      {transcript?.id && hasText && (
+        <TranscriptPersonalDataBar
+          key={`pd-${transcript.id}`}
+          transcriptId={transcript.id}
+          disabled={!!translation}
+          onChange={setHidden}
+        />
+      )}
       {translation?.summary && (
         <Box sx={{ mb: 3 }}>
           <Typography variant="subtitle2" sx={{ mb: 0.5 }}>
@@ -99,7 +113,7 @@ const TranscriptBody = ({ transcript }: { transcript: any }) => {
       )}
       <Box dir={translation ? "auto" : undefined}>
         <TranscriptText
-          transcript={applyTranslation(transcript, translation)}
+          transcript={applyTranslation(transcript, translation ?? hidden)}
           playerRef={playerRef}
         />
       </Box>

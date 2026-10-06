@@ -820,6 +820,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/transcripts/{id}/personal-data": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description The personal data found in the transcript (emails, phones, bank accounts,
+         *     cards, identity numbers) and the transcript with it hidden. Found with
+         *     rules on the server. Nothing is stored and the transcript is not changed.
+         */
+        get: operations["GetTranscriptPersonalData"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/transcripts/{id}/translate": {
         parameters: {
             query?: never;
@@ -4558,6 +4579,46 @@ export interface components {
             /** @description Diarization label ("Speaker 0", "User 1") → corrected name. Blank name clears the identification. */
             overrides: components["schemas"]["Record_string.string_"];
         };
+        /** @description Construct a type with a set of properties K of type T */
+        "Record_PersonalDataType.number_": {
+            /** Format: double */
+            EMAIL: number;
+            /** Format: double */
+            PHONE: number;
+            /** Format: double */
+            IBAN: number;
+            /** Format: double */
+            CARD: number;
+            /** Format: double */
+            NATIONAL_ID: number;
+        };
+        PersonalDataCounts: components["schemas"]["Record_PersonalDataType.number_"];
+        /**
+         * @description Personal data in a saved transcript: how much there is, and the same
+         *     transcript with it hidden. Worked out on request with rules, never stored,
+         *     and the transcript itself is not changed.
+         */
+        TranscriptPersonalData: {
+            /** @description How many pieces of each kind were found in the transcript and its summary. */
+            counts: components["schemas"]["PersonalDataCounts"];
+            /** Format: double */
+            total: number;
+            /** @description The summary with the personal data replaced by labels. */
+            summary: string | null;
+            /**
+             * @description The transcript with the personal data replaced by labels: one string per
+             *     utterance, or one per line of the flat transcript. Same shape as a
+             *     translation, so the same code can show it.
+             */
+            lines: string[];
+        };
+        TranscriptPersonalDataResponse: components["schemas"]["TranscriptPersonalData"];
+        ApiResponse_TranscriptPersonalDataResponse_: {
+            message?: string;
+            data: components["schemas"]["TranscriptPersonalDataResponse"] | null;
+            /** Format: double */
+            status: number;
+        };
         TranscriptTranslationResult: {
             language: string;
             summary: string | null;
@@ -8271,6 +8332,28 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ApiResponse_StandaloneTranscriptResponse_"];
+                };
+            };
+        };
+    };
+    GetTranscriptPersonalData: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_TranscriptPersonalDataResponse_"];
                 };
             };
         };

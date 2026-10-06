@@ -2279,5 +2279,21 @@
     "failed": "No se ha podido traducir. Vuelve a intentarlo.",
     "missingKey": "El workspace necesita una clave de IA configurada para traducir.",
     "tooLong": "Esta transcripción es demasiado larga para traducirla de una vez."
+  },
+  "transcriptPersonalData": {
+    "found": "Datos personales encontrados: {{list}}.",
+    "EMAIL_one": "{{count}} correo",
+    "EMAIL_other": "{{count}} correos",
+    "PHONE_one": "{{count}} teléfono",
+    "PHONE_other": "{{count}} teléfonos",
+    "IBAN_one": "{{count}} cuenta bancaria",
+    "IBAN_other": "{{count}} cuentas bancarias",
+    "CARD_one": "{{count}} número de tarjeta",
+    "CARD_other": "{{count}} números de tarjeta",
+    "NATIONAL_ID_one": "{{count}} número de identidad",
+    "NATIONAL_ID_other": "{{count}} números de identidad",
+    "hide": "Ocultarlos en la transcripción",
+    "whileTranslated": "Vuelve al idioma original para ocultarlos.",
+    "note": "Se detectan por su forma: no se encuentran nombres, direcciones ni números dichos con palabras."
   }
 }
