@@ -1612,7 +1612,10 @@
         "integration": "Integraciones",
         "assistant": "Asistente",
         "platform_admin": "Administración de la plataforma"
-      }
+      },
+      "filteredBy": "Mostrando solo: {{what}}",
+      "clearFilter": "Ver todo",
+      "filterHint": "Ver solo las entradas de este"
     },
     "signInRules": {
       "title": "Reglas de inicio de sesión",

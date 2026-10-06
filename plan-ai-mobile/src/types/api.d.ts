@@ -3084,6 +3084,43 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/admin/maintenance/qdrant-workspace": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description How many Qdrant points still lack their workspace. Changes nothing. */
+        get: operations["CheckQdrantWorkspace"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/maintenance/qdrant-workspace/apply": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description Stamps the Qdrant points that lack their workspace. Safe to repeat and to
+         *     run while the platform is in use.
+         */
+        post: operations["ApplyQdrantWorkspace"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/admin/emails/templates": {
         parameters: {
             query?: never;
@@ -5986,6 +6023,55 @@ export interface components {
             description: string;
             tags: string[];
         };
+        /**
+         * @description Stamps every Qdrant point with the workspace that owns it.
+         *
+         *     All workspaces share one collection. Points written since October 2026
+         *     carry `workspaceId`, and reads refuse a point stamped with another
+         *     workspace. Older points have no stamp. This adds it, taking the workspace
+         *     from the point's Context row.
+         *
+         *     Safe to run more than once and while the backend is serving: it only adds a
+         *     payload field, and reads accept points with or without it.
+         *
+         *     Points whose context no longer exists in the database are counted and left
+         *     alone. No read can reach them, because every read starts from a Context row.
+         *
+         *     Run from the admin maintenance page, or with `yarn qdrant:backfill-workspace`.
+         */
+        QdrantWorkspaceBackfillResult: {
+            collection: string;
+            /** @description False when the collection does not exist yet (nothing was ever indexed). */
+            collectionExists: boolean;
+            /** Format: double */
+            totalPoints: number;
+            /**
+             * Format: double
+             * @description Points without `workspaceId` before this run.
+             */
+            missingBefore: number;
+            /**
+             * Format: double
+             * @description Points stamped by this run, or that a run with `apply` would stamp.
+             */
+            stamped: number;
+            /** Format: double */
+            contextsTouched: number;
+            /** Format: double */
+            contextsTotal: number;
+            /**
+             * Format: double
+             * @description Points without stamp whose context is gone from the database.
+             */
+            orphans: number;
+            /**
+             * Format: double
+             * @description Points without `workspaceId` after this run. Equal to `missingBefore` on a dry run.
+             */
+            missingAfter: number;
+            applied: boolean;
+        };
+        QdrantWorkspaceBackfillResponse: components["schemas"]["QdrantWorkspaceBackfillResult"];
         AdminEmailTemplatesResponse: {
             status: string;
             data: {
@@ -11765,6 +11851,46 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AiModelResponse"][];
+                };
+            };
+        };
+    };
+    CheckQdrantWorkspace: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QdrantWorkspaceBackfillResponse"];
+                };
+            };
+        };
+    };
+    ApplyQdrantWorkspace: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QdrantWorkspaceBackfillResponse"];
                 };
             };
         };

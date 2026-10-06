@@ -8797,6 +8797,70 @@
 				"type": "object",
 				"additionalProperties": false
 			},
+			"QdrantWorkspaceBackfillResult": {
+				"description": "Stamps every Qdrant point with the workspace that owns it.\n\nAll workspaces share one collection. Points written since October 2026\ncarry `workspaceId`, and reads refuse a point stamped with another\nworkspace. Older points have no stamp. This adds it, taking the workspace\nfrom the point's Context row.\n\nSafe to run more than once and while the backend is serving: it only adds a\npayload field, and reads accept points with or without it.\n\nPoints whose context no longer exists in the database are counted and left\nalone. No read can reach them, because every read starts from a Context row.\n\nRun from the admin maintenance page, or with `yarn qdrant:backfill-workspace`.",
+				"properties": {
+					"collection": {
+						"type": "string"
+					},
+					"collectionExists": {
+						"type": "boolean",
+						"description": "False when the collection does not exist yet (nothing was ever indexed)."
+					},
+					"totalPoints": {
+						"type": "number",
+						"format": "double"
+					},
+					"missingBefore": {
+						"type": "number",
+						"format": "double",
+						"description": "Points without `workspaceId` before this run."
+					},
+					"stamped": {
+						"type": "number",
+						"format": "double",
+						"description": "Points stamped by this run, or that a run with `apply` would stamp."
+					},
+					"contextsTouched": {
+						"type": "number",
+						"format": "double"
+					},
+					"contextsTotal": {
+						"type": "number",
+						"format": "double"
+					},
+					"orphans": {
+						"type": "number",
+						"format": "double",
+						"description": "Points without stamp whose context is gone from the database."
+					},
+					"missingAfter": {
+						"type": "number",
+						"format": "double",
+						"description": "Points without `workspaceId` after this run. Equal to `missingBefore` on a dry run."
+					},
+					"applied": {
+						"type": "boolean"
+					}
+				},
+				"required": [
+					"collection",
+					"collectionExists",
+					"totalPoints",
+					"missingBefore",
+					"stamped",
+					"contextsTouched",
+					"contextsTotal",
+					"orphans",
+					"missingAfter",
+					"applied"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"QdrantWorkspaceBackfillResponse": {
+				"$ref": "#/components/schemas/QdrantWorkspaceBackfillResult"
+			},
 			"AdminEmailTemplatesResponse": {
 				"properties": {
 					"status": {
@@ -18787,6 +18851,60 @@
 				"security": [
 					{
 						"ClientLevel": []
+					}
+				],
+				"parameters": []
+			}
+		},
+		"/api/admin/maintenance/qdrant-workspace": {
+			"get": {
+				"operationId": "CheckQdrantWorkspace",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/QdrantWorkspaceBackfillResponse"
+								}
+							}
+						}
+					}
+				},
+				"description": "How many Qdrant points still lack their workspace. Changes nothing.",
+				"tags": [
+					"Admin"
+				],
+				"security": [
+					{
+						"AdminOnly": []
+					}
+				],
+				"parameters": []
+			}
+		},
+		"/api/admin/maintenance/qdrant-workspace/apply": {
+			"post": {
+				"operationId": "ApplyQdrantWorkspace",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/QdrantWorkspaceBackfillResponse"
+								}
+							}
+						}
+					}
+				},
+				"description": "Stamps the Qdrant points that lack their workspace. Safe to repeat and to\nrun while the platform is in use.",
+				"tags": [
+					"Admin"
+				],
+				"security": [
+					{
+						"AdminOnly": []
 					}
 				],
 				"parameters": []

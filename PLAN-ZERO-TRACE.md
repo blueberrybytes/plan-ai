@@ -11,10 +11,10 @@ Cada punto del análisis se comprueba en el código antes de tocar nada. Lo que 
 | Fase | Qué | Estado |
 | --- | --- | --- |
 | 0 | Aislamiento entre workspaces en Qdrant | Hecho el 6 de octubre (`40f5cea`) |
-| 0b | Segunda capa: `workspaceId` en los puntos de Qdrant | Hecho el 6 de octubre. Falta ejecutar el relleno en producción |
+| 0b | Segunda capa: `workspaceId` en los puntos de Qdrant | Hecho el 6 de octubre. Falta pulsar el relleno en producción, desde Admin |
 | 1 | Reuniones y proyectos confidenciales | Pendiente, hay decisiones abiertas |
-| 2 | Retención de transcripciones, embeddings y chats | Pendiente, hay decisiones abiertas |
-| 3 | Auditoría de lectura y exportación | Backend hecho el 6 de octubre. Falta el filtro por reunión en la web |
+| 2 | Retención de transcripciones, embeddings y chats | Aparcada. Xavier, 7 de octubre: de momento no se borra nada |
+| 3 | Auditoría de lectura y exportación | Hecho, con filtro por persona y por reunión en la web |
 | 4 | Detección y marcado de datos personales | Pendiente |
 | 5 | Modelo por función y por sensibilidad | Pendiente |
 | 6 | Desplegar sin Google | Pendiente, es la más grande |
@@ -41,13 +41,11 @@ Cada punto nuevo de Qdrant guarda su `workspaceId`. Todas las lecturas rechazan 
 
 Comprobado contra el Qdrant local con una colección temporal: un punto marcado con otro workspace no vuelve, y uno antiguo sin marca sí.
 
-Pendiente de hacer a mano en producción, después de desplegar:
+Pendiente de hacer en producción, después de desplegar. Railway no da acceso a una consola, así que el relleno se lanza desde la web: **Admin, Maintenance** (`/admin/maintenance`), solo para administradores de la plataforma. La página enseña cuántos puntos faltan sin cambiar nada, y el botón **Run backfill** escribe la marca y crea el índice. Se puede pulsar con la plataforma en uso y más de una vez. Queda registrado en la auditoría.
 
-```bash
-yarn qdrant:backfill-workspace
-```
+En local sigue existiendo `yarn qdrant:backfill-workspace` (solo cuenta) y `--apply`.
 
-Eso solo cuenta. Con `--apply` escribe la marca y crea el índice. Se puede ejecutar con el backend en marcha y más de una vez. Cuando esté hecho en producción, se puede quitar la rama `is_empty` del filtro en `contextVectorStore.ts`, y entonces Qdrant impone el aislamiento por sí solo.
+Cuando esté hecho en producción, se puede quitar la rama `is_empty` del filtro en `contextVectorStore.ts`, y entonces Qdrant impone el aislamiento por sí solo.
 
 Revisadas las otras consultas de `Context` que no filtran por workspace. Ninguna es un hueco: `gitnexusRouter.ts` sí filtra, todos los llamadores de `repoNameForContexts` pasan el workspace, el webhook de GitHub busca por repositorio a propósito, y los workers reciben el `contextId` de trabajos que encola el propio backend. `transcriptsController.ts` y `projectsModelController.ts` filtran por usuario y no por workspace: un usuario podría adjuntar un contexto suyo de otro workspace, pero la capa de vectores ya lo descarta.
 
@@ -65,27 +63,22 @@ Decisiones abiertas:
 
 Esfuerzo: 4 a 6 días. Es la de más riesgo, porque toca todas las lecturas.
 
-## Fase 2. Retención de transcripciones, embeddings y chats
+## Fase 2. Retención de transcripciones, embeddings y chats (aparcada)
 
-Hoy solo se borra el audio (`audioRetentionDays`). Falta lo mismo para el texto.
+Decisión de Xavier del 7 de octubre: de momento no se borra nada de forma automática. No empezar esta fase hasta que él lo pida.
 
-Propuesta: `transcriptRetentionDays` y `chatRetentionDays` por workspace, con el mismo trabajo diario que ya borra audio. Al borrar una transcripción se borran sus vectores, su chat y sus traducciones.
+Para cuando se retome: hoy solo se borra el audio (`audioRetentionDays`). La propuesta era `transcriptRetentionDays` y `chatRetentionDays` por workspace, apagados por defecto, con el mismo trabajo diario que ya borra audio. Quedaba por decidir qué pasa con las tareas y documentos que salieron de una reunión borrada.
 
-Decisiones abiertas: qué pasa con las tareas y documentos que salieron de una reunión borrada, y si un proyecto puede tener su propia regla.
-
-Esfuerzo: 2 días.
-
-## Fase 3. Auditoría de lectura y exportación (backend hecho)
+## Fase 3. Auditoría de lectura y exportación (hecho)
 
 El registro de auditoría ya guarda quién lee cada reunión, con cuatro acciones nuevas: `meeting.viewed`, `meeting.audio_accessed`, `meeting.notes_sent` y `meeting.translated`. Se registran al abrir el detalle (también desde un proyecto), al pedir el audio, al enviar las notas, al traducir y al leer una reunión por MCP (`get_meeting_detail`, marcado con `via: mcp`).
 
 La página de una reunión consulta el detalle cada pocos segundos mientras se procesa. Por eso abrir y pedir audio se registran una vez por persona, reunión y canal cada 30 minutos. Los envíos y las traducciones se registran siempre.
 
-Aparecen en el panel de auditoría de la web, en el grupo "meeting", con etiqueta en inglés y en español. El endpoint acepta ahora `targetId` y `actorUserId` para filtrar por reunión o por persona.
+Aparecen en el panel de auditoría de la web, en el grupo "meeting", con etiqueta en inglés y en español. Al pulsar una persona o una reunión en una fila, el panel muestra solo sus entradas (el endpoint acepta `targetId` y `actorUserId`).
 
 Pendiente:
 
-- Un filtro por reunión y por persona en el panel de la web. El backend ya lo soporta.
 - Las búsquedas por MCP (`search_meetings`, `get_recent_meetings`) y el chat sobre una reunión no se registran.
 - Las exportaciones automáticas a Notion, Drive y OneDrive no se registran.
 - El control de repeticiones vive en memoria de cada proceso. Con más de una réplica del backend puede salir una entrada por réplica.
@@ -130,4 +123,4 @@ Calidad del RAG:
 
 ## Orden recomendado
 
-0b, después 2 y 3 (pequeñas y sin dependencias), después 1, y con la 1 hecha la 5. La 4 puede ir en paralelo. La 6 solo con un cliente detrás. La búsqueda en todas las reuniones de la fase 7 conviene hacerla después de la 1, para que nazca respetando la visibilidad.
+Hechas la 0, la 0b y la 3. La 2 está aparcada. Sigue la 1, y con la 1 hecha la 5. La 4 puede ir en paralelo. La 6 solo con un cliente detrás. La búsqueda en todas las reuniones de la fase 7 conviene hacerla después de la 1, para que nazca respetando la visibilidad.

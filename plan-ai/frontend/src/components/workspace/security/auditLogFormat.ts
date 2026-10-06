@@ -59,6 +59,12 @@ export const auditActionLabelKey = (action: string): string | null =>
 export const formatAuditTarget = (entry: AuditLogEntryResponse): string =>
   [entry.targetType, entry.targetId].filter(Boolean).join(" ");
 
+/** The title kept with the entry (a meeting or document name), or "". */
+export const auditTargetTitle = (entry: AuditLogEntryResponse): string => {
+  const title = (entry.metadata as Record<string, unknown> | null)?.title;
+  return typeof title === "string" ? title : "";
+};
+
 /** Metadata as short "key: value" pairs, e.g. "role: ADMIN, email: a@b.com". */
 export const formatAuditDetails = (metadata: AuditLogEntryResponse["metadata"]): string => {
   if (!metadata || typeof metadata !== "object") return "";
