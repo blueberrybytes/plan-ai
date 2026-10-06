@@ -105,6 +105,21 @@ export class DocGenerationService {
       workspaceId,
     );
 
+    // A document written from a meeting of a restricted project stays in that
+    // project, so it is hidden from the same people as the meeting.
+    let projectId = input.projectId ?? null;
+    if (!projectId && input.transcriptIds?.length) {
+      const restricted = await prisma.transcript.findFirst({
+        where: {
+          id: { in: input.transcriptIds },
+          workspaceId,
+          project: { visibility: "RESTRICTED" },
+        },
+        select: { projectId: true },
+      });
+      projectId = restricted?.projectId ?? null;
+    }
+
     const doc = await prisma.docDocument.create({
       data: {
         userId,
@@ -115,7 +130,7 @@ export class DocGenerationService {
         contextIds: resolvedContextIds,
         transcriptIds: input.transcriptIds ?? [],
         themeId: input.themeId ?? null,
-        projectId: input.projectId ?? null,
+        projectId,
         prompt: input.prompt ?? "",
       },
       include: { theme: true, project: { select: { id: true, title: true } } },

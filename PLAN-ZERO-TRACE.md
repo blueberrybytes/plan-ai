@@ -69,13 +69,13 @@ Comprobado con datos reales en la base local (`yarn smoke:restricted-projects`):
 Límites conocidos:
 
 - Una reunión guardada sin proyecto sigue siendo visible para todo el workspace.
-- Un documento generado desde una reunión restringida y guardado fuera del proyecto (solo con `transcriptIds`) no hereda la restricción.
+- Un documento generado desde una reunión restringida se guarda ahora en el proyecto de esa reunión, así que hereda la restricción. Las presentaciones y diagramas no tienen proyecto: heredan solo si usan los archivos del proyecto.
 - Los datos traídos con `include` desde un modelo no filtrado no pasan por el filtro. Revisé las consultas actuales y no hay ninguna así, pero es la regla a recordar al escribir consultas nuevas.
 - Las tareas de un proyecto restringido se siguen sincronizando con Jira, Linear o Trello si la sincronización está activa.
-- El registro de uso de IA guarda el `projectId`. No he revisado si alguna vista de uso enseña el título de un proyecto restringido.
+- El registro de uso de IA guarda el `projectId`. Revisado: ninguna vista de uso enseña títulos de proyecto.
 - El stream de audio del recorder no pasa por el filtro. Solo usa los términos clave del proyecto para Deepgram, no devuelve nada al usuario.
 - Los trabajos en segundo plano ven todo, a propósito. Si uno nuevo genera algo para que lo lean personas, tiene que usar `runWithHidden`.
-- La lista de proyectos de la web no marca todavía cuáles son restringidos.
+- La lista de proyectos de la web marca los restringidos con un candado.
 
 Sin probar: la pantalla en el navegador y el recorrido completo con dos usuarios reales. El recorder y el móvil no cambian: reciben la lista de proyectos ya filtrada.
 

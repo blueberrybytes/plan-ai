@@ -81,7 +81,7 @@ The rule is applied in one place, in the layer that talks to the database, so a 
 Limits to know about:
 
 *   A meeting saved without a project is visible to the workspace, as before. Put sensitive meetings in a restricted project.
-*   A document that someone with access generated from a restricted meeting and saved outside the project follows its own sharing, not the project's.
+*   A document generated from a restricted meeting is kept in that project and hidden with it. Slides and diagrams are hidden when they use the project's files.
 *   Tasks of a restricted project still sync to a connected tool (Jira, Linear, Trello and the like) when sync is on, and are then visible there.
 *   With support access turned on, a platform admin does not see restricted projects.
 
