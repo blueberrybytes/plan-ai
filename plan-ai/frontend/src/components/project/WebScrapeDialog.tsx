@@ -38,12 +38,14 @@ const WebScrapeDialog: React.FC<WebScrapeDialogProps> = ({ open, onClose, contex
     onClose();
   };
 
-  const validateUrl = (string: string) => {
+  // People type "example.com": add https when no scheme was given.
+  const normalizeUrl = (typed: string): string | null => {
+    const withScheme = /^https?:\/\//i.test(typed) ? typed : `https://${typed}`;
     try {
-      new URL(string);
-      return true;
+      const parsed = new URL(withScheme);
+      return parsed.hostname.includes(".") && !/\s/.test(typed) ? parsed.toString() : null;
     } catch (_) {
-      return false;
+      return null;
     }
   };
 
@@ -57,16 +59,18 @@ const WebScrapeDialog: React.FC<WebScrapeDialogProps> = ({ open, onClose, contex
       return;
     }
 
-    if (!validateUrl(trimmedUrl)) {
-      setErrorText("Please enter a valid HTTP or HTTPS URL.");
+    const fullUrl = normalizeUrl(trimmedUrl);
+    if (!fullUrl) {
+      setErrorText("That does not look like a web address. Try something like example.com.");
       return;
     }
+    setUrl(fullUrl);
 
     try {
       const result = await importFromWebsite({
         contextId,
         body: {
-          url: trimmedUrl,
+          url: fullUrl,
           maxPages,
         },
       }).unwrap();
@@ -104,7 +108,7 @@ const WebScrapeDialog: React.FC<WebScrapeDialogProps> = ({ open, onClose, contex
             autoFocus
             fullWidth
             label="Website URL"
-            placeholder="https://example.com/docs"
+            placeholder="example.com/docs"
             variant="outlined"
             size="medium"
             value={url}

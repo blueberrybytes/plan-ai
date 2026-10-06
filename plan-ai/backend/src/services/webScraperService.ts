@@ -11,6 +11,36 @@ interface ScrapedPage {
   url: string;
   title: string;
   content: string;
+  /**
+   * True when the page is drawn by JavaScript and its HTML holds no text:
+   * `content` is then only what the page declares about itself (title,
+   * description, headings), not what a visitor reads.
+   */
+  metaOnly?: boolean;
+}
+
+/** Below this, what Readability returned is not a page worth keeping. */
+const MIN_ARTICLE_CHARS = 100;
+
+/**
+ * What a page says about itself in its head, for sites drawn by JavaScript
+ * (their body is an empty element until a browser runs the script).
+ */
+function describeFromHead(document: Document): string {
+  const meta = (selector: string) =>
+    document.querySelector(selector)?.getAttribute("content")?.trim() ?? "";
+  const parts = [
+    document.title?.trim() ?? "",
+    meta('meta[name="description"]'),
+    meta('meta[property="og:title"]'),
+    meta('meta[property="og:description"]'),
+    meta('meta[name="keywords"]'),
+    ...Array.from(document.querySelectorAll("h1, h2, noscript")).map(
+      (el) => el.textContent?.replace(/\s+/g, " ").trim() ?? "",
+    ),
+  ];
+  // The same sentence is often in the description and in og:description.
+  return Array.from(new Set(parts.filter((p) => p.length > 0))).join("\n\n");
 }
 
 export class WebScraperService {
@@ -33,18 +63,21 @@ export class WebScraperService {
       const html = response.data;
       // Use an empty virtual console to suppress annoying "Could not parse CSS stylesheet" warnings
       const dom = new JSDOM(html, { url, virtualConsole: new VirtualConsole() });
+      // Read the head first: Readability changes the document it parses.
+      const fromHead = describeFromHead(dom.window.document);
+      const pageTitle = dom.window.document.title?.trim();
       const reader = new Readability(dom.window.document);
       const article = reader.parse();
+      const content = article?.textContent ? article.textContent.replace(/\s+/g, " ").trim() : "";
 
-      if (!article) {
-        return null;
+      if (content.length >= MIN_ARTICLE_CHARS) {
+        return { url, title: article?.title || pageTitle || "Untitled Page", content };
       }
-
-      return {
-        url,
-        title: article.title || "Untitled Page",
-        content: article.textContent ? article.textContent.replace(/\s+/g, " ").trim() : "",
-      };
+      // No readable text in the HTML. Keep what the page declares, if anything.
+      if (fromHead) {
+        return { url, title: pageTitle || "Untitled Page", content: fromHead, metaOnly: true };
+      }
+      return null;
     } catch (error) {
       logger.warn(
         `Failed to scrape URL ${url}:`,
@@ -156,11 +189,15 @@ export class WebScraperService {
     const results: ScrapedPage[] = [];
 
     // 2. Iterate and scrape sequentially to avoid rate limits
+    const seenContent = new Set<string>();
     for (const target of targetUrls) {
       const scraped = await this.scrapeUrl(target);
-      if (scraped && scraped.content.length > 100) {
-        results.push(scraped);
-      }
+      if (!scraped) continue;
+      if (!scraped.metaOnly && scraped.content.length <= MIN_ARTICLE_CHARS) continue;
+      // A JavaScript site answers every path with the same empty shell.
+      if (seenContent.has(scraped.content)) continue;
+      seenContent.add(scraped.content);
+      results.push(scraped);
     }
 
     return results;

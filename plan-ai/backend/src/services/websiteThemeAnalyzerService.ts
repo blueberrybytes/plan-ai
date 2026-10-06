@@ -1,4 +1,5 @@
 import { safeAxios } from "../utils/ssrfGuard";
+import { normalizeWebUrl } from "../utils/webUrl";
 import * as cheerio from "cheerio";
 import { generateText, Output } from "ai";
 import { z } from "zod";
@@ -114,8 +115,8 @@ export class WebsiteThemeAnalyzerService {
    */
   public async analyzeUrl(rawUrl: string, workspaceId: string) {
     // People type "example.com". Without a scheme the URL parser rejects it.
-    const trimmed = rawUrl.trim();
-    const url = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+    const url = normalizeWebUrl(rawUrl);
+    if (!url) throw new Error("Failed to fetch website: that does not look like a web address.");
 
     // 1. Fetch HTML
     let html = "";
