@@ -1,3 +1,4 @@
+import { slideTitleColor } from "../slideColors";
 import React from "react";
 import { Box, Typography } from "@mui/material";
 import MermaidRenderer from "../../common/MermaidRenderer";
@@ -16,13 +17,16 @@ export const DiagramSlide: React.FC<SlideProps> = ({
 }) => {
   const primary = brandColors?.primary || "#6366f1";
 
-  // Create a minimal theme object expected by MermaidRenderer
+  // Brand colours and font for the diagram. Without the secondary colour the
+  // renderer would fall back to the app theme and the slide would mix palettes.
   const mermaidTheme = React.useMemo(
     () => ({
       primaryColor: primary,
+      secondaryColor: brandColors?.secondary,
       backgroundColor: brandColors?.background || "#0f172a",
+      bodyFont: fonts?.body,
     }),
-    [primary, brandColors?.background],
+    [primary, brandColors?.secondary, brandColors?.background, fonts?.body],
   );
 
   return (
@@ -35,7 +39,7 @@ export const DiagramSlide: React.FC<SlideProps> = ({
             fontSize: 32,
             fontWeight: 700,
             mb: 1,
-            color: primary,
+            color: slideTitleColor(brandColors),
             fontFamily: `'${fonts?.heading || "Inter"}', sans-serif`,
           }}
         >
@@ -45,6 +49,7 @@ export const DiagramSlide: React.FC<SlideProps> = ({
       <Box
         sx={{
           flex: 1,
+          minHeight: 0,
           display: "flex",
           justifyContent: "center",
           alignItems: "center",
@@ -60,7 +65,7 @@ export const DiagramSlide: React.FC<SlideProps> = ({
         }}
       >
         {data.mermaidCode ? (
-          <MermaidRenderer chart={data.mermaidCode as string} theme={mermaidTheme} />
+          <MermaidRenderer chart={data.mermaidCode as string} theme={mermaidTheme} fit="contain" />
         ) : (
           <Typography color="text.secondary">No diagram data provided</Typography>
         )}
