@@ -58,7 +58,7 @@
     "@bull-board/api": "^6.20.6",
     "@bull-board/express": "^6.20.6",
     "@deepgram/sdk": "^4.11.3",
-    "@google-cloud/logging": "^11.2.1",
+    "@google-cloud/logging": "^12.1.0",
     "@langchain/core": "^1.0.3",
     "@langchain/openai": "^1.0.0",
     "@langchain/textsplitters": "^1.0.0",
