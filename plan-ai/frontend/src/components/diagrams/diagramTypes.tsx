@@ -149,11 +149,13 @@ export const DIAGRAM_TYPES: DiagramTypeDefinition[] = [
     icon: <MapIcon fontSize="large" color="success" />,
     desc: "Map user tasks, emotional states, and actors.",
     sampleCode: `journey
-  title My working day
-  section Go to work
-    Make tea: 5: Me
-    Go downstairs: 3: Me
-    Do work: 1: Me, Cat`,
+  title Customer onboarding
+  section Sign up
+    Create account: 5: Customer
+    Verify email: 3: Customer
+  section First project
+    Import data: 2: Customer, Support
+    Invite the team: 4: Customer`,
   },
   {
     id: "GIT",
@@ -249,11 +251,12 @@ export const DIAGRAM_TYPES: DiagramTypeDefinition[] = [
     icon: <AutoAwesomeMosaicIcon fontSize="large" color="primary" />,
     desc: "High level abstract component topologies and layouts.",
     sampleCode: `block-beta
-    columns 1
-    db(("Database"))
-    blockArrowId6<["fa:fa-spinner"]>(up)
-    server["Server"]
-    blockArrowId6<["fa:fa-spinner"]>(down)
-    client["Client"]`,
+    columns 3
+    client["Client"] space server["Server"]
+    space:3
+    cache["Cache"] space db[("Database")]
+    client --> server
+    server --> db
+    server --> cache`,
   },
 ];

@@ -757,7 +757,9 @@ const BrandThemeCreate: React.FC = () => {
                   primaryColor: brandColors.primary,
                   secondaryColor: brandColors.secondary,
                   backgroundColor: brandColors.background,
+                  bodyFont: fonts.body,
                 }}
+                fit="contain"
               />
             </Box>
           )}

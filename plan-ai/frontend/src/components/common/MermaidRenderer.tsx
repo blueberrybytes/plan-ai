@@ -10,17 +10,25 @@ import {
   AutoAwesome as AutoAwesomeIcon,
 } from "@mui/icons-material";
 import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
-import { injectMermaidThemeStyles, repairMermaidSyntax } from "../../utils/mermaidUtils";
+import { repairMermaidSyntax } from "../../utils/mermaidUtils";
+import {
+  buildMermaidTheme,
+  fitSvgToBox,
+  injectMermaidThemeStyles,
+  type MermaidBrandTheme,
+} from "../../utils/mermaidTheme";
 import { sanitizeMermaidSvg } from "../../utils/sanitizeSvg";
 
 interface MermaidRendererProps {
   chart: string;
-  theme?: {
-    primaryColor?: string;
-    secondaryColor?: string;
-    backgroundColor?: string;
-    textColor?: string;
-  } | null;
+  theme?: MermaidBrandTheme | null;
+  /**
+   * "width" (default): the diagram fits the width and the box grows with it.
+   * "contain": the box takes the height of its parent and the diagram is scaled
+   * to fit both width and height. Use it where the parent has a fixed height,
+   * like a slide.
+   */
+  fit?: "width" | "contain";
   onFixDiagram?: (errorMessage?: string) => void;
   isFixing?: boolean;
   onErrorStateChange?: (hasError: boolean, errorMessage?: string) => void;
@@ -29,50 +37,87 @@ interface MermaidRendererProps {
 const MermaidRenderer: React.FC<MermaidRendererProps> = ({
   chart,
   theme,
+  fit = "width",
   onFixDiagram,
   isFixing,
   onErrorStateChange,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
+  const boxRef = useRef<HTMLDivElement>(null);
   const [svgContent, setSvgContent] = useState<string>("");
   const [hasError, setHasError] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string>("");
   const muiTheme = useTheme();
 
-  // Smart background-aware text color inversion (fixes unreadable dark themes)
-  const bg = theme?.backgroundColor || muiTheme.palette.background.paper;
-  const primary = theme?.primaryColor || muiTheme.palette.primary.main;
-  const secondary = theme?.secondaryColor || muiTheme.palette.secondary.main;
+  const defaultPrimary = muiTheme.palette.primary.main;
+  const defaultSecondary = muiTheme.palette.secondary.main;
+  const defaultBackground = muiTheme.palette.background.paper;
 
-  // Compute text colors mathematically to guarantee readability against their respective backgrounds
-  const canvasTextColor = theme?.textColor || muiTheme.palette.getContrastText(bg);
-  // Always-readable-against-background color, ignoring any theme textColor override.
-  // Needed for text painted directly on the canvas (architecture-beta labels): a
-  // theme with a light textColor on a light background would otherwise hide them.
-  const canvasContrastText = muiTheme.palette.getContrastText(bg);
-  const nodeTextColor = muiTheme.palette.getContrastText(primary);
-  const secondaryTextColor = muiTheme.palette.getContrastText(secondary);
+  // Brand colours, with the app theme filling in whatever the brand leaves out.
+  // The dependencies are the plain values, so a caller that builds a new theme
+  // object on every render does not trigger a new Mermaid render.
+  const mermaidTheme = React.useMemo(
+    () =>
+      buildMermaidTheme(
+        {
+          primaryColor: theme?.primaryColor,
+          secondaryColor: theme?.secondaryColor,
+          backgroundColor: theme?.backgroundColor,
+          textColor: theme?.textColor,
+          bodyFont: theme?.bodyFont,
+        },
+        { primary: defaultPrimary, secondary: defaultSecondary, background: defaultBackground },
+      ),
+    [
+      theme?.primaryColor,
+      theme?.secondaryColor,
+      theme?.backgroundColor,
+      theme?.textColor,
+      theme?.bodyFont,
+      defaultPrimary,
+      defaultSecondary,
+      defaultBackground,
+    ],
+  );
+  const bg = mermaidTheme.palette.background;
 
-  const isDark = muiTheme.palette.getContrastText(bg) === "#fff";
+  // Size of the box the diagram is drawn in, kept up to date on resize.
+  // clientWidth and clientHeight ignore CSS transforms, so a slide that is
+  // scaled down as a whole still reports its layout size.
+  const [boxSize, setBoxSize] = useState<{ width: number; height: number }>({
+    width: 0,
+    height: 0,
+  });
+  useEffect(() => {
+    const box = boxRef.current;
+    if (!box) return;
+    const measure = () =>
+      setBoxSize((prev) =>
+        prev.width === box.clientWidth && prev.height === box.clientHeight
+          ? prev
+          : { width: box.clientWidth, height: box.clientHeight },
+      );
+    measure();
+    if (typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(measure);
+    observer.observe(box);
+    return () => observer.disconnect();
+  }, [hasError]);
 
-  // Generate a derived palette for charts to ensure variety
-  const generatePalette = (p: string, s: string) => {
-    // To ensure pie charts and multi-line charts always have distinct, high-contrast slices/lines,
-    // we lead with the primary brand color, followed by curated vibrant colors, and mix in secondary.
-    return [
-      p,
-      "#f59e0b", // Amber
-      "#10b981", // Emerald
-      s, // Brand Secondary
-      "#8b5cf6", // Violet
-      "#ef4444", // Red
-      "#0ea5e9", // Sky
-      "#f43f5e", // Rose
-      "#84cc16", // Lime
-      "#d946ef", // Fuchsia
-    ];
-  };
-  const palette = React.useMemo(() => generatePalette(primary, secondary), [primary, secondary]);
+  const contain = fit === "contain";
+  const canvasPadding = contain ? 16 : 32;
+  const fittedSvg = React.useMemo(() => {
+    if (!svgContent || boxSize.width <= 0) return svgContent;
+    const width = boxSize.width - canvasPadding * 2;
+    const height = boxSize.height - canvasPadding * 2;
+    // A box with almost no height means the parent has no fixed height. The
+    // diagram is then fitted by width only, or it would shrink to nothing.
+    // With a real height the diagram may grow up to MAX_DIAGRAM_UPSCALE.
+    if (contain && height >= 80) return fitSvgToBox(svgContent, { width, height });
+    // By width only: shrink a wide diagram, never enlarge a small one. The old
+    // 300px minimum blew narrow diagrams up until they were cropped.
+    return fitSvgToBox(svgContent, { width, height: null }, 1);
+  }, [svgContent, boxSize, contain, canvasPadding]);
 
   useEffect(() => {
     let isMounted = true;
@@ -86,219 +131,15 @@ const MermaidRenderer: React.FC<MermaidRendererProps> = ({
         setErrorMessage("");
         if (onErrorStateChange) onErrorStateChange(false);
 
-        // Mermaid's theme engine ONLY honours hex colours (named colours and
-        // rgba() are silently ignored). MUI's getContrastText returns "#fff"
-        // or "rgba(0,0,0,0.87)", so coerce the contrast-derived colours to hex
-        // — otherwise the native `base` theme drops them. `transparent` also
-        // isn't a hex, so the few genuine transparencies stay in the residual
-        // CSS (injectMermaidThemeStyles), not here.
-        const hx = (c: string, darkText = "#1a1a1a") =>
-          /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(c) ? c : darkText;
-        const bgHex = hx(bg, isDark ? "#0b0d11" : "#ffffff");
-        const primHex = hx(primary, "#3b82f6");
-        const secHex = hx(secondary, "#64748b");
-        const txt = hx(canvasTextColor); // canvas / label text over the background
-        const nodeTxt = hx(nodeTextColor); // text painted ON primary-filled nodes
-        const secTxt = hx(secondaryTextColor); // text on secondary fills (notes)
-        // Repeating colour scales (pie/git/cScale wrap the 10-colour palette).
-        const scale = (prefix: string, n: number, from = 0) =>
-          Object.fromEntries(
-            Array.from({ length: n }, (_, i) => [
-              `${prefix}${from + i}`,
-              palette[i % palette.length],
-            ]),
-          );
-        const constScale = (prefix: string, n: number, value: string, from = 0) =>
-          Object.fromEntries(Array.from({ length: n }, (_, i) => [`${prefix}${from + i}`, value]));
-
-        // Blend two hex colours → hex. Mermaid ignores rgb()/rgba() (see hx above),
-        // so MUI's lighten/darken — which return rgb() — are unusable here; this keeps
-        // everything hex. Used to derive an on-brand Gantt palette that stays legible
-        // whatever the brand's secondary colour happens to be.
-        const mix = (a: string, b: string, t: number): string => {
-          const rgb = (h: string) => {
-            const s = h.replace("#", "");
-            const v = s.length === 3 ? s.replace(/./g, "$&$&") : s;
-            return [0, 2, 4].map((i) => parseInt(v.slice(i, i + 2), 16));
-          };
-          const [r1, g1, b1] = rgb(a);
-          const [r2, g2, b2] = rgb(b);
-          const ch = (x: number, y: number) =>
-            Math.round(x + (y - x) * t)
-              .toString(16)
-              .padStart(2, "0");
-          return `#${ch(r1, r2)}${ch(g1, g2)}${ch(b1, b2)}`;
-        };
-        // On-brand Gantt tints, derived from primary / background / ink — NEVER from
-        // the brand secondary. A light secondary was washing "done" tasks, grid lines
-        // and borders to near-invisibility, which read as "the red theme isn't applied".
-        // Mermaid renders DONE (and active) task labels with `taskTextDarkColor`
-        // (verified in gantt/styles: `.doneText*{fill:taskTextDarkColor}`), which we
-        // set to `txt` — the background-contrast ink (dark on light, light on dark).
-        // So the done bar must be a LIGHT tint on a light bg (dark label reads at
-        // CR ~6) and a DARK shade on a dark bg (light label reads) — exactly what
-        // mixing toward the background gives. A deep red here would sink the dark
-        // label to CR ~3. "Lighter = past/done" also matches the usual Gantt reading.
-        const ganttDoneBkg = mix(primHex, bgHex, isDark ? 0.5 : 0.42);
-        const ganttDoneBorder = mix(primHex, bgHex, 0.3);
-        const ganttActiveBorder = mix(primHex, isDark ? "#ffffff" : "#000000", 0.28);
-        const ganttBand = mix(primHex, bgHex, isDark ? 0.85 : 0.95); // faint section banding (mostly bg)
-        const ganttGrid = mix(txt, bgHex, 0.78); // always-visible faint grid
-        const ganttCrit = "#f59e0b"; // amber — must read apart from brand red
-
-        // theme: 'base' is the ONLY customizable theme — themeVariables apply
-        // fully here (they were largely ignored on default/dark before, which
-        // is why everything was force-painted via injected CSS). darkMode drives
-        // the engine's derived-colour maths.
+        // theme "base" is the only Mermaid theme that takes themeVariables in
+        // full. All colours come from buildMermaidTheme, already as hex, which
+        // is the only format the theme engine accepts.
         mermaid.initialize({
           startOnLoad: false,
           theme: "base",
-          darkMode: isDark,
-          fontFamily: '"Inter", "Roboto", sans-serif',
-          themeVariables: {
-            darkMode: isDark,
-            background: bgHex,
-            fontFamily: '"Inter", "Roboto", sans-serif',
-            fontSize: "14px",
-
-            // ── Core (flowchart/state/class nodes, edges, clusters, text) ──
-            primaryColor: primHex,
-            primaryTextColor: nodeTxt,
-            primaryBorderColor: secHex,
-            secondaryColor: secHex,
-            secondaryBorderColor: secHex,
-            secondaryTextColor: secTxt,
-            tertiaryColor: bgHex,
-            tertiaryBorderColor: secHex,
-            tertiaryTextColor: txt,
-            mainBkg: primHex,
-            nodeBkg: primHex,
-            nodeBorder: secHex,
-            nodeTextColor: nodeTxt,
-            clusterBkg: bgHex,
-            clusterBorder: secHex,
-            lineColor: secHex,
-            defaultLinkColor: secHex,
-            arrowheadColor: secHex,
-            textColor: txt,
-            titleColor: txt,
-            edgeLabelBackground: bgHex,
-            labelBackgroundColor: bgHex,
-            noteBkgColor: secHex,
-            noteTextColor: secTxt,
-            noteBorderColor: primHex,
-            classText: nodeTxt,
-
-            // ── Sequence ──
-            actorBkg: primHex,
-            actorBorder: secHex,
-            actorTextColor: nodeTxt,
-            actorLineColor: secHex,
-            signalColor: secHex,
-            signalTextColor: txt,
-            labelBoxBkgColor: bgHex,
-            labelBoxBorderColor: secHex,
-            labelTextColor: txt,
-            loopTextColor: txt,
-            activationBkgColor: primHex,
-            activationBorderColor: secHex,
-            sequenceNumberColor: nodeTxt,
-
-            // ── State ──
-            stateBkg: primHex,
-            stateLabelColor: nodeTxt,
-            labelColor: nodeTxt,
-            altBackground: bgHex,
-            compositeBackground: bgHex,
-            compositeBorder: secHex,
-            compositeTitleBackground: bgHex,
-            transitionColor: secHex,
-            transitionLabelColor: txt,
-            specialStateColor: secHex,
-
-            // ── ER (boxes also via the er.{fill,stroke} config below) ──
-            attributeBackgroundColorOdd: primHex,
-            attributeBackgroundColorEven: primHex,
-            relationColor: secHex,
-            relationLabelBackground: bgHex,
-            relationLabelColor: txt,
-
-            // ── Gantt (tints derived above, NOT from the brand secondary, so a
-            //     light secondary can't wash "done" tasks / grid / borders out —
-            //     the reported "red theme isn't applied" bug) ──
-            sectionBkgColor: ganttBand,
-            sectionBkgColor2: bgHex,
-            altSectionBkgColor: bgHex,
-            taskBkgColor: primHex,
-            taskBorderColor: ganttActiveBorder,
-            taskTextColor: nodeTxt,
-            taskTextLightColor: txt,
-            taskTextDarkColor: txt,
-            taskTextOutsideColor: txt,
-            activeTaskBkgColor: primHex,
-            activeTaskBorderColor: ganttActiveBorder,
-            doneTaskBkgColor: ganttDoneBkg,
-            doneTaskBorderColor: ganttDoneBorder,
-            critBkgColor: ganttCrit,
-            critBorderColor: mix(ganttCrit, "#000000", 0.2),
-            gridColor: ganttGrid,
-            todayLineColor: primHex,
-
-            // ── Quadrant (the transparent square fill stays in residual CSS) ──
-            quadrantPointFill: primHex,
-            quadrantPointTextFill: txt,
-            quadrantTitleFill: txt,
-            quadrantXAxisTextFill: txt,
-            quadrantYAxisTextFill: txt,
-            quadrantInternalBorderStrokeFill: secHex,
-            quadrantExternalBorderStrokeFill: secHex,
-
-            // ── Architecture (label text contrast stays in residual CSS) ──
-            archEdgeColor: secHex,
-            archEdgeArrowColor: secHex,
-            archGroupBorderColor: secHex,
-
-            // ── Pie ──
-            ...scale("pie", 12, 1),
-            pieTitleTextSize: "16px",
-            pieTitleTextColor: txt,
-            pieSectionTextSize: "12px",
-            pieSectionTextColor: txt,
-            pieLegendTextSize: "14px",
-            pieLegendTextColor: txt,
-            pieStrokeColor: bgHex,
-            pieStrokeWidth: "2px",
-            pieOuterStrokeWidth: "2px",
-            pieOuterStrokeColor: bgHex,
-            pieOpacity: "0.85",
-
-            // ── Journey / Timeline / Mindmap colour scales ──
-            ...scale("fillType", 8),
-            ...scale("cScale", 12),
-            ...constScale("cScaleLabel", 12, txt),
-
-            // ── Git graph ──
-            ...scale("git", 8),
-            ...constScale("gitBranchLabel", 8, txt),
-            commitLabelColor: txt,
-            commitLabelBackground: bgHex,
-
-            // ── XYChart (object — colours live here, geometry in xyChart config) ──
-            xyChart: {
-              backgroundColor: "transparent",
-              titleColor: txt,
-              dataLabelColor: txt,
-              xAxisLabelColor: txt,
-              xAxisTitleColor: txt,
-              xAxisTickColor: secHex,
-              xAxisLineColor: secHex,
-              yAxisLabelColor: txt,
-              yAxisTitleColor: txt,
-              yAxisTickColor: secHex,
-              yAxisLineColor: secHex,
-              plotColorPalette: palette.join(", "),
-            } as any,
-          },
+          darkMode: mermaidTheme.palette.isDark,
+          fontFamily: mermaidTheme.palette.fontFamily,
+          themeVariables: mermaidTheme.themeVariables,
           flowchart: { htmlLabels: true, useMaxWidth: true },
           sequence: { wrap: true, showSequenceNumbers: false },
           // Gantt geometry: bigger bars + labels so a long chronology stays legible,
@@ -314,8 +155,8 @@ const MermaidRenderer: React.FC<MermaidRendererProps> = ({
             gridLineStartPadding: 32,
           },
           // Per-diagram colour config (these colours are NOT themeVariables).
-          er: { fill: primHex, stroke: secHex } as any,
-          sankey: { linkColor: primHex } as any,
+          er: mermaidTheme.er as any,
+          sankey: mermaidTheme.sankey as any,
           // Diagram source can come from model output. "strict" sanitises labels and
           // disables click callbacks; the final SVG is sanitised again below.
           securityLevel: "strict",
@@ -330,18 +171,8 @@ const MermaidRenderer: React.FC<MermaidRendererProps> = ({
         const { svg } = await mermaid.render(id, safeChart);
 
         if (isMounted) {
-          // Wrap with theme styles for complex diagrams (Gantt, Class, Sequence)
-          // while preserving intrinsic node colors for Flowcharts.
-          const themedSvg = injectMermaidThemeStyles(svg, {
-            id,
-            bg,
-            primary,
-            secondary,
-            canvasTextColor,
-            canvasContrastText,
-            nodeTextColor,
-            secondaryTextColor,
-          });
+          // Add the CSS for what theme variables cannot reach.
+          const themedSvg = injectMermaidThemeStyles(svg, id, mermaidTheme.palette);
           setSvgContent(sanitizeMermaidSvg(themedSvg));
         }
       } catch (err: any) {
@@ -367,19 +198,7 @@ const MermaidRenderer: React.FC<MermaidRendererProps> = ({
     return () => {
       isMounted = false;
     };
-  }, [
-    chart,
-    bg,
-    primary,
-    secondary,
-    canvasTextColor,
-    canvasContrastText,
-    nodeTextColor,
-    secondaryTextColor,
-    onErrorStateChange,
-    isDark,
-    palette,
-  ]);
+  }, [chart, mermaidTheme, onErrorStateChange]);
 
   const handleDownloadSvg = () => {
     if (!svgContent) return;
@@ -455,9 +274,11 @@ const MermaidRenderer: React.FC<MermaidRendererProps> = ({
 
   return (
     <Box
+      ref={boxRef}
       sx={{
         width: "100%",
-        minHeight: "400px",
+        minHeight: contain ? 0 : "400px",
+        ...(contain ? { height: "100%", alignSelf: "stretch" } : {}),
         position: "relative",
         border: 1,
         borderColor: "divider",
@@ -511,11 +332,11 @@ const MermaidRenderer: React.FC<MermaidRendererProps> = ({
               </IconButton>
             </Box>
             <TransformComponent
-              wrapperStyle={{ width: "100%", height: "100%", minHeight: "400px" }}
+              wrapperStyle={{ width: "100%", height: "100%", minHeight: contain ? 0 : "400px" }}
               contentStyle={{
                 width: "100%",
                 height: "100%",
-                minHeight: "400px",
+                minHeight: contain ? 0 : "400px",
                 display: "flex",
                 justifyContent: "center",
                 alignItems: "center",
@@ -530,14 +351,15 @@ const MermaidRenderer: React.FC<MermaidRendererProps> = ({
                   alignItems: "center",
                   bgcolor: bg,
                   borderRadius: 2,
-                  p: 4,
+                  p: `${canvasPadding}px`,
+                  // The svg carries an explicit size from fitSvgToBox. It must
+                  // not be stretched or shrunk again by the flex layout.
                   "& svg": {
                     display: "block",
-                    minWidth: "300px",
-                    minHeight: "300px",
+                    flexShrink: 0,
                   },
                 }}
-                dangerouslySetInnerHTML={{ __html: svgContent }}
+                dangerouslySetInnerHTML={{ __html: fittedSvg }}
               />
             </TransformComponent>
           </>
