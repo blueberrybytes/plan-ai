@@ -15,8 +15,8 @@ import {
   ensureContextCollection,
   upsertContextVectors,
   queryVectors,
-  getFullContextPayloads,
-  getRepomixContextPayloads,
+  getFullContextPayloads as storeFullContextPayloads,
+  getRepomixContextPayloads as storeRepomixContextPayloads,
   type ContextVectorPoint,
 } from "./contextVectorStore";
 
@@ -60,8 +60,6 @@ const ensureCollectionIfNeeded = async (): Promise<void> => {
 };
 
 export const initializeContextVectorStore = ensureCollectionIfNeeded;
-
-export { getFullContextPayloads, getRepomixContextPayloads };
 
 const normalizeChunks = (chunks: string[]): string[] =>
   chunks.map((chunk) => chunk.trim()).filter((chunk) => chunk.length > 0);
@@ -270,7 +268,53 @@ export const removeContextVectors = async (contextId: string): Promise<void> => 
   }
 };
 
+/**
+ * All workspaces share one Qdrant collection and the points are filtered by
+ * contextId alone. So every read goes through here first: contextIds that are
+ * not of this workspace are dropped, wherever they came from (the request, or
+ * a list stored on a chat, a document or a meeting).
+ */
+const contextsOfWorkspace = async (workspaceId: string, contextIds: string[]) => {
+  if (!workspaceId || contextIds.length === 0) return [];
+  const rows = await prisma.context.findMany({
+    where: { id: { in: contextIds }, workspaceId },
+    select: { id: true, userId: true },
+  });
+  const asked = new Set(contextIds).size;
+  if (rows.length < asked) {
+    logger.warn(
+      `Vector read: dropped ${asked - rows.length} context id(s) that are not of workspace ${workspaceId}.`,
+    );
+  }
+  return rows;
+};
+
+/** Every chunk of these contexts, for the ones that belong to the workspace. */
+export const getFullContextPayloads = async (
+  workspaceId: string,
+  contextIds: string[],
+): Promise<string[]> => {
+  const allowed = await contextsOfWorkspace(workspaceId, contextIds);
+  return allowed.length ? storeFullContextPayloads(allowed.map((c) => c.id)) : [];
+};
+
+/** The chunks of one repository file, for contexts that belong to the workspace. */
+export const getRepomixContextPayloads = async (
+  workspaceId: string,
+  contextIds: string[],
+  fileId: string,
+): Promise<string[]> => {
+  const allowed = await contextsOfWorkspace(workspaceId, contextIds);
+  return allowed.length
+    ? storeRepomixContextPayloads(
+        allowed.map((c) => c.id),
+        fileId,
+      )
+    : [];
+};
+
 export const queryContexts = async (
+  workspaceId: string,
   contextIds: string[],
   queryText: string,
   limit = 10,
@@ -280,13 +324,11 @@ export const queryContexts = async (
   }
 
   try {
-    // Resolve the workspace + its BYOK OpenAI key before embedding the query.
-    const contextRecord = await prisma.context.findUnique({ where: { id: contextIds[0] } });
-    if (!contextRecord) {
-      logger.warn(`queryContexts: context ${contextIds[0]} not found — skipping.`);
-      return [];
-    }
-    const embeddingConfig = await resolveWorkspaceEmbeddingConfig(contextRecord.workspaceId);
+    const allowed = await contextsOfWorkspace(workspaceId, contextIds);
+    if (allowed.length === 0) return [];
+    const allowedIds = allowed.map((c) => c.id);
+    // The query is embedded with this workspace's key and billed to it.
+    const embeddingConfig = await resolveWorkspaceEmbeddingConfig(workspaceId);
     const embeddings = buildEmbeddings(embeddingConfig);
 
     // Truncate before embedding so an oversized paste can't blow the model's
@@ -299,15 +341,15 @@ export const queryContexts = async (
     }
 
     const vector = await embeddings.embedQuery(safeQueryText);
-    const points = await queryVectors(contextIds, vector, limit);
+    const points = await queryVectors(allowedIds, vector, limit);
 
     // Track AI Usage centrally for querying embeddings
     {
       const estimatedTokens = Math.ceil(safeQueryText.length / 4);
       aiUsageService
         .logUsage({
-          userId: contextRecord.userId,
-          workspaceId: contextRecord.workspaceId,
+          userId: allowed[0].userId,
+          workspaceId,
           feature: "DOC",
           provider: embeddingConfig.baseURL ? "openrouter" : "openai",
           model: embeddingConfig.model,

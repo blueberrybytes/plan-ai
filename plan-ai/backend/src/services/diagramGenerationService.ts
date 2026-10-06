@@ -67,7 +67,7 @@ class DiagramGenerationService {
         }
         contextContent = `## Explicit System Context Chunk: \n${safeContext}`;
       } else {
-        const rawContextData = await queryContexts(contextIds, prompt);
+        const rawContextData = await queryContexts(workspaceId, contextIds, prompt);
         if (rawContextData && rawContextData.length > 0) {
           contextContent = rawContextData
             .map((c) => `## Context Chunk: \n${c || "(No readable text)"}`)
@@ -164,7 +164,7 @@ class DiagramGenerationService {
         `[triggerImprovement] Started for diagram ${diagramId} with instruction: ${instruction}`,
       );
 
-      const rawContextData = await queryContexts(contextIds, instruction);
+      const rawContextData = await queryContexts(workspaceId, contextIds, instruction);
       let contextContent = "";
       if (rawContextData && rawContextData.length > 0) {
         contextContent = rawContextData

@@ -690,7 +690,7 @@ export class ProjectTranscriptService {
     // project; the project's paired Context is what feeds RAG and AI tasks.
     let contextIds = input.contextIds ?? [];
     if (contextIds.length === 0 && input.projectId) {
-      contextIds = await resolveProjectIdsToContextIds([input.projectId]);
+      contextIds = await resolveProjectIdsToContextIds([input.projectId], input.workspaceId);
     }
 
     const transcript = await prisma.transcript.create({
@@ -1654,7 +1654,7 @@ export class ProjectTranscriptService {
       // Format the raw text with a header so chunks carry meeting metadata
       const vectorText = `Meeting: ${transcriptTitle}\nDate: ${transcriptDate}\n\n${processedContent}`;
 
-      resolveProjectIdsToContextIds([input.projectId])
+      resolveProjectIdsToContextIds([input.projectId], input.workspaceId)
         .then((contextIds) => {
           const contextId = contextIds[0];
           if (!contextId) {
@@ -1728,7 +1728,7 @@ export class ProjectTranscriptService {
           logger.info(
             `ContextRouter bypassed RAG. Using FULL_INJECTION for ${routerResult.estimatedTokens} estimated tokens.`,
           );
-          const fullChunks = await getFullContextPayloads(contextIds);
+          const fullChunks = await getFullContextPayloads(workspaceId, contextIds);
           if (fullChunks.length > 0) {
             dynamicContext = `\n[FULL CONTEXT INJECTED]:\n${fullChunks.join("\n\n")}\n`;
           }
@@ -1739,7 +1739,7 @@ export class ProjectTranscriptService {
           // RAG: Query context vectors using 500 chars as query
           const query = content.slice(0, 500);
           const maxChunks = getMaxContextChunks(activeModel);
-          const chunks = await queryContexts(contextIds, query, maxChunks);
+          const chunks = await queryContexts(workspaceId, contextIds, query, maxChunks);
           if (chunks.length > 0) {
             dynamicContext = `\nRetrieved targeted context snippets from knowledge base:\n${chunks.join("\n\n")}\n`;
           }
@@ -2859,7 +2859,7 @@ ${transcriptForLLM}`;
     // Fetch ONLY the repomix chunks (not PDFs, transcripts, or other context
     // files from the same project) — keeps the prompt clean and avoids mixing
     // business docs with source code.
-    const chunks = await getRepomixContextPayloads(contextIds, githubFile.id);
+    const chunks = await getRepomixContextPayloads(workspaceId, contextIds, githubFile.id);
     const repoText = chunks.join("\n\n");
     if (!repoText.trim()) {
       logger.info(

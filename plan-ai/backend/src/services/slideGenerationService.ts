@@ -136,7 +136,7 @@ export class SlideGenerationService {
       let contextText = "";
       if (contextIds.length > 0) {
         try {
-          const chunks = await queryContexts(contextIds, userPrompt, 1000);
+          const chunks = await queryContexts(workspaceId, contextIds, userPrompt, 1000);
           if (chunks.length > 0) {
             contextText = `\nRetrieved context:\n${chunks.join("\n\n")}\n`;
           }
@@ -373,7 +373,7 @@ CRITICAL PRESENTATION RULE: Slides must be easily readable. Do NOT write long pa
     let contextText = "";
     if (presentation.contextIds && presentation.contextIds.length > 0) {
       try {
-        const chunks = await queryContexts(presentation.contextIds, prompt, 1000);
+        const chunks = await queryContexts(workspaceId, presentation.contextIds, prompt, 1000);
         if (chunks.length > 0) {
           contextText = `\nRetrieved context:\n${chunks.join("\n\n")}\n`;
         }

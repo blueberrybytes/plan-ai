@@ -570,7 +570,7 @@ export function createPlanAiMcpServer(userId: string, workspaceId: string): McpS
       },
     },
     async (args) => {
-      const contextIds = await mergeProjectAndContextIds([args.projectId], null);
+      const contextIds = await mergeProjectAndContextIds([args.projectId], null, workspaceId);
       if (contextIds.length === 0) {
         return jsonResult({
           query: args.query,
@@ -578,7 +578,7 @@ export function createPlanAiMcpServer(userId: string, workspaceId: string): McpS
           note: "This project has no knowledge base / context files to search.",
         });
       }
-      const chunks = await queryContexts(contextIds, args.query, args.limit);
+      const chunks = await queryContexts(workspaceId, contextIds, args.query, args.limit);
       return jsonResult({ query: args.query, results: chunks, total: chunks.length });
     },
   );

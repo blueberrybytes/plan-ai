@@ -99,7 +99,11 @@ export class DocGenerationService {
   ): Promise<DocDocument & { theme: BrandTheme | null }> {
     // Resolve user-facing projectIds → internal contextIds and merge with any
     // direct contextIds the caller passed.
-    const resolvedContextIds = await mergeProjectAndContextIds(input.projectIds, input.contextIds);
+    const resolvedContextIds = await mergeProjectAndContextIds(
+      input.projectIds,
+      input.contextIds,
+      workspaceId,
+    );
 
     const doc = await prisma.docDocument.create({
       data: {
@@ -143,6 +147,7 @@ export class DocGenerationService {
     if (input.contextIds && input.contextIds.length > 0) {
       try {
         const chunks = await queryContexts(
+          workspaceId,
           input.contextIds,
           input.prompt ?? "",
           getMaxContextChunks(DOC_MODEL),

@@ -100,7 +100,7 @@ export class ChatService {
     let contextSection = "";
     if (thread.contextIds.length > 0) {
       try {
-        const chunks = await queryContexts(thread.contextIds, content, 500);
+        const chunks = await queryContexts(thread.workspaceId, thread.contextIds, content, 500);
         if (chunks.length > 0) {
           logger.info(`Retrieved ${chunks.length} RAG Chunks`, { chunks });
           contextSection = `\nRelevant Context from Knowledge Base:\n${chunks.join("\n\n")}\n`;

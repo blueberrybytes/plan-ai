@@ -646,7 +646,7 @@ export class TranscriptsController extends BaseWorkspaceController {
     // refactor), auto-derive the project's paired contextId so AI generation,
     // RAG queries, and downstream chat see the project's files.
     if (contextIdsArray.length === 0 && projectId) {
-      contextIdsArray = await resolveProjectIdsToContextIds([projectId]);
+      contextIdsArray = await resolveProjectIdsToContextIds([projectId], workspaceId);
     }
 
     // Validate the target project BEFORE touching storage. This used to run

@@ -140,7 +140,7 @@ export class DiagramController extends BaseWorkspaceController {
   ): Promise<DiagramResponse> {
     const { user, workspaceId } = await this.getPaidGenerationAccess(request);
 
-    const contextIds = await mergeProjectAndContextIds(body.projectIds, body.contextIds);
+    const contextIds = await mergeProjectAndContextIds(body.projectIds, body.contextIds, workspaceId);
 
     let initialSyntax = `%% ${body.title} - ${body.type}\n`;
     if (body.type === "FLOWCHART") initialSyntax += "flowchart TD\n";

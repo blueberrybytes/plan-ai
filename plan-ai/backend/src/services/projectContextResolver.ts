@@ -10,16 +10,32 @@
 import prisma from "../prisma/prismaClient";
 
 /**
- * Map projectIds → their paired contextIds. Order is NOT preserved (it's a
- * set operation). Projects without a Context are silently dropped — that
- * should not happen after the migration has run, but defending against it.
+ * Map projectIds to their paired contextIds, for projects of this workspace
+ * only. Ids of another workspace's projects resolve to nothing: the ids come
+ * from the client, and whoever knows a project id must not get its files.
+ * Order is NOT preserved (it's a set operation). Projects without a Context
+ * are silently dropped.
  */
 export async function resolveProjectIdsToContextIds(
   projectIds: string[] | undefined | null,
+  workspaceId: string,
 ): Promise<string[]> {
-  if (!projectIds || projectIds.length === 0) return [];
+  if (!projectIds || projectIds.length === 0 || !workspaceId) return [];
   const contexts = await prisma.context.findMany({
-    where: { projectId: { in: projectIds } },
+    where: { projectId: { in: projectIds }, workspaceId },
+    select: { id: true },
+  });
+  return contexts.map((c) => c.id);
+}
+
+/** The contextIds that belong to this workspace. The rest are dropped. */
+export async function keepWorkspaceContextIds(
+  contextIds: string[] | undefined | null,
+  workspaceId: string,
+): Promise<string[]> {
+  if (!contextIds || contextIds.length === 0 || !workspaceId) return [];
+  const contexts = await prisma.context.findMany({
+    where: { id: { in: contextIds }, workspaceId },
     select: { id: true },
   });
   return contexts.map((c) => c.id);
@@ -41,15 +57,18 @@ export async function resolveContextIdsToProjectIds(
 }
 
 /**
- * Merge incoming `projectIds` (translated) with any direct `contextIds`
- * the caller also provided. Dedupes the result. Convenience for endpoints
- * that accept both shapes during the migration period.
+ * Merge incoming `projectIds` (translated) with any direct `contextIds` the
+ * caller also provided, keeping only what belongs to this workspace. Dedupes
+ * the result. For endpoints that accept both shapes.
  */
 export async function mergeProjectAndContextIds(
   projectIds: string[] | undefined | null,
   contextIds: string[] | undefined | null,
+  workspaceId: string,
 ): Promise<string[]> {
-  const fromProjects = await resolveProjectIdsToContextIds(projectIds);
-  const direct = contextIds ?? [];
+  const [fromProjects, direct] = await Promise.all([
+    resolveProjectIdsToContextIds(projectIds, workspaceId),
+    keepWorkspaceContextIds(contextIds, workspaceId),
+  ]);
   return Array.from(new Set([...fromProjects, ...direct]));
 }

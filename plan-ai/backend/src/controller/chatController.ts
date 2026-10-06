@@ -222,7 +222,7 @@ export class ChatController extends BaseWorkspaceController {
     workspaceId: string,
   ): Promise<string[]> {
     const fromProjects =
-      projectIds && projectIds.length > 0 ? await resolveProjectIdsToContextIds(projectIds) : [];
+      projectIds && projectIds.length > 0 ? await resolveProjectIdsToContextIds(projectIds, workspaceId) : [];
     const merged = Array.from(new Set([...fromProjects, ...(contextIds ?? [])]));
     return this.validateContextIds(merged, workspaceId);
   }
@@ -591,7 +591,7 @@ export class ChatController extends BaseWorkspaceController {
     // 2. Build Context (Vector RAG)
     let contextText = "";
     if (thread.contextIds.length > 0) {
-      const contexts = await queryContexts(thread.contextIds, body.content, 5);
+      const contexts = await queryContexts(workspaceId, thread.contextIds, body.content, 5);
       if (contexts && contexts.length > 0) {
         contextText = contexts.join("\n---\n");
       }
@@ -758,7 +758,7 @@ ${MERMAID_SYNTAX_RULES}`;
       workspaceId,
     );
     if (validContextIds.length > 0) {
-      const contexts = await queryContexts(validContextIds, body.content, 500);
+      const contexts = await queryContexts(workspaceId, validContextIds, body.content, 500);
       if (contexts && contexts.length > 0) {
         contextText = contexts.join("\n---\n");
       }
@@ -915,7 +915,7 @@ CRITICAL: You MUST respond in the EXACT same language that the user used to ask 
     const cache = ChatController.liveSummaryContextCache;
     const hit = cache.get(key);
     if (hit && Date.now() - hit.at < ChatController.LIVE_SUMMARY_CONTEXT_TTL_MS) return hit.text;
-    const contexts = await queryContexts(contextIds, "summary tasks action items", 500);
+    const contexts = await queryContexts(workspaceId, contextIds, "summary tasks action items", 500);
     const text = contexts && contexts.length > 0 ? contexts.join("\n---\n") : "";
     if (cache.size >= 500) {
       const oldest = cache.keys().next().value;

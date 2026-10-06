@@ -90,7 +90,7 @@ export class PresentationController extends BaseWorkspaceController {
   ): Promise<PresentationResponse> {
     const { user, workspaceId } = await this.getPaidGenerationAccess(request);
 
-    const contextIds = await mergeProjectAndContextIds(body.projectIds, body.contextIds);
+    const contextIds = await mergeProjectAndContextIds(body.projectIds, body.contextIds, workspaceId);
 
     const presentation = await slideGenerationService.startPresentationGeneration(
       user.id,

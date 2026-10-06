@@ -174,7 +174,7 @@ router.post(
 
       if (thread.contextIds.length > 0 || thread.transcriptId) {
         if (thread.contextIds.length > 0) {
-          const contexts = await queryContexts(thread.contextIds, content, 500);
+          const contexts = await queryContexts(thread.workspaceId, thread.contextIds, content, 500);
           if (contexts && contexts.length > 0) {
             contextText = contexts.join("\n---\n");
             // Badge tells the user WHERE the answer drew from — here, their

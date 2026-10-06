@@ -99,7 +99,7 @@ export class AssistantChatService {
               ? String((lastUserMsg.parts[0] as { text?: string }).text ?? "")
               : "";
           if (queryText.trim().length > 0) {
-            const chunks = await queryContexts([activeProject.contextId], queryText, 500);
+            const chunks = await queryContexts(workspaceId, [activeProject.contextId], queryText, 500);
             if (chunks && chunks.length > 0) {
               projectKnowledge = chunks.join("\n---\n");
             }
