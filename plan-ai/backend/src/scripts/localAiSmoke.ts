@@ -109,11 +109,11 @@ const main = async (): Promise<void> => {
     docs.map((text, i) => ({
       id: uuidv4(),
       vector: vectors[i],
-      payload: { contextId, fileId: "smoke", chunkIndex: i, text },
+      payload: { contextId, workspaceId: "smoke", fileId: "smoke", chunkIndex: i, text },
     })),
   );
   const query = "¿Cuándo es la demo para el cliente?";
-  const hits = await queryVectors([contextId], await embeddings.embedQuery(query), 1);
+  const hits = await queryVectors("smoke", [contextId], await embeddings.embedQuery(query), 1);
   console.log(`   collection ${getContextCollectionName()}`);
   console.log(`   "${query}" -> "${hits[0]?.payload.text}"`);
   await deleteVectorsByContext(contextId);

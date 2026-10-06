@@ -47,6 +47,11 @@ async function withQdrantRetry<T>(
 
 export type ContextVectorPayload = {
   contextId: string;
+  /**
+   * Owner workspace. Written on every point since October 2026. Older points
+   * get it from scripts/backfillQdrantWorkspace.ts.
+   */
+  workspaceId?: string;
   fileId: string;
   chunkIndex: number;
   text: string;
@@ -67,11 +72,31 @@ type QdrantMatch = {
   };
 };
 
+type QdrantIsEmpty = { is_empty: { key: string } };
+type QdrantCondition = QdrantMatch | QdrantIsEmpty | QdrantFilter;
+
 type QdrantFilter = {
-  must?: QdrantMatch[];
-  should?: QdrantMatch[];
-  must_not?: QdrantMatch[];
+  must?: QdrantCondition[];
+  should?: QdrantCondition[];
+  must_not?: QdrantCondition[];
 };
+
+const anyContext = (contextIds: string[]): QdrantFilter => ({
+  should: contextIds.map((cid) => ({ key: "contextId", match: { value: cid } })),
+});
+
+/**
+ * Second lock on reads, inside Qdrant itself: a point stamped with another
+ * workspace never comes back, whatever contextIds were asked for. Points from
+ * before the stamp existed carry no workspace and still pass. Once the
+ * backfill has run everywhere, the `is_empty` branch can go.
+ */
+const ownedBy = (workspaceId: string): QdrantFilter => ({
+  should: [
+    { key: "workspaceId", match: { value: workspaceId } },
+    { is_empty: { key: "workspaceId" } },
+  ],
+});
 
 type QdrantCollectionInfo = {
   collections?: Array<{ name: string }>;
@@ -107,6 +132,7 @@ const toFilterByContext = (contextId: string): QdrantFilter => ({
 
 const toQdrantPayload = (payload: ContextVectorPayload): Record<string, string | number> => ({
   contextId: payload.contextId,
+  ...(payload.workspaceId ? { workspaceId: payload.workspaceId } : {}),
   fileId: payload.fileId,
   chunkIndex: payload.chunkIndex,
   text: payload.text,
@@ -188,21 +214,17 @@ export interface QdrantScoredPoint {
 }
 
 export const queryVectors = async (
+  workspaceId: string,
   contextIds: string[],
   vector: number[],
   limit = 5,
 ): Promise<ContextVectorPoint[]> => {
-  if (!contextIds || contextIds.length === 0) {
+  if (!workspaceId || !contextIds || contextIds.length === 0) {
     return [];
   }
 
-  // Filter to include any of the provided contextIds
-  const filter: QdrantFilter = {
-    should: contextIds.map((cid) => ({
-      key: "contextId",
-      match: { value: cid },
-    })),
-  };
+  // Any of the provided contextIds, and never a point of another workspace.
+  const filter: QdrantFilter = { must: [anyContext(contextIds), ownedBy(workspaceId)] };
 
   const name = getContextCollectionName();
   // Universal Query API. The client dropped `search` in 1.19; a plain vector
@@ -293,17 +315,15 @@ async function scrollAll(
  * This is used for "FULL_INJECTION" strategies where the context fits entirely inside the LLM prompt.
  * Uses paginated scrolling so large contexts (>1000 Qdrant points) are returned in full.
  */
-export const getFullContextPayloads = async (contextIds: string[]): Promise<string[]> => {
-  if (!contextIds || contextIds.length === 0) {
+export const getFullContextPayloads = async (
+  workspaceId: string,
+  contextIds: string[],
+): Promise<string[]> => {
+  if (!workspaceId || !contextIds || contextIds.length === 0) {
     return [];
   }
 
-  const filter: QdrantFilter = {
-    should: contextIds.map((cid) => ({
-      key: "contextId",
-      match: { value: cid },
-    })),
-  };
+  const filter: QdrantFilter = { must: [anyContext(contextIds), ownedBy(workspaceId)] };
 
   const name = getContextCollectionName();
 
@@ -329,10 +349,11 @@ export const getFullContextPayloads = async (contextIds: string[]): Promise<stri
  * other context files (PDFs, transcripts, text docs) from the same project context.
  */
 export const getRepomixContextPayloads = async (
+  workspaceId: string,
   contextIds: string[],
   fileId: string,
 ): Promise<string[]> => {
-  if (!contextIds || contextIds.length === 0 || !fileId) {
+  if (!workspaceId || !contextIds || contextIds.length === 0 || !fileId) {
     return [];
   }
 
@@ -343,6 +364,7 @@ export const getRepomixContextPayloads = async (
         match: { value: fileId },
       } as QdrantMatch,
       ...contextIds.map((cid) => ({ key: "contextId", match: { value: cid } }) as QdrantMatch),
+      ownedBy(workspaceId),
     ],
   };
 
