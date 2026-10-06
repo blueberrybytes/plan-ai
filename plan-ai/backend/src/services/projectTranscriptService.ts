@@ -48,6 +48,7 @@ import {
 
 import { aiContextRouter } from "./aiContextRouter";
 import { resolveProjectIdsToContextIds } from "./projectContextResolver";
+import { interleaveUnique, spreadQueries } from "../utils/ragQueries";
 import { IntegrationProvider, IntegrationStatus } from "@prisma/client";
 import { jiraIntegrationService } from "./jiraIntegrationService";
 import { linearIntegrationService } from "./linearIntegrationService";
@@ -1736,10 +1737,15 @@ export class ProjectTranscriptService {
           logger.info(
             `ContextRouter triggered RAG for ${routerResult.estimatedTokens} estimated tokens.`,
           );
-          // RAG: Query context vectors using 500 chars as query
-          const query = content.slice(0, 500);
+          // RAG: search with windows spread over the whole meeting. The first
+          // characters alone are greetings and miss what was discussed later.
           const maxChunks = getMaxContextChunks(activeModel);
-          const chunks = await queryContexts(workspaceId, contextIds, query, maxChunks);
+          const queries = spreadQueries(content);
+          const perQuery = Math.max(3, Math.ceil(maxChunks / Math.max(1, queries.length)));
+          const found = await Promise.all(
+            queries.map((query) => queryContexts(workspaceId, contextIds, query, perQuery)),
+          );
+          const chunks = interleaveUnique(found, maxChunks);
           if (chunks.length > 0) {
             dynamicContext = `\nRetrieved targeted context snippets from knowledge base:\n${chunks.join("\n\n")}\n`;
           }
