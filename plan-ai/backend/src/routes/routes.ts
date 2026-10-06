@@ -2996,26 +2996,29 @@ const models: TsoaRoute.Models = {
         "additionalProperties": false,
     },
     // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
-    "QdrantWorkspaceBackfillResult": {
+    "QdrantWorkspaceBackfillStatus": {
         "dataType": "refObject",
         "properties": {
+            "state": {"dataType":"union","subSchemas":[{"dataType":"enum","enums":["idle"]},{"dataType":"enum","enums":["running"]},{"dataType":"enum","enums":["done"]},{"dataType":"enum","enums":["failed"]}],"required":true},
+            "mode": {"dataType":"union","subSchemas":[{"dataType":"enum","enums":["check"]},{"dataType":"enum","enums":["apply"]},{"dataType":"enum","enums":[null]}],"required":true},
+            "step": {"dataType":"union","subSchemas":[{"dataType":"string"},{"dataType":"enum","enums":[null]}],"required":true},
+            "workspacesDone": {"dataType":"double","required":true},
+            "workspacesTotal": {"dataType":"double","required":true},
             "collection": {"dataType":"string","required":true},
-            "collectionExists": {"dataType":"boolean","required":true},
-            "totalPoints": {"dataType":"double","required":true},
-            "missingBefore": {"dataType":"double","required":true},
-            "stamped": {"dataType":"double","required":true},
-            "contextsTouched": {"dataType":"double","required":true},
-            "contextsTotal": {"dataType":"double","required":true},
-            "orphans": {"dataType":"double","required":true},
-            "missingAfter": {"dataType":"double","required":true},
-            "applied": {"dataType":"boolean","required":true},
+            "collectionExists": {"dataType":"union","subSchemas":[{"dataType":"boolean"},{"dataType":"enum","enums":[null]}],"required":true},
+            "totalPoints": {"dataType":"union","subSchemas":[{"dataType":"double"},{"dataType":"enum","enums":[null]}],"required":true},
+            "missing": {"dataType":"union","subSchemas":[{"dataType":"double"},{"dataType":"enum","enums":[null]}],"required":true},
+            "stamped": {"dataType":"union","subSchemas":[{"dataType":"double"},{"dataType":"enum","enums":[null]}],"required":true},
+            "startedAt": {"dataType":"union","subSchemas":[{"dataType":"string"},{"dataType":"enum","enums":[null]}],"required":true},
+            "finishedAt": {"dataType":"union","subSchemas":[{"dataType":"string"},{"dataType":"enum","enums":[null]}],"required":true},
+            "error": {"dataType":"union","subSchemas":[{"dataType":"string"},{"dataType":"enum","enums":[null]}],"required":true},
         },
         "additionalProperties": false,
     },
     // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
     "QdrantWorkspaceBackfillResponse": {
         "dataType": "refAlias",
-        "type": {"ref":"QdrantWorkspaceBackfillResult","validators":{}},
+        "type": {"ref":"QdrantWorkspaceBackfillStatus","validators":{}},
     },
     // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
     "AdminEmailTemplatesResponse": {
@@ -10471,9 +10474,39 @@ export function RegisterRoutes(app: Router,opts?:{multer?:ReturnType<typeof mult
             }
         });
         // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
-        const argsAdminMaintenanceController_checkQdrantWorkspace: Record<string, TsoaRoute.ParameterSchema> = {
+        const argsAdminMaintenanceController_getQdrantWorkspaceStatus: Record<string, TsoaRoute.ParameterSchema> = {
         };
         app.get('/api/admin/maintenance/qdrant-workspace',
+            authenticateMiddleware([{"AdminOnly":[]}]),
+            ...(fetchMiddlewares<RequestHandler>(AdminMaintenanceController)),
+            ...(fetchMiddlewares<RequestHandler>(AdminMaintenanceController.prototype.getQdrantWorkspaceStatus)),
+
+            async function AdminMaintenanceController_getQdrantWorkspaceStatus(request: ExRequest, response: ExResponse, next: any) {
+
+            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+
+            let validatedArgs: any[] = [];
+            try {
+                validatedArgs = templateService.getValidatedArgs({ args: argsAdminMaintenanceController_getQdrantWorkspaceStatus, request, response });
+
+                const controller = new AdminMaintenanceController();
+
+              await templateService.apiHandler({
+                methodName: 'getQdrantWorkspaceStatus',
+                controller,
+                response,
+                next,
+                validatedArgs,
+                successStatus: undefined,
+              });
+            } catch (err) {
+                return next(err);
+            }
+        });
+        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+        const argsAdminMaintenanceController_checkQdrantWorkspace: Record<string, TsoaRoute.ParameterSchema> = {
+        };
+        app.post('/api/admin/maintenance/qdrant-workspace/check',
             authenticateMiddleware([{"AdminOnly":[]}]),
             ...(fetchMiddlewares<RequestHandler>(AdminMaintenanceController)),
             ...(fetchMiddlewares<RequestHandler>(AdminMaintenanceController.prototype.checkQdrantWorkspace)),
