@@ -37,6 +37,7 @@ import { githubContextQueue } from "../queue/githubContextQueue";
 import { googleIntegrationService } from "../services/googleIntegrationService";
 import { microsoftIntegrationService } from "../services/microsoftIntegrationService";
 import { webScraperService } from "../services/webScraperService";
+import { normalizeWebUrl } from "../utils/webUrl";
 import { withDecryptedTokens } from "../utils/integrationSecrets";
 
 interface ImportWebsiteRequest {
@@ -741,6 +742,13 @@ export class ContextController extends BaseWorkspaceController {
       this.setStatus(400);
       throw { status: 400, message: "URL is required" };
     }
+    // People type "example.com". The rest of this method needs a full URL.
+    const rootUrl = normalizeWebUrl(body.url);
+    if (!rootUrl) {
+      this.setStatus(400);
+      throw { status: 400, message: "That does not look like a web address." };
+    }
+    body.url = rootUrl;
 
     const maxPages = body.maxPages && body.maxPages > 0 ? body.maxPages : 1;
 
@@ -749,8 +757,14 @@ export class ContextController extends BaseWorkspaceController {
 
     if (!scrapedPages || scrapedPages.length === 0) {
       this.setStatus(400);
-      throw { status: 400, message: "Could not extract any content from the provided URL" };
+      throw {
+        status: 400,
+        message:
+          "No text could be read from that address. Check that it is right and that the site is public.",
+      };
     }
+    // A site drawn by JavaScript gives its title and description, not its pages.
+    const metaOnly = scrapedPages.every((page) => page.metaOnly);
 
     // 1. Aggregate all scraped pages into one massive markdown document
     let aggregatedText = "";
@@ -810,7 +824,9 @@ export class ContextController extends BaseWorkspaceController {
     this.setStatus(200);
     return {
       status: 200,
-      message: `Successfully imported ${scrapedPages.length} pages`,
+      message: metaOnly
+        ? "This site is drawn by JavaScript, so only its title and description could be read, not the text of its pages. Upload the content as a file to add all of it."
+        : `Successfully imported ${scrapedPages.length} pages`,
       data: this.mapContextResponse(context),
     };
   }

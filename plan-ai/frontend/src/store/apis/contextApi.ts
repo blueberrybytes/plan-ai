@@ -186,10 +186,15 @@ export const contextApi = createApi({
         method: "POST",
         body,
       }),
-      invalidatesTags: (result, error, { contextId }) => [
-        { type: "Context", id: contextId },
-        { type: "Context", id: "LIST" },
-      ],
+      // Only after a success. Refetching the files after a failure redrew the
+      // tab and took the dialog's error message with it.
+      invalidatesTags: (result, error, { contextId }) =>
+        error
+          ? []
+          : [
+              { type: "Context", id: contextId },
+              { type: "Context", id: "LIST" },
+            ],
     }),
     retryContextFile: builder.mutation<ApiResponseContextResponse, DeleteContextFileArgs>({
       query: ({ contextId, fileId }) => ({

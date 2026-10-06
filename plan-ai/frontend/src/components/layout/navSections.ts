@@ -10,6 +10,8 @@ export const studioTabs: SectionTab[] = [
   { labelKey: "sidebarLayout.nav.documents", path: "/docs" },
   { labelKey: "sidebarLayout.nav.slides", path: "/slides" },
   { labelKey: "sidebarLayout.nav.diagrams", path: "/diagrams" },
+  // Themes style documents and slides, so they live with them.
+  { labelKey: "sidebarLayout.nav.brandThemes", path: "/brand-themes" },
 ];
 
 /** The team report tab is only for owners and admins of a team workspace. */
@@ -24,7 +26,6 @@ export const buildSettingsTabs = (isPlatformAdmin: boolean): SectionTab[] => [
   { labelKey: "sidebarLayout.nav.team", path: "/team" },
   { labelKey: "sidebarLayout.nav.integrations", path: "/integrations" },
   { labelKey: "sidebarLayout.nav.billing", path: "/billing" },
-  { labelKey: "sidebarLayout.nav.brandThemes", path: "/brand-themes" },
   { labelKey: "sidebarLayout.nav.apps", path: "/downloads" },
   ...(isPlatformAdmin ? [{ labelKey: "sidebarLayout.nav.admin", path: "/admin" }] : []),
 ];
