@@ -18,6 +18,10 @@ type TranslateTranscriptRequest = components["schemas"]["TranslateTranscriptRequ
 export type TranscriptPersonalData = components["schemas"]["TranscriptPersonalData"];
 type ApiResponseTranscriptPersonalData =
   components["schemas"]["ApiResponse_TranscriptPersonalDataResponse_"];
+export type TranscriptExportFormat = components["schemas"]["TranscriptExportFormatValue"];
+export type CreateTranscriptClipRequest = components["schemas"]["CreateTranscriptClipRequest"];
+export type TranscriptClip = components["schemas"]["TranscriptClipResponse"];
+type ApiResponseTranscriptClip = components["schemas"]["ApiResponse_TranscriptClipResponse_"];
 
 export const transcriptApi = createApi({
   reducerPath: "transcriptApi",
@@ -141,6 +145,27 @@ export const transcriptApi = createApi({
         body,
       }),
     }),
+    // The transcript as a subtitle or text file. The body is the file itself,
+    // not JSON. An error still comes back as JSON.
+    exportTranscript: builder.mutation<string, { id: string; format: TranscriptExportFormat }>({
+      query: ({ id, format }) => ({
+        url: `/api/transcripts/${id}/export`,
+        method: "GET",
+        params: { format },
+        responseHandler: (response) => (response.ok ? response.text() : response.json()),
+      }),
+    }),
+    // Cuts a part of the recording and returns a link that expires.
+    createTranscriptClip: builder.mutation<
+      ApiResponseTranscriptClip,
+      { id: string; body: CreateTranscriptClipRequest }
+    >({
+      query: ({ id, body }) => ({
+        url: `/api/transcripts/${id}/clip`,
+        method: "POST",
+        body,
+      }),
+    }),
   }),
 });
 
@@ -156,4 +181,6 @@ export const {
   useGetTranscriptAudioQuery,
   useDeleteTranscriptAudioMutation,
   useSendMeetingNotesMutation,
+  useExportTranscriptMutation,
+  useCreateTranscriptClipMutation,
 } = transcriptApi;

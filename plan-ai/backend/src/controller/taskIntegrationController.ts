@@ -1,3 +1,4 @@
+import { countFeature } from "../services/featureUsageService";
 import { Post, Path, Request, Route, Security, Tags, Body } from "tsoa";
 import { BaseWorkspaceController } from "./BaseWorkspaceController";
 import type { AuthenticatedRequest } from "../middleware/authMiddleware";
@@ -75,6 +76,7 @@ export class TaskIntegrationController extends BaseWorkspaceController {
 
     // Initialize/merge metadata locally
     const existingMetadata = (task.metadata as unknown as TaskMetadata) || {};
+    countFeature(`task.synced.${providerEnum.toLowerCase()}`);
 
     let responseData: SyncTaskResponse | null = null;
 

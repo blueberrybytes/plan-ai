@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import { trackFeatureFor } from "../services/featureUsageService";
 import {
   Route,
   Tags,
@@ -406,6 +407,7 @@ export class SessionController {
         },
         include: { customTheme: true },
       });
+      trackFeatureFor(request, "voice_profile.saved", user.id, "");
 
       const userResponse: UserResponse = {
         id: updatedUser.id,

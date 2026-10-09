@@ -36,6 +36,8 @@ import { selectActiveWorkspaceId } from "../../store/slices/app/appSelector";
 import WorkspaceSwitcher from "./WorkspaceSwitcher";
 import SidebarNavItem from "./SidebarNavItem";
 import SectionTabs from "./SectionTabs";
+import GlobalSearch from "../search/GlobalSearch";
+import { buildNavCommands } from "../search/searchPalette";
 import {
   SectionTab,
   buildReportTabs,
@@ -155,6 +157,15 @@ const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children, fullHeight = fa
     };
     return [...coreNavItems, studioNavItem, reportsNavItem];
   }, [activeWorkspace, reportTabs]);
+
+  // The pages the search palette offers before the user types.
+  const paletteCommands = React.useMemo(
+    () =>
+      buildNavCommands(mainNavItems, [
+        { labelKey: "sidebarLayout.nav.settings", path: settingsTabs[0].path },
+      ]),
+    [mainNavItems, settingsTabs],
+  );
 
   const tabSections = React.useMemo(
     () => [studioTabs, reportTabs, settingsTabs],
@@ -360,6 +371,8 @@ const SidebarLayout: React.FC<SidebarLayoutProps> = ({ children, fullHeight = fa
           )}
 
           <Divider sx={{ my: 1, opacity: 0.5 }} />
+
+          <GlobalSearch collapsed={isCollapsed} commands={paletteCommands} />
 
           <List
             sx={{

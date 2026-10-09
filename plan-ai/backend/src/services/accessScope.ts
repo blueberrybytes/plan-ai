@@ -24,8 +24,17 @@ export interface HiddenFromCaller {
   contextIds: string[];
 }
 
+/** Who makes the current request. Only used to count feature use. */
+export interface RequestCaller {
+  userId: string;
+  workspaceId: string;
+  /** "web", "recorder", "mobile" or "api". */
+  client: string;
+}
+
 interface Scope {
   hidden: HiddenFromCaller | null;
+  caller?: RequestCaller;
 }
 
 const storage = new AsyncLocalStorage<Scope>();
@@ -47,6 +56,17 @@ export function setHiddenForRequest(hidden: HiddenFromCaller): void {
 /** What is hidden from the current caller, or null when nothing is. */
 export function hiddenFromCaller(): HiddenFromCaller | null {
   return storage.getStore()?.hidden ?? null;
+}
+
+/** Remembers who makes this request. A no-op outside a request. */
+export function setCallerForRequest(caller: RequestCaller): void {
+  const scope = storage.getStore();
+  if (scope) scope.caller = caller;
+}
+
+/** Who makes the current request, when its workspace access was resolved. */
+export function callerOfRequest(): RequestCaller | null {
+  return storage.getStore()?.caller ?? null;
 }
 
 /** Runs `work` with these projects hidden. For code outside a request. */

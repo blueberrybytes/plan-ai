@@ -54,6 +54,7 @@ import { setToastMessage } from "../store/slices/app/appSlice";
 import { reportUnexpectedError } from "../utils/reportError";
 import { openSharedLink, shareAndGetLinkKey } from "../utils/openSharedLink";
 import { splitMarkdownIntoChunks, MarkdownChunk } from "../utils/markdownParser";
+import { trackFeature } from "../utils/trackFeature";
 import HybridChunkEditor from "../components/docs/HybridChunkEditor";
 import TiptapEditor from "../components/docs/TiptapEditor";
 
@@ -252,6 +253,7 @@ const DocView: React.FC = () => {
 
   const handleExportPdf = () => {
     setExportAnchor(null);
+    trackFeature("doc.printed_pdf");
     window.print();
   };
 

@@ -3,6 +3,7 @@ import prisma from "../prisma/prismaClient";
 import { deleteStoredObject } from "../firebase/privateStorage";
 import { deleteTranscriptArtifacts } from "./dataDeletionService";
 import { recordAudit } from "./auditLogService";
+import { emitMeetingDeleted, snapshotMeetingForDelete } from "./webhookService";
 
 export interface TranscriptListResult {
   transcripts: (Transcript & { project?: { id: string; title: string } | null })[];
@@ -329,7 +330,10 @@ export class TranscriptCrudService {
       if (ref) await deleteStoredObject(ref);
     }
     await deleteTranscriptArtifacts([{ id: transcript.id, rawMicUrl: null, rawSysUrl: null }]);
+    // Webhooks: taken before the row goes, sent after. Neither call throws.
+    const webhookSnapshot = await snapshotMeetingForDelete(workspaceId, transcriptId);
     await prisma.transcript.delete({ where: { id: transcriptId } });
+    void emitMeetingDeleted(workspaceId, webhookSnapshot);
     await recordAudit({
       workspaceId,
       actor: { id: actor.userId },

@@ -1,3 +1,4 @@
+import { trackIntegrationConnected } from "./featureUsageService";
 import { IntegrationProvider, IntegrationStatus, Prisma } from "@prisma/client";
 import prisma from "../prisma/prismaClient";
 import EnvUtils from "../utils/EnvUtils";
@@ -144,6 +145,7 @@ class NotionIntegrationService {
         metadata: metadata as unknown as Prisma.InputJsonObject,
       },
     });
+    trackIntegrationConnected("NOTION", workspaceId);
   }
 
   public async getNotionSummary(workspaceId: string): Promise<NotionSummaryResponse> {

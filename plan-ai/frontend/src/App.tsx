@@ -7,6 +7,7 @@ import { PersistGate } from "redux-persist/integration/react";
 import { selectUser } from "./store/slices/auth/authSelector";
 import NavigationProvider from "./providers/NavigationProvider";
 import ClarityRouteGate from "./components/analytics/ClarityRouteGate";
+import FeatureUsageRouteTracker from "./components/analytics/FeatureUsageRouteTracker";
 import MfaCodeDialog from "./components/auth/MfaCodeDialog";
 import FirebaseAuthProvider, { useAuth } from "./providers/FirebaseAuthProvider";
 import TokenRefreshProvider from "./providers/TokenRefreshProvider";
@@ -66,6 +67,7 @@ import AdminMcp from "./pages/AdminMcp";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminRecentUsage from "./pages/admin/AdminRecentUsage";
 import AdminMaintenance from "./pages/admin/AdminMaintenance";
+import AdminFeatureUsage from "./pages/admin/AdminFeatureUsage";
 import "./App.css";
 import "./i18n";
 import { useGetCurrentUserQuery } from "./store/apis/authApi";
@@ -170,6 +172,7 @@ const AppContent: React.FC = () => {
           <Route path="/admin/users/:targetUserId/usage" element={<AiUsage />} />
           <Route path="/admin/usage" element={<AdminRecentUsage />} />
           <Route path="/admin/maintenance" element={<AdminMaintenance />} />
+          <Route path="/admin/feature-usage" element={<AdminFeatureUsage />} />
           <Route path="/admin/pricing" element={<AiPricing />} />
           <Route path="/admin/pptx-preview" element={<AdminPptxPreview />} />
           <Route path="/admin/emails" element={<AdminEmails />} />
@@ -198,6 +201,8 @@ const AppRoutes: React.FC = () => {
       <Router>
         <NavigationProvider />
         <ClarityRouteGate />
+        {/* Counts which main sections are opened. Sends a section name, nothing else. */}
+        <FeatureUsageRouteTracker />
         {/* Code prompt for sign-ins that need two-step verification */}
         <MfaCodeDialog />
         <FirebaseAuthProvider>

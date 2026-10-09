@@ -233,6 +233,15 @@ export const deletePrefix = async (prefix: string): Promise<void> => {
   await bucket.deleteFiles({ prefix, force: true });
 };
 
+/** Saves an object to a local file without holding it in memory. */
+export const downloadPathToFile = async (
+  storagePath: string,
+  destination: string,
+): Promise<void> => {
+  const bucket = await getBucket();
+  await bucket.file(storagePath).download({ destination });
+};
+
 export const downloadPath = async (storagePath: string): Promise<Buffer> => {
   const bucket = await getBucket();
   const [data] = await bucket.file(storagePath).download();

@@ -1,3 +1,4 @@
+import { trackIntegrationConnected } from "../services/featureUsageService";
 import {
   Body,
   Get,
@@ -211,6 +212,7 @@ export class LinearController extends BaseWorkspaceController {
           metadata: { authType: "OAUTH" },
         },
       });
+      trackIntegrationConnected("LINEAR", workspaceId);
 
       // Ensure the "Plan AI" label is created and cached for future task generation
       await linearIntegrationService.ensurePlanAiLabel(workspaceId);

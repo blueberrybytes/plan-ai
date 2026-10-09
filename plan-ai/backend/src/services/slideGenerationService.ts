@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import { countFeature } from "./featureUsageService";
 import { BrandTheme, Prisma } from "@prisma/client";
 
 export type PresentationWithRelations = Prisma.PresentationGetPayload<{
@@ -615,6 +616,7 @@ Select ONLY ONE slide type that best fits this request, and define a clear inten
       include: { template: true, theme: true },
     });
     if (data.isPublic !== undefined && data.isPublic !== existing.isPublic) {
+      if (data.isPublic) countFeature("slides.shared_public");
       await recordAudit({
         workspaceId,
         actor: { id: userId },

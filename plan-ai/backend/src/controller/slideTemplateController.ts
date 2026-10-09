@@ -1,3 +1,4 @@
+import { countFeature } from "../services/featureUsageService";
 import { BaseWorkspaceController } from "./BaseWorkspaceController";
 import { Get, Post, Put, Delete, Route, Tags, Body, Path, Security, Request } from "tsoa";
 import { type AuthenticatedRequest } from "../middleware/authMiddleware";
@@ -80,6 +81,7 @@ export class SlideTemplateController extends BaseWorkspaceController {
     @Request() request: AuthenticatedRequest,
   ): Promise<SlideTemplateResponse> {
     const { user, workspaceId } = await this.getAuthorizedWorkspaceAccess(request);
+    countFeature("slide_template.created");
     const input: CreateTemplateInput = {
       userId: user.id,
       workspaceId,

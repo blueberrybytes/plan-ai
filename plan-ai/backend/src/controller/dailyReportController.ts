@@ -1,3 +1,4 @@
+import { countFeature } from "../services/featureUsageService";
 import { Body, Get, Patch, Post, Query, Request, Route, Security, Tags } from "tsoa";
 import type { TaskUpdateStatus } from "@prisma/client";
 import { BaseWorkspaceController } from "./BaseWorkspaceController";
@@ -297,6 +298,7 @@ export class DailyReportController extends BaseWorkspaceController {
       await requireActiveSubscription(actor.workspaceId);
       await checkUsageLimit(actor.workspaceId, "llm");
       const result = await extractFromDayNote(actor, body.noteId);
+      countFeature("daily_report.submitted");
       // The service returns rows without names; read them back with names.
       const withNames = result.proposals.length
         ? await listProposals(actor, { noteId: body.noteId, status: "PROPOSED" })
@@ -351,6 +353,7 @@ export class DailyReportController extends BaseWorkspaceController {
       this.setStatus(403);
       throw { status: 403, message: "Only owners and admins can read the team report." };
     }
+    countFeature("team_report.viewed");
     return this.run(async () => {
       let report = await buildTeamReport(actor.workspaceId, resolveWeekStart(week));
       if (summary === true) {

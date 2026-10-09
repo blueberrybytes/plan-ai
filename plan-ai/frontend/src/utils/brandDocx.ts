@@ -15,6 +15,7 @@ import {
   BorderStyle,
 } from "docx";
 import { saveAs } from "file-saver";
+import { trackFeature } from "./trackFeature";
 
 /**
  * Generates branded Microsoft Word (.docx) files from a Brand Theme, using the
@@ -648,6 +649,7 @@ export const downloadThemeTemplateDocx = async (theme: BrandDocxTheme): Promise<
   const doc = buildDocument({ theme, logo });
   const blob = await withFontFallbacks(await Packer.toBlob(doc), brandFonts(theme));
   saveAs(blob, `${safeFileName(theme.name || "Brand")} — Theme Template.docx`);
+  trackFeature("theme.template_downloaded");
 };
 
 /**

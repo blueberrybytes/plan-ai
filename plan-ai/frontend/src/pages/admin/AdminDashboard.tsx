@@ -16,6 +16,7 @@ import MailIcon from "@mui/icons-material/MailOutline";
 import QueryStatsIcon from "@mui/icons-material/QueryStats";
 import ElectricalServicesIcon from "@mui/icons-material/ElectricalServices";
 import BuildIcon from "@mui/icons-material/BuildOutlined";
+import InsightsIcon from "@mui/icons-material/InsightsOutlined";
 import SidebarLayout from "../../components/layout/SidebarLayout";
 
 const AdminDashboard: React.FC = () => {
@@ -31,6 +32,12 @@ const AdminDashboard: React.FC = () => {
       description: "See who used the platform recently and what it cost, by month.",
       path: "/admin/usage",
       icon: <QueryStatsIcon fontSize="large" color="primary" />,
+    },
+    {
+      title: "Feature Usage",
+      description: "See which features people use and which nobody uses. Counts only.",
+      path: "/admin/feature-usage",
+      icon: <InsightsIcon fontSize="large" color="primary" />,
     },
     {
       title: "AI Pricing",

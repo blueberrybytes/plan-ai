@@ -4,6 +4,7 @@ import { components } from "../../types/api";
 
 type AdminEmailTemplatesResponse = components["schemas"]["AdminEmailTemplatesResponse"];
 export type QdrantWorkspaceBackfill = components["schemas"]["QdrantWorkspaceBackfillStatus"];
+type FeatureUsageReport = components["schemas"]["FeatureUsageReport"];
 
 export const adminApi = createApi({
   reducerPath: "adminApi",
@@ -30,6 +31,10 @@ export const adminApi = createApi({
       query: () => ({ url: "/api/admin/maintenance/qdrant-workspace/apply", method: "POST" }),
       invalidatesTags: ["QdrantWorkspace"],
     }),
+    // Which features are used, as counts. Every feature is listed, also unused ones.
+    getFeatureUsage: builder.query<FeatureUsageReport, { days: number }>({
+      query: ({ days }) => ({ url: "/api/admin/feature-usage", params: { days } }),
+    }),
   }),
 });
 
@@ -38,4 +43,5 @@ export const {
   useGetQdrantWorkspaceStatusQuery,
   useCheckQdrantWorkspaceMutation,
   useApplyQdrantWorkspaceBackfillMutation,
+  useGetFeatureUsageQuery,
 } = adminApi;

@@ -1,3 +1,4 @@
+import { countFeature } from "../services/featureUsageService";
 import { BaseWorkspaceController } from "./BaseWorkspaceController";
 import { Get, Post, Put, Delete, Body, Route, Security, Request, Tags, Path, Query } from "tsoa";
 import {
@@ -424,6 +425,7 @@ export class WorkspaceController extends BaseWorkspaceController {
         metadata: { role: body.role },
         request,
       });
+      countFeature("workspace.member_invited");
 
       return { success: true, message: "Invitation email sent successfully." };
     }
@@ -467,6 +469,7 @@ export class WorkspaceController extends BaseWorkspaceController {
       metadata: { email: invitedUserEmail, role: body.role },
       request,
     });
+    countFeature("workspace.member_invited");
 
     return { success: true, message: "User successfully invited and added to workspace." };
   }
@@ -824,6 +827,7 @@ export class WorkspaceController extends BaseWorkspaceController {
       throw { status: 403, message: "Only the workspace owner can export its data." };
     }
     await recordAudit({ workspaceId, actor: user, action: "workspace.exported", request });
+    countFeature("workspace.exported");
     return (await exportWorkspace(workspaceId, user.id)) as TsoaJsonObject;
   }
 

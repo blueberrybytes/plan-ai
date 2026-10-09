@@ -31,6 +31,7 @@ jest.mock("../../store/apis/billingApi", () => ({
   useGetSubscriptionQuery: () => ({ data: undefined }),
 }));
 jest.mock("./WorkspaceSwitcher", () => ({ __esModule: true, default: () => null }));
+jest.mock("../search/GlobalSearch", () => ({ __esModule: true, default: () => null }));
 jest.mock("../billing/SubscriptionBanner", () => ({ __esModule: true, default: () => null }));
 
 const mockDispatch = jest.fn();

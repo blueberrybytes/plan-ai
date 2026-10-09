@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
+import { chatMessageFeature, trackFeatureFor } from "../services/featureUsageService";
 import { Router } from "express";
 import {
   streamText,
@@ -153,6 +154,7 @@ router.post(
       // 1. Save User Message (with optional image/PDF attachments). Only the
       // user's own uploads are kept, as private gs:// URIs.
       const storedAttachments = toStoredAttachments(attachments, user.id);
+      trackFeatureFor(req, chatMessageFeature(thread.transcriptId), user.id, workspaceId);
       await prisma.chatMessage.create({
         data: {
           threadId,
@@ -597,6 +599,7 @@ router.post(
       }
 
       const { modelKey } = req.query;
+      trackFeatureFor(req, "chat.assistant_message", user.id, workspaceId);
       const result = await assistantChatService.handleAssistantStream(
         messages,
         user.id,
@@ -709,6 +712,7 @@ router.post(
         (req.body.projectId as string) || (req.query.projectId as string) || undefined;
       const modelKey = req.query.modelKey as string;
 
+      trackFeatureFor(req, "chat.assistant_message", user.id, workspaceId);
       const result = await assistantChatService.handleAssistantStream(
         req.body.messages,
         user.id,

@@ -1,3 +1,8 @@
+import {
+  countFeature,
+  countRecorderFeature,
+  meetingCreatedFeature,
+} from "../services/featureUsageService";
 import { BaseWorkspaceController } from "./BaseWorkspaceController";
 import {
   Route,
@@ -119,6 +124,18 @@ import { TranscriptMetadata, type PostMeetingTaskKind } from "../services/transc
 import { logger } from "../utils/logger";
 import { recordAudit } from "../services/auditLogService";
 import { recordMeetingAccess } from "../services/meetingAccessAudit";
+import { Readable } from "node:stream";
+import {
+  TranscriptExportError,
+  buildTranscriptExport,
+  isExportFormat,
+} from "../services/transcriptExportService";
+import {
+  ClipError,
+  createClip,
+  type ClipChannel,
+  type CreatedClip,
+} from "../services/transcriptClipService";
 import {
   getTranscriptPersonalData,
   type TranscriptPersonalData,
@@ -127,6 +144,20 @@ import {
   translateTranscript,
   type TranscriptTranslationResult,
 } from "../services/transcriptTranslationService";
+
+export type TranscriptExportFormatValue = "srt" | "vtt" | "txt";
+export type TranscriptClipChannelValue = ClipChannel;
+
+export interface CreateTranscriptClipRequest {
+  /** Seconds on the player's clock. */
+  startSeconds: number;
+  /** At least 1 second and at most 300 seconds after the start. */
+  endSeconds: number;
+  /** Both files mixed when left out. */
+  channel?: TranscriptClipChannelValue;
+}
+
+export type TranscriptClipResponse = CreatedClip;
 
 interface TranscriptContextSummary {
   id: string;
@@ -819,6 +850,7 @@ export class TranscriptsController extends BaseWorkspaceController {
         } as Prisma.JsonObject,
       },
     });
+    countRecorderFeature(request, meetingCreatedFeature(source ?? "RECORDING"));
 
     if (partsPrefixToDelete) {
       const prefix = partsPrefixToDelete;
@@ -899,6 +931,7 @@ export class TranscriptsController extends BaseWorkspaceController {
   ): Promise<ApiResponse<StandaloneTranscriptResponse>> {
     try {
       const { user, workspaceId } = await this.getPaidLlmAccess(request);
+      countFeature(meetingCreatedFeature(body.source));
 
       let transcript: Transcript;
 
@@ -1156,7 +1189,112 @@ export class TranscriptsController extends BaseWorkspaceController {
       metadata: { title: transcript.title },
       request,
     });
+    countFeature("meeting.audio_deleted");
     return { status: 200, data: { success: true } };
+  }
+
+  /**
+   * The transcript as a file: subtitles (srt, vtt) or plain text (txt).
+   * Subtitles need a timed transcript. A meeting with flat text only answers
+   * 409 for srt and vtt.
+   */
+  @Get("{id}/export")
+  @Security("ClientLevel")
+  public async exportTranscript(
+    @Request() request: AuthenticatedRequest,
+    @Path() id: string,
+    @Query() format: TranscriptExportFormatValue,
+  ): Promise<Readable> {
+    const { user, workspaceId } = await this.getAuthorizedWorkspaceAccess(request);
+    if (!isExportFormat(format)) {
+      this.setStatus(400);
+      throw { status: 400, message: "The format must be srt, vtt or txt." };
+    }
+    const transcript = await prisma.transcript.findFirst({
+      where: { id, workspaceId },
+      select: { id: true, title: true, transcript: true, utterances: true, metadata: true },
+    });
+    if (!transcript) {
+      this.setStatus(404);
+      throw { status: 404, message: "Transcript not found" };
+    }
+    let file;
+    try {
+      file = buildTranscriptExport(transcript, format);
+    } catch (err) {
+      if (err instanceof TranscriptExportError) {
+        this.setStatus(err.status);
+        throw { status: err.status, message: err.message };
+      }
+      throw err;
+    }
+    void recordMeetingAccess({
+      workspaceId,
+      actor: user,
+      transcriptId: id,
+      kind: "exported",
+      title: transcript.title,
+      detail: { format },
+      request,
+    });
+    this.setHeader("Content-Type", file.mimeType);
+    this.setHeader("Content-Disposition", `attachment; filename="${file.fileName}"`);
+    // A stream is sent as it is. A string would be sent as JSON, with quotes.
+    return Readable.from([file.content]);
+  }
+
+  /**
+   * Cuts a part of the recording (1 to 300 seconds) and returns a link to it
+   * that works for 7 days. The clip is a private file of its own.
+   */
+  @Post("{id}/clip")
+  @Security("ClientLevel")
+  public async createTranscriptClip(
+    @Request() request: AuthenticatedRequest,
+    @Path() id: string,
+    @Body() body: CreateTranscriptClipRequest,
+  ): Promise<ApiResponse<TranscriptClipResponse>> {
+    const { user, workspaceId } = await this.getAuthorizedWorkspaceAccess(request);
+    const transcript = await prisma.transcript.findFirst({
+      where: { id, workspaceId },
+      select: {
+        id: true,
+        workspaceId: true,
+        title: true,
+        rawMicUrl: true,
+        rawSysUrl: true,
+        durationSeconds: true,
+        metadata: true,
+      },
+    });
+    if (!transcript) {
+      this.setStatus(404);
+      throw { status: 404, message: "Transcript not found" };
+    }
+    let clip: CreatedClip;
+    try {
+      clip = await createClip(transcript, body);
+    } catch (err) {
+      if (err instanceof ClipError) {
+        this.setStatus(err.status);
+        throw { status: err.status, message: err.message };
+      }
+      throw err;
+    }
+    void recordMeetingAccess({
+      workspaceId,
+      actor: user,
+      transcriptId: id,
+      kind: "clip_created",
+      title: transcript.title,
+      detail: {
+        startSeconds: clip.startSeconds,
+        endSeconds: clip.endSeconds,
+        channel: clip.channel,
+      },
+      request,
+    });
+    return { status: 200, data: clip };
   }
 
   @Get("{id}")
@@ -1260,6 +1398,7 @@ export class TranscriptsController extends BaseWorkspaceController {
       id,
       body.overrides ?? {},
     );
+    countFeature("meeting.speakers_renamed");
 
     return {
       status: 200,
@@ -1279,6 +1418,7 @@ export class TranscriptsController extends BaseWorkspaceController {
     @Path() id: string,
   ): Promise<ApiResponse<TranscriptPersonalDataResponse>> {
     const { workspaceId } = await this.getAuthorizedWorkspaceAccess(request);
+    countFeature("meeting.personal_data_hidden");
     try {
       return { status: 200, data: await getTranscriptPersonalData(workspaceId, id) };
     } catch (err) {
@@ -1376,6 +1516,7 @@ export class TranscriptsController extends BaseWorkspaceController {
       source: existing.source,
       ...generationOptions,
     });
+    countFeature("meeting.reprocessed");
 
     return {
       status: 200,

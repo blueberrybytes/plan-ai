@@ -1,5 +1,13 @@
+import { countFeature } from "./featureUsageService";
 import { Prisma, Task, TaskPriority, TaskStatus, TaskType } from "@prisma/client";
 import prisma from "../prisma/prismaClient";
+import {
+  emitTaskCreated,
+  emitTaskDeleted,
+  emitTaskUpdated,
+  snapshotTaskForDelete,
+  taskChanges,
+} from "./webhookService";
 
 export interface TaskListOptions {
   projectId?: string;
@@ -12,6 +20,8 @@ export interface TaskListOptions {
 export interface TaskWithRelations extends Task {
   dependants: { dependsOnTaskId: string }[];
   dependencies: { taskId: string }[];
+  /** Comments on the task that were not deleted. */
+  _count?: { comments: number };
 }
 
 export interface TaskListResult {
@@ -62,6 +72,7 @@ export class TaskCrudService {
         taskId: true,
       },
     },
+    _count: { select: { comments: { where: { deletedAt: null } } } },
   } as const;
 
   public async listTasksForWorkspace(
@@ -146,6 +157,9 @@ export class TaskCrudService {
       await this.replaceDependencies(task.id, input.dependencyTaskIds);
     }
 
+    // Webhooks. Not awaited and never throws: the task is already saved.
+    void emitTaskCreated(workspaceId, task.id);
+
     return this.getTaskByIdWithRelations(task.id);
   }
 
@@ -176,6 +190,7 @@ export class TaskCrudService {
 
     if (typeof data.status !== "undefined") {
       updateData.status = data.status;
+      if (data.status !== current.status) countFeature("task.status_changed");
       // The weekly team report counts a task in the week it was closed.
       if (data.status === TaskStatus.COMPLETED && current.status !== TaskStatus.COMPLETED) {
         updateData.completedAt = new Date();
@@ -205,10 +220,12 @@ export class TaskCrudService {
       updateData.metadata = data.metadata === null ? Prisma.JsonNull : data.metadata;
     }
 
-    await prisma.task.update({
+    const saved = await prisma.task.update({
       where: { id: taskId },
       data: updateData,
     });
+    // Webhooks. Not awaited and never throws. Tests stub `update` with no row.
+    if (saved) void emitTaskUpdated(workspaceId, taskId, taskChanges(current, saved));
 
     if (Array.isArray(data.dependencyTaskIds)) {
       await this.replaceDependencies(taskId, data.dependencyTaskIds);
@@ -219,7 +236,10 @@ export class TaskCrudService {
 
   public async deleteTaskForWorkspace(workspaceId: string, taskId: string): Promise<void> {
     await this.getTaskForWorkspace(workspaceId, taskId);
+    // Taken before the row goes, sent after. Neither call throws.
+    const snapshot = await snapshotTaskForDelete(workspaceId, taskId);
     await prisma.task.delete({ where: { id: taskId } });
+    void emitTaskDeleted(workspaceId, snapshot);
   }
 
   private async assertProjectBelongsToWorkspace(workspaceId: string, projectId: string) {

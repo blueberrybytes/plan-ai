@@ -4,6 +4,109 @@
  */
 
 export interface paths {
+    "/api/webhooks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Lists the workspace's webhook endpoints. Never returns a secret. */
+        get: operations["ListEndpoints"];
+        put?: never;
+        /** @description Creates an endpoint. The secret is in this answer and cannot be read again. */
+        post: operations["CreateEndpoint"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/webhooks/{endpointId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["DeleteEndpoint"];
+        options?: never;
+        head?: never;
+        /** @description Changes the URL, the events, the description or turns the endpoint on or off. */
+        patch: operations["UpdateEndpoint"];
+        trace?: never;
+    };
+    "/api/webhooks/{endpointId}/rotate-secret": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Replaces the secret. The new one is in this answer and cannot be read again. */
+        post: operations["RotateSecret"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/webhooks/{endpointId}/deliveries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description The last 50 deliveries of an endpoint, newest first. */
+        get: operations["ListDeliveries"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/webhooks/{endpointId}/test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Sends a `ping` event to the endpoint, through the same queue and signing. */
+        post: operations["SendTestEvent"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/webhooks/deliveries/{deliveryId}/redeliver": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Sends one past delivery again, with the same id and payload. */
+        post: operations["Redeliver"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/version/desktop/latest": {
         parameters: {
             query?: never;
@@ -820,6 +923,47 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/transcripts/{id}/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description The transcript as a file: subtitles (srt, vtt) or plain text (txt).
+         *     Subtitles need a timed transcript. A meeting with flat text only answers
+         *     409 for srt and vtt.
+         */
+        get: operations["ExportTranscript"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/transcripts/{id}/clip": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description Cuts a part of the recording (1 to 300 seconds) and returns a link to it
+         *     that works for 7 days. The clip is a private file of its own.
+         */
+        post: operations["CreateTranscriptClip"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/transcripts/{id}": {
         parameters: {
             query?: never;
@@ -1324,6 +1468,27 @@ export interface paths {
          *     without the verifier.
          */
         post: operations["ExchangeMobileCode"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description Searches meetings, tasks, documents and projects of the workspace.
+         *     `q` needs at least 2 characters and is cut at 200. `limit` defaults to 20
+         *     and stops at 50.
+         */
+        get: operations["SearchWorkspace"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -2191,6 +2356,42 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/usage/feature": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["TrackFeatureUse"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/feature-usage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description Every feature of the catalogue with its uses in the last `days` days
+         *     (default 30, at most 365), the unused ones included.
+         */
+        get: operations["GetFeatureUsage"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/daily-report/status": {
         parameters: {
             query?: never;
@@ -2511,6 +2712,42 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/api/comments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description The thread of one task or one meeting, oldest first. */
+        get: operations["ListComments"];
+        put?: never;
+        /** @description Posts a comment. The people mentioned in it get an email. */
+        post: operations["CreateComment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/comments/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** @description Removes a comment: its author, or an owner or admin of the workspace. */
+        delete: operations["DeleteComment"];
+        options?: never;
+        head?: never;
+        /** @description Changes the text. Only the author. */
+        patch: operations["UpdateComment"];
         trace?: never;
     };
     "/api/chat/assistant/skills": {
@@ -3596,6 +3833,67 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** @description A webhook endpoint. The signing secret is never part of it. */
+        WebhookEndpointResponse: {
+            id: string;
+            url: string;
+            /** @description Event names this endpoint receives. Empty means all of them. */
+            events: string[];
+            description: string | null;
+            enabled: boolean;
+            /**
+             * Format: double
+             * @description Failed deliveries in a row. The endpoint is turned off at 20.
+             */
+            failureCount: number;
+            lastSuccessAt: string | null;
+            lastFailureAt: string | null;
+            createdAt: string;
+            updatedAt: string;
+        };
+        WebhookEndpointListResponse: {
+            endpoints: components["schemas"]["WebhookEndpointResponse"][];
+        };
+        /** @description Returned once, on creation and on rotation. The secret cannot be read again. */
+        WebhookEndpointSecretResponse: {
+            endpoint: components["schemas"]["WebhookEndpointResponse"];
+            secret: string;
+        };
+        CreateWebhookEndpointRequest: {
+            url: string;
+            events?: string[];
+            description?: string | null;
+        };
+        UpdateWebhookEndpointRequest: {
+            url?: string;
+            events?: string[];
+            description?: string | null;
+            enabled?: boolean;
+        };
+        TsoaJsonObject: ({
+            [key: string]: unknown;
+        } | unknown[] | string | number | boolean) | null;
+        WebhookDeliveryResponse: {
+            id: string;
+            event: string;
+            /** @description PENDING, SUCCESS or FAILED. */
+            status: string;
+            /** Format: double */
+            attempts: number;
+            /** Format: double */
+            responseStatus: number | null;
+            error: string | null;
+            createdAt: string;
+            deliveredAt: string | null;
+            /** @description What was sent. Null when its project became restricted afterwards. */
+            payload: components["schemas"]["TsoaJsonObject"];
+        };
+        WebhookDeliveryListResponse: {
+            deliveries: components["schemas"]["WebhookDeliveryResponse"][];
+        };
+        WebhookQueuedResponse: {
+            deliveryId: string;
+        };
         VersionInfo: {
             version: string;
             url: string;
@@ -3853,9 +4151,6 @@ export interface components {
         /** @enum {string} */
         "_36_Enums.ProjectStatus": "ACTIVE" | "COMPLETED" | "ARCHIVED";
         ProjectStatus: components["schemas"]["_36_Enums.ProjectStatus"];
-        TsoaJsonObject: ({
-            [key: string]: unknown;
-        } | unknown[] | string | number | boolean) | null;
         /** @enum {string} */
         "_36_Enums.ProjectVisibility": "WORKSPACE" | "RESTRICTED";
         ProjectVisibility: components["schemas"]["_36_Enums.ProjectVisibility"];
@@ -3976,6 +4271,11 @@ export interface components {
             completedAt: string | null;
             dependencies: string[];
             metadata: components["schemas"]["TsoaJsonObject"] | null;
+            /**
+             * Format: double
+             * @description Comments on the task. Missing where the task was loaded without them.
+             */
+            commentCount?: number;
             /** Format: date-time */
             createdAt: string;
             /** Format: date-time */
@@ -4669,6 +4969,54 @@ export interface components {
             /** Format: double */
             status: number;
         };
+        /** @enum {string} */
+        TranscriptExportFormatValue: "srt" | "vtt" | "txt";
+        /**
+         * @description A short piece of a meeting's audio to share: cut with ffmpeg, saved as a
+         *     private object of its own, and handed out as a signed link that expires.
+         *
+         *     Times are on the web player's clock. That is the microphone file's clock
+         *     when the meeting has one, otherwise the system audio file's. The system
+         *     audio file starts `micSysOffsetSeconds` later than the microphone file, so
+         *     its own position is the player's time minus that offset.
+         *
+         *     Clips are never deleted by this code. They stay in the bucket under
+         *     `clips/` until someone removes them.
+         * @enum {string}
+         */
+        ClipChannel: "mic" | "sys" | "mix";
+        CreatedClip: {
+            url: string;
+            /** @description ISO time at which the link stops working. */
+            expiresAt: string;
+            /** Format: double */
+            startSeconds: number;
+            /** Format: double */
+            endSeconds: number;
+            channel: components["schemas"]["ClipChannel"];
+        };
+        TranscriptClipResponse: components["schemas"]["CreatedClip"];
+        ApiResponse_TranscriptClipResponse_: {
+            message?: string;
+            data: components["schemas"]["TranscriptClipResponse"] | null;
+            /** Format: double */
+            status: number;
+        };
+        TranscriptClipChannelValue: components["schemas"]["ClipChannel"];
+        CreateTranscriptClipRequest: {
+            /**
+             * Format: double
+             * @description Seconds on the player's clock.
+             */
+            startSeconds: number;
+            /**
+             * Format: double
+             * @description At least 1 second and at most 300 seconds after the start.
+             */
+            endSeconds: number;
+            /** @description Both files mixed when left out. */
+            channel?: components["schemas"]["TranscriptClipChannelValue"];
+        };
         UpdateStandaloneTranscriptBody: {
             title?: string | null;
             source?: components["schemas"]["TranscriptSource"];
@@ -5040,6 +5388,38 @@ export interface components {
             data: {
                 customToken: string;
             } | null;
+            /** Format: double */
+            status: number;
+        };
+        /** @enum {string} */
+        SearchHitType: "meeting" | "task" | "document" | "project";
+        SearchHit: {
+            type: components["schemas"]["SearchHitType"];
+            id: string;
+            /** @description Empty for a meeting nobody named: the app shows its own "untitled" text. */
+            title: string;
+            /** @description About 160 characters around the first match. Null when there is no text to show. */
+            snippet: string | null;
+            /** @description True when every word of the query is in the title. These come first. */
+            titleMatch: boolean;
+            projectId: string | null;
+            projectTitle: string | null;
+            /** @description ISO date. For a meeting, when it was recorded. */
+            date: string;
+            /**
+             * Format: double
+             * @description Meetings only: where the matching sentence starts, in seconds.
+             */
+            atSeconds?: number;
+        };
+        GlobalSearchResult: {
+            query: string;
+            hits: components["schemas"]["SearchHit"][];
+        };
+        GlobalSearchResponse: components["schemas"]["GlobalSearchResult"];
+        ApiResponse_GlobalSearchResponse_: {
+            message?: string;
+            data: components["schemas"]["GlobalSearchResponse"] | null;
             /** Format: double */
             status: number;
         };
@@ -5477,6 +5857,82 @@ export interface components {
             installationId: number;
             repositories: components["schemas"]["GithubRepository"][];
         };
+        /**
+         * @description What an app sends to count one use of a feature. Only `feature` and
+         *     `client` are read. Anything else in the body is ignored and never stored.
+         */
+        TrackFeatureBody: {
+            /** @description A name from the fixed list in services/featureUsageService.ts. */
+            feature: string;
+            /** @description "web", "recorder" or "mobile". */
+            client: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /**
+         * @description Who reports the count: the server where the thing happens, or the web app.
+         * @enum {string}
+         */
+        FeatureSource: "server" | "client";
+        FeatureUsageByClient: {
+            /** Format: double */
+            web: number;
+            /** Format: double */
+            recorder: number;
+            /** Format: double */
+            mobile: number;
+            /** Format: double */
+            api: number;
+            /** Format: double */
+            mcp: number;
+        };
+        FeatureUsageRow: {
+            feature: string;
+            description: string;
+            /** @description "server" when the backend counts it, "client" when the web app reports it. */
+            source: components["schemas"]["FeatureSource"];
+            /**
+             * Format: double
+             * @description Uses in the period.
+             */
+            total: number;
+            /**
+             * Format: double
+             * @description Distinct users in the period.
+             */
+            users: number;
+            /**
+             * Format: double
+             * @description Distinct workspaces in the period.
+             */
+            workspaces: number;
+            byClient: components["schemas"]["FeatureUsageByClient"];
+            /** @description Last day with a use, in any period ("YYYY-MM-DD"). Null when never used. */
+            lastUsedDay: string | null;
+            /** @description Uses per day, one number per entry of `dayLabels`. */
+            series: number[];
+        };
+        FeatureUsageReport: {
+            /** Format: double */
+            days: number;
+            /** @description The UTC days of the period, oldest first ("YYYY-MM-DD"). */
+            dayLabels: string[];
+            /** Format: double */
+            totalUses: number;
+            /**
+             * Format: double
+             * @description Distinct users with at least one use in the period.
+             */
+            activeUsers: number;
+            /**
+             * Format: double
+             * @description Distinct workspaces with at least one use in the period.
+             */
+            activeWorkspaces: number;
+            /** @description Every feature of the catalogue, the unused ones included. */
+            features: components["schemas"]["FeatureUsageRow"][];
+        };
+        FeatureUsageReportResponse: components["schemas"]["FeatureUsageReport"];
         DailyReportStatusResponse: {
             /** @description On for this workspace. */
             enabled: boolean;
@@ -5672,6 +6128,60 @@ export interface components {
             url: string;
             /** Format: double */
             maxPages?: number;
+        };
+        CommentAuthorResponse: {
+            id: string;
+            name: string | null;
+            email: string;
+            avatarUrl: string | null;
+        };
+        CommentMentionResponse: {
+            userId: string;
+            name: string;
+        };
+        CommentResponse: {
+            id: string;
+            taskId: string | null;
+            transcriptId: string | null;
+            /** @description Text with mentions written as `@[Name](user:ID)`. Empty when deleted. */
+            body: string;
+            /** @description True when the comment was removed. It stays so the thread keeps its shape. */
+            deleted: boolean;
+            /**
+             * Format: double
+             * @description Seconds into the meeting this comment is about.
+             */
+            atSeconds: number | null;
+            author: components["schemas"]["CommentAuthorResponse"];
+            /** @description The members mentioned in the body. */
+            mentions: components["schemas"]["CommentMentionResponse"][];
+            /** @description The text was changed after it was posted. */
+            edited: boolean;
+            /** @description The signed-in user wrote it and may change the text. */
+            canEdit: boolean;
+            /** @description The signed-in user wrote it, or is an owner or admin of the workspace. */
+            canDelete: boolean;
+            createdAt: string;
+            updatedAt: string;
+        };
+        CommentListResponse: {
+            comments: components["schemas"]["CommentResponse"][];
+        };
+        CreateCommentRequest: {
+            /** @description The task the comment is on. Send this or `transcriptId`, not both. */
+            taskId?: string | null;
+            /** @description The meeting the comment is on. */
+            transcriptId?: string | null;
+            /** @description 1 to 5000 characters. A mention is written `@[Name](user:ID)`. */
+            body: string;
+            /**
+             * Format: double
+             * @description Seconds into the meeting. Only with `transcriptId`.
+             */
+            atSeconds?: number | null;
+        };
+        UpdateCommentRequest: {
+            body: string;
         };
         SkillsResponse: {
             skills: {
@@ -6561,6 +7071,184 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    ListEndpoints: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WebhookEndpointListResponse"];
+                };
+            };
+        };
+    };
+    CreateEndpoint: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateWebhookEndpointRequest"];
+            };
+        };
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WebhookEndpointSecretResponse"];
+                };
+            };
+        };
+    };
+    DeleteEndpoint: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                endpointId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    UpdateEndpoint: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                endpointId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateWebhookEndpointRequest"];
+            };
+        };
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WebhookEndpointResponse"];
+                };
+            };
+        };
+    };
+    RotateSecret: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                endpointId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WebhookEndpointSecretResponse"];
+                };
+            };
+        };
+    };
+    ListDeliveries: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                endpointId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WebhookDeliveryListResponse"];
+                };
+            };
+        };
+    };
+    SendTestEvent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                endpointId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WebhookQueuedResponse"];
+                };
+            };
+        };
+    };
+    Redeliver: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                deliveryId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WebhookQueuedResponse"];
+                };
+            };
+        };
+    };
     GetLatestDesktopVersion: {
         parameters: {
             query?: never;
@@ -8396,6 +9084,56 @@ export interface operations {
             };
         };
     };
+    ExportTranscript: {
+        parameters: {
+            query: {
+                format: components["schemas"]["TranscriptExportFormatValue"];
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": string;
+                };
+            };
+        };
+    };
+    CreateTranscriptClip: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateTranscriptClipRequest"];
+            };
+        };
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_TranscriptClipResponse_"];
+                };
+            };
+        };
+    };
     GetTranscript: {
         parameters: {
             query?: never;
@@ -9320,6 +10058,29 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ApiResponse__customToken-string__"];
+                };
+            };
+        };
+    };
+    SearchWorkspace: {
+        parameters: {
+            query: {
+                q: string;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_GlobalSearchResponse_"];
                 };
             };
         };
@@ -10661,6 +11422,50 @@ export interface operations {
             };
         };
     };
+    TrackFeatureUse: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TrackFeatureBody"];
+            };
+        };
+        responses: {
+            /** @description Counted or dropped */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    GetFeatureUsage: {
+        parameters: {
+            query?: {
+                days?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FeatureUsageReportResponse"];
+                };
+            };
+        };
+    };
     GetDailyReportStatus: {
         parameters: {
             query?: never;
@@ -11192,6 +11997,103 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ApiResponse_ContextResponse_"];
+                };
+            };
+        };
+    };
+    ListComments: {
+        parameters: {
+            query?: {
+                taskId?: string;
+                transcriptId?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommentListResponse"];
+                };
+            };
+        };
+    };
+    CreateComment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateCommentRequest"];
+            };
+        };
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommentResponse"];
+                };
+            };
+        };
+    };
+    DeleteComment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        success: boolean;
+                    };
+                };
+            };
+        };
+    };
+    UpdateComment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateCommentRequest"];
+            };
+        };
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommentResponse"];
                 };
             };
         };

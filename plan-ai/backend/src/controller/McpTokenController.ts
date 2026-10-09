@@ -1,3 +1,4 @@
+import { trackFeatureFor } from "../services/featureUsageService";
 import {
   Controller,
   Post,
@@ -85,6 +86,7 @@ export class McpTokenController extends Controller {
       body.workspaceId,
       body.name,
     );
+    trackFeatureFor(req, "mcp.token_created", dbUser.id, body.workspaceId);
 
     this.setStatus(201);
     return {

@@ -1,5 +1,6 @@
 import PptxGenJS from "pptxgenjs";
 import { TokenService } from "./tokenService";
+import { trackFeature } from "../utils/trackFeature";
 
 const fetchProxiedImage = async (url: string): Promise<string> => {
   try {
@@ -1558,5 +1559,6 @@ export const exportToPptx = async (options: ExportOptions): Promise<ExportResult
   }
 
   await pptx.writeFile({ fileName: `${options.title.replace(/[^a-z0-9-_]/gi, "_")}.pptx` });
+  trackFeature("slides.exported_pptx");
   return { skippedDiagramSlides };
 };

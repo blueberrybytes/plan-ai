@@ -52,7 +52,8 @@ export default withMermaid(defineConfig({
           { text: 'Task Sync (Jira, Linear, Trello, Notion, Asana)', link: '/features/task-sync' },
           { text: 'CRM Sync (Twenty)', link: '/features/crm-twenty' },
           { text: 'Docs & Diagrams', link: '/features/docs-diagrams' },
-          { text: 'MCP Server', link: '/features/mcp-server' }
+          { text: 'MCP Server', link: '/features/mcp-server' },
+          { text: 'API and Webhooks', link: '/features/api-webhooks' }
         ]
       },
       {

@@ -1,3 +1,4 @@
+import { countFeature, meetingCreatedFeature } from "../services/featureUsageService";
 import { BaseWorkspaceController } from "./BaseWorkspaceController";
 import {
   Route,
@@ -192,6 +193,8 @@ export interface TaskResponse {
   completedAt: Date | null;
   dependencies: string[];
   metadata: TsoaJsonObject | null;
+  /** Comments on the task. Missing where the task was loaded without them. */
+  commentCount?: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -331,6 +334,7 @@ export function mapTaskResponse(
     completedAt: task.completedAt,
     dependencies: (task.dependants ?? []).map((dependency) => dependency.dependsOnTaskId),
     metadata: (task.metadata as TsoaJsonObject) || null,
+    commentCount: (task as { _count?: { comments?: number } })._count?.comments,
     createdAt: task.createdAt,
     updatedAt: task.updatedAt,
   };
@@ -503,6 +507,7 @@ export class ProjectsModelController extends BaseWorkspaceController {
   ): Promise<ApiResponse<CreateTranscriptResponse>> {
     const { user, workspaceId } = await this.getPaidWorkspaceAccess(request);
     await this.getProjectForWorkspace(request, projectId, workspaceId);
+    countFeature("meeting.imported");
 
     if (!files || files.length === 0) {
       this.setStatus(400);
@@ -671,6 +676,7 @@ export class ProjectsModelController extends BaseWorkspaceController {
   ): Promise<ApiResponse<CreateTranscriptResponse>> {
     const { user, workspaceId } = await this.getPaidWorkspaceAccess(request);
     await this.getProjectForWorkspace(request, projectId, workspaceId);
+    countFeature("meeting.linked_to_project");
 
     const sourceTranscript = await prisma.transcript.findUnique({
       where: {
@@ -823,6 +829,7 @@ export class ProjectsModelController extends BaseWorkspaceController {
   ): Promise<ApiResponse<ConvertPainPointResponse>> {
     const { workspaceId } = await this.getAuthorizedWorkspaceAccess(request);
     await this.getProjectForWorkspace(request, projectId, workspaceId);
+    countFeature("task.created_from_pain_point");
 
     const painPoint = await prisma.painPoint.findFirst({
       where: { id: painPointId, transcriptId, workspaceId },
@@ -892,6 +899,7 @@ export class ProjectsModelController extends BaseWorkspaceController {
   ): Promise<ApiResponse<TranscriptResponse>> {
     const { user, workspaceId } = await this.getAuthorizedWorkspaceAccess(request);
     await this.getProjectForWorkspace(request, projectId, workspaceId);
+    countFeature(meetingCreatedFeature(body.source));
 
     const input: CreateTranscriptInput & { workspaceId: string } = {
       projectId,
@@ -1043,6 +1051,7 @@ export class ProjectsModelController extends BaseWorkspaceController {
       dependencyTaskIds: body.dependencyTaskIds,
       assigneeId: body.assigneeId,
     });
+    countFeature("task.created_manual");
 
     return {
       status: 201,
@@ -1103,6 +1112,7 @@ export class ProjectsModelController extends BaseWorkspaceController {
       workspaceId,
       userId: request.user!.uid,
     });
+    countFeature("task.refined");
 
     return {
       status: 200,
@@ -1186,6 +1196,7 @@ export class ProjectsModelController extends BaseWorkspaceController {
         },
       });
     });
+    countFeature("project.created");
 
     return {
       status: 201,
@@ -1230,6 +1241,7 @@ export class ProjectsModelController extends BaseWorkspaceController {
         visibility: body.visibility,
         memberUserIds: body.memberUserIds,
       });
+      if (body.visibility === "RESTRICTED") countFeature("project.restricted");
       await recordAudit({
         workspaceId,
         actor: user,
@@ -1298,6 +1310,7 @@ export class ProjectsModelController extends BaseWorkspaceController {
     await this.getProjectForWorkspace(request, projectId, workspaceId);
 
     const result = await generateProjectDigest(user.id, workspaceId, projectId);
+    countFeature("project.digest_generated");
     if (!result) {
       this.setStatus(400);
       throw {
@@ -1395,6 +1408,7 @@ export class ProjectsModelController extends BaseWorkspaceController {
   ): Promise<ApiResponse<CreateTranscriptResponse>> {
     const { user, workspaceId } = await this.getPaidWorkspaceAccess(request);
     await this.getProjectForWorkspace(request, projectId, workspaceId);
+    countFeature("meeting.created_manual");
 
     const contextPrompt = await this.buildContextPrompt(user.id, body.contextIds ?? []);
 

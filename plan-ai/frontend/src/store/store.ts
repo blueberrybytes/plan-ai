@@ -32,11 +32,14 @@ import { workspaceApi } from "./apis/workspaceApi";
 import { onboardingApi } from "./apis/onboardingApi";
 import { analyticsApi } from "./apis/analyticsApi";
 import { mcpApi } from "./apis/mcpApi";
+import { webhookApi } from "./apis/webhookApi";
 import { billingApi } from "./apis/billingApi";
 import { notesApi } from "./apis/notesApi";
 import { personalApi } from "./apis/personalApi";
 import { trackersApi } from "./apis/trackersApi";
 import { dailyReportApi } from "./apis/dailyReportApi";
+import { searchApi } from "./apis/searchApi";
+import { commentApi } from "./apis/commentApi";
 
 // Only these slices are written to localStorage. RTK Query caches (projects, chats,
 // contexts, transcripts...) hold meeting data and must not stay on a shared computer,
@@ -119,11 +122,14 @@ const store = configureStore({
       onboardingApi.middleware,
       analyticsApi.middleware,
       mcpApi.middleware,
+      webhookApi.middleware,
       billingApi.middleware,
       notesApi.middleware,
       personalApi.middleware,
       trackersApi.middleware,
       dailyReportApi.middleware,
+      searchApi.middleware,
+      commentApi.middleware,
     ),
 });
 

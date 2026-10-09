@@ -1,3 +1,4 @@
+import { chatMessageFeature, countFeature } from "../services/featureUsageService";
 import { BaseWorkspaceController } from "./BaseWorkspaceController";
 import {
   Get,
@@ -587,6 +588,7 @@ export class ChatController extends BaseWorkspaceController {
         content: body.content,
       },
     });
+    countFeature(chatMessageFeature(thread.transcriptId));
 
     // 2. Build Context (Vector RAG)
     let contextText = "";
@@ -749,6 +751,7 @@ ${MERMAID_SYNTAX_RULES}`;
     @Request() request: AuthenticatedRequest,
   ): Promise<ApiResponse<LiveChatMessageResponse>> {
     const { workspaceId } = await this.getPaidLlmAccess(request);
+    countFeature("chat.live_message");
 
     // 1. Retrieve Context (RAG) — accept either projectIds (preferred) or contextIds.
     let contextText = "";
@@ -931,6 +934,7 @@ CRITICAL: You MUST respond in the EXACT same language that the user used to ask 
     @Request() request: AuthenticatedRequest,
   ): Promise<ApiResponse<LiveSummaryResponse>> {
     const { workspaceId } = await this.getAuthorizedWorkspaceAccess(request);
+    countFeature("chat.live_summary");
 
     // 1. Retrieve Context (RAG) — accept either projectIds (preferred) or contextIds.
     const validContextIds = await this.resolveAndValidate(

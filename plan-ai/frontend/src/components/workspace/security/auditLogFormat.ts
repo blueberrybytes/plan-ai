@@ -20,6 +20,8 @@ const KNOWN_ACTIONS = new Set([
   "meeting.audio_accessed",
   "meeting.notes_sent",
   "meeting.translated",
+  "meeting.exported",
+  "meeting.clip_created",
   "document.shared",
   "document.unshared",
   "presentation.shared",
@@ -29,10 +31,15 @@ const KNOWN_ACTIONS = new Set([
   "note.shared",
   "note.unshared",
   "note.deleted",
+  "comment.deleted_by_admin",
   "integration.disconnected",
   "assistant.task_status_changed",
   "assistant.task_assigned",
   "platform_admin.access",
+  "webhook.created",
+  "webhook.deleted",
+  "webhook.secret_rotated",
+  "webhook.disabled",
 ]);
 
 /** Action prefixes offered in the filter. The backend matches `action` as a prefix. */
@@ -46,9 +53,11 @@ export const AUDIT_ACTION_GROUPS = [
   "presentation",
   "diagram",
   "note",
+  "comment",
   "integration",
   "assistant",
   "platform_admin",
+  "webhook",
 ] as const;
 
 /** i18n key of the human label, or null for an unknown action. */

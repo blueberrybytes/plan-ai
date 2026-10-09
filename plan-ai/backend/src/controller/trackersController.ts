@@ -1,3 +1,4 @@
+import { countFeature } from "../services/featureUsageService";
 import { Body, Delete, Get, Patch, Path, Post, Query, Request, Route, Security, Tags } from "tsoa";
 import type { Tracker, TrackerEntry } from "@prisma/client";
 import { BaseWorkspaceController } from "./BaseWorkspaceController";
@@ -212,6 +213,7 @@ export class TrackersController extends BaseWorkspaceController {
     @Body() body: TrackerInputRequest,
   ): Promise<TrackerResponse> {
     const owner = await this.owner(request);
+    countFeature("tracker.created");
     return this.run(async () => trackerResponse(await createTracker(owner, body ?? {})));
   }
 
@@ -306,6 +308,7 @@ export class TrackersController extends BaseWorkspaceController {
     }
     return this.run(async () => {
       await checkUsageLimit(owner.workspaceId, "llm");
+      countFeature("tracker.entries_extracted");
       const result = body.noteId
         ? await extractFromNote(owner, body.noteId, body.today)
         : await extractFromText(owner, body.text as string, body.today);
@@ -345,6 +348,7 @@ export class TrackersController extends BaseWorkspaceController {
     @Body() body: AddEntryRequest,
   ): Promise<TrackerEntryResponse> {
     const owner = await this.owner(request);
+    countFeature("tracker.entry_added");
     return this.run(async () => entryResponse(await addEntry(owner, id, body ?? {})));
   }
 }

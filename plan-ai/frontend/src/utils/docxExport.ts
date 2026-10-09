@@ -1,6 +1,7 @@
 import { convertMarkdownToDocx } from "@mohtasham/md-to-docx";
 import { saveAs } from "file-saver";
 import { exportThemedDocx, type BrandDocxTheme } from "./brandDocx";
+import { trackFeature } from "./trackFeature";
 
 /**
  * Export markdown as a .docx. When a Brand Theme is supplied (and carries real
@@ -14,6 +15,7 @@ export async function exportMarkdownToDocx(
   markdown: string,
   theme?: BrandDocxTheme | null,
 ) {
+  trackFeature("doc.exported_word");
   if (theme && (theme.primaryColor || theme.headingFont || theme.logoUrl)) {
     await exportThemedDocx(theme, title, markdown);
     return;

@@ -1,3 +1,4 @@
+import { countFeature } from "../services/featureUsageService";
 import { BaseWorkspaceController } from "./BaseWorkspaceController";
 import {
   Get,
@@ -89,6 +90,7 @@ export class DocController extends BaseWorkspaceController {
     @Request() request: AuthenticatedRequest,
   ): Promise<DocDocumentResponse> {
     const { user, workspaceId } = await this.getPaidGenerationAccess(request);
+    countFeature("doc.generated");
     this.setStatus(202);
     return docGenerationService.startGeneration(
       user.id,
@@ -110,6 +112,7 @@ export class DocController extends BaseWorkspaceController {
 
     // Parse the file and extract raw text
     const extractedText = await extractTextFromUpload(file);
+    countFeature("doc.imported");
 
     // Parse arrays
     const parsedContextIds = contextIds ? JSON.parse(contextIds) : [];
