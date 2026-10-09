@@ -1,3 +1,4 @@
+import { countFeature } from "../services/featureUsageService";
 import { BaseWorkspaceController } from "./BaseWorkspaceController";
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import {
@@ -256,6 +257,7 @@ export class ContextController extends BaseWorkspaceController {
 
     // Get the current context to ensure it exists and belongs to the user
     const context = await contextService.getContextForWorkspace(workspaceId, contextId);
+    countFeature("project.github_connected");
 
     // Merge existing metadata with github specific syncing metadata
     let newMetadata: Prisma.JsonObject = {};
@@ -367,6 +369,7 @@ export class ContextController extends BaseWorkspaceController {
     }
 
     const file = files[0];
+    countFeature("project.file_uploaded");
     const originalNameUtf8 = Buffer.from(file.originalname, "latin1").toString("utf8");
 
     if (!isSupportedContextFileMimeType(file.mimetype)) {
@@ -522,6 +525,7 @@ export class ContextController extends BaseWorkspaceController {
     @Body() body: { fileIds: string[] },
   ): Promise<ApiResponse<ContextResponse>> {
     const { user, workspaceId } = await this.getPaidWorkspaceAccess(request);
+    countFeature("project.drive_imported");
 
     if (!body.fileIds || body.fileIds.length === 0) {
       this.setStatus(400);
@@ -638,6 +642,7 @@ export class ContextController extends BaseWorkspaceController {
     @Body() body: { fileIds: string[] },
   ): Promise<ApiResponse<ContextResponse>> {
     const { user, workspaceId } = await this.getPaidWorkspaceAccess(request);
+    countFeature("project.onedrive_imported");
 
     if (!body.fileIds || body.fileIds.length === 0) {
       this.setStatus(400);
@@ -744,6 +749,7 @@ export class ContextController extends BaseWorkspaceController {
     }
     // People type "example.com". The rest of this method needs a full URL.
     const rootUrl = normalizeWebUrl(body.url);
+    countFeature("project.website_imported");
     if (!rootUrl) {
       this.setStatus(400);
       throw { status: 400, message: "That does not look like a web address." };

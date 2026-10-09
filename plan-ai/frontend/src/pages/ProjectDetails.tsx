@@ -171,6 +171,22 @@ const ProjectDetails: React.FC = () => {
     return JSON.parse(JSON.stringify(rawTasks)) as typeof rawTasks;
   }, [tasksData]);
 
+  // A link from the search carries ?task=<id>: open that task once it loads.
+  const linkedTaskId = searchParams.get("task");
+  React.useEffect(() => {
+    if (!linkedTaskId) return;
+    const linked = tasks.find((task) => task.id === linkedTaskId);
+    if (!linked) return;
+    setSelectedTask(linked);
+    setSearchParams(
+      (prev) => {
+        prev.delete("task");
+        return prev;
+      },
+      { replace: true },
+    );
+  }, [linkedTaskId, tasks, setSearchParams]);
+
   /**
    * Per-category bucket count. Always read against the FULL unfiltered task
    * list so the badge numbers don't change when the user switches filters.

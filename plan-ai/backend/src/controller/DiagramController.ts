@@ -1,3 +1,4 @@
+import { countFeature } from "../services/featureUsageService";
 import { BaseWorkspaceController } from "./BaseWorkspaceController";
 import {
   Controller,
@@ -139,6 +140,7 @@ export class DiagramController extends BaseWorkspaceController {
     @Body() body: CreateDiagramRequest,
   ): Promise<DiagramResponse> {
     const { user, workspaceId } = await this.getPaidGenerationAccess(request);
+    countFeature("diagram.generated");
 
     const contextIds = await mergeProjectAndContextIds(body.projectIds, body.contextIds, workspaceId);
 
@@ -222,6 +224,7 @@ export class DiagramController extends BaseWorkspaceController {
       },
     });
     if (body.isPublic !== undefined && body.isPublic !== current.isPublic) {
+      if (body.isPublic) countFeature("diagram.shared_public");
       await recordAudit({
         workspaceId,
         actor: user,
@@ -271,6 +274,7 @@ export class DiagramController extends BaseWorkspaceController {
     @Body() body: DiagramAssistantRequest,
   ): Promise<DiagramResponse> {
     const { user, workspaceId } = await this.getPaidWorkspaceAccess(request);
+    countFeature("diagram.assistant_edit");
 
     const diagram = await prisma.diagram.findFirst({
       where: { id: diagramId, workspaceId },

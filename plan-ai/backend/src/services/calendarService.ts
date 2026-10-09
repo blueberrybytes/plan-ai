@@ -1,3 +1,4 @@
+import { trackIntegrationConnected } from "./featureUsageService";
 import axios from "axios";
 import { createHmac, randomUUID, timingSafeEqual } from "crypto";
 import { google } from "googleapis";
@@ -540,6 +541,7 @@ class CalendarService {
         refreshToken: encryptedRefresh,
       },
     });
+    trackIntegrationConnected(provider, undefined, userId);
   }
 
   // ── Tokens ──────────────────────────────────────────────────────────────────

@@ -1,3 +1,4 @@
+import { countFeature } from "../services/featureUsageService";
 import { Body, Delete, Get, Patch, Path, Post, Query, Request, Route, Security, Tags } from "tsoa";
 import type { Note } from "@prisma/client";
 import { BaseWorkspaceController } from "./BaseWorkspaceController";
@@ -187,6 +188,7 @@ export class NotesController extends BaseWorkspaceController {
     @Body() body: CreateNoteRequest,
   ): Promise<NoteResponse> {
     const actor = await this.actor(request);
+    countFeature("note.created");
     return this.run(async () => toResponse(await createNote(actor, body ?? {}), actor.userId));
   }
 

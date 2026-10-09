@@ -49,14 +49,14 @@ export function resolveFfmpegPath(): string {
  * only as a local file: a playlist (HLS) or concat list disguised as audio
  * could otherwise make ffmpeg read other files on the server or fetch URLs.
  */
-const SAFE_INPUT_OPTIONS = [
+export const SAFE_INPUT_OPTIONS = [
   "-protocol_whitelist",
   "file",
   "-format_whitelist",
   "mov,matroska,webm,wav,mp3,ogg,aac,flac,caf,amr,asf",
 ];
 
-function runFfmpegToBuffer(args: string[]): Promise<Buffer> {
+export function runFfmpegToBuffer(args: string[]): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     const ff = spawn(resolveFfmpegPath(), args, { stdio: ["ignore", "pipe", "pipe"] });
     const out: Buffer[] = [];

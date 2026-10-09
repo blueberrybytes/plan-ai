@@ -1,3 +1,4 @@
+import { countFeature } from "../services/featureUsageService";
 import { BaseWorkspaceController } from "./BaseWorkspaceController";
 import { Get, Post, Delete, Patch, Route, Tags, Body, Path, Security, Request } from "tsoa";
 import { type Presentation, type SlideTemplate, type BrandTheme, Prisma } from "@prisma/client";
@@ -104,6 +105,7 @@ export class PresentationController extends BaseWorkspaceController {
       body.numSlides,
       body.modelKey,
     );
+    countFeature("slides.generated");
 
     this.setStatus(201);
     return this.mapPresentationResponse(presentation);
@@ -125,6 +127,7 @@ export class PresentationController extends BaseWorkspaceController {
       body.position,
       body.slideTypeKey,
     );
+    countFeature("slides.slide_generated");
 
     this.setStatus(200);
     return this.mapPresentationResponse(presentation);

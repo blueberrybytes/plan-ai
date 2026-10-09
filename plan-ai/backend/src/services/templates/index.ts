@@ -3,6 +3,7 @@ import { renderTelegramLeadEmail } from "./telegramLead";
 import { renderWeeklyDigestEmail } from "./weeklyDigest";
 import { renderMeetingNotesEmail } from "./meetingNotes";
 import { renderTeamReportEmail } from "./teamReport";
+import { renderCommentMentionEmail } from "./commentMention";
 
 export {
   renderWorkspaceInvitationEmail,
@@ -10,6 +11,7 @@ export {
   renderWeeklyDigestEmail,
   renderMeetingNotesEmail,
   renderTeamReportEmail,
+  renderCommentMentionEmail,
 };
 
 export function getAllEmailTemplates() {
@@ -78,6 +80,17 @@ export function getAllEmailTemplates() {
             },
           ],
         },
+      }),
+    },
+    {
+      id: "comment_mention",
+      name: "Comment Mention",
+      html: renderCommentMentionEmail({
+        authorName: "Anna Serra",
+        targetKind: "meeting",
+        targetTitle: "Kickoff Uriach, Impact Platform",
+        text: "@Xavier Mas can you confirm the CRM date they gave at this point?",
+        url: "https://plan-ai.blueberrybytes.com/recordings/clx1",
       }),
     },
     {

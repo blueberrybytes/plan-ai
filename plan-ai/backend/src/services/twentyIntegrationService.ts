@@ -1,3 +1,4 @@
+import { trackIntegrationConnected } from "./featureUsageService";
 import { IntegrationProvider, IntegrationStatus, Prisma, type Transcript } from "@prisma/client";
 import prisma from "../prisma/prismaClient";
 import { logger } from "../utils/logger";
@@ -373,6 +374,7 @@ class TwentyIntegrationService {
         metadata: metadata as unknown as Prisma.InputJsonObject,
       },
     });
+    trackIntegrationConnected("TWENTY", workspaceId);
 
     return { success: true };
   }

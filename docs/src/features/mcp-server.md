@@ -6,7 +6,7 @@ The point is the question you can finally ask in your editor: *"what did the cli
 
 ## What the assistant can do
 
-Thirteen tools, scoped to a single workspace:
+Fourteen tools, scoped to a single workspace:
 
 | Meetings | Projects & tasks | Search |
 | --- | --- | --- |
@@ -18,10 +18,13 @@ Thirteen tools, scoped to a single workspace:
 | | `update_task` | |
 | | `list_workspace_members` | |
 | | `generate_document` | |
+| | `add_comment` | |
 
 `semantic_search` is the interesting one: it searches a project's knowledge base by meaning rather than keyword, so "the thing we decided about billing" finds the right discussion even when nobody used the word "billing".
 
-Note that `create_task` and `update_task` **write**. A token is enough to modify your workspace — treat it like a password.
+`get_task_detail` and `get_meeting_detail` include the latest 30 comments of the task or meeting. `add_comment` posts a comment on one of them as the token's user, and the members mentioned in it get an email.
+
+Note that `create_task`, `update_task` and `add_comment` **write**. A token is enough to modify your workspace — treat it like a password.
 
 ## Creating a token
 

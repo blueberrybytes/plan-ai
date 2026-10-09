@@ -109,6 +109,10 @@ async function main() {
     await rawPrisma.diagram.create({
       data: { ...base, title: name, prompt: "x", type: "FLOWCHART", contextIds: [context.id] },
     });
+    // A comment on the task and one on the meeting.
+    const comment = { workspaceId: ws.id, authorId: creator.id, body: name };
+    await rawPrisma.comment.create({ data: { ...comment, taskId: task.id } });
+    await rawPrisma.comment.create({ data: { ...comment, transcriptId: transcript.id } });
     return { project, context, transcript, task };
   };
   const open = await seed("open", false);
@@ -130,6 +134,7 @@ async function main() {
     doc: await prisma.docDocument.count({ where: w }),
     slides: await prisma.presentation.count({ where: w }),
     diagram: await prisma.diagram.count({ where: w }),
+    comment: await prisma.comment.count({ where: w }),
   });
   const onlyOpen = {
     project: 1,
@@ -145,6 +150,7 @@ async function main() {
     doc: 2,
     slides: 1,
     diagram: 1,
+    comment: 2,
   };
   const everything = Object.fromEntries(Object.entries(onlyOpen).map(([k, v]) => [k, v * 2]));
 

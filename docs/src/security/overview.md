@@ -137,6 +137,20 @@ Some features make the server fetch a URL that a user can influence: importing a
 
 The image proxy only answers signed-in users. The assistant's web tool only opens links the user typed or links that a web search returned. Web searches go to DuckDuckGo and carry only the search query.
 
+## Usage counts
+
+Plan AI counts how many times each feature is used. We use the counts to decide what to improve and what to remove.
+
+What is stored is one row per person, feature and day, with a counter. The row holds the name of the feature, the app it came from (web, recorder, mobile, API or MCP), the id of the user, the id of the workspace, the day in UTC and the number of uses. Examples of feature names are "meeting recorded", "document generated" and "notes section opened".
+
+No content is stored with a count. There are no meeting titles, no transcript text, no search text, no page addresses, no IP address and no browser user agent. The feature names come from a fixed list in the code. A name that is not in the list is dropped, so an app cannot attach anything else to a count.
+
+Most counts are made by the backend at the moment the action happens. The web app also reports a few things only the browser can see: which main section was opened, and the files made in the browser (a document printed or saved as Word, a presentation saved as PowerPoint, the theme template, the audit log as CSV). For these it sends the name of the feature. It does not send the page address or any text.
+
+The counts stay in the Plan AI database. They are not sent to an analytics service or to any other company. In a private install they stay in your own database. Only platform admins of the install can read them, as totals per feature.
+
+The counts are not deleted automatically for now. They are deleted with the rest of the database if an install is removed.
+
 ## Error reports
 
 Error reports sent to Sentry carry no request bodies, email addresses, IP addresses or auth headers. The backend only sends them when `SENTRY_DSN` is set.

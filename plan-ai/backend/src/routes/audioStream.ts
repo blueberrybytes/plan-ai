@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
+import { recordingClient, trackFeature } from "../services/featureUsageService";
 import { randomBytes } from "node:crypto";
 import { WebSocketServer, WebSocket as WSWebSocket } from "ws";
 import { IncomingMessage, Server } from "http";
@@ -106,6 +107,13 @@ export function setupAudioStream(server: Server) {
           if (ws.readyState === ws.OPEN)
             ws.send(JSON.stringify({ type: "translation_error", code }));
         },
+      });
+      // The socket has no request scope, so the user and workspace are passed.
+      const usedBy = { workspaceId: currentWorkspaceId, userId: currentUserId };
+      trackFeature({
+        feature: "meeting.live_translation",
+        client: recordingClient(req),
+        ...usedBy,
       });
     };
 

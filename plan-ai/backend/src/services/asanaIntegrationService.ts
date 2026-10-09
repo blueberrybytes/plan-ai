@@ -1,3 +1,4 @@
+import { trackIntegrationConnected } from "./featureUsageService";
 import { createHmac, randomUUID, timingSafeEqual } from "node:crypto";
 import { URL } from "node:url";
 import { IntegrationProvider, IntegrationStatus, Prisma } from "@prisma/client";
@@ -300,6 +301,7 @@ class AsanaIntegrationService {
         metadata: metadata as unknown as Prisma.InputJsonObject,
       },
     });
+    trackIntegrationConnected("ASANA", params.workspaceId);
 
     return withDecryptedTokens(integration);
   }
@@ -365,6 +367,7 @@ class AsanaIntegrationService {
         metadata: metadata as unknown as Prisma.InputJsonObject,
       },
     });
+    trackIntegrationConnected("ASANA", workspaceId);
 
     return withDecryptedTokens(integration);
   }

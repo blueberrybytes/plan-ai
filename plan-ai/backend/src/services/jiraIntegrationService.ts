@@ -1,3 +1,4 @@
+import { trackIntegrationConnected } from "./featureUsageService";
 import { createHmac, randomUUID, timingSafeEqual } from "node:crypto";
 import { URL } from "node:url";
 import { IntegrationProvider, IntegrationStatus, Prisma } from "@prisma/client";
@@ -319,6 +320,7 @@ class JiraIntegrationService {
         metadata: metadata as unknown as Prisma.InputJsonObject,
       },
     });
+    trackIntegrationConnected("JIRA", params.workspaceId);
 
     return withDecryptedTokens(integration);
   }
@@ -397,6 +399,7 @@ class JiraIntegrationService {
         } as JiraIntegrationMetadata as unknown as Prisma.InputJsonObject,
       },
     });
+    trackIntegrationConnected("JIRA", workspaceId);
 
     return withDecryptedTokens(integration);
   }

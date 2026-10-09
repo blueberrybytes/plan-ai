@@ -3,10 +3,12 @@ import {
   renderTelegramLeadEmail,
   renderWeeklyDigestEmail,
   renderTeamReportEmail,
+  renderCommentMentionEmail,
 } from "./templates";
 import type { TelegramLeadEmailInput } from "./templates/telegramLead";
 import type { WeeklyDigestEmailInput } from "./templates/weeklyDigest";
 import type { TeamReportEmailInput } from "./templates/teamReport";
+import type { CommentMentionEmailInput } from "./templates/commentMention";
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
 const FROM_EMAIL = process.env.FROM_EMAIL || "Plan AI <noreply@plan-ai.blueberrybytes.com>";
@@ -202,5 +204,34 @@ export async function sendTeamReportEmail(to: string, input: TeamReportEmailInpu
   if (!response.ok) {
     const body = await response.text();
     throw new Error(`Team report email failed ${response.status}: ${body}`);
+  }
+}
+
+/** Tells a member they were mentioned in a comment. Throws on failure. */
+export async function sendCommentMentionEmail(
+  to: string,
+  input: CommentMentionEmailInput,
+): Promise<void> {
+  if (!RESEND_API_KEY) return;
+
+  const title = input.targetTitle.replace(/[\r\n]+/g, " ").slice(0, 120);
+  const response = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${RESEND_API_KEY}`,
+    },
+    body: JSON.stringify({
+      from: FROM_EMAIL,
+      to: [to],
+      subject: `${input.authorName.replace(/[\r\n]+/g, " ").slice(0, 80)} mentioned you in "${title}"`,
+      html: renderCommentMentionEmail(input),
+    }),
+    signal: AbortSignal.timeout(15000),
+  });
+
+  if (!response.ok) {
+    const body = await response.text();
+    throw new Error(`Comment mention email failed ${response.status}: ${body}`);
   }
 }

@@ -1,3 +1,4 @@
+import { countFeature } from "../services/featureUsageService";
 import { Body, Get, Post, Request, Route, Security, Tags, Response, Query } from "tsoa";
 import { BaseWorkspaceController } from "./BaseWorkspaceController";
 import type { AuthenticatedRequest } from "../middleware/authMiddleware";
@@ -110,6 +111,7 @@ export class TwentyController extends BaseWorkspaceController {
         opportunityId: body.opportunityId,
         forceSeparateNote: body.forceSeparateNote,
       });
+      countFeature("meeting.pushed_to_twenty");
 
       // Record it where every other post-meeting step reports, so the
       // transcript view shows this push like any other. Best-effort: the note

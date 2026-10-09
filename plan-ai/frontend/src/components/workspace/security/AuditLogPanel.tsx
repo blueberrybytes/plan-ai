@@ -34,6 +34,7 @@ import {
 } from "./auditLogFormat";
 import { downloadTextFile, fileSafeName } from "../../../utils/downloadFile";
 import { reportUnexpectedError } from "../../../utils/reportError";
+import { trackFeature } from "../../../utils/trackFeature";
 
 const PAGE_SIZE = 50;
 
@@ -135,6 +136,7 @@ const AuditLogPanel: React.FC<AuditLogPanelProps> = ({ workspaceName }) => {
       csv,
       "text/csv;charset=utf-8",
     );
+    trackFeature("workspace.audit_log_csv");
   };
 
   return (

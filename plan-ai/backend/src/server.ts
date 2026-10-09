@@ -16,6 +16,7 @@ import { RegisterRoutes } from "./routes/routes";
 import chatRouter from "./routes/chatRouter";
 import gitnexusRouter from "./routes/gitnexusRouter";
 import { mcpRouter } from "./routes/mcpRouter";
+import { publicApiRouter } from "./routes/publicApiRouter";
 import { accessScopeMiddleware } from "./services/accessScope";
 import { initializeContextVectorStore } from "./vector/contextFileVectorService";
 import { setupAudioStream } from "./routes/audioStream";
@@ -37,7 +38,10 @@ import { taskRefinementWorker } from "./workers/taskRefinementWorker";
 import { taskRefinementQueue } from "./queue/taskRefinementQueue";
 import { contextDocumentWorker } from "./workers/contextDocumentWorker";
 import { contextDocumentQueue } from "./queue/contextDocumentQueue";
+import { webhookDeliveryWorker } from "./workers/webhookDeliveryWorker";
+import { webhookDeliveryQueue } from "./queue/webhookDeliveryQueue";
 import { pricingCacheService } from "./services/pricingCacheService";
+import { startFeatureUsageFlusher, stopFeatureUsageFlusher } from "./services/featureUsageService";
 import { createBullBoard } from "@bull-board/api";
 import { BullMQAdapter } from "@bull-board/api/bullMQAdapter";
 import { ExpressAdapter } from "@bull-board/express";
@@ -137,6 +141,13 @@ const rateLimitHandler: Options["handler"] = (
     tags: { limiter: limiterName },
     extra: { ip, path: req.path, method: req.method, limit: options.max },
   });
+  // The public API answers every error in one shape.
+  if (req.originalUrl.startsWith("/api/v1/")) {
+    res.status(options.statusCode).json({
+      error: { code: "rate_limited", message: "Too many requests, please try again later." },
+    });
+    return;
+  }
   res.status(options.statusCode).json(options.message);
 };
 
@@ -172,6 +183,17 @@ const postOnly =
 app.use("/api/documents", postOnly(aiLimiter));
 app.use("/api/diagrams", postOnly(aiLimiter));
 app.use("/api/trackers/extract", aiLimiter);
+// Feature counts sent by the apps: a few per page view, so 60 a minute is plenty.
+app.use(
+  "/api/usage",
+  rateLimit({
+    windowMs: 60 * 1000,
+    max: 60,
+    standardHeaders: true,
+    legacyHeaders: false,
+    handler: rateLimitHandler,
+  }),
+);
 // The MCP endpoint and the queue dashboard are outside /api.
 app.use("/mcp", apiLimiter);
 app.use(
@@ -211,6 +233,10 @@ app.get("/api/auth/microsoft/mobile-callback", microsoftMobileCallback);
 // Plan AI MCP Server — outside /api to avoid TSOA middleware
 app.use("/mcp", mcpRouter);
 
+// Public REST API for customers' own systems. Personal tokens only work here.
+// Under /api, so the API rate limiter above already applies.
+app.use("/api/v1", publicApiRouter);
+
 // API docs and the database schema describe every endpoint and table. Useful
 // in development, a map for attackers in production unless turned on.
 const exposeApiDocs = !isProduction || process.env.EXPOSE_API_DOCS === "true";
@@ -249,6 +275,7 @@ createBullBoard({
     new BullMQAdapter(weeklyDigestQueue),
     new BullMQAdapter(teamReportQueue),
     new BullMQAdapter(storageCleanupQueue),
+    new BullMQAdapter(webhookDeliveryQueue),
   ],
   serverAdapter: serverAdapter,
 });
@@ -481,6 +508,8 @@ const startServer = async () => {
 
   // Bind WebSocket server after the HTTP server starts listening
   setupAudioStream(server);
+  // Feature counts are kept in memory and written every few seconds.
+  startFeatureUsageFlusher();
 };
 
 void startServer();
@@ -513,6 +542,8 @@ const closeServer = async (cb?: () => void) => {
   }, SHUTDOWN_GRACE_MS);
   deadline.unref();
 
+  // First, while the database is surely still reachable. It never throws.
+  await stopFeatureUsageFlusher();
   logger.info("Closing background workers...");
   await githubContextWorker.close();
   await pricingSyncWorker.close();
@@ -522,6 +553,7 @@ const closeServer = async (cb?: () => void) => {
   await weeklyDigestWorker.close();
   await teamReportWorker.close();
   await storageCleanupWorker.close();
+  await webhookDeliveryWorker.close();
   pricingCacheService.close();
 
   if (server) {

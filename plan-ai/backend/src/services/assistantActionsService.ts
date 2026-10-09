@@ -1,10 +1,4 @@
-import {
-  PrismaClient,
-  IntegrationProvider,
-  IntegrationStatus,
-  Prisma,
-  TaskStatus,
-} from "@prisma/client";
+import { IntegrationProvider, IntegrationStatus, Prisma, TaskStatus } from "@prisma/client";
 import { linearIntegrationService } from "./linearIntegrationService";
 import { jiraIntegrationService } from "./jiraIntegrationService";
 import { asanaIntegrationService } from "./asanaIntegrationService";
@@ -19,8 +13,9 @@ import {
 } from "./integrationMetadataTypes";
 import { TaskMetadata } from "./taskMetadataTypes";
 import { logger } from "../utils/logger";
-
-const prisma = new PrismaClient();
+// The shared client: it leaves out the tasks of restricted projects the
+// user is not part of. A client created here would skip that rule.
+import prisma from "../prisma/prismaClient";
 
 /**
  * External, side-effectful actions the in-app assistant can take: syncing tasks
@@ -361,6 +356,20 @@ export const createIssuesFromTasks = async (
 
 const VALID_STATUS = Object.values(TaskStatus) as string[];
 
+/**
+ * Tells the webhooks a task changed. The service is loaded on use, so this
+ * file does not pull the shared Prisma client in at import. Never throws.
+ */
+const announceTaskUpdate = (
+  workspaceId: string,
+  taskId: string,
+  changed: ("status" | "assignee")[],
+): void => {
+  void import("./webhookService")
+    .then(({ emitTaskUpdated }) => emitTaskUpdated(workspaceId, taskId, changed))
+    .catch(() => undefined);
+};
+
 /** Updates a task's status (BACKLOG/IN_PROGRESS/BLOCKED/COMPLETED/ARCHIVED). */
 export const updateTaskStatus = async (
   workspaceId: string,
@@ -372,11 +381,13 @@ export const updateTaskStatus = async (
   }
   const task = await prisma.task.findFirst({
     where: { id: taskId, project: { workspaceId } },
-    select: { id: true, title: true },
+    select: { id: true, title: true, status: true },
   });
   if (!task) return { ok: false, reason: "Task not found in this workspace." };
 
   await prisma.task.update({ where: { id: taskId }, data: { status: status as TaskStatus } });
+  // Webhooks. Not awaited and never throws.
+  if (task.status !== status) announceTaskUpdate(workspaceId, taskId, ["status"]);
   return { ok: true, title: task.title, status };
 };
 
@@ -391,12 +402,14 @@ export const assignTask = async (
 ): Promise<{ ok: boolean; reason?: string; title?: string; assignee?: string }> => {
   const task = await prisma.task.findFirst({
     where: { id: taskId, project: { workspaceId } },
-    select: { id: true, title: true },
+    select: { id: true, title: true, assigneeId: true },
   });
   if (!task) return { ok: false, reason: "Task not found in this workspace." };
 
   if (!email) {
     await prisma.task.update({ where: { id: taskId }, data: { assigneeId: null } });
+    // Webhooks. Not awaited and never throws.
+    if (task.assigneeId) announceTaskUpdate(workspaceId, taskId, ["assignee"]);
     return { ok: true, title: task.title, assignee: "unassigned" };
   }
 
@@ -408,5 +421,6 @@ export const assignTask = async (
   if (!member) return { ok: false, reason: `No workspace member with email ${email}.` };
 
   await prisma.task.update({ where: { id: taskId }, data: { assigneeId: member.user.id } });
+  if (task.assigneeId !== member.user.id) announceTaskUpdate(workspaceId, taskId, ["assignee"]);
   return { ok: true, title: task.title, assignee: member.user.name || member.user.email };
 };

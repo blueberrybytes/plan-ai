@@ -3,6 +3,7 @@ import { AuthenticatedRequest } from "../middleware/authMiddleware";
 import { resolveWorkspaceAccess, workspaceIdFromHeaders } from "../services/workspaceAccess";
 import { requireActiveSubscription } from "../services/subscriptionGuard";
 import { checkUsageLimit } from "../services/usageLimitGuard";
+import { rememberRequester } from "../services/featureUsageService";
 
 export abstract class BaseWorkspaceController extends Controller {
   protected async getAuthorizedWorkspaceAccess(request: AuthenticatedRequest) {
@@ -12,12 +13,15 @@ export abstract class BaseWorkspaceController extends Controller {
     }
 
     try {
-      return await resolveWorkspaceAccess({
+      const access = await resolveWorkspaceAccess({
         firebaseUid: request.user.uid,
         workspaceId: workspaceIdFromHeaders(request.headers),
         signIn: request.user,
         request,
       });
+      // For the feature counts: who made this request (see featureUsageService).
+      rememberRequester(request, access.user.id, access.workspaceId);
+      return access;
     } catch (err) {
       const status = (err as { status?: number })?.status;
       if (status) this.setStatus(status);

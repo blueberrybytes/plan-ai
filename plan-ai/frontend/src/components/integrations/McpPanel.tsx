@@ -111,7 +111,7 @@ const MCP_TOOLS = [
     name: "get_task_detail",
     emoji: "📝",
     description:
-      "Full detail of a single task: description, acceptance criteria, assignee, parent and subtasks.",
+      "Full detail of a single task: description, acceptance criteria, assignee, parent, subtasks and latest comments.",
   },
   {
     name: "get_project_detail",
@@ -133,6 +133,11 @@ const MCP_TOOLS = [
     name: "update_task",
     emoji: "♻️",
     description: "Updates a task's status, priority, title, description, type or due date.",
+  },
+  {
+    name: "add_comment",
+    emoji: "💬",
+    description: "Adds a comment to a task or a meeting. Members mentioned in it get an email.",
   },
   {
     name: "semantic_search",

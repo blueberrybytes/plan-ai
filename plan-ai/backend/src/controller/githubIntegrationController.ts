@@ -1,3 +1,4 @@
+import { trackIntegrationConnected } from "../services/featureUsageService";
 import {
   Controller,
   Post,
@@ -126,6 +127,7 @@ export class GithubIntegrationController extends Controller {
         accessToken: "", // Not used directly for Github Apps which have their own key
       },
     });
+    trackIntegrationConnected("GITHUB");
 
     return { success: true };
   }

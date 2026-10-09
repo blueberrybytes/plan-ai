@@ -1,4 +1,5 @@
 import { recordAudit, type AuditActor, type AuditRequestInfo } from "./auditLogService";
+import { trackMeetingAccess } from "./featureUsageService";
 
 /**
  * Who read which meeting, for the workspace audit log.
@@ -8,10 +9,19 @@ import { recordAudit, type AuditActor, type AuditRequestInfo } from "./auditLogS
  * it through MCP. Owners and admins see them in the audit log under "meeting".
  */
 
-export type MeetingAccessKind = "viewed" | "audio_accessed" | "notes_sent" | "translated";
+export type MeetingAccessKind =
+  | "viewed"
+  | "audio_accessed"
+  | "notes_sent"
+  | "translated"
+  | "exported"
+  | "clip_created";
 
-/** Where the read came from. "app" is the web, the recorder or the phone. */
-export type MeetingAccessChannel = "app" | "mcp";
+/**
+ * Where the read came from. "app" is the web, the recorder or the phone,
+ * "api" is the public REST API.
+ */
+export type MeetingAccessChannel = "app" | "mcp" | "api";
 
 export interface MeetingAccess {
   workspaceId: string;
@@ -62,6 +72,9 @@ export function recordMeetingAccess(access: MeetingAccess, now = Date.now()): Pr
     const key = `${access.actor.id ?? "?"}:${access.transcriptId}:${access.kind}:${channel}`;
     if (seenRecently(key, now)) return Promise.resolve();
   }
+  // Counts only: the kind, the workspace and the user. No title, no detail.
+  const { kind, workspaceId, request } = access;
+  trackMeetingAccess({ kind, channel, workspaceId, userId: access.actor.id, request });
   return recordAudit({
     workspaceId: access.workspaceId,
     actor: access.actor,

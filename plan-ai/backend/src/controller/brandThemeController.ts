@@ -1,3 +1,4 @@
+import { countFeature } from "../services/featureUsageService";
 import { BaseWorkspaceController } from "./BaseWorkspaceController";
 import { Get, Post, Patch, Delete, Route, Tags, Body, Path, Security, Request } from "tsoa";
 import { type AuthenticatedRequest } from "../middleware/authMiddleware";
@@ -61,6 +62,7 @@ export class BrandThemeController extends BaseWorkspaceController {
     @Request() request: AuthenticatedRequest,
   ): Promise<BrandThemeResponse> {
     const { user, workspaceId } = await this.getAuthorizedWorkspaceAccess(request);
+    countFeature("theme.created");
     this.setStatus(201);
     return brandThemeService.create(user.id, {
       ...body,
@@ -74,6 +76,7 @@ export class BrandThemeController extends BaseWorkspaceController {
     @Request() request: AuthenticatedRequest,
   ): Promise<AnalyzeUrlResponse> {
     const { workspaceId } = await this.getAuthorizedWorkspaceAccess(request);
+    countFeature("theme.imported_from_website");
     const analyzer = new WebsiteThemeAnalyzerService();
     return analyzer.analyzeUrl(body.url, workspaceId);
   }

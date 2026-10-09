@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import { trackIntegrationConnected } from "./featureUsageService";
 import { google, drive_v3, Auth } from "googleapis";
 import { Readable } from "stream";
 import EnvUtils from "../utils/EnvUtils";
@@ -126,6 +127,7 @@ class GoogleIntegrationService {
         accountName: tokens.accountName,
       },
     });
+    trackIntegrationConnected("GOOGLE_DRIVE", workspaceId);
   }
 
   public async getGoogleSummary(workspaceId: string): Promise<GoogleSummaryResponse> {

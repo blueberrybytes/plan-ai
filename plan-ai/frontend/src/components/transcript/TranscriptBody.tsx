@@ -12,8 +12,10 @@ import type { SpeakerInsight } from "./SpeakerInsightsTab";
 import { parseSpeakerBlocks } from "./speakerBlocks";
 import TranscriptTranslationBar from "./TranscriptTranslationBar";
 import TranscriptPersonalDataBar from "./TranscriptPersonalDataBar";
+import TranscriptShareBar from "./TranscriptShareBar";
 import { applyTranslation } from "./transcriptTranslation";
 import type { TranscriptTranslation } from "../../store/apis/transcriptApi";
+import MeetingComments from "../comments/MeetingComments";
 
 const formatTimestamp = (seconds?: number | null) => {
   if (seconds == null) return "";
@@ -81,6 +83,17 @@ const TranscriptBody = ({ transcript }: { transcript: any }) => {
             ))}
           </Box>
         </Box>
+      )}
+      {transcript?.id && <MeetingComments transcriptId={transcript.id} playerRef={playerRef} />}
+      {transcript?.id && (
+        <TranscriptShareBar
+          transcriptId={transcript.id}
+          title={transcript.title}
+          durationSeconds={transcript.durationSeconds}
+          hasText={hasText}
+          hasTimedText={Array.isArray(transcript.utterances) && transcript.utterances.length > 0}
+          playerRef={playerRef}
+        />
       )}
       {transcript?.id && hasText && (
         <TranscriptTranslationBar

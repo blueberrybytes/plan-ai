@@ -31,11 +31,14 @@ import { workspaceApi } from "./apis/workspaceApi";
 import { onboardingApi } from "./apis/onboardingApi";
 import { analyticsApi } from "./apis/analyticsApi";
 import { mcpApi } from "./apis/mcpApi";
+import { webhookApi } from "./apis/webhookApi";
 import { billingApi } from "./apis/billingApi";
 import { notesApi } from "./apis/notesApi";
 import { personalApi } from "./apis/personalApi";
 import { trackersApi } from "./apis/trackersApi";
 import { dailyReportApi } from "./apis/dailyReportApi";
+import { searchApi } from "./apis/searchApi";
+import { commentApi } from "./apis/commentApi";
 
 // Define the combined reducers
 const appReducers = combineReducers({
@@ -69,11 +72,14 @@ const appReducers = combineReducers({
   [onboardingApi.reducerPath]: onboardingApi.reducer,
   [analyticsApi.reducerPath]: analyticsApi.reducer,
   [mcpApi.reducerPath]: mcpApi.reducer,
+  [webhookApi.reducerPath]: webhookApi.reducer,
   [billingApi.reducerPath]: billingApi.reducer,
   [notesApi.reducerPath]: notesApi.reducer,
   [personalApi.reducerPath]: personalApi.reducer,
   [trackersApi.reducerPath]: trackersApi.reducer,
   [dailyReportApi.reducerPath]: dailyReportApi.reducer,
+  [searchApi.reducerPath]: searchApi.reducer,
+  [commentApi.reducerPath]: commentApi.reducer,
 });
 
 // Create a root reducer that can handle the reset action
@@ -113,6 +119,8 @@ const rootReducers = (state: any, action: any) => {
       [notesApi.reducerPath]: undefined,
       [trackersApi.reducerPath]: undefined,
       [dailyReportApi.reducerPath]: undefined,
+      [searchApi.reducerPath]: undefined,
+      [commentApi.reducerPath]: undefined,
       // Note: We deliberately exclude authApi, accountApi, userApi, adminApi, onboardingApi, personalApi
       // because their context is global (User-level) and doesn't rotate.
       // We also exclude workspaceApi so the switcher UI doesn't stutter/reload its dropdown list.

@@ -7,6 +7,242 @@
 		"requestBodies": {},
 		"responses": {},
 		"schemas": {
+			"WebhookEndpointResponse": {
+				"description": "A webhook endpoint. The signing secret is never part of it.",
+				"properties": {
+					"id": {
+						"type": "string"
+					},
+					"url": {
+						"type": "string"
+					},
+					"events": {
+						"items": {
+							"type": "string"
+						},
+						"type": "array",
+						"description": "Event names this endpoint receives. Empty means all of them."
+					},
+					"description": {
+						"type": "string",
+						"nullable": true
+					},
+					"enabled": {
+						"type": "boolean"
+					},
+					"failureCount": {
+						"type": "number",
+						"format": "double",
+						"description": "Failed deliveries in a row. The endpoint is turned off at 20."
+					},
+					"lastSuccessAt": {
+						"type": "string",
+						"nullable": true
+					},
+					"lastFailureAt": {
+						"type": "string",
+						"nullable": true
+					},
+					"createdAt": {
+						"type": "string"
+					},
+					"updatedAt": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"id",
+					"url",
+					"events",
+					"description",
+					"enabled",
+					"failureCount",
+					"lastSuccessAt",
+					"lastFailureAt",
+					"createdAt",
+					"updatedAt"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"WebhookEndpointListResponse": {
+				"properties": {
+					"endpoints": {
+						"items": {
+							"$ref": "#/components/schemas/WebhookEndpointResponse"
+						},
+						"type": "array"
+					}
+				},
+				"required": [
+					"endpoints"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"WebhookEndpointSecretResponse": {
+				"description": "Returned once, on creation and on rotation. The secret cannot be read again.",
+				"properties": {
+					"endpoint": {
+						"$ref": "#/components/schemas/WebhookEndpointResponse"
+					},
+					"secret": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"endpoint",
+					"secret"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"CreateWebhookEndpointRequest": {
+				"properties": {
+					"url": {
+						"type": "string"
+					},
+					"events": {
+						"items": {
+							"type": "string"
+						},
+						"type": "array"
+					},
+					"description": {
+						"type": "string",
+						"nullable": true
+					}
+				},
+				"required": [
+					"url"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"UpdateWebhookEndpointRequest": {
+				"properties": {
+					"url": {
+						"type": "string"
+					},
+					"events": {
+						"items": {
+							"type": "string"
+						},
+						"type": "array"
+					},
+					"description": {
+						"type": "string",
+						"nullable": true
+					},
+					"enabled": {
+						"type": "boolean"
+					}
+				},
+				"type": "object",
+				"additionalProperties": false
+			},
+			"TsoaJsonObject": {
+				"anyOf": [
+					{
+						"properties": {},
+						"additionalProperties": {},
+						"type": "object"
+					},
+					{
+						"items": {},
+						"type": "array"
+					},
+					{
+						"type": "string"
+					},
+					{
+						"type": "number",
+						"format": "double"
+					},
+					{
+						"type": "boolean"
+					}
+				],
+				"nullable": true
+			},
+			"WebhookDeliveryResponse": {
+				"properties": {
+					"id": {
+						"type": "string"
+					},
+					"event": {
+						"type": "string"
+					},
+					"status": {
+						"type": "string",
+						"description": "PENDING, SUCCESS or FAILED."
+					},
+					"attempts": {
+						"type": "number",
+						"format": "double"
+					},
+					"responseStatus": {
+						"type": "number",
+						"format": "double",
+						"nullable": true
+					},
+					"error": {
+						"type": "string",
+						"nullable": true
+					},
+					"createdAt": {
+						"type": "string"
+					},
+					"deliveredAt": {
+						"type": "string",
+						"nullable": true
+					},
+					"payload": {
+						"$ref": "#/components/schemas/TsoaJsonObject",
+						"description": "What was sent. Null when its project became restricted afterwards."
+					}
+				},
+				"required": [
+					"id",
+					"event",
+					"status",
+					"attempts",
+					"responseStatus",
+					"error",
+					"createdAt",
+					"deliveredAt",
+					"payload"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"WebhookDeliveryListResponse": {
+				"properties": {
+					"deliveries": {
+						"items": {
+							"$ref": "#/components/schemas/WebhookDeliveryResponse"
+						},
+						"type": "array"
+					}
+				},
+				"required": [
+					"deliveries"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"WebhookQueuedResponse": {
+				"properties": {
+					"deliveryId": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"deliveryId"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
 			"VersionInfo": {
 				"properties": {
 					"version": {
@@ -884,30 +1120,6 @@
 			"ProjectStatus": {
 				"$ref": "#/components/schemas/_36_Enums.ProjectStatus"
 			},
-			"TsoaJsonObject": {
-				"anyOf": [
-					{
-						"properties": {},
-						"additionalProperties": {},
-						"type": "object"
-					},
-					{
-						"items": {},
-						"type": "array"
-					},
-					{
-						"type": "string"
-					},
-					{
-						"type": "number",
-						"format": "double"
-					},
-					{
-						"type": "boolean"
-					}
-				],
-				"nullable": true
-			},
 			"_36_Enums.ProjectVisibility": {
 				"type": "string",
 				"enum": [
@@ -1344,6 +1556,11 @@
 							}
 						],
 						"nullable": true
+					},
+					"commentCount": {
+						"type": "number",
+						"format": "double",
+						"description": "Comments on the task. Missing where the task was loaded without them."
 					},
 					"createdAt": {
 						"type": "string",
@@ -3583,6 +3800,108 @@
 				],
 				"type": "object"
 			},
+			"TranscriptExportFormatValue": {
+				"type": "string",
+				"enum": [
+					"srt",
+					"vtt",
+					"txt"
+				]
+			},
+			"ClipChannel": {
+				"type": "string",
+				"enum": [
+					"mic",
+					"sys",
+					"mix"
+				],
+				"description": "A short piece of a meeting's audio to share: cut with ffmpeg, saved as a\nprivate object of its own, and handed out as a signed link that expires.\n\nTimes are on the web player's clock. That is the microphone file's clock\nwhen the meeting has one, otherwise the system audio file's. The system\naudio file starts `micSysOffsetSeconds` later than the microphone file, so\nits own position is the player's time minus that offset.\n\nClips are never deleted by this code. They stay in the bucket under\n`clips/` until someone removes them."
+			},
+			"CreatedClip": {
+				"properties": {
+					"url": {
+						"type": "string"
+					},
+					"expiresAt": {
+						"type": "string",
+						"description": "ISO time at which the link stops working."
+					},
+					"startSeconds": {
+						"type": "number",
+						"format": "double"
+					},
+					"endSeconds": {
+						"type": "number",
+						"format": "double"
+					},
+					"channel": {
+						"$ref": "#/components/schemas/ClipChannel"
+					}
+				},
+				"required": [
+					"url",
+					"expiresAt",
+					"startSeconds",
+					"endSeconds",
+					"channel"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"TranscriptClipResponse": {
+				"$ref": "#/components/schemas/CreatedClip"
+			},
+			"ApiResponse_TranscriptClipResponse_": {
+				"properties": {
+					"message": {
+						"type": "string"
+					},
+					"data": {
+						"allOf": [
+							{
+								"$ref": "#/components/schemas/TranscriptClipResponse"
+							}
+						],
+						"nullable": true
+					},
+					"status": {
+						"type": "number",
+						"format": "double"
+					}
+				},
+				"required": [
+					"data",
+					"status"
+				],
+				"type": "object"
+			},
+			"TranscriptClipChannelValue": {
+				"$ref": "#/components/schemas/ClipChannel"
+			},
+			"CreateTranscriptClipRequest": {
+				"properties": {
+					"startSeconds": {
+						"type": "number",
+						"format": "double",
+						"description": "Seconds on the player's clock."
+					},
+					"endSeconds": {
+						"type": "number",
+						"format": "double",
+						"description": "At least 1 second and at most 300 seconds after the start."
+					},
+					"channel": {
+						"$ref": "#/components/schemas/TranscriptClipChannelValue",
+						"description": "Both files mixed when left out."
+					}
+				},
+				"required": [
+					"startSeconds",
+					"endSeconds"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
 			"UpdateStandaloneTranscriptBody": {
 				"properties": {
 					"title": {
@@ -4823,6 +5142,113 @@
 							"customToken"
 						],
 						"type": "object",
+						"nullable": true
+					},
+					"status": {
+						"type": "number",
+						"format": "double"
+					}
+				},
+				"required": [
+					"data",
+					"status"
+				],
+				"type": "object"
+			},
+			"SearchHitType": {
+				"type": "string",
+				"enum": [
+					"meeting",
+					"task",
+					"document",
+					"project"
+				]
+			},
+			"SearchHit": {
+				"properties": {
+					"type": {
+						"$ref": "#/components/schemas/SearchHitType"
+					},
+					"id": {
+						"type": "string"
+					},
+					"title": {
+						"type": "string",
+						"description": "Empty for a meeting nobody named: the app shows its own \"untitled\" text."
+					},
+					"snippet": {
+						"type": "string",
+						"nullable": true,
+						"description": "About 160 characters around the first match. Null when there is no text to show."
+					},
+					"titleMatch": {
+						"type": "boolean",
+						"description": "True when every word of the query is in the title. These come first."
+					},
+					"projectId": {
+						"type": "string",
+						"nullable": true
+					},
+					"projectTitle": {
+						"type": "string",
+						"nullable": true
+					},
+					"date": {
+						"type": "string",
+						"description": "ISO date. For a meeting, when it was recorded."
+					},
+					"atSeconds": {
+						"type": "number",
+						"format": "double",
+						"description": "Meetings only: where the matching sentence starts, in seconds."
+					}
+				},
+				"required": [
+					"type",
+					"id",
+					"title",
+					"snippet",
+					"titleMatch",
+					"projectId",
+					"projectTitle",
+					"date"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"GlobalSearchResult": {
+				"properties": {
+					"query": {
+						"type": "string"
+					},
+					"hits": {
+						"items": {
+							"$ref": "#/components/schemas/SearchHit"
+						},
+						"type": "array"
+					}
+				},
+				"required": [
+					"query",
+					"hits"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"GlobalSearchResponse": {
+				"$ref": "#/components/schemas/GlobalSearchResult"
+			},
+			"ApiResponse_GlobalSearchResponse_": {
+				"properties": {
+					"message": {
+						"type": "string"
+					},
+					"data": {
+						"allOf": [
+							{
+								"$ref": "#/components/schemas/GlobalSearchResponse"
+							}
+						],
 						"nullable": true
 					},
 					"status": {
@@ -6456,6 +6882,173 @@
 				"type": "object",
 				"additionalProperties": false
 			},
+			"TrackFeatureBody": {
+				"description": "What an app sends to count one use of a feature. Only `feature` and\n`client` are read. Anything else in the body is ignored and never stored.",
+				"properties": {
+					"feature": {
+						"type": "string",
+						"description": "A name from the fixed list in services/featureUsageService.ts."
+					},
+					"client": {
+						"type": "string",
+						"description": "\"web\", \"recorder\" or \"mobile\"."
+					}
+				},
+				"required": [
+					"feature",
+					"client"
+				],
+				"type": "object",
+				"additionalProperties": {}
+			},
+			"FeatureSource": {
+				"type": "string",
+				"enum": [
+					"server",
+					"client"
+				],
+				"description": "Who reports the count: the server where the thing happens, or the web app."
+			},
+			"FeatureUsageByClient": {
+				"properties": {
+					"web": {
+						"type": "number",
+						"format": "double"
+					},
+					"recorder": {
+						"type": "number",
+						"format": "double"
+					},
+					"mobile": {
+						"type": "number",
+						"format": "double"
+					},
+					"api": {
+						"type": "number",
+						"format": "double"
+					},
+					"mcp": {
+						"type": "number",
+						"format": "double"
+					}
+				},
+				"required": [
+					"web",
+					"recorder",
+					"mobile",
+					"api",
+					"mcp"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"FeatureUsageRow": {
+				"properties": {
+					"feature": {
+						"type": "string"
+					},
+					"description": {
+						"type": "string"
+					},
+					"source": {
+						"$ref": "#/components/schemas/FeatureSource",
+						"description": "\"server\" when the backend counts it, \"client\" when the web app reports it."
+					},
+					"total": {
+						"type": "number",
+						"format": "double",
+						"description": "Uses in the period."
+					},
+					"users": {
+						"type": "number",
+						"format": "double",
+						"description": "Distinct users in the period."
+					},
+					"workspaces": {
+						"type": "number",
+						"format": "double",
+						"description": "Distinct workspaces in the period."
+					},
+					"byClient": {
+						"$ref": "#/components/schemas/FeatureUsageByClient"
+					},
+					"lastUsedDay": {
+						"type": "string",
+						"nullable": true,
+						"description": "Last day with a use, in any period (\"YYYY-MM-DD\"). Null when never used."
+					},
+					"series": {
+						"items": {
+							"type": "number",
+							"format": "double"
+						},
+						"type": "array",
+						"description": "Uses per day, one number per entry of `dayLabels`."
+					}
+				},
+				"required": [
+					"feature",
+					"description",
+					"source",
+					"total",
+					"users",
+					"workspaces",
+					"byClient",
+					"lastUsedDay",
+					"series"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"FeatureUsageReport": {
+				"properties": {
+					"days": {
+						"type": "number",
+						"format": "double"
+					},
+					"dayLabels": {
+						"items": {
+							"type": "string"
+						},
+						"type": "array",
+						"description": "The UTC days of the period, oldest first (\"YYYY-MM-DD\")."
+					},
+					"totalUses": {
+						"type": "number",
+						"format": "double"
+					},
+					"activeUsers": {
+						"type": "number",
+						"format": "double",
+						"description": "Distinct users with at least one use in the period."
+					},
+					"activeWorkspaces": {
+						"type": "number",
+						"format": "double",
+						"description": "Distinct workspaces with at least one use in the period."
+					},
+					"features": {
+						"items": {
+							"$ref": "#/components/schemas/FeatureUsageRow"
+						},
+						"type": "array",
+						"description": "Every feature of the catalogue, the unused ones included."
+					}
+				},
+				"required": [
+					"days",
+					"dayLabels",
+					"totalUses",
+					"activeUsers",
+					"activeWorkspaces",
+					"features"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"FeatureUsageReportResponse": {
+				"$ref": "#/components/schemas/FeatureUsageReport"
+			},
 			"DailyReportStatusResponse": {
 				"properties": {
 					"enabled": {
@@ -7168,6 +7761,178 @@
 				},
 				"required": [
 					"url"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"CommentAuthorResponse": {
+				"properties": {
+					"id": {
+						"type": "string"
+					},
+					"name": {
+						"type": "string",
+						"nullable": true
+					},
+					"email": {
+						"type": "string"
+					},
+					"avatarUrl": {
+						"type": "string",
+						"nullable": true
+					}
+				},
+				"required": [
+					"id",
+					"name",
+					"email",
+					"avatarUrl"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"CommentMentionResponse": {
+				"properties": {
+					"userId": {
+						"type": "string"
+					},
+					"name": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"userId",
+					"name"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"CommentResponse": {
+				"properties": {
+					"id": {
+						"type": "string"
+					},
+					"taskId": {
+						"type": "string",
+						"nullable": true
+					},
+					"transcriptId": {
+						"type": "string",
+						"nullable": true
+					},
+					"body": {
+						"type": "string",
+						"description": "Text with mentions written as `@[Name](user:ID)`. Empty when deleted."
+					},
+					"deleted": {
+						"type": "boolean",
+						"description": "True when the comment was removed. It stays so the thread keeps its shape."
+					},
+					"atSeconds": {
+						"type": "number",
+						"format": "double",
+						"nullable": true,
+						"description": "Seconds into the meeting this comment is about."
+					},
+					"author": {
+						"$ref": "#/components/schemas/CommentAuthorResponse"
+					},
+					"mentions": {
+						"items": {
+							"$ref": "#/components/schemas/CommentMentionResponse"
+						},
+						"type": "array",
+						"description": "The members mentioned in the body."
+					},
+					"edited": {
+						"type": "boolean",
+						"description": "The text was changed after it was posted."
+					},
+					"canEdit": {
+						"type": "boolean",
+						"description": "The signed-in user wrote it and may change the text."
+					},
+					"canDelete": {
+						"type": "boolean",
+						"description": "The signed-in user wrote it, or is an owner or admin of the workspace."
+					},
+					"createdAt": {
+						"type": "string"
+					},
+					"updatedAt": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"id",
+					"taskId",
+					"transcriptId",
+					"body",
+					"deleted",
+					"atSeconds",
+					"author",
+					"mentions",
+					"edited",
+					"canEdit",
+					"canDelete",
+					"createdAt",
+					"updatedAt"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"CommentListResponse": {
+				"properties": {
+					"comments": {
+						"items": {
+							"$ref": "#/components/schemas/CommentResponse"
+						},
+						"type": "array"
+					}
+				},
+				"required": [
+					"comments"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"CreateCommentRequest": {
+				"properties": {
+					"taskId": {
+						"type": "string",
+						"nullable": true,
+						"description": "The task the comment is on. Send this or `transcriptId`, not both."
+					},
+					"transcriptId": {
+						"type": "string",
+						"nullable": true,
+						"description": "The meeting the comment is on."
+					},
+					"body": {
+						"type": "string",
+						"description": "1 to 5000 characters. A mention is written `@[Name](user:ID)`."
+					},
+					"atSeconds": {
+						"type": "number",
+						"format": "double",
+						"nullable": true,
+						"description": "Seconds into the meeting. Only with `transcriptId`."
+					}
+				},
+				"required": [
+					"body"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"UpdateCommentRequest": {
+				"properties": {
+					"body": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"body"
 				],
 				"type": "object",
 				"additionalProperties": false
@@ -10190,6 +10955,284 @@
 		"contact": {}
 	},
 	"paths": {
+		"/api/webhooks": {
+			"get": {
+				"operationId": "ListEndpoints",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/WebhookEndpointListResponse"
+								}
+							}
+						}
+					}
+				},
+				"description": "Lists the workspace's webhook endpoints. Never returns a secret.",
+				"tags": [
+					"Webhooks"
+				],
+				"security": [
+					{
+						"BearerAuth": []
+					}
+				],
+				"parameters": []
+			},
+			"post": {
+				"operationId": "CreateEndpoint",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/WebhookEndpointSecretResponse"
+								}
+							}
+						}
+					}
+				},
+				"description": "Creates an endpoint. The secret is in this answer and cannot be read again.",
+				"tags": [
+					"Webhooks"
+				],
+				"security": [
+					{
+						"BearerAuth": []
+					}
+				],
+				"parameters": [],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/CreateWebhookEndpointRequest"
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/webhooks/{endpointId}": {
+			"patch": {
+				"operationId": "UpdateEndpoint",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/WebhookEndpointResponse"
+								}
+							}
+						}
+					}
+				},
+				"description": "Changes the URL, the events, the description or turns the endpoint on or off.",
+				"tags": [
+					"Webhooks"
+				],
+				"security": [
+					{
+						"BearerAuth": []
+					}
+				],
+				"parameters": [
+					{
+						"in": "path",
+						"name": "endpointId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/UpdateWebhookEndpointRequest"
+							}
+						}
+					}
+				}
+			},
+			"delete": {
+				"operationId": "DeleteEndpoint",
+				"responses": {
+					"204": {
+						"description": "No content"
+					}
+				},
+				"tags": [
+					"Webhooks"
+				],
+				"security": [
+					{
+						"BearerAuth": []
+					}
+				],
+				"parameters": [
+					{
+						"in": "path",
+						"name": "endpointId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				]
+			}
+		},
+		"/api/webhooks/{endpointId}/rotate-secret": {
+			"post": {
+				"operationId": "RotateSecret",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/WebhookEndpointSecretResponse"
+								}
+							}
+						}
+					}
+				},
+				"description": "Replaces the secret. The new one is in this answer and cannot be read again.",
+				"tags": [
+					"Webhooks"
+				],
+				"security": [
+					{
+						"BearerAuth": []
+					}
+				],
+				"parameters": [
+					{
+						"in": "path",
+						"name": "endpointId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				]
+			}
+		},
+		"/api/webhooks/{endpointId}/deliveries": {
+			"get": {
+				"operationId": "ListDeliveries",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/WebhookDeliveryListResponse"
+								}
+							}
+						}
+					}
+				},
+				"description": "The last 50 deliveries of an endpoint, newest first.",
+				"tags": [
+					"Webhooks"
+				],
+				"security": [
+					{
+						"BearerAuth": []
+					}
+				],
+				"parameters": [
+					{
+						"in": "path",
+						"name": "endpointId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				]
+			}
+		},
+		"/api/webhooks/{endpointId}/test": {
+			"post": {
+				"operationId": "SendTestEvent",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/WebhookQueuedResponse"
+								}
+							}
+						}
+					}
+				},
+				"description": "Sends a `ping` event to the endpoint, through the same queue and signing.",
+				"tags": [
+					"Webhooks"
+				],
+				"security": [
+					{
+						"BearerAuth": []
+					}
+				],
+				"parameters": [
+					{
+						"in": "path",
+						"name": "endpointId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				]
+			}
+		},
+		"/api/webhooks/deliveries/{deliveryId}/redeliver": {
+			"post": {
+				"operationId": "Redeliver",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/WebhookQueuedResponse"
+								}
+							}
+						}
+					}
+				},
+				"description": "Sends one past delivery again, with the same id and payload.",
+				"tags": [
+					"Webhooks"
+				],
+				"security": [
+					{
+						"BearerAuth": []
+					}
+				],
+				"parameters": [
+					{
+						"in": "path",
+						"name": "deliveryId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				]
+			}
+		},
 		"/api/version/desktop/latest": {
 			"get": {
 				"operationId": "GetLatestDesktopVersion",
@@ -13232,6 +14275,97 @@
 				]
 			}
 		},
+		"/api/transcripts/{id}/export": {
+			"get": {
+				"operationId": "ExportTranscript",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "string",
+									"format": "byte"
+								}
+							}
+						}
+					}
+				},
+				"description": "The transcript as a file: subtitles (srt, vtt) or plain text (txt).\nSubtitles need a timed transcript. A meeting with flat text only answers\n409 for srt and vtt.",
+				"tags": [
+					"Transcripts"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": [
+					{
+						"in": "path",
+						"name": "id",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"in": "query",
+						"name": "format",
+						"required": true,
+						"schema": {
+							"$ref": "#/components/schemas/TranscriptExportFormatValue"
+						}
+					}
+				]
+			}
+		},
+		"/api/transcripts/{id}/clip": {
+			"post": {
+				"operationId": "CreateTranscriptClip",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiResponse_TranscriptClipResponse_"
+								}
+							}
+						}
+					}
+				},
+				"description": "Cuts a part of the recording (1 to 300 seconds) and returns a link to it\nthat works for 7 days. The clip is a private file of its own.",
+				"tags": [
+					"Transcripts"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": [
+					{
+						"in": "path",
+						"name": "id",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/CreateTranscriptClipRequest"
+							}
+						}
+					}
+				}
+			}
+		},
 		"/api/transcripts/{id}": {
 			"get": {
 				"operationId": "GetTranscript",
@@ -14732,6 +15866,51 @@
 						}
 					}
 				}
+			}
+		},
+		"/api/search": {
+			"get": {
+				"operationId": "SearchWorkspace",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiResponse_GlobalSearchResponse_"
+								}
+							}
+						}
+					}
+				},
+				"description": "Searches meetings, tasks, documents and projects of the workspace.\n`q` needs at least 2 characters and is cut at 200. `limit` defaults to 20\nand stops at 50.",
+				"tags": [
+					"Search"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": [
+					{
+						"in": "query",
+						"name": "q",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"in": "query",
+						"name": "limit",
+						"required": false,
+						"schema": {
+							"format": "double",
+							"type": "number"
+						}
+					}
+				]
 			}
 		},
 		"/api/public/prototypes/{id}": {
@@ -16873,6 +18052,72 @@
 				]
 			}
 		},
+		"/api/usage/feature": {
+			"post": {
+				"operationId": "TrackFeatureUse",
+				"responses": {
+					"204": {
+						"description": "Counted or dropped"
+					}
+				},
+				"tags": [
+					"Usage"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": [],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/TrackFeatureBody"
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/admin/feature-usage": {
+			"get": {
+				"operationId": "GetFeatureUsage",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/FeatureUsageReportResponse"
+								}
+							}
+						}
+					}
+				},
+				"description": "Every feature of the catalogue with its uses in the last `days` days\n(default 30, at most 365), the unused ones included.",
+				"tags": [
+					"Admin"
+				],
+				"security": [
+					{
+						"AdminOnly": []
+					}
+				],
+				"parameters": [
+					{
+						"in": "query",
+						"name": "days",
+						"required": false,
+						"schema": {
+							"format": "double",
+							"type": "number"
+						}
+					}
+				]
+			}
+		},
 		"/api/daily-report/status": {
 			"get": {
 				"operationId": "GetDailyReportStatus",
@@ -17810,6 +19055,173 @@
 						}
 					}
 				}
+			}
+		},
+		"/api/comments": {
+			"get": {
+				"operationId": "ListComments",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/CommentListResponse"
+								}
+							}
+						}
+					}
+				},
+				"description": "The thread of one task or one meeting, oldest first.",
+				"tags": [
+					"Comments"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": [
+					{
+						"in": "query",
+						"name": "taskId",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"in": "query",
+						"name": "transcriptId",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					}
+				]
+			},
+			"post": {
+				"operationId": "CreateComment",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/CommentResponse"
+								}
+							}
+						}
+					}
+				},
+				"description": "Posts a comment. The people mentioned in it get an email.",
+				"tags": [
+					"Comments"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": [],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/CreateCommentRequest"
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/comments/{id}": {
+			"patch": {
+				"operationId": "UpdateComment",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/CommentResponse"
+								}
+							}
+						}
+					}
+				},
+				"description": "Changes the text. Only the author.",
+				"tags": [
+					"Comments"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": [
+					{
+						"in": "path",
+						"name": "id",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/UpdateCommentRequest"
+							}
+						}
+					}
+				}
+			},
+			"delete": {
+				"operationId": "DeleteComment",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"success": {
+											"type": "boolean"
+										}
+									},
+									"required": [
+										"success"
+									],
+									"type": "object"
+								}
+							}
+						}
+					}
+				},
+				"description": "Removes a comment: its author, or an owner or admin of the workspace.",
+				"tags": [
+					"Comments"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": [
+					{
+						"in": "path",
+						"name": "id",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				]
 			}
 		},
 		"/api/chat/assistant/skills": {

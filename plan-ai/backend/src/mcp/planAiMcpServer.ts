@@ -1,3 +1,4 @@
+import { countMcpToolCalls } from "../services/featureUsageService";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { TaskStatus, TaskPriority, TaskType } from "@prisma/client";
@@ -7,6 +8,13 @@ import { queryContexts } from "../vector/contextFileVectorService";
 import { mergeProjectAndContextIds } from "../services/projectContextResolver";
 import { docGenerationService } from "../services/docGenerationService";
 import { recordMeetingAccess } from "../services/meetingAccessAudit";
+import {
+  createComment,
+  listComments,
+  plainCommentBody,
+  type CommentActor,
+  type CommentView,
+} from "../services/commentService";
 
 // Enum value tuples shared by the task tools (kept in sync with schema.prisma).
 const TASK_STATUSES = ["BACKLOG", "IN_PROGRESS", "BLOCKED", "COMPLETED", "ARCHIVED"] as const;
@@ -22,6 +30,7 @@ export function createPlanAiMcpServer(userId: string, workspaceId: string): McpS
     name: "plan-ai",
     version: "1.0.0",
   });
+  countMcpToolCalls(server, userId, workspaceId);
 
   // ─── Response helpers ────────────────────────────────────────────────────
   const jsonResult = (data: unknown) => ({
@@ -31,6 +40,24 @@ export function createPlanAiMcpServer(userId: string, workspaceId: string): McpS
     content: [{ type: "text" as const, text: message }],
     isError: true as const,
   });
+
+  // ─── Comments ────────────────────────────────────────────────────────────
+  // A token carries no workspace role. The role only decides who may delete a
+  // comment, and no tool here deletes one.
+  const commentActor: CommentActor = { userId, workspaceId, role: "MEMBER" };
+  const MAX_TOOL_COMMENTS = 30;
+  const toolComment = (c: CommentView) => ({
+    id: c.id,
+    author: c.author.name ?? c.author.email,
+    body: c.deleted ? null : plainCommentBody(c.body),
+    deleted: c.deleted,
+    ...(c.atSeconds !== null ? { atSeconds: c.atSeconds } : {}),
+    createdAt: c.createdAt,
+    edited: c.edited,
+  });
+  /** The newest comments of a task or meeting, oldest first. */
+  const threadFor = async (target: { taskId?: string; transcriptId?: string }) =>
+    (await listComments(commentActor, target, { newest: MAX_TOOL_COMMENTS })).map(toolComment);
 
   // ─── get_recent_meetings ─────────────────────────────────────────────────
 
@@ -95,7 +122,7 @@ export function createPlanAiMcpServer(userId: string, workspaceId: string): McpS
     "get_meeting_detail",
     {
       description:
-        "Get the full transcript text, summary, and metadata for a specific meeting by its ID.",
+        "Get the full transcript text, summary, metadata and latest comments for a specific meeting by its ID.",
       inputSchema: {
         meetingId: z.string().describe("The transcript/meeting ID"),
         transcriptOffset: z
@@ -179,6 +206,7 @@ export function createPlanAiMcpServer(userId: string, workspaceId: string): McpS
                 },
                 project: transcript.project,
                 tasks: transcript.taskLinks.map((l) => l.task),
+                comments: await threadFor({ transcriptId: transcript.id }),
               },
               null,
               2,
@@ -390,7 +418,7 @@ export function createPlanAiMcpServer(userId: string, workspaceId: string): McpS
     "get_task_detail",
     {
       description:
-        "Get full detail for a single task: description, acceptance criteria, status, priority, assignee, parent task and subtasks.",
+        "Get full detail for a single task: description, acceptance criteria, status, priority, assignee, parent task, subtasks and its latest comments.",
       inputSchema: { taskId: z.string().describe("The task ID") },
     },
     async (args) => {
@@ -404,7 +432,35 @@ export function createPlanAiMcpServer(userId: string, workspaceId: string): McpS
         },
       });
       if (!task) return errorResult(`Task "${args.taskId}" not found in this workspace.`);
-      return jsonResult(task);
+      return jsonResult({ ...task, comments: await threadFor({ taskId: task.id }) });
+    },
+  );
+
+  // ─── add_comment ─────────────────────────────────────────────────────────
+
+  server.registerTool(
+    "add_comment",
+    {
+      description:
+        "Add a comment to a task or to a meeting, as the token's user. Pass taskId or meetingId, not both. To mention a member write @[Name](user:USER_ID) with an id from list_workspace_members; mentioned members get an email.",
+      inputSchema: {
+        taskId: z.string().optional().describe("The task to comment on"),
+        meetingId: z.string().optional().describe("The meeting to comment on"),
+        body: z.string().min(1).max(5000).describe("The comment text"),
+      },
+    },
+    async (args) => {
+      try {
+        const comment = await createComment(commentActor, {
+          taskId: args.taskId,
+          transcriptId: args.meetingId,
+          body: args.body,
+        });
+        return jsonResult({ created: true, comment: toolComment(comment) });
+      } catch (e) {
+        const message = (e as { message?: string })?.message ?? String(e);
+        return errorResult(`Failed to add comment: ${message}`);
+      }
     },
   );
 

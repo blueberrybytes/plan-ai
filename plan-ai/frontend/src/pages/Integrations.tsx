@@ -28,6 +28,7 @@ import BusinessIcon from "@mui/icons-material/Business";
 import PersonIcon from "@mui/icons-material/Person";
 import WarningAmberIcon from "@mui/icons-material/WarningAmber";
 import CodeIcon from "@mui/icons-material/Code";
+import WebhookIcon from "@mui/icons-material/Webhook";
 import HubOutlinedIcon from "@mui/icons-material/HubOutlined";
 import CalendarMonthOutlinedIcon from "@mui/icons-material/CalendarMonthOutlined";
 import EventOutlinedIcon from "@mui/icons-material/EventOutlined";
@@ -111,6 +112,7 @@ import { useGooglePicker } from "../hooks/useGooglePicker";
 import { useOneDrivePicker } from "../hooks/useOneDrivePicker";
 import { HowToConnectDialog, HowToProvider } from "../components/integrations/HowToConnectDialog";
 import McpPanel from "../components/integrations/McpPanel";
+import WebhooksPanel from "../components/integrations/WebhooksPanel";
 import IconButton from "@mui/material/IconButton";
 
 const PROVIDER_TAB_PARAM = "provider";
@@ -130,7 +132,8 @@ type ProviderTabValue =
   | "asana"
   | "google-calendar"
   | "outlook-calendar"
-  | "plan-ai-mcp";
+  | "plan-ai-mcp"
+  | "webhooks";
 
 type ProviderConfig = {
   tabValue: ProviderTabValue;
@@ -285,6 +288,7 @@ const Integrations: React.FC = () => {
     const lower = value.toLowerCase();
     // Handle the MCP tab which is not in PROVIDER_CONFIGS
     if (lower === "plan-ai-mcp") return "plan-ai-mcp";
+    if (lower === "webhooks") return "webhooks";
     const match = PROVIDER_CONFIGS.find((config) => config.tabValue.toLowerCase() === lower);
     return match?.tabValue ?? null;
   };
@@ -1493,6 +1497,22 @@ const Integrations: React.FC = () => {
                 </Stack>
               }
             />
+
+            {/* Outbound webhooks tab */}
+            <Chip
+              onClick={(e) => handleChangeTab(e, "webhooks")}
+              variant={activeTab === "webhooks" ? "filled" : "outlined"}
+              color={activeTab === "webhooks" ? "primary" : "default"}
+              sx={{ py: 2.5, px: 0.5, borderRadius: 2 }}
+              label={
+                <Stack direction="row" alignItems="center" spacing={1}>
+                  <WebhookIcon sx={{ fontSize: 16 }} />
+                  <Typography variant="body2" sx={{ fontWeight: "inherit" }}>
+                    {t("webhooks.tab")}
+                  </Typography>
+                </Stack>
+              }
+            />
           </Box>
 
           {isSuccessStatus || isErrorStatus ? (
@@ -1533,6 +1553,12 @@ const Integrations: React.FC = () => {
           ))}
 
           {activeTab === "plan-ai-mcp" && <McpPanel workspaceId={activeWorkspaceId ?? ""} />}
+          {activeTab === "webhooks" && (
+            <WebhooksPanel
+              workspaceId={activeWorkspaceId ?? ""}
+              canManage={canManageIntegrations}
+            />
+          )}
         </Stack>
       </Box>
       <HowToConnectDialog

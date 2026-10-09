@@ -3,9 +3,7 @@ import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { createPlanAiMcpServer } from "../mcp/planAiMcpServer";
 import { isMcpTokenActive, validateMcpToken } from "../services/mcpTokenService";
-import { rawPrisma } from "../prisma/prismaClient";
-import { setHiddenForRequest } from "../services/accessScope";
-import { hiddenFromMember, hiddenFromOutsiders } from "../services/projectAccess";
+import { scopeToMember } from "../services/tokenScope";
 
 const mcpRouter = Router();
 
@@ -17,22 +15,8 @@ async function authenticate(req: Request) {
   return validateMcpToken(raw);
 }
 
-/**
- * A token acts as its user in its workspace, so it sees what that member
- * sees: the restricted projects they are not part of stay hidden. Must run
- * in every request that executes tools.
- */
-async function scopeToMember(userId: string, workspaceId: string): Promise<void> {
-  const member = await rawPrisma.workspaceMember.findUnique({
-    where: { workspaceId_userId: { workspaceId, userId } },
-    select: { role: true },
-  });
-  setHiddenForRequest(
-    member
-      ? await hiddenFromMember(workspaceId, userId, member.role)
-      : await hiddenFromOutsiders(workspaceId),
-  );
-}
+// Every request that executes tools calls scopeToMember first: a token sees
+// what its user sees (restricted projects stay hidden).
 
 const jsonRpcError = (code: number, message: string) => ({
   jsonrpc: "2.0",

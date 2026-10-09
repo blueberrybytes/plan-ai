@@ -18,6 +18,7 @@ import type { TaskResponse, TaskPrioritySchema } from "../../store/apis/projectA
 import type { components } from "../../types/api";
 import { AiGraphTrace, ContextGraph } from "./ContextGraph";
 import MarkdownRenderer from "../common/MarkdownRenderer";
+import CommentThread from "../comments/CommentThread";
 
 type TaskMetadata = components["schemas"]["TaskMetadata"];
 
@@ -368,6 +369,10 @@ const ProjectTaskDialog: React.FC<ProjectTaskDialogProps> = ({
               </Stack>
             ) : null}
           </Stack>
+
+          <Divider />
+
+          <CommentThread key={task.id} target={{ taskId: task.id }} />
         </Stack>
       </DialogContent>
       <DialogActions sx={{ justifyContent: "space-between" }}>

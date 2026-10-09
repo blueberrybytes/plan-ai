@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
+import { trackIntegrationConnected } from "./featureUsageService";
 import axios from "axios";
 import { PrismaClient, IntegrationStatus, IntegrationProvider, Prisma } from "@prisma/client";
 import EnvUtils from "../utils/EnvUtils";
@@ -140,6 +141,7 @@ export class MicrosoftIntegrationService {
         accountName: userEmail,
       },
     });
+    trackIntegrationConnected("ONEDRIVE", workspaceId);
   }
 
   public async getMicrosoftSummary(workspaceId: string): Promise<MicrosoftSummaryResponse> {

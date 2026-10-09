@@ -17,6 +17,7 @@ const { db, linear, jira } = vi.hoisted(() => ({
   jira: { listJiraProjects: vi.fn(), createJiraIssue: vi.fn() },
 }));
 
+vi.mock("../../prisma/prismaClient", () => ({ default: db, rawPrisma: db }));
 vi.mock("@prisma/client", () => ({
   PrismaClient: class {
     constructor() {

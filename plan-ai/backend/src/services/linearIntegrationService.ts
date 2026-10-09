@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
+import { trackIntegrationConnected } from "./featureUsageService";
 import { IntegrationProvider, IntegrationStatus, Prisma } from "@prisma/client";
 import prisma from "../prisma/prismaClient";
 import { LinearClient } from "@linear/sdk";
@@ -274,6 +275,7 @@ class LinearIntegrationService {
           } as LinearIntegrationMetadata as unknown as Prisma.InputJsonObject,
         },
       });
+      trackIntegrationConnected("LINEAR", workspaceId);
       return { success: true };
     } catch (error) {
       logger.error("Linear basic auth verification failed", error);

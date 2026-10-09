@@ -83,6 +83,7 @@ import { twentyIntegrationService } from "./twentyIntegrationService";
 import { readableUrl } from "../firebase/privateStorage";
 import { deepgramPrivacyOptions } from "../utils/deepgramPrivacy";
 import { resolveWorkspaceDeepgramKey } from "./platformKeys";
+import { emitMeetingProcessed, emitTaskCreated } from "./webhookService";
 
 /**
  * Which Twenty company a meeting note is filed under.
@@ -1015,6 +1016,8 @@ export class ProjectTranscriptService {
           logger.error(`Failed to push transcript ${transcriptId} to Twenty`, err),
         );
       }
+      // Webhooks. Not awaited and never throws. No summary or tasks on this path.
+      void emitMeetingProcessed(input.workspaceId, transcriptId);
       logger.info(`[processPendingTranscript] ${transcriptId} transcribed only (no AI steps)`);
       return { transcript: updated, tasks: [], analysis: { language: "", tasks: [] } };
     }
@@ -1412,6 +1415,11 @@ export class ProjectTranscriptService {
 
       return { transcript, createdTasks };
     });
+
+    // Webhooks, once the meeting and its tasks are committed. Not awaited and
+    // never throws. These tasks are created here, not through taskCrudService.
+    void emitMeetingProcessed(input.workspaceId, result.transcript.id);
+    for (const task of result.createdTasks) void emitTaskCreated(input.workspaceId, task.id);
 
     if (result.createdTasks.length > 0) {
       this.autoSyncTasks(input.workspaceId, result.transcript, result.createdTasks, {

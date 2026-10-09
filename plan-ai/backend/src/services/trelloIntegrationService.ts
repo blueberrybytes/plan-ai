@@ -1,3 +1,4 @@
+import { trackIntegrationConnected } from "./featureUsageService";
 import { IntegrationProvider, IntegrationStatus, Prisma } from "@prisma/client";
 import prisma from "../prisma/prismaClient";
 import { logger } from "../utils/logger";
@@ -80,6 +81,7 @@ class TrelloIntegrationService {
           } as TrelloIntegrationMetadata as unknown as Prisma.InputJsonObject,
         },
       });
+      trackIntegrationConnected("TRELLO", workspaceId);
       return { success: true };
     } catch (error) {
       logger.error("Trello basic auth verification failed", error);
@@ -138,6 +140,7 @@ class TrelloIntegrationService {
           } as TrelloIntegrationMetadata as unknown as Prisma.InputJsonObject,
         },
       });
+      trackIntegrationConnected("TRELLO", workspaceId);
       return { success: true };
     } catch (error) {
       logger.error("Trello auto connect verification failed", error);

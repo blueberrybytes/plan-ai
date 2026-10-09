@@ -1,3 +1,4 @@
+import { countFeature } from "./featureUsageService";
 import { DocDocument, BrandTheme } from "@prisma/client";
 import {
   getWorkspaceModel,
@@ -19,6 +20,7 @@ import type { TranscriptMetadata } from "./transcriptMetadataTypes";
 import { publicLinkWhere, shareTokenUpdate } from "../utils/shareToken";
 import { assertThemeInWorkspace } from "./brandThemeAccess";
 import { recordAudit } from "./auditLogService";
+import { emitDocumentCreated } from "./webhookService";
 
 export interface CreateDocInput {
   title: string;
@@ -327,6 +329,8 @@ export class DocGenerationService {
         ...(nextTitle ? { title: nextTitle } : {}),
       },
     });
+    // Webhooks. Not awaited and never throws: the document is already saved.
+    void emitDocumentCreated(workspaceId, docId);
 
     if (currentTitleIsPlaceholder && !derivedTitle) {
       logger.warn(
@@ -501,6 +505,7 @@ ${userPrompt}`;
       include: { theme: true, project: { select: { id: true, title: true } } },
     });
     if (input.isPublic !== undefined && input.isPublic !== existing.isPublic) {
+      if (input.isPublic) countFeature("doc.shared_public");
       await recordAudit({
         workspaceId,
         actor: { id: userId },
