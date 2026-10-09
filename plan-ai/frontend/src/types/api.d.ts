@@ -41,6 +41,44 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/users/{userId}/workspaces": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description The workspaces a user belongs to, with their courtesy flag. Admin only. */
+        get: operations["GetUserWorkspaces"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/users/workspaces/{workspaceId}/courtesy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * @description Turns courtesy on or off for a workspace. A courtesy workspace runs on the
+         *     platform's keys and skips the subscription check and the usage limits.
+         *     Admin only. The change is written to that workspace's audit log.
+         */
+        put: operations["SetWorkspaceCourtesy"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/users/{userId}/role": {
         parameters: {
             query?: never;
@@ -3588,12 +3626,61 @@ export interface components {
             /** Format: date-time */
             updatedAt: string;
             lastSignInAt: string | null;
+            /**
+             * Format: double
+             * @description How many courtesy workspaces this user owns.
+             */
+            courtesyWorkspaces: number;
         };
         "ApiResponse_UserDetailResponse-Array_": {
             message?: string;
             data: components["schemas"]["UserDetailResponse"][] | null;
             /** Format: double */
             status: number;
+        };
+        /**
+         * @description Courtesy workspaces, for platform admins.
+         *
+         *     A courtesy workspace runs on the platform's own AI and transcription keys
+         *     and skips the subscription check and the usage limits. It is a flag on the
+         *     workspace, not on a person: to give someone courtesy access, their workspace
+         *     gets it. Until now the only way to set it was a query on the database.
+         *
+         *     The unfiltered client is used on purpose: this lists workspaces by name and
+         *     size for the platform admin, who is not a member of them.
+         */
+        AdminUserWorkspace: {
+            workspaceId: string;
+            name: string;
+            /** @description TEAM or PERSONAL. */
+            kind: string;
+            tier: string;
+            /** @description The user's role in it. */
+            role: string;
+            isCourtesy: boolean;
+            /** Format: double */
+            members: number;
+        };
+        AdminUserWorkspaceResponse: components["schemas"]["AdminUserWorkspace"];
+        "ApiResponse_AdminUserWorkspaceResponse-Array_": {
+            message?: string;
+            data: components["schemas"]["AdminUserWorkspaceResponse"][] | null;
+            /** Format: double */
+            status: number;
+        };
+        WorkspaceCourtesyResponse: {
+            workspaceId: string;
+            name: string;
+            isCourtesy: boolean;
+        };
+        ApiResponse_WorkspaceCourtesyResponse_: {
+            message?: string;
+            data: components["schemas"]["WorkspaceCourtesyResponse"] | null;
+            /** Format: double */
+            status: number;
+        };
+        SetWorkspaceCourtesyRequest: {
+            isCourtesy: boolean;
         };
         ApiResponse_UserDetailResponse_: {
             message?: string;
@@ -6546,6 +6633,54 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["GenericResponse"];
+                };
+            };
+        };
+    };
+    GetUserWorkspaces: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_AdminUserWorkspaceResponse-Array_"];
+                };
+            };
+        };
+    };
+    SetWorkspaceCourtesy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetWorkspaceCourtesyRequest"];
+            };
+        };
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_WorkspaceCourtesyResponse_"];
                 };
             };
         };

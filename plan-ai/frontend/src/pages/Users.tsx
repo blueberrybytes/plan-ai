@@ -44,6 +44,8 @@ import {
   useDeleteUserMutation,
 } from "../store/apis/userApi";
 import HowToRegIcon from "@mui/icons-material/HowToReg";
+import CardGiftcardIcon from "@mui/icons-material/CardGiftcardOutlined";
+import UserCourtesyDialog from "../components/admin/UserCourtesyDialog";
 
 const Users: React.FC = () => {
   const { t } = useTranslation();
@@ -63,6 +65,7 @@ const Users: React.FC = () => {
   const [syncOrphan, { isLoading: isSyncing }] = useSyncOrphanMutation();
   const [forceVerifyEmail, { isLoading: isVerifying }] = useForceVerifyEmailMutation();
   const [deleteUser, { isLoading: isDeleting }] = useDeleteUserMutation();
+  const [courtesyUser, setCourtesyUser] = useState<{ id: string; label: string } | null>(null);
   const [snackbarMessage, setSnackbarMessage] = useState("");
 
   const users = useMemo(() => response?.data || [], [response?.data]);
@@ -216,9 +219,16 @@ const Users: React.FC = () => {
                             >
                               {user.name ? user.name[0].toUpperCase() : user.email[0].toUpperCase()}
                             </Avatar>
-                            <Typography variant="body2" fontWeight={500}>
-                              {user.name || "—"}
-                            </Typography>
+                            <Box>
+                              <Typography variant="body2" fontWeight={500}>
+                                {user.name || "—"}
+                              </Typography>
+                              {user.courtesyWorkspaces > 0 && (
+                                <Typography variant="caption" color="text.secondary">
+                                  Courtesy
+                                </Typography>
+                              )}
+                            </Box>
                           </Box>
                         </TableCell>
                         <TableCell>
@@ -336,6 +346,16 @@ const Users: React.FC = () => {
                                 <InsightsIcon />
                               </IconButton>
                             </Tooltip>
+                            <Tooltip title="Courtesy access">
+                              <IconButton
+                                size="small"
+                                onClick={() =>
+                                  setCourtesyUser({ id: user.id, label: user.name || user.email })
+                                }
+                              >
+                                <CardGiftcardIcon />
+                              </IconButton>
+                            </Tooltip>
                             <Tooltip title="Delete User">
                               <IconButton
                                 size="small"
@@ -437,6 +457,7 @@ const Users: React.FC = () => {
           message={snackbarMessage}
         />
       </Box>
+      <UserCourtesyDialog user={courtesyUser} onClose={() => setCourtesyUser(null)} />
     </SidebarLayout>
   );
 };

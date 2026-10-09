@@ -237,12 +237,50 @@ async function renderWith(browser: Browser, url: string): Promise<RenderedPage |
   }
 }
 
+const REMOTE_TIMEOUT_MS = 60_000;
+
+/** A renderer that asks the web render service, when one is configured. */
+function remoteRenderer(): WebRenderer | null {
+  const base = process.env.WEB_RENDER_URL?.trim().replace(/\/$/, "");
+  const token = process.env.WEB_RENDER_TOKEN?.trim();
+  if (!base || !token) return null;
+  return {
+    render: async (url) => {
+      try {
+        // Our own service on the private network: plain fetch, not the guard,
+        // which exists to refuse exactly that kind of address.
+        const response = await fetch(`${base}/render`, {
+          method: "POST",
+          headers: { "content-type": "application/json", authorization: `Bearer ${token}` },
+          body: JSON.stringify({ url }),
+          signal: AbortSignal.timeout(REMOTE_TIMEOUT_MS),
+        });
+        if (!response.ok) {
+          logger.warn(`[WebRender] The render service answered ${response.status} for ${url}`);
+          return null;
+        }
+        const body = (await response.json()) as { page?: RenderedPage | null };
+        return body.page ?? null;
+      } catch (err) {
+        logger.warn(`[WebRender] The render service did not answer: ${(err as Error).message}`);
+        return null;
+      }
+    },
+    close: async () => undefined,
+  };
+}
+
 /**
  * Opens a browser for one import. Returns null when this machine has no
  * Chromium or it cannot start, so the caller keeps what it already has.
  * Waits its turn when another import is rendering.
  */
 export async function openWebRenderer(): Promise<WebRenderer | null> {
+  // With a render service configured the browser runs there, in a container
+  // that holds no secrets (see webRenderServer.ts), and never in this process.
+  const remote = remoteRenderer();
+  if (remote) return remote;
+
   const executablePath = findChromium();
   if (!executablePath) {
     logger.info("[WebRender] No Chromium on this machine. Pages are read from their HTML only.");

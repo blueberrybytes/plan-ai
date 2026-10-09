@@ -19,6 +19,12 @@ import type { AuthenticatedRequest } from "../middleware/authMiddleware";
 import { Role } from "@prisma/client";
 import { ApiResponse, GenericResponse } from "./controllerTypes";
 import { firebaseAdmin, setUserRole } from "../firebase/firebaseAdmin";
+import {
+  courtesyCountByOwner,
+  listUserWorkspaces,
+  setWorkspaceCourtesy,
+  type AdminUserWorkspace,
+} from "../services/adminCourtesyService";
 
 export interface UserDetailResponse {
   id: string;
@@ -30,6 +36,20 @@ export interface UserDetailResponse {
   createdAt: Date;
   updatedAt: Date;
   lastSignInAt: string | null;
+  /** How many courtesy workspaces this user owns. */
+  courtesyWorkspaces: number;
+}
+
+export type AdminUserWorkspaceResponse = AdminUserWorkspace;
+
+export interface SetWorkspaceCourtesyRequest {
+  isCourtesy: boolean;
+}
+
+export interface WorkspaceCourtesyResponse {
+  workspaceId: string;
+  name: string;
+  isCourtesy: boolean;
 }
 
 export interface UpdateUserRoleRequest {
@@ -84,6 +104,7 @@ export class UserController extends Controller {
         logger.warn("Could not fetch Firebase user metadata for lastSignInAt", fbErr);
       }
 
+      const courtesy = await courtesyCountByOwner();
       const userResponses: UserDetailResponse[] = users.map((u) => ({
         id: u.id,
         firebaseUid: u.firebaseUid,
@@ -94,6 +115,7 @@ export class UserController extends Controller {
         createdAt: u.createdAt,
         updatedAt: u.updatedAt,
         lastSignInAt: firebaseMap.get(u.firebaseUid) || null,
+        courtesyWorkspaces: courtesy.get(u.id) ?? 0,
       }));
 
       return {
@@ -108,6 +130,65 @@ export class UserController extends Controller {
         data: [] as unknown as UserDetailResponse[], // Type conformance for tsoa
         message: "Failed to fetch users",
       };
+    }
+  }
+
+  /**
+   * The workspaces a user belongs to, with their courtesy flag. Admin only.
+   */
+  @Get("/{userId}/workspaces")
+  @Security("AdminOnly")
+  public async getUserWorkspaces(
+    @Path() userId: string,
+  ): Promise<ApiResponse<AdminUserWorkspaceResponse[]>> {
+    try {
+      return { status: 200, data: await listUserWorkspaces(userId) };
+    } catch (err) {
+      const status = (err as { status?: number })?.status;
+      if (typeof status === "number") this.setStatus(status);
+      throw err;
+    }
+  }
+
+  /**
+   * Turns courtesy on or off for a workspace. A courtesy workspace runs on the
+   * platform's keys and skips the subscription check and the usage limits.
+   * Admin only. The change is written to that workspace's audit log.
+   */
+  @Put("/workspaces/{workspaceId}/courtesy")
+  @Security("AdminOnly")
+  public async setWorkspaceCourtesy(
+    @Path() workspaceId: string,
+    @Body() body: SetWorkspaceCourtesyRequest,
+    @Request() request: AuthenticatedRequest,
+  ): Promise<ApiResponse<WorkspaceCourtesyResponse>> {
+    try {
+      const change = await setWorkspaceCourtesy(workspaceId, body.isCourtesy);
+      if (change.changed) {
+        const admin = request.user?.uid
+          ? await prisma.user.findUnique({
+              where: { firebaseUid: request.user.uid },
+              select: { id: true, email: true },
+            })
+          : null;
+        await recordAudit({
+          workspaceId,
+          actor: admin ?? { email: request.user?.email ?? null },
+          action: "platform_admin.courtesy_changed",
+          targetType: "workspace",
+          targetId: workspaceId,
+          metadata: { courtesy: change.isCourtesy },
+          request,
+        });
+      }
+      return {
+        status: 200,
+        data: { workspaceId, name: change.name, isCourtesy: change.isCourtesy },
+      };
+    } catch (err) {
+      const status = (err as { status?: number })?.status;
+      if (typeof status === "number") this.setStatus(status);
+      throw err;
     }
   }
 
@@ -183,6 +264,7 @@ export class UserController extends Controller {
         createdAt: updatedUser.createdAt,
         updatedAt: updatedUser.updatedAt,
         lastSignInAt: null,
+        courtesyWorkspaces: 0,
       };
 
       return {
@@ -292,6 +374,7 @@ export class UserController extends Controller {
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,
         lastSignInAt: null,
+        courtesyWorkspaces: 0,
       };
 
       return {
@@ -423,6 +506,7 @@ export class UserController extends Controller {
         createdAt: newUser.createdAt,
         updatedAt: newUser.updatedAt,
         lastSignInAt: null,
+        courtesyWorkspaces: 0,
       };
 
       return {
