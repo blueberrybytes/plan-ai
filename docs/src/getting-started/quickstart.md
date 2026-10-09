@@ -18,7 +18,7 @@ It takes less than 2 minutes to get fully set up.
 
 ## 2. Running Locally (For Developers)
 
-We’ve designed Plan AI to be incredibly easy to spin up locally. If you want to contribute to the open-source project or self-host the platform on your own machine, follow these steps.
+We’ve designed Plan AI to be incredibly easy to spin up locally. If you want to contribute to the project or self-host the platform on your own machine, follow these steps.
 
 ## Prerequisites
 
