@@ -84,6 +84,7 @@ describe("hidden filters", () => {
     expect(Object.keys(HIDDEN_FILTERS).sort()).toEqual(
       [
         "ChatThread",
+        "Comment",
         "Context",
         "ContextFile",
         "Diagram",

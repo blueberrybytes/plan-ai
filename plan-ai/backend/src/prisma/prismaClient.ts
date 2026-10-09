@@ -38,6 +38,13 @@ export const HIDDEN_FILTERS: Record<string, (h: HiddenFromCaller) => Where> = {
   PainPoint: (h) => ({ transcript: transcriptOk(h) }),
   TaskTranscriptLink: (h) => ({ transcript: transcriptOk(h) }),
   TranscriptTranslation: (h) => ({ source: transcriptOk(h) }),
+  // A comment hangs from a task or from a meeting.
+  Comment: (h) => ({
+    AND: [
+      { OR: [{ taskId: null }, { task: { projectId: { notIn: h.projectIds } } }] },
+      viaTranscript(h),
+    ],
+  }),
   Context: (h) => ({ AND: [projectOk(h), { id: { notIn: h.contextIds } }] }),
   ContextFile: (h) => ({ contextId: { notIn: h.contextIds } }),
   ChatThread: (h) => ({ AND: [viaTranscript(h), ...contextsOk(h)] }),

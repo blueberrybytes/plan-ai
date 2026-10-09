@@ -1,6 +1,12 @@
 # Ports are published on 127.0.0.1 only: Docker writes its own firewall
 # rules, so a port published on 0.0.0.0 is open to the network even behind
 # ufw. Put a TLS proxy in front of anything that must be reached from outside.
+# A fixed project name. Without it Compose names the project after the folder
+# ("backend"), and any other repository with a backend/docker-compose.yml
+# becomes the same project: bringing one up replaces the containers of the
+# other.
+name: plan-ai
+
 services:
   db:
     image: postgres:16
@@ -162,9 +168,16 @@ services:
         curl -fsS http://ollama:11434/api/pull -d '{"model":"${LOCAL_EMBEDDINGS_MODEL:-bge-m3}","stream":false}';
         echo; echo "All models ready."
 
+# The names the volumes had while the project was called "backend", so the
+# data of an existing install is found again under the new project name.
 volumes:
   plan-ai-db-data:
+    name: backend_plan-ai-db-data
   qdrant-storage:
+    name: backend_qdrant-storage
   plan-ai-redis-data:
+    name: backend_plan-ai-redis-data
   whisper-models:
+    name: backend_whisper-models
   ollama-models:
+    name: backend_ollama-models
