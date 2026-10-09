@@ -1379,7 +1379,8 @@
       "team_grid": "Team Members",
       "showcase": "Showcase",
       "stats": "Key Stats"
-    }
+    },
+    "generationFailed": "This presentation could not be generated. Nothing was saved. Create it again."
   },
   "transcripts": {
     "speakers": {

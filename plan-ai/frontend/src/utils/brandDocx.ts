@@ -1,3 +1,4 @@
+import { withFontFallbacks } from "./docxFontFallback";
 import {
   Document,
   Packer,
@@ -629,6 +630,12 @@ const buildDocument = ({ theme, title, markdown, logo }: BuildArgs): Document =>
   });
 };
 
+/** The fonts a themed document uses, for the substitutes declared in the file. */
+const brandFonts = (theme: BrandDocxTheme): string[] => {
+  const style = resolveStyle(theme);
+  return [style.headingFont, style.bodyFont];
+};
+
 const safeFileName = (name: string) =>
   (name || "document").replace(/[\\/:*?"<>|]+/g, "").trim() || "document";
 
@@ -639,7 +646,7 @@ const safeFileName = (name: string) =>
 export const downloadThemeTemplateDocx = async (theme: BrandDocxTheme): Promise<void> => {
   const logo = await fetchLogo(theme.logoUrl);
   const doc = buildDocument({ theme, logo });
-  const blob = await Packer.toBlob(doc);
+  const blob = await withFontFallbacks(await Packer.toBlob(doc), brandFonts(theme));
   saveAs(blob, `${safeFileName(theme.name || "Brand")} — Theme Template.docx`);
 };
 
@@ -655,7 +662,7 @@ export const exportThemedDocx = async (
 ): Promise<void> => {
   const logo = await fetchLogo(theme.logoUrl);
   const doc = buildDocument({ theme, title, markdown, logo });
-  const blob = await Packer.toBlob(doc);
+  const blob = await withFontFallbacks(await Packer.toBlob(doc), brandFonts(theme));
   saveAs(blob, `${safeFileName(title)}.docx`);
 };
 

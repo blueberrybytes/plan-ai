@@ -154,6 +154,19 @@ const SlideView: React.FC = () => {
     );
   }
 
+  if (presentation?.status === "FAILED" && slides.length === 0) {
+    return (
+      <SidebarLayout>
+        <Box sx={{ p: 4 }}>
+          <Button startIcon={<ArrowBackIcon />} onClick={() => navigate("/slides")}>
+            {t("slides.actions.back")}
+          </Button>
+          <Typography sx={{ mt: 2 }}>{t("slides.generationFailed")}</Typography>
+        </Box>
+      </SidebarLayout>
+    );
+  }
+
   if (!presentation) {
     return (
       <SidebarLayout>

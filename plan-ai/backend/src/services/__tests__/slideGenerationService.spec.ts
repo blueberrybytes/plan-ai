@@ -119,7 +119,7 @@ describe("slide generation", () => {
     expect(slidePrompts().filter((p) => p.includes("slide #2"))).toHaveLength(2);
   });
 
-  it("keeps the outline when no slide could be filled", async () => {
+  it("fails the deck when no slide could be filled", async () => {
     answerWith(
       [
         { slideTypeKey: "title_only", intent: "cover" },
@@ -130,12 +130,12 @@ describe("slide generation", () => {
       },
     );
 
-    await generate();
+    await expect(generate()).rejects.toThrow();
 
-    expect(savedSlides()).toEqual([
-      { slideTypeKey: "title_only", parameters: {} },
-      { slideTypeKey: "text_block", parameters: {} },
-    ]);
+    // The outline kept for the live preview is cleared, then the deck is marked failed.
+    const writes = db.presentation.update.mock.calls.map((c: any[]) => c[0].data);
+    expect(writes.at(-2)).toEqual({ slidesJson: [] });
+    expect(writes.at(-1)).toEqual({ status: "FAILED" });
   });
 
   it("cuts a list to what the slide can show", async () => {

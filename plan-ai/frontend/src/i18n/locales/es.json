@@ -1375,7 +1375,8 @@
       "team_grid": "Miembros del Equipo",
       "showcase": "Exhibición",
       "stats": "Estadísticas Clave"
-    }
+    },
+    "generationFailed": "No se ha podido generar esta presentación. No se ha guardado nada. Vuelve a crearla."
   },
   "transcripts": {
     "speakers": {
