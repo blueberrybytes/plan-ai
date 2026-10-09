@@ -287,7 +287,7 @@ export class SlideGenerationService {
       );
 
       const slideResults = await Promise.all(parameterPromises);
-      let fullyPopulatedSlides = slideResults.filter((s): s is FilledSlide => s !== null);
+      const fullyPopulatedSlides = slideResults.filter((s): s is FilledSlide => s !== null);
       const dropped = slideResults.length - fullyPopulatedSlides.length;
       if (dropped > 0 && fullyPopulatedSlides.length > 0) {
         // A slide without content renders as an empty frame, so it is left out.
@@ -295,14 +295,14 @@ export class SlideGenerationService {
           `[Slide Gen Debug] Dropped ${dropped} of ${slideResults.length} slides that could not be filled for ${presentationId}.`,
         );
       } else if (dropped > 0) {
-        // Nothing could be filled. Keep the outline so the deck is not empty.
-        logger.error(
-          `[Slide Gen Debug] No slide could be filled for ${presentationId}. Keeping the empty outline.`,
-        );
-        fullyPopulatedSlides = slidesOutline.map((s) => ({
-          slideTypeKey: s.slideTypeKey,
-          parameters: {},
-        }));
+        // Nothing could be filled. A deck of empty frames looks finished and
+        // is not, so the generation fails and the user is told. The outline
+        // saved for the live preview goes too.
+        await prisma.presentation.update({
+          where: { id: presentationId },
+          data: { slidesJson: [] },
+        });
+        throw new Error(`No slide could be filled for presentation ${presentationId}`);
       }
 
       logger.info(

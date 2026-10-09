@@ -1,5 +1,6 @@
 import prisma from "../prisma/prismaClient";
 import { type BrandTheme } from "@prisma/client";
+import { adoptLogo } from "./brandLogoService";
 
 export interface CreateBrandThemeInput {
   workspaceId: string;
@@ -39,6 +40,7 @@ export const brandThemeService = {
       data: {
         userId,
         ...data,
+        logoUrl: await adoptLogo(userId, data.logoUrl),
       },
     });
   },
@@ -52,7 +54,11 @@ export const brandThemeService = {
     const theme = await this.findById(userId, workspaceId, id);
     return prisma.brandTheme.update({
       where: { id: theme.id },
-      data,
+      // Only when the logo changes: the stored one is already ours or was tried.
+      data:
+        data.logoUrl !== undefined && data.logoUrl !== theme.logoUrl
+          ? { ...data, logoUrl: await adoptLogo(userId, data.logoUrl) }
+          : data,
     });
   },
 

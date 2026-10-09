@@ -4,7 +4,7 @@ import SlideFrame from "./SlideFrame";
 import AnimatedText from "./AnimatedText";
 import SlideBadge from "./SlideBadge";
 import { SlideProps } from "../SlideRenderer";
-import { slideTitleColor } from "../slideColors";
+import { DEFAULT_SLIDE_COLORS, readableOn, slideTitleColor } from "../slideColors";
 import { capList } from "../slideCaps";
 
 // Team Grid
@@ -16,6 +16,13 @@ export const TeamGridSlide: React.FC<SlideProps> = ({
   animate,
 }) => {
   const primary = brandColors?.primary || "#6366f1";
+  // Small text: the brand colour only when it reads on the slide background.
+  const roleColor = readableOn(
+    brandColors?.background || DEFAULT_SLIDE_COLORS.background,
+    primary,
+    "inherit",
+    "body",
+  );
   const titleColor = slideTitleColor(brandColors);
   const members: { name: string; role: string; bio: string }[] = capList(
     "team_grid",
@@ -89,8 +96,8 @@ export const TeamGridSlide: React.FC<SlideProps> = ({
                 width: 64,
                 height: 64,
                 borderRadius: "50%",
-                background: `linear-gradient(135deg, ${primary}, #a78bfa)`,
-                backgroundSize: "200% 200%",
+                // Solid brand colour. The initial picks black or white by contrast.
+                bgcolor: primary,
                 mx: "auto",
                 mb: 2,
                 display: "flex",
@@ -98,8 +105,7 @@ export const TeamGridSlide: React.FC<SlideProps> = ({
                 justifyContent: "center",
                 fontSize: 24,
                 fontWeight: 800,
-                color: "inherit",
-                boxShadow: `0 4px 14px ${primary}60`,
+                color: readableOn(primary, "#ffffff", "#111111", "title"),
               }}
             >
               {member.name.charAt(0)}
@@ -107,7 +113,7 @@ export const TeamGridSlide: React.FC<SlideProps> = ({
             <Typography sx={{ fontSize: 18, fontWeight: 700, color: "inherit" }}>
               {member.name}
             </Typography>
-            <Typography sx={{ fontSize: 14, color: primary, mb: 1, fontWeight: 500 }}>
+            <Typography sx={{ fontSize: 14, color: roleColor, mb: 1, fontWeight: 500 }}>
               {member.role}
             </Typography>
             <Typography sx={{ fontSize: 13, color: "inherit", opacity: 0.7, lineHeight: 1.5 }}>

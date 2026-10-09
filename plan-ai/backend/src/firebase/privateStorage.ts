@@ -9,6 +9,8 @@
  * with `yarn storage:make-private`.
  */
 
+import { randomUUID } from "node:crypto";
+
 type Bucket = ReturnType<
   ReturnType<(typeof import("./firebaseAdmin"))["firebaseAdmin"]["storage"]>["bucket"]
 >;
@@ -76,6 +78,26 @@ export const uploadPrivateFile = async (
   const bucket = await getBucket();
   await bucket.file(storagePath).save(data, { contentType });
   return storageUri(storagePath);
+};
+
+/**
+ * Saves a file and returns a long-lived Firebase download URL for it, the
+ * same kind the web app gets when a user uploads a logo by hand. Only for
+ * things meant to be embedded in shared documents and slides, such as brand
+ * logos. Recordings and files go through `uploadPrivateFile`.
+ */
+export const uploadWithDownloadUrl = async (
+  storagePath: string,
+  data: Buffer,
+  contentType: string,
+): Promise<string> => {
+  const bucket = await getBucket();
+  const token = randomUUID();
+  await bucket.file(storagePath).save(data, {
+    contentType,
+    metadata: { metadata: { firebaseStorageDownloadTokens: token } },
+  });
+  return `https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/${encodeURIComponent(storagePath)}?alt=media&token=${token}`;
 };
 
 export const signedUrlForPath = async (
