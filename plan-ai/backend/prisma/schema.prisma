@@ -54,14 +54,16 @@ enum SubscriptionTrack {
 }
 
 model Workspace {
-  id                      String        @id @default(cuid())
+  comments                Comment[]
+  webhookEndpoints        WebhookEndpoint[]
+  id                      String            @id @default(cuid())
   name                    String
-  kind                    WorkspaceKind @default(TEAM)
+  kind                    WorkspaceKind     @default(TEAM)
   stripeId                String?
-  tier                    WorkspaceTier @default(FREE)
-  maxInvitations          Int           @default(5)
-  createdAt               DateTime      @default(now())
-  updatedAt               DateTime      @updatedAt
+  tier                    WorkspaceTier     @default(FREE)
+  maxInvitations          Int               @default(5)
+  createdAt               DateTime          @default(now())
+  updatedAt               DateTime          @updatedAt
   openRouterKey           String?
   deepgramKey             String?
   // LEGACY / OPTIONAL: embeddings now run through the workspace's openRouterKey
@@ -70,8 +72,8 @@ model Workspace {
   // workspaces that already set an OpenAI key still use it as an embeddings
   // fallback. New workspaces don't need it.
   openaiKey               String?
-  isCourtesy              Boolean       @default(false)
-  monthlyTokenLimit       Int           @default(200000)
+  isCourtesy              Boolean           @default(false)
+  monthlyTokenLimit       Int               @default(200000)
   // Workspace-wide default brand theme. Used for AI-generated docs & slides
   // when neither an explicit theme nor the project's theme is set — covers
   // standalone recordings (recorder/mobile) that have no project.
@@ -81,9 +83,9 @@ model Workspace {
   audioRetentionDays      Int?
   // Daily report (parte diario): members say what they did and the AI
   // proposes changes to their tasks. Off until an owner or admin turns it on.
-  dailyReportEnabled      Boolean       @default(false)
+  dailyReportEnabled      Boolean           @default(false)
   // Local time "HH:mm" when the apps remind members to send it. Null: 17:30.
-  dailyReportReminderTime String?       @db.VarChar(5)
+  dailyReportReminderTime String?           @db.VarChar(5)
 
   // Sign-in rules for members, checked on every request. Empty means no rule.
   // Members whose email is outside these domains lose access.
@@ -348,6 +350,7 @@ model WorkspaceInvitation {
 }
 
 model User {
+  comments             Comment[]
   projectMemberships   ProjectMember[]       @relation("ProjectMemberUser")
   id                   String                @id @default(cuid())
   firebaseUid          String                @unique
@@ -542,6 +545,7 @@ model Transcript {
 
   notes        Note[]
   translations TranscriptTranslation[]
+  comments     Comment[]
 
   @@index([projectId])
   @@index([workspaceId])
@@ -553,6 +557,7 @@ model Transcript {
 }
 
 model Task {
+  comments           Comment[]
   id                 String               @id @default(cuid())
   title              String
   description        String?
@@ -1280,4 +1285,98 @@ model ProjectMember {
 
   @@unique([projectId, userId])
   @@index([userId])
+}
+
+/// A comment a person writes on a task or on a meeting. On a meeting it can
+/// point at a moment of the recording. `mentions` holds the ids of the
+/// workspace members named in it.
+model Comment {
+  id           String    @id @default(cuid())
+  workspaceId  String
+  authorId     String
+  taskId       String?
+  transcriptId String?
+  body         String
+  mentions     String[]  @default([])
+  /// Seconds into the meeting this comment is about. Only for meetings.
+  atSeconds    Float?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  /// Set when the author or an admin removes it. The row stays for the thread.
+  deletedAt    DateTime?
+
+  workspace  Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  author     User        @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  task       Task?       @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  transcript Transcript? @relation(fields: [transcriptId], references: [id], onDelete: Cascade)
+
+  @@index([taskId, createdAt])
+  @@index([transcriptId, createdAt])
+  @@index([workspaceId, createdAt])
+}
+
+/// A URL of the customer's own system that Plan AI calls when something
+/// happens in the workspace (a meeting was processed, a task changed).
+model WebhookEndpoint {
+  id            String    @id @default(cuid())
+  workspaceId   String
+  url           String
+  /// Signs each call (HMAC SHA-256). Encrypted at rest like the workspace keys.
+  secret        String
+  /// Event names this endpoint wants. Empty means all of them.
+  events        String[]  @default([])
+  description   String?
+  enabled       Boolean   @default(true)
+  createdById   String?
+  /// Failures in a row. The endpoint is turned off after too many.
+  failureCount  Int       @default(0)
+  lastSuccessAt DateTime?
+  lastFailureAt DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  workspace  Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  deliveries WebhookDelivery[]
+
+  @@index([workspaceId])
+}
+
+/// One call to a webhook endpoint, kept for a while so the customer can see
+/// what was sent and what their server answered.
+model WebhookDelivery {
+  id             String    @id @default(cuid())
+  endpointId     String
+  event          String    @db.VarChar(64)
+  payload        Json
+  /// PENDING, SUCCESS or FAILED.
+  status         String    @default("PENDING") @db.VarChar(16)
+  attempts       Int       @default(0)
+  responseStatus Int?
+  error          String?
+  createdAt      DateTime  @default(now())
+  deliveredAt    DateTime?
+
+  endpoint WebhookEndpoint @relation(fields: [endpointId], references: [id], onDelete: Cascade)
+
+  @@index([endpointId, createdAt])
+}
+
+/// How many times a feature was used, per day. Counts only: no content, no
+/// page addresses, nothing sent to a third party. Answers "which features do
+/// people use" so the ones nobody uses can be cut.
+model FeatureUsageDaily {
+  id          String   @id @default(cuid())
+  day         DateTime @db.Date
+  /// Dotted name, e.g. "meeting.recorded", "search.used".
+  feature     String   @db.VarChar(64)
+  /// web, recorder, mobile, api or mcp.
+  client      String   @db.VarChar(16)
+  /// "" when there is none. Empty strings, not NULL, so the unique key works.
+  workspaceId String   @default("")
+  userId      String   @default("")
+  count       Int      @default(0)
+
+  @@unique([day, feature, client, workspaceId, userId])
+  @@index([feature, day])
+  @@index([workspaceId, day])
 }
