@@ -108,6 +108,11 @@
 					"lastSignInAt": {
 						"type": "string",
 						"nullable": true
+					},
+					"courtesyWorkspaces": {
+						"type": "number",
+						"format": "double",
+						"description": "How many courtesy workspaces this user owns."
 					}
 				},
 				"required": [
@@ -119,7 +124,8 @@
 					"role",
 					"createdAt",
 					"updatedAt",
-					"lastSignInAt"
+					"lastSignInAt",
+					"courtesyWorkspaces"
 				],
 				"type": "object",
 				"additionalProperties": false
@@ -146,6 +152,128 @@
 					"status"
 				],
 				"type": "object"
+			},
+			"AdminUserWorkspace": {
+				"description": "Courtesy workspaces, for platform admins.\n\nA courtesy workspace runs on the platform's own AI and transcription keys\nand skips the subscription check and the usage limits. It is a flag on the\nworkspace, not on a person: to give someone courtesy access, their workspace\ngets it. Until now the only way to set it was a query on the database.\n\nThe unfiltered client is used on purpose: this lists workspaces by name and\nsize for the platform admin, who is not a member of them.",
+				"properties": {
+					"workspaceId": {
+						"type": "string"
+					},
+					"name": {
+						"type": "string"
+					},
+					"kind": {
+						"type": "string",
+						"description": "TEAM or PERSONAL."
+					},
+					"tier": {
+						"type": "string"
+					},
+					"role": {
+						"type": "string",
+						"description": "The user's role in it."
+					},
+					"isCourtesy": {
+						"type": "boolean"
+					},
+					"members": {
+						"type": "number",
+						"format": "double"
+					}
+				},
+				"required": [
+					"workspaceId",
+					"name",
+					"kind",
+					"tier",
+					"role",
+					"isCourtesy",
+					"members"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"AdminUserWorkspaceResponse": {
+				"$ref": "#/components/schemas/AdminUserWorkspace"
+			},
+			"ApiResponse_AdminUserWorkspaceResponse-Array_": {
+				"properties": {
+					"message": {
+						"type": "string"
+					},
+					"data": {
+						"items": {
+							"$ref": "#/components/schemas/AdminUserWorkspaceResponse"
+						},
+						"type": "array",
+						"nullable": true
+					},
+					"status": {
+						"type": "number",
+						"format": "double"
+					}
+				},
+				"required": [
+					"data",
+					"status"
+				],
+				"type": "object"
+			},
+			"WorkspaceCourtesyResponse": {
+				"properties": {
+					"workspaceId": {
+						"type": "string"
+					},
+					"name": {
+						"type": "string"
+					},
+					"isCourtesy": {
+						"type": "boolean"
+					}
+				},
+				"required": [
+					"workspaceId",
+					"name",
+					"isCourtesy"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"ApiResponse_WorkspaceCourtesyResponse_": {
+				"properties": {
+					"message": {
+						"type": "string"
+					},
+					"data": {
+						"allOf": [
+							{
+								"$ref": "#/components/schemas/WorkspaceCourtesyResponse"
+							}
+						],
+						"nullable": true
+					},
+					"status": {
+						"type": "number",
+						"format": "double"
+					}
+				},
+				"required": [
+					"data",
+					"status"
+				],
+				"type": "object"
+			},
+			"SetWorkspaceCourtesyRequest": {
+				"properties": {
+					"isCourtesy": {
+						"type": "boolean"
+					}
+				},
+				"required": [
+					"isCourtesy"
+				],
+				"type": "object",
+				"additionalProperties": false
 			},
 			"ApiResponse_UserDetailResponse_": {
 				"properties": {
@@ -10150,6 +10278,88 @@
 					}
 				],
 				"parameters": []
+			}
+		},
+		"/api/users/{userId}/workspaces": {
+			"get": {
+				"operationId": "GetUserWorkspaces",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiResponse_AdminUserWorkspaceResponse-Array_"
+								}
+							}
+						}
+					}
+				},
+				"description": "The workspaces a user belongs to, with their courtesy flag. Admin only.",
+				"tags": [
+					"Users"
+				],
+				"security": [
+					{
+						"AdminOnly": []
+					}
+				],
+				"parameters": [
+					{
+						"in": "path",
+						"name": "userId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				]
+			}
+		},
+		"/api/users/workspaces/{workspaceId}/courtesy": {
+			"put": {
+				"operationId": "SetWorkspaceCourtesy",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiResponse_WorkspaceCourtesyResponse_"
+								}
+							}
+						}
+					}
+				},
+				"description": "Turns courtesy on or off for a workspace. A courtesy workspace runs on the\nplatform's keys and skips the subscription check and the usage limits.\nAdmin only. The change is written to that workspace's audit log.",
+				"tags": [
+					"Users"
+				],
+				"security": [
+					{
+						"AdminOnly": []
+					}
+				],
+				"parameters": [
+					{
+						"in": "path",
+						"name": "workspaceId",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/SetWorkspaceCourtesyRequest"
+							}
+						}
+					}
+				}
 			}
 		},
 		"/api/users/{userId}/role": {

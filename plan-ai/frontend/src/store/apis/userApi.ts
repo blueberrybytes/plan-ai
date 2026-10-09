@@ -12,10 +12,15 @@ export type SyncOrphanRequest = components["schemas"]["SyncOrphanRequest"];
 export type ApiResponseUserOrphanArray =
   components["schemas"]["ApiResponse_UserOrphanResponse-Array_"];
 
+export type AdminUserWorkspace = components["schemas"]["AdminUserWorkspace"];
+type ApiResponseAdminUserWorkspaces =
+  components["schemas"]["ApiResponse_AdminUserWorkspaceResponse-Array_"];
+type ApiResponseWorkspaceCourtesy = components["schemas"]["ApiResponse_WorkspaceCourtesyResponse_"];
+
 export const userApi = createApi({
   reducerPath: "userApi",
   baseQuery: baseQueryWithReauth,
-  tagTypes: ["User"],
+  tagTypes: ["User", "UserWorkspaces"],
   endpoints: (builder) => ({
     getUsers: builder.query<ApiResponseUserDetailArray, void>({
       query: () => "/api/users",
@@ -58,6 +63,23 @@ export const userApi = createApi({
       }),
       invalidatesTags: ["User"],
     }),
+    // Platform admin: the workspaces of one user, with their courtesy flag.
+    getUserWorkspaces: builder.query<ApiResponseAdminUserWorkspaces, string>({
+      query: (userId) => `/api/users/${userId}/workspaces`,
+      providesTags: (_result, _error, userId) => [{ type: "UserWorkspaces", id: userId }],
+    }),
+    setWorkspaceCourtesy: builder.mutation<
+      ApiResponseWorkspaceCourtesy,
+      { workspaceId: string; isCourtesy: boolean }
+    >({
+      query: ({ workspaceId, isCourtesy }) => ({
+        url: `/api/users/workspaces/${workspaceId}/courtesy`,
+        method: "PUT",
+        body: { isCourtesy },
+      }),
+      // The user list shows who owns a courtesy workspace.
+      invalidatesTags: ["User", "UserWorkspaces"],
+    }),
   }),
 });
 
@@ -68,4 +90,6 @@ export const {
   useSyncOrphanMutation,
   useForceVerifyEmailMutation,
   useDeleteUserMutation,
+  useGetUserWorkspacesQuery,
+  useSetWorkspaceCourtesyMutation,
 } = userApi;
