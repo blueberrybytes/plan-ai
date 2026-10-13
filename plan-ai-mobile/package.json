@@ -68,7 +68,7 @@
     "expo-glass-effect": "~55.0.10",
     "expo-image": "~55.0.8",
     "expo-linking": "~55.0.13",
-    "expo-location": "~55.1.8",
+    "expo-location": "~57.0.20",
     "expo-router": "~55.0.12",
     "expo-sharing": "^55.0.18",
     "expo-splash-screen": "~55.0.18",
