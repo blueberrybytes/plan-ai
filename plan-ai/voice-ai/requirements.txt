@@ -1,9 +1,0 @@
-fastapi
-uvicorn
-python-multipart
-httpx
-speechbrain
-torchaudio
-sentry-sdk[fastapi]
-scipy
-numpy

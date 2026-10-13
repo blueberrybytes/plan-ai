@@ -5,11 +5,13 @@ RUN apt-get update && apt-get install -y ffmpeg libsndfile1 wget && rm -rf /var/
 
 WORKDIR /app
 
-COPY requirements.txt .
+COPY pyproject.toml uv.lock ./
 
-# Install uv and use it to install dependencies lightning fast
+# Install the exact versions in uv.lock, the same ones local development uses.
+# --frozen installs from the lock as it is, without resolving again.
 RUN pip install --no-cache-dir uv
-RUN uv pip install --system --no-cache -r requirements.txt
+RUN uv sync --frozen --no-dev --no-cache
+ENV PATH="/app/.venv/bin:$PATH"
 
 RUN python -c "from speechbrain.inference.speaker import SpeakerRecognition; SpeakerRecognition.from_hparams(source='speechbrain/spkrec-ecapa-voxceleb', savedir='model')"
 
