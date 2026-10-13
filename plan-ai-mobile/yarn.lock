@@ -4456,10 +4456,15 @@ expo-font@~55.0.6:
   dependencies:
     fontfaceobserver "^2.1.0"
 
-expo-glass-effect@^55.0.10, expo-glass-effect@~55.0.10:
+expo-glass-effect@^55.0.10:
   version "55.0.10"
   resolved "https://registry.yarnpkg.com/expo-glass-effect/-/expo-glass-effect-55.0.10.tgz#5db7a154e8c7dd89a7fc91f87a1d5387364f0f20"
   integrity sha512-5kL/jATvgJWdrqPdxixrECJqD2l8cfQ4ALr1DK7qi9XkyI97ejXvUjB2VsfEePNy3Fg+/VwzA3n3L7Nv3tAPkw==
+
+expo-glass-effect@~57.0.4:
+  version "57.0.4"
+  resolved "https://registry.yarnpkg.com/expo-glass-effect/-/expo-glass-effect-57.0.4.tgz#9b7e65b1475970f0662c045b71fce99bf2710a5c"
+  integrity sha512-/AG2Kljbqfgxu+GchI2YFIbxiF9cPsIpCy4iNDzlRiZk9rvR6BwRfB6gfQVu3V2ExaoGf2h5IsEnqVI5MYNBAg==
 
 expo-image@^55.0.9, expo-image@~55.0.8:
   version "55.0.9"
