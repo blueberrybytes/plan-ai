@@ -13,19 +13,19 @@ import {
   getLocalLanguageModel,
 } from "./localAi";
 
-// Gemini 3.7 Flash. Handles structured extraction and prose for the whole app.
+// GPT-6 Luna. Handles structured extraction and prose for the whole app.
 //
-// Replaced 2.5 Flash, which was fourteen months older, at effectively the same
-// price: input went up ($0.300 to $0.375 per 1M) and output came down ($2.500
-// to $1.875). Break-even sits at an input:output ratio of 8.3 to 1, and our
-// meetings land right about there, so the bill moves by well under 1% in either
-// direction. It only loses on very input-heavy calls (roughly 10% more at 20 to
-// 1). Before assuming a ratio, measure it: AiUsageLog stores inputTokens and
-// outputTokens per call.
+// Replaced Gemini 3.7 Flash on 2026-11-13. Flash went up to $0.75/$3.75 per 1M
+// (it was $0.375/$1.875 in August). Luna costs $0.10/$0.50 at list price, with
+// no promotion behind it, and a 1.05M context.
 //
-// Same 1M context and same lineage, so the tokenizer, the json_schema
-// behaviour and Google's implicit prompt caching all carry over unchanged.
-export const DEFAULT_AI_MODEL = "google/gemini-3.7-flash";
+// Picked with `yarn eval:models` on eight meetings, using the real analysis
+// prompt and schema with no fallbacks. Luna was the only cheap model with valid
+// JSON 8 of 8 times, the meeting's language every time and every quoted
+// "evidence" present word for word in the transcript. Measured cost per
+// analysis: $0.0026 against $0.0164 on Flash. It is slower (38 s median against
+// 22 s), which is fine for background jobs. Full results in MODELOS.md.
+export const DEFAULT_AI_MODEL = "openai/gpt-6-luna";
 
 // FAST is deliberately a rung BELOW the default. It used to be the same model,
 // which made the name a lie and the constant pointless. Flash Lite keeps the
@@ -37,31 +37,42 @@ export const DEFAULT_AI_MODEL = "google/gemini-3.7-flash";
 // Staying on 2.5 Flash Lite on purpose. The 3.1 generation of Lite costs
 // $0.25/$1.50, which is nearly a full Flash, so moving up would collapse the
 // gap this constant exists to keep.
+//
+// Rechecked on 2026-11-13 for live translation against seven newer cheap
+// models: still the fastest (0.8 s median per phrase) and the cheapest. It is
+// not used for the meeting analysis because it once wrote a Spanish meeting's
+// whole analysis in English.
 export const FAST_AI_MODEL = "google/gemini-2.5-flash-lite";
 
 // ── Per-task model selection ───────────────────────────────────────────────
 // These three all track the default. They're separate constants so a task can
 // be moved on its own when there's a reason to, not because they differ today.
-export const TICKET_MODEL = "google/gemini-3.7-flash"; // task/ticket extraction
-export const DOC_MODEL = "google/gemini-3.7-flash"; // markdown document generation
-export const SLIDE_MODEL = "google/gemini-3.7-flash"; // slide deck generation
-// Haiku 4.5 rather than Sonnet: ~$1/$5 per 1M instead of Sonnet 4.6's $3/$15.
+// DOC_MODEL also drives mockups and HTML prototypes.
+export const TICKET_MODEL = "openai/gpt-6-luna"; // task/ticket extraction
+export const DOC_MODEL = "openai/gpt-6-luna"; // markdown document generation
+export const SLIDE_MODEL = "openai/gpt-6-luna"; // slide deck generation
+// Haiku 5.5: $0.10/$0.50 per 1M, a tenth of Haiku 4.5's $1/$5, same family.
 //
-// The original reasoning (Mermaid's grammar is strict, a single error makes the
-// diagram unrenderable) was sound when written, but the economics had drifted
-// badly: at Sonnet prices ONE diagram cost roughly twice as much as processing
-// the entire rest of the meeting. And the safety net has grown since. The
+// Mermaid's grammar is strict, which is why this stays on Anthropic. The
 // frontend runs `repairMermaidSyntax` before every render, with targeted fixes
-// for the failures actually seen in the wild (quotes inside labels, xychart
-// corruption, zero-duration Gantt tasks). A syntax slip is no longer fatal.
+// for the failures seen in the wild (quotes inside labels, xychart corruption,
+// zero-duration Gantt tasks), so a syntax slip is not fatal.
 //
-// Haiku keeps the Anthropic lineage that handles strict syntax well, and 200k
-// context is far more than a diagram prompt needs. If diagram quality regresses
-// this is one constant to move back, and it should be measured with the Mermaid
-// parser rather than by eye (see MODELOS.md).
-export const DIAGRAM_MODEL = "anthropic/claude-haiku-4.5"; // Mermaid generation + repair
+// Haiku 5.5 must NOT be used for structured output. It rejects the meeting
+// analysis schema ("too many parameters with union types": 24 nullable fields).
+// Diagrams are streamed as plain text, so that limit does not apply here. If
+// diagram quality regresses, measure it with the Mermaid parser rather than by
+// eye (see MODELOS.md).
+export const DIAGRAM_MODEL = "anthropic/claude-haiku-5.5"; // Mermaid generation + repair
+
+// Quick title and summary right after a meeting, and the optional codebase
+// investigation before task extraction. These were "openai/gpt-4o-mini" written
+// by hand (a 2024 model, $0.15/$0.60, 128k context).
+export const QUICK_SUMMARY_MODEL = DEFAULT_AI_MODEL;
 
 // Model used for the "big-context cached" route (e.g. injecting a whole repo).
+// Left on Gemini when the default moved to Luna: moving it needs OpenAI's
+// caching measured first.
 // Gemini 3.7 Flash: 1M context (a stripped repo fits), cheap, reliable
 // json_schema, and Google applies *implicit* prompt caching automatically, with
 // no `cache_control` needed (that directive is Anthropic-only). We pin the
@@ -80,18 +91,23 @@ export const CACHED_CONTEXT_MODEL = "google/gemini-3.7-flash";
 //    OpenRouter — we use Output.object() across the entire app, and a fallback
 //    that can't honour a schema turns a recoverable failure into a parse error.
 //
-// 2. They must NOT share a provider with the primary model. The default is
-//    Google; if Google is the reason the primary failed, a Google fallback
-//    fails with it. That's why this list is OpenAI + Anthropic.
+// 2. The first fallback must NOT share a provider with the primary model. If
+//    OpenAI is the reason the primary failed, an OpenAI fallback fails with it.
+//
+// The list is shared by primaries from three providers (OpenAI for the default,
+// Google for FAST and the cached route, Anthropic for diagrams), and
+// getConfiguredModel drops the primary itself from it. So the order matters:
+// a Luna call falls back to Gemini, a Gemini call falls back to Luna, and
+// Sonnet is the last resort for everything.
 //
 // Context matters more than price here: fallbacks fire rarely, but they fire on
 // the hardest requests. `gpt-4o-mini` was picked as the cheap "gold standard"
-// and capped at 128k — too small for a long meeting with injected context, so
-// it failed exactly when it was needed. Prices verified 2026-08-12.
+// and capped at 128k, too small for a long meeting with injected context, so
+// it failed exactly when it was needed. Prices verified 2026-11-13.
 export const FALLBACK_MODELS = [
-  "openai/gpt-5.6-luna", // 1.05M context, ~$0.20/$1.20 list (currently 50% off)
-  "openai/gpt-5-mini", // 400k, very reliable on json_schema
-  "anthropic/claude-sonnet-5", // different provider again; 1M context
+  "openai/gpt-6-luna", // 1.05M context, $0.10/$0.50
+  "google/gemini-3.7-flash", // 1M context, $0.75/$3.75, the previous default
+  "anthropic/claude-sonnet-5", // 1M context, $2/$10, last resort
 ];
 
 /**

@@ -22,6 +22,7 @@ import {
   CACHED_CONTEXT_MODEL,
   TICKET_MODEL,
   DEFAULT_AI_MODEL,
+  QUICK_SUMMARY_MODEL,
   getMaxContextChunks,
   extractOpenRouterUsage,
 } from "../utils/aiModelUtils";
@@ -242,7 +243,7 @@ const TranscriptAnalysisRawSchema = z.object({
   tasks: z.array(TranscriptTaskRawSchemaWithSubtasks),
 });
 
-const transcriptAnalysisSchemaForGeneration: ZodTypeAny = z.object({
+export const transcriptAnalysisSchemaForGeneration: ZodTypeAny = z.object({
   language: z.string().min(1),
   title: z.string().nullable(),
   summary: z.string().nullable(),
@@ -1024,14 +1025,14 @@ export class ProjectTranscriptService {
 
     // PHASE 1: Fast Summary to Unlock UI Early
     try {
-      const fastModel = await getWorkspaceModel(input.workspaceId, "openai/gpt-4o-mini");
+      const fastModel = await getWorkspaceModel(input.workspaceId, QUICK_SUMMARY_MODEL);
       const {
         output: fastParsed,
         usage,
         providerMetadata,
       } = await generateText({
         model: fastModel,
-        providerOptions: getStructuredProviderOptions("openai/gpt-4o-mini"),
+        providerOptions: getStructuredProviderOptions(QUICK_SUMMARY_MODEL),
         output: Output.object({
           name: "TranscriptQuickSummary",
           description:
@@ -1056,7 +1057,7 @@ export class ProjectTranscriptService {
             workspaceId: input.workspaceId,
             feature: "TASK_EXTRACTION",
             provider: "openrouter", // or get fallback provider
-            model: "openai/gpt-4o-mini",
+            model: QUICK_SUMMARY_MODEL,
             inputTokens: fastUsage.inputTokens,
             outputTokens: fastUsage.outputTokens,
             cost: fastUsage.cost,
@@ -1717,8 +1718,10 @@ export class ProjectTranscriptService {
     /** Optional transcript id to exclude from the "previous meetings" lookup — the one being analyzed right now. */
     excludeTranscriptId?: string,
   ): Promise<TranscriptAnalysis> {
-    // Structured-output extraction defaults to Gemini Flash: it handles
-    // `response_format: json_schema` reliably and cheaply. Premium models
+    // Structured-output extraction defaults to TICKET_MODEL (GPT-6 Luna since
+    // 2026-11-13): it handles `response_format: json_schema` reliably and
+    // cheaply, see MODELOS.md for the comparison. Claude Haiku 5.5 rejects this
+    // schema outright (too many nullable fields). Premium models
     // (e.g. claude-sonnet) intermittently return OpenRouter's body-level 400
     // "Provider returned error" on structured output, which OpenRouter's
     // automatic model fallback does NOT recover from. Callers can still pass
@@ -1820,10 +1823,10 @@ export class ProjectTranscriptService {
     if (tools) {
       try {
         logger.info(`Starting Two-Step Agentic Investigation for Transcript using fast model`);
-        const fastModel = await getWorkspaceModel(workspaceId, "openai/gpt-4o-mini");
+        const fastModel = await getWorkspaceModel(workspaceId, QUICK_SUMMARY_MODEL);
         const investigation = await generateText({
           model: fastModel,
-          providerOptions: getFallbackProviderOptions("openai/gpt-4o-mini"),
+          providerOptions: getFallbackProviderOptions(QUICK_SUMMARY_MODEL),
           tools,
           stopWhen: stepCountIs(2),
           system:
@@ -1842,7 +1845,7 @@ export class ProjectTranscriptService {
             workspaceId,
             feature: "TASK_EXTRACTION",
             provider: "openrouter",
-            model: "openai/gpt-4o-mini",
+            model: QUICK_SUMMARY_MODEL,
             inputTokens: investUsage.inputTokens,
             outputTokens: investUsage.outputTokens,
             cost: investUsage.cost,
@@ -3120,8 +3123,7 @@ ${transcriptForLLM}`;
       const tMcp = Date.now();
       try {
         // Use the workspace's configured model for the MCP investigation, and
-        // fall back to the app default, which is a Gemini Flash and handles tool
-        // use well.
+        // fall back to the app default, which handles tool use well.
         const mcpModel = await getWorkspaceModel(workspaceId, MCP_MODEL);
         const investigation = await generateText({
           model: mcpModel,

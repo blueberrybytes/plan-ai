@@ -39,18 +39,26 @@ export const AI_MODEL_LIMITS: Record<string, ModelLimits> = {
       "The cheapest option that still takes a whole codebase. ~$0.10/$0.40 per 1M tokens — around a quarter the cost of Flash. Best default when volume matters more than nuance.",
     tags: ["Cheapest", "High Context", "Google"],
   },
+  // The app default since 2026-11-13 (see aiModelUtils.ts and MODELOS.md).
+  "openai/gpt-6-luna": {
+    modelName: "GPT-6 Luna",
+    maxTokens: 1000000,
+    description:
+      "The app default. $0.10/$0.50 per 1M tokens with a 1M context. In our meeting tests it never broke the JSON, kept the meeting's language and never invented a quote.",
+    tags: ["Cheapest", "High Context", "OpenAI"],
+  },
   "openai/gpt-5.6-luna": {
     modelName: "GPT-5.6 Luna",
     maxTokens: 1000000,
     description:
-      "Newest OpenAI generation at budget pricing — ~$0.10/$0.60 per 1M tokens with a 1M context. Strong structured output for the money.",
-    tags: ["Cheapest", "High Context", "OpenAI"],
+      "The previous Luna, at $0.20/$1.20 per 1M tokens with a 1M context. GPT-6 Luna is newer and costs less.",
+    tags: ["Balanced", "High Context", "OpenAI"],
   },
   "google/gemini-3.7-flash": {
     modelName: "Gemini 3.7 Flash",
     maxTokens: 1000000,
     description:
-      "Fourteen months newer than 2.5 Flash and slightly cheaper for a transcript-shaped workload — ~$0.38/$1.88 per 1M tokens with a 1M context. The natural successor to the default.",
+      "Google's current Flash at $0.75/$3.75 per 1M tokens with a 1M context. Was the app default until its price doubled in November 2026.",
     tags: ["Balanced", "High Context", "Google"],
   },
   "google/gemini-2.5-flash": {
@@ -137,13 +145,6 @@ export const AI_MODEL_LIMITS: Record<string, ModelLimits> = {
       "xAI's flagship at ~$2/$6 per 1M tokens — notably cheap output for its tier, with a 500k window. Same price as 4.5, one generation newer.",
     tags: ["Reasoning", "Cheap Output", "xAI"],
   },
-  "qwen/qwen3-max": {
-    modelName: "Qwen3 Max",
-    maxTokens: 260000,
-    description:
-      "Alibaba's flagship at ~$0.78/$3.90 per 1M tokens. Strong multilingual performance — worth testing if your meetings aren't in English.",
-    tags: ["Multilingual", "Reasoning", "Qwen"],
-  },
   "openai/gpt-5.4": {
     modelName: "GPT-5.4",
     maxTokens: 1000000,
@@ -183,40 +184,15 @@ export const AI_MODEL_LIMITS: Record<string, ModelLimits> = {
   },
 
   // ── Open weights ──────────────────────────────────────────────────────────
-  // 60k, not the 160k this briefly claimed: R1 is down to a single provider
-  // serving 64k, so the usable window collapsed when the others dropped off.
-  // Provider mix moves — re-check with `yarn verify:models`, not from memory.
-  "deepseek/deepseek-r1": {
-    modelName: "DeepSeek R1",
-    maxTokens: 60000,
-    description:
-      "DeepSeek's reasoning model, ~$0.70/$2.50 per 1M tokens. Specialised in chain-of-thought logic and system architecture.",
-    tags: ["Reasoning", "Open Source", "DeepSeek"],
-  },
+  // Removed 2026-11-13 because OpenRouter no longer serves them: Qwen3 Max,
+  // DeepSeek R1 and Hermes 3 70B (the neutrally aligned option for meetings
+  // other models refuse to summarise). Picking one failed on every call.
   "meta-llama/llama-3.3-70b-instruct": {
     modelName: "Llama 3.3 70B",
     maxTokens: 130000,
     description:
       "Meta's open LLM at ~$0.10/$0.32 per 1M tokens, optimised for instruction following and general tasks.",
     tags: ["Open Source", "Meta", "Cheapest"],
-  },
-
-  // Neutrally-aligned option. Safety-tuned models sometimes decline to
-  // summarise a legitimate meeting — a security incident, an HR case, a legal
-  // dispute, or simply blunt language — and a refusal on a recording the user
-  // already owns is a product failure, not a safeguard. Hermes follows the
-  // system prompt instead of applying judgements of its own.
-  //
-  // Deliberately NOT one of the "uncensored" roleplay fine-tunes: those are
-  // built for fiction, are weak at extraction, and the best known one (Dolphin
-  // Venice) doesn't support structured_outputs at all, so picking it would
-  // silently break every ticket the pipeline tries to extract.
-  "nousresearch/hermes-3-llama-3.1-70b": {
-    modelName: "Hermes 3 70B",
-    maxTokens: 130000,
-    description:
-      "Neutrally aligned and highly steerable — it follows your instructions rather than refusing on its own judgement. Pick it when a meeting covers material other models decline to summarise. ~$0.70/$0.70 per 1M tokens. Being Llama-3.1-era, extraction quality sits below the frontier options.",
-    tags: ["Unfiltered", "Open Source", "Nous"],
   },
 };
 

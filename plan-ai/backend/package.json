@@ -42,7 +42,8 @@
     "prisma:seed": "ts-node prisma/seed.ts",
     "prisma:migrate": "npx prisma migrate dev",
     "generate:swagger": "npx tsoa spec && npx tsoa routes",
-    "format": "prettier --cache --write \"src/**/*.{ts,tsx,js,json}\""
+    "format": "prettier --cache --write \"src/**/*.{ts,tsx,js,json}\"",
+    "eval:models": "env-cmd -f .env ts-node --transpile-only src/scripts/modelEval.ts"
   },
   "keywords": [
     "backend"

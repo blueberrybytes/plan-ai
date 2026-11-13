@@ -1,3 +1,85 @@
+# Revisión de modelos, noviembre 2026
+
+Precios sacados del catálogo en vivo de OpenRouter el 13 de noviembre de 2026 (471 modelos). La prueba se puede repetir con `yarn eval:models` (ver al final de esta sección).
+
+## Qué ha pasado con el gasto
+
+El modelo por defecto, `google/gemini-3.7-flash`, cuesta ahora $0.75 de entrada y $3.75 de salida por millón de tokens. En agosto costaba la mitad ($0.375/$1.875). El coste real que devolvió OpenRouter en la prueba lo confirma: $0.0164 por análisis de una reunión de unos 25 minutos.
+
+Ese modelo hace casi todo lo que pasa después de grabar una reunión: el análisis (tareas, resumen, problemas), el análisis por participante, la traducción de la transcripción guardada, el documento y las slides. Las dos primeras llamadas mandan la transcripción entera, así que cada reunión paga dos veces la entrada.
+
+La transcripción no pasa por OpenRouter. Va por Deepgram y no entra en esta revisión.
+
+## La prueba
+
+Ocho reuniones sintéticas, escritas para la prueba y sin datos de clientes: planificación de sprint en español, llamada comercial en inglés con un cliente de Dubái, reunión de marketing en catalán, post mortem en español con texto de reconocimiento de voz sucio, una reunión de RRHH delicada, una demo que mezcla español e inglés, una reunión general larga y una llamada de 4 minutos casi sin tareas.
+
+Cada modelo recibió el mismo prompt y el mismo esquema JSON que usa `analyzeTranscript` en producción, sin cadena de fallback, para medir el modelo y no la red de seguridad. Se midió si devuelve un JSON válido, el coste real, el tiempo, si escribe en el idioma de la reunión y si las citas que pone como prueba existen de verdad en la transcripción.
+
+| Modelo | Válidos | Coste por análisis | Frente a hoy | Tiempo (mediana) | Idioma mal | Citas inventadas o pegadas |
+| --- | --- | --- | --- | --- | --- | --- |
+| `google/gemini-3.7-flash` (hoy) | 8/8 | $0.0164 | | 22 s | 0/8 | 1 de 26 |
+| `openai/gpt-6-luna` | 8/8 | $0.0026 | 84% menos | 38 s | 0/8 | 0 de 33 |
+| `google/gemini-3.1-flash-lite` | 8/8 | $0.0041 | 75% menos | 6 s | 0/8 | 1 de 20 |
+| `google/gemini-2.5-flash-lite` | 8/8 (3 cortes de cuota antes) | $0.0015 | 91% menos | 11 s | 1/8 | 2 de 35 |
+| `deepseek/deepseek-v4-flash` | 8/8 | $0.0010 | 94% menos | 21 s | 0/8 | 17 de 38 |
+| `mistralai/mistral-small-2603` | 8/8 | $0.0027 | 84% menos | 21 s | 0/8 | 18 de 31 |
+| `qwen/qwen3.8-flash` sin razonamiento | 8/8 | $0.0017 | 90% menos | 23 s | 0/8 | 12 de 22 |
+| `minimax/minimax-m3.1-flash` | 7/8 | $0.0029 | 82% menos | 24 s | 0/7 | 2 de 58 |
+| `z-ai/glm-5.3-flash` | 2/8 | | | | | |
+| `anthropic/claude-haiku-5.5` | 0/8 | | | | | |
+
+Qué quiere decir cada caso raro:
+
+`claude-haiku-5.5` cuesta $0.10/$0.50 pero rechaza nuestro esquema. Tiene 24 campos que aceptan `null` y Anthropic, Google y Azure limitan ese número. Para el análisis no sirve sin rediseñar el esquema.
+
+GLM y Qwen devolvieron vacío en casi todas tras 30 a 70 segundos, porque gastan todo el presupuesto de salida razonando. A GLM y MiniMax no se les puede apagar el razonamiento. A Qwen sí, y así funciona, pero inventa o recorta muchas citas.
+
+DeepSeek, Mistral y Qwen tienen el problema de las citas. Pegan trozos de frases distintas con "..." y lo presentan como cita literal. En el campo `evidence` eso es justo lo que el prompt prohíbe.
+
+`gemini-2.5-flash-lite` es el más barato de los fiables, pero escribió en inglés todo el análisis de la reunión del sprint, que es en español. Además Google cortó por cuota 3 de las 8 llamadas en la primera pasada.
+
+`gemini-3.1-flash-lite` es rápido y limpio, pero saca menos tareas (4,1 de media frente a 5,9 del modelo actual). En la reunión del sprint se dejó la integración de facturación, que se asignó explícitamente.
+
+`gpt-6-luna` es el único que no falla en nada de lo medido. Todas sus citas están literalmente en la transcripción, saca más tareas que el modelo actual y las que añade están en la reunión (revisión de PRs, preparar la demo del viernes). Lo malo es que tarda más, 38 s de mediana, que en un proceso en segundo plano no se nota. Su precio es tarifa normal, sin descuento: el endpoint de OpenRouter marca `discount: 0`.
+
+## Traducción en directo
+
+Probada aparte con 50 frases de cinco reuniones (catalán, español, inglés, mezcla y árabe como destino), con el mismo prompt de `liveTranslationService`. `gemini-2.5-flash-lite`, que es lo que usa hoy, fue el más rápido (0,8 s de mediana, 1,3 s el percentil 90) y el más barato ($0.00004 por frase, unos 2 céntimos por hora de reunión). Las traducciones de los demás no eran mejores de forma apreciable. Se queda como está.
+
+## Propuesta
+
+Pasar a `openai/gpt-6-luna` las constantes `DEFAULT_AI_MODEL`, `TICKET_MODEL`, `DOC_MODEL` y `SLIDE_MODEL`. Con eso el análisis, el análisis por participante, la traducción de transcripciones, el documento y las slides cuestan entre un 84% y un 87% menos. La salida baja de $3.75 a $0.50 por millón, que es lo que más pesa en documentos y slides.
+
+Cambiar también los dos `"openai/gpt-4o-mini"` escritos a mano en `projectTranscriptService.ts` (resumen rápido e investigación con herramientas) por la constante. gpt-4o-mini es de 2024, cuesta $0.15/$0.60 y tiene 128k de contexto.
+
+Diagramas de `anthropic/claude-haiku-4.5` a `anthropic/claude-haiku-5.5`: de $1/$5 a $0.10/$0.50, un 90% menos y misma familia. Aquí el problema del esquema no aplica porque los diagramas salen como texto libre.
+
+La cadena de fallback tiene que cambiar a la vez. Hoy empieza por dos modelos de OpenAI, y la regla (con test) es que ningún fallback comparta proveedor con el principal. Quedaría `google/gemini-3.7-flash` y `anthropic/claude-sonnet-5`. Haiku 5.5 no puede ser fallback por el esquema.
+
+`FAST_AI_MODEL` (chat, traducción en directo, Telegram) se queda en `gemini-2.5-flash-lite`.
+
+`CACHED_CONTEXT_MODEL` se queda en Gemini de momento. Fija el proveedor para aprovechar el caché implícito de Google, y moverlo pide medir el caché de OpenAI antes.
+
+Con una reunión de unos 25 minutos que genera documento, el coste por reunión pasaría de unos 4 a 5 céntimos a menos de 1. Es una estimación con datos sintéticos. El número real sale de la consulta del apartado 7 sobre `AiUsageLog` en producción.
+
+## Lo que esta prueba no cubre
+
+Las reuniones son sintéticas y son ocho. La reunión más larga tiene 4.600 palabras, unos 30 minutos, no una hora entera. Documentos y slides no se han probado con Luna, solo el análisis. Los diagramas con Haiku 5.5 tampoco: hay que pasarlos por el parser de Mermaid.
+
+La evaluación con dos modelos jueces (Opus 5 y GPT-6 Sol) no se pudo lanzar porque la cuenta de OpenRouter se quedó sin saldo. La calidad la revisé a mano en dos reuniones y con comprobaciones automáticas de idioma y de citas en las ocho.
+
+## Repetir la prueba
+
+```bash
+cd plan-ai/backend
+yarn eval:models <carpeta con .txt> <carpeta de salida> openai/gpt-6-luna,google/gemini-3.7-flash
+```
+
+Cada reunión es un `.txt` con una línea `hablante: texto` por intervención. Añadiendo `@noreason` al id del modelo se manda con el razonamiento apagado. El script escribe un JSON por modelo y reunión con la salida, el coste y el tiempo, y no repite lo que ya existe.
+
+---
+
 # Revisión de modelos — agosto 2026
 
 Precios sacados del catálogo **en vivo** de OpenRouter (`/api/v1/models`, 406 modelos) el 12 de agosto de 2026, no de memoria. Todo lo que hay aquí es comprobable volviendo a lanzar esa consulta, y los 23 ids del catálogo de la app están verificados con `yarn verify:models`.

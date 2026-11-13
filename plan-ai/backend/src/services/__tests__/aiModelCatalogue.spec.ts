@@ -36,6 +36,8 @@ import {
  * the catalogue — a model here with a bigger declared window is a live bug.
  */
 const REAL_CONTEXT: Record<string, number> = {
+  "openai/gpt-6-luna": 1_050_000, // verified 2026-11-13, every provider serves the full window
+  "anthropic/claude-haiku-5.5": 1_000_000, // verified 2026-11-13
   "google/gemini-2.5-flash-lite": 1_048_576,
   "openai/gpt-5.6-luna": 1_050_000,
   "google/gemini-2.5-flash": 1_048_576,
@@ -111,12 +113,28 @@ describe("AI model catalogue", () => {
 describe("fallback chain", () => {
   const providerOf = (id: string) => id.split("/")[0];
 
-  it("never falls back to the provider that just failed", () => {
+  it("never falls back first to the provider that just failed", () => {
     // The whole point of a fallback is surviving a provider outage. A Google
     // fallback behind a Google primary fails with it and buys nothing.
-    const primary = providerOf(DEFAULT_AI_MODEL);
-    const sameProvider = FALLBACK_MODELS.filter((m) => providerOf(m) === primary);
-    expect(sameProvider).toEqual([]);
+    //
+    // The chain is shared by primaries from several providers, and
+    // getConfiguredModel drops the primary itself from it. So the check is on
+    // the chain each primary actually gets: its first fallback must come from
+    // another provider.
+    const primaries = [
+      DEFAULT_AI_MODEL,
+      FAST_AI_MODEL,
+      DIAGRAM_MODEL,
+      TICKET_MODEL,
+      DOC_MODEL,
+      SLIDE_MODEL,
+      CACHED_CONTEXT_MODEL,
+    ];
+    const bad = primaries.filter((primary) => {
+      const chain = FALLBACK_MODELS.filter((m) => m !== primary);
+      return chain.length === 0 || providerOf(chain[0]) === providerOf(primary);
+    });
+    expect(bad).toEqual([]);
   });
 
   it("spreads the fallbacks across more than one provider", () => {
@@ -149,6 +167,25 @@ describe("fallback chain", () => {
     expect(unverified).toEqual([]);
   });
 
+  it("keeps structured-output tasks off models that reject our schema", () => {
+    // Measured with `yarn eval:models` on 2026-11-13: Haiku 5.5 answers the
+    // meeting analysis schema with "too many parameters with union types" on
+    // every provider (Anthropic, Google, Azure). It is fine for plain-text
+    // diagrams and nothing else.
+    const REJECTS_SCHEMA = ["anthropic/claude-haiku-5.5"];
+    const structured = [
+      DEFAULT_AI_MODEL,
+      FAST_AI_MODEL,
+      TICKET_MODEL,
+      DOC_MODEL,
+      SLIDE_MODEL,
+      CACHED_CONTEXT_MODEL,
+      ...FALLBACK_MODELS,
+      ...Object.keys(AI_MODEL_LIMITS),
+    ];
+    expect(structured.filter((m) => REJECTS_SCHEMA.includes(m))).toEqual([]);
+  });
+
   it("keeps FAST genuinely cheaper than the default, or the name is a lie", () => {
     // These were the same model for a while, which made the constant pointless
     // and quietly billed chat at the default rate.
@@ -158,7 +195,11 @@ describe("fallback chain", () => {
   it("offers every user-pickable model as a real catalogue entry", () => {
     // A per-task model missing from AI_MODEL_LIMITS has no context budget, so
     // aiContextRouter falls back to RAG for it and logs a warning per call.
-    const routed = [DEFAULT_AI_MODEL, FAST_AI_MODEL, DIAGRAM_MODEL, CACHED_CONTEXT_MODEL];
+    //
+    // DIAGRAM_MODEL is left out on purpose. Haiku 5.5 rejects the meeting
+    // analysis schema, and every model in the picker must handle structured
+    // output. Diagrams stream plain text and never go through the router.
+    const routed = [DEFAULT_AI_MODEL, FAST_AI_MODEL, CACHED_CONTEXT_MODEL];
     const missing = routed.filter((m) => AI_MODEL_LIMITS[m] === undefined);
     expect(missing).toEqual([]);
   });
