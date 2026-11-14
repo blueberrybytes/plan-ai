@@ -59,7 +59,7 @@
     "react-dom": "^18.3.1",
     "react-json-view": "^1.21.3",
     "react-markdown": "^10.1.0",
-    "react-router-dom": "^6.23.1"
+    "react-router-dom": "^7.18.4"
   },
   "devDependencies": {
     "@electron/notarize": "^3.1.1",
