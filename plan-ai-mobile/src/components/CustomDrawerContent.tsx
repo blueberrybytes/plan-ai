@@ -1,14 +1,20 @@
 import React from 'react';
 import { View, StyleSheet, TouchableOpacity } from 'react-native';
-import { DrawerContentScrollView, DrawerItemList } from '@react-navigation/drawer';
+import { DrawerContentScrollView, DrawerItem, DrawerItemList } from '@react-navigation/drawer';
 import { Text, useTheme, Divider, Avatar, Button } from 'react-native-paper';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import { useRouter } from 'expo-router';
+import { usePersonalStatus } from '../services/trackersStore';
 
 export function CustomDrawerContent(props: any) {
   const theme = useTheme();
   const { user } = useAuth();
   const router = useRouter();
+  // Without personal mode there is no personal workspace, so the Trackers
+  // item never shows. This item opens Trackers, which asks for the consent.
+  const { status: personalStatus } = usePersonalStatus();
+  const offerPersonal = !!personalStatus?.available && !personalStatus.enabled;
 
   return (
     <DrawerContentScrollView {...props} style={{ backgroundColor: theme.colors.surface }}>
@@ -33,6 +39,20 @@ export function CustomDrawerContent(props: any) {
       </TouchableOpacity>
       <Divider style={{ backgroundColor: theme.colors.outline, marginBottom: 8 }} />
       <DrawerItemList {...props} />
+      {offerPersonal && (
+        <DrawerItem
+          label="Personal space"
+          activeTintColor={theme.colors.primary}
+          inactiveTintColor={theme.colors.onSurfaceVariant}
+          icon={({ color, size }: { color: string; size: number }) => (
+            <MaterialCommunityIcons name="shield-account-outline" color={color} size={size} />
+          )}
+          onPress={() => {
+            props.navigation.closeDrawer();
+            props.navigation.navigate('trackers');
+          }}
+        />
+      )}
       
       <View style={{ marginTop: 24, paddingHorizontal: 20 }}>
         <Button 

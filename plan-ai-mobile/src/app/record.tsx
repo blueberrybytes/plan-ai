@@ -62,6 +62,11 @@ import {
   LiveTranslationSelector,
 } from "@/components/LiveTranslationSelector";
 import type { TranslationLines } from "@/utils/liveTranslation";
+import {
+  LiveChatAttachButton,
+  LiveChatDocumentList,
+  useLiveChatDocuments,
+} from "@/components/LiveChatDocuments";
 
 const formatDuration = (ms: number): string => {
   const total = Math.max(0, Math.floor(ms / 1000));
@@ -570,6 +575,8 @@ export default function RecordScreen() {
   >([]);
   const [chatLoading, setChatLoading] = useState(false);
   const chatScrollViewRef = useRef<ScrollView>(null);
+  // Files attached to the chat. They last until this meeting stops.
+  const chatDocs = useLiveChatDocuments(isRecording ? session.sessionId : null);
 
   // Summary state
   const [liveSummary, setLiveSummary] = useState<string>("");
@@ -740,7 +747,8 @@ export default function RecordScreen() {
 
   const handleSendChat = async () => {
     const msg = chatMessage.trim();
-    if (!msg || !api) return;
+    // Wait for the file being read, or the question would go without it.
+    if (!msg || !api || chatDocs.busy) return;
 
     setChatMessage("");
     setChatHistory((p) => [...p, { role: "user", content: msg }]);
@@ -758,6 +766,7 @@ export default function RecordScreen() {
             : undefined,
         projectIds: selectedProjectId ? [selectedProjectId] : undefined,
         history: chatHistory,
+        documents: chatDocs.forQuestion(),
       });
 
       setChatHistory((p) => [...p, { role: "assistant", content: response }]);
@@ -2159,15 +2168,17 @@ export default function RecordScreen() {
                 </Text>
               )}
             </ScrollView>
+            <View style={{ borderTopWidth: 1, borderTopColor: theme.colors.outlineVariant }}>
+              <LiveChatDocumentList state={chatDocs} />
+            </View>
             <View
               style={{
                 padding: 12,
-                borderTopWidth: 1,
-                borderTopColor: theme.colors.outlineVariant,
                 flexDirection: "row",
                 alignItems: "center",
               }}
             >
+              <LiveChatAttachButton state={chatDocs} />
               <TextInput
                 mode="outlined"
                 value={chatMessage}
@@ -2181,7 +2192,7 @@ export default function RecordScreen() {
                 icon="send"
                 iconColor={theme.colors.primary}
                 onPress={handleSendChat}
-                disabled={!chatMessage.trim() || chatLoading}
+                disabled={!chatMessage.trim() || chatLoading || chatDocs.busy}
                 style={{ margin: 0, marginLeft: 8 }}
               />
             </View>

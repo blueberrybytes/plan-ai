@@ -83,6 +83,16 @@ export function loadPersonalStatus(
   return statusRequest;
 }
 
+/**
+ * Keeps a status the server just sent back (after enable or a settings
+ * change), so every screen sees it without another request.
+ */
+export function setPersonalStatus(status: PersonalStatus): void {
+  const uid = currentUid();
+  ensureAccount(uid);
+  if (uid) setState({ status, failed: false });
+}
+
 /** Personal mode is on and the consent is current: trackers can be used. */
 export const personalReady = (
   s: PersonalStatus | null | undefined,

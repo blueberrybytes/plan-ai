@@ -60,6 +60,21 @@ export type TaskUpdateKind         = components['schemas']['TaskUpdateKindValue'
 export type DailyReportExtractResponse = components['schemas']['DailyReportExtractResponse'];
 export type ReviewProposalItem     = components['schemas']['ReviewProposalItem'];
 export type ReviewProposalsResponse = components['schemas']['ReviewProposalsResponse'];
+// Meeting sharing, translation, comments, search and team report.
+export type SendMeetingNotesResult = components['schemas']['SendMeetingNotesResponse'];
+export type TranscriptTranslation  = components['schemas']['TranscriptTranslationResult'];
+export type TranscriptExportFormat = components['schemas']['TranscriptExportFormatValue'];
+export type TranscriptClip         = components['schemas']['CreatedClip'];
+export type CreateTranscriptClipRequest = components['schemas']['CreateTranscriptClipRequest'];
+export type Comment                = components['schemas']['CommentResponse'];
+export type SearchHit              = components['schemas']['SearchHit'];
+export type GlobalSearchResult     = components['schemas']['GlobalSearchResult'];
+export type TeamReport             = components['schemas']['TeamReportResponse'];
+export type TeamReportMember       = components['schemas']['TeamReportMemberResponse'];
+export type TeamReportTask         = components['schemas']['TeamReportTaskResponse'];
+export type TrackerInput           = components['schemas']['TrackerInputRequest'];
+export type PersonalSettings       = components['schemas']['PersonalSettingsRequest'];
+export type LiveChatDocument       = components['schemas']['LiveChatDocumentResponse'];
 
 /**
  * An API error that keeps the HTTP status, so callers can tell a request
@@ -1034,6 +1049,8 @@ export const createPlanAiApi = (
       history?: { role: "user" | "assistant"; content: string }[];
       modelKey?: string;
       complexityLevel?: string;
+      /** Files read with readLiveChatDocument, sent again with every question. */
+      documents?: components["schemas"]["LiveChatDocument"][];
     }): Promise<{ response: string }> {
       const req = async (force: boolean) =>
         safeFetch(`${BASE_URL}/api/chat/live`, {
@@ -1364,6 +1381,239 @@ export const createPlanAiApi = (
         workspaceId,
         feature: "daily_report",
       });
+    },
+    // ── Meeting: share, translate, comments ───────────────────────────────
+    // These use trackerRequest: no alert, and a refusal keeps the server's
+    // message and status, so each screen says what went wrong.
+
+    /** Emails the summary to the given addresses. */
+    async sendMeetingNotes(
+      transcriptId: string,
+      body: { recipients: string[]; message?: string },
+    ): Promise<SendMeetingNotesResult> {
+      return trackerRequest<SendMeetingNotesResult>(
+        `/api/transcripts/${encodeURIComponent(transcriptId)}/send-notes`,
+        { method: "POST", body, feature: "send_notes", timeoutMs: 60000 },
+      );
+    },
+
+    /**
+     * The transcript and summary in another language. The first call for a
+     * language translates and stores it; later calls return the stored copy.
+     */
+    async translateTranscript(
+      transcriptId: string,
+      language: string,
+      force = false,
+    ): Promise<TranscriptTranslation> {
+      return trackerRequest<TranscriptTranslation>(
+        `/api/transcripts/${encodeURIComponent(transcriptId)}/translate`,
+        {
+          method: "POST",
+          body: force ? { language, force } : { language },
+          feature: "transcript_translation",
+          timeoutMs: 180000,
+        },
+      );
+    },
+
+    /**
+     * The transcript as a subtitle (srt, vtt) or text file. The body is the
+     * file itself, not JSON. A meeting with flat text only answers 409 for
+     * subtitles.
+     */
+    async exportTranscript(transcriptId: string, format: TranscriptExportFormat): Promise<string> {
+      const send = async (force: boolean) =>
+        silentFetch(
+          `${BASE_URL}/api/transcripts/${encodeURIComponent(transcriptId)}/export${query({ format })}`,
+          { headers: await getAuthHeaders(force) },
+          60000,
+        );
+      let res = await send(false);
+      if (res.status === 401) res = await send(true);
+      if (!res.ok) {
+        report5xx(res);
+        const body = (await res.json().catch(() => ({}))) as { message?: string };
+        throw new HttpError(body.message ?? `HTTP ${res.status}`, res.status);
+      }
+      return res.text();
+    },
+
+    /** Cuts 1 to 300 seconds of the recording; the link works for 7 days. */
+    async createTranscriptClip(
+      transcriptId: string,
+      body: CreateTranscriptClipRequest,
+    ): Promise<TranscriptClip> {
+      return trackerRequest<TranscriptClip>(
+        `/api/transcripts/${encodeURIComponent(transcriptId)}/clip`,
+        { method: "POST", body, feature: "transcript_clip", timeoutMs: 120000 },
+      );
+    },
+
+    /** The thread of one meeting or one task, oldest first. */
+    async listComments(target: { transcriptId?: string; taskId?: string }): Promise<Comment[]> {
+      const res = await trackerRequest<{ comments: Comment[] }>(
+        `/api/comments${query({ transcriptId: target.transcriptId, taskId: target.taskId })}`,
+        { feature: "comments" },
+      );
+      return res.comments ?? [];
+    },
+
+    /** Posts a comment. People named with @ get an email. */
+    async createComment(body: {
+      transcriptId?: string;
+      taskId?: string;
+      body: string;
+      atSeconds?: number;
+    }): Promise<Comment> {
+      return trackerRequest<Comment>("/api/comments", {
+        method: "POST",
+        body,
+        feature: "comments",
+      });
+    },
+
+    /** Changes the text. Only the author. */
+    async updateComment(id: string, body: string): Promise<Comment> {
+      return trackerRequest<Comment>(`/api/comments/${encodeURIComponent(id)}`, {
+        method: "PATCH",
+        body: { body },
+        feature: "comments",
+      });
+    },
+
+    /** Its author, or an owner or admin of the workspace. */
+    async deleteComment(id: string): Promise<void> {
+      await trackerRequest<{ success: boolean }>(`/api/comments/${encodeURIComponent(id)}`, {
+        method: "DELETE",
+        feature: "comments",
+      });
+    },
+
+    /**
+     * Creates the task in Jira, Linear, Trello, Asana or Notion, in the
+     * project or team set as default for that integration. Calling it again
+     * makes a second issue, so the screen offers it only for providers the
+     * task is not in yet.
+     */
+    async syncTaskToProvider(
+      taskId: string,
+      provider: "jira" | "linear" | "trello" | "asana" | "notion",
+    ): Promise<components['schemas']['SyncTaskResponse']> {
+      return trackerRequest<components['schemas']['SyncTaskResponse']>(
+        `/api/tasks/${encodeURIComponent(taskId)}/sync/${provider}`,
+        { method: "POST", body: {}, feature: "task_sync", timeoutMs: 60000 },
+      );
+    },
+
+    // ── Search and team report ────────────────────────────────────────────
+
+    /** Meetings, tasks, documents and projects of the workspace. `q` needs 2 characters. */
+    async globalSearch(q: string, limit = 30): Promise<GlobalSearchResult> {
+      return trackerRequest<GlobalSearchResult>(
+        `/api/search${query({ q, limit: String(limit) })}`,
+        { feature: "search" },
+      );
+    },
+
+    /**
+     * The team's week for owners and admins. `week` is any day of the week
+     * (default: last week). `summary` adds a short AI summary per member.
+     */
+    async getTeamReport(
+      q: { week?: string; summary?: boolean; language?: string } = {},
+    ): Promise<TeamReport> {
+      return trackerRequest<TeamReport>(
+        `/api/daily-report/team${query({
+          week: q.week,
+          summary: q.summary ? "true" : undefined,
+          language: q.language,
+        })}`,
+        { feature: "team_report", timeoutMs: q.summary ? 120000 : 30000 },
+      );
+    },
+
+    // ── Personal mode and tracker setup ───────────────────────────────────
+
+    /** Turns personal mode on. `consentVersion` is the text the user accepted. */
+    async enablePersonal(consentVersion: string): Promise<PersonalStatus> {
+      return trackerRequest<PersonalStatus>("/api/personal/enable", {
+        method: "POST",
+        body: { consent: true, consentVersion },
+      });
+    },
+
+    /** Withdraws consent and deletes every tracker and entry. Notes stay. */
+    async withdrawPersonalConsent(): Promise<PersonalStatus> {
+      return trackerRequest<PersonalStatus>("/api/personal/withdraw-consent", {
+        method: "POST",
+        body: {},
+      });
+    },
+
+    async updatePersonalSettings(body: PersonalSettings): Promise<PersonalStatus> {
+      return trackerRequest<PersonalStatus>("/api/personal/settings", { method: "PATCH", body });
+    },
+
+    async createTracker(body: TrackerInput, workspaceId?: string | null): Promise<Tracker> {
+      return trackerRequest<Tracker>("/api/trackers", { method: "POST", body, workspaceId });
+    },
+
+    /** Also archives (archived: true) and brings back (archived: false). */
+    async updateTracker(
+      trackerId: string,
+      body: TrackerInput,
+      workspaceId?: string | null,
+    ): Promise<Tracker> {
+      return trackerRequest<Tracker>(`/api/trackers/${encodeURIComponent(trackerId)}`, {
+        method: "PATCH",
+        body,
+        workspaceId,
+      });
+    },
+
+    /** Deletes the tracker and every entry. Archiving keeps them. */
+    async deleteTracker(trackerId: string, workspaceId?: string | null): Promise<void> {
+      await trackerRequest<{ success: boolean }>(`/api/trackers/${encodeURIComponent(trackerId)}`, {
+        method: "DELETE",
+        workspaceId,
+      });
+    },
+
+    // ── Live chat during a recording ──────────────────────────────────────
+
+    /**
+     * Reads a file picked during a recording and returns its text. Nothing is
+     * stored on the server: the screen keeps the text for the meeting.
+     */
+    async readLiveChatDocument(file: {
+      uri: string;
+      name: string;
+      mimeType: string;
+    }): Promise<LiveChatDocument> {
+      const send = async (force: boolean) => {
+        const token = await getToken(force);
+        if (!token) throw new HttpError("No auth token available", 401);
+        const headers: Record<string, string> = { Authorization: `Bearer ${token}` };
+        const wsId = getWorkspaceId();
+        if (wsId) headers["X-Workspace-Id"] = wsId;
+        const form = new FormData();
+        form.append("file", { uri: file.uri, name: file.name, type: file.mimeType } as any);
+        return silentFetch(
+          `${BASE_URL}/api/chat/live/documents`,
+          { method: "POST", headers, body: form },
+          120000,
+        );
+      };
+      let res = await send(false);
+      if (res.status === 401) res = await send(true);
+      if (!res.ok) {
+        report5xx(res);
+        const body = (await res.json().catch(() => ({}))) as { message?: string };
+        throw new HttpError(body.message ?? `HTTP ${res.status}`, res.status);
+      }
+      const json = await readJson(res);
+      return (json && json.data !== undefined ? json.data : json) as LiveChatDocument;
     },
   };
 };

@@ -16,7 +16,7 @@ import { useAuth } from "../context/AuthContext";
 import { useAppTheme } from "../context/ThemeContext";
 import { AppThemeName, THEMES } from "../theme/Theme";
 import { useRouter } from "expo-router";
-import { WorkspaceMemberResponse } from "../services/planAiApi";
+import { HttpError, WorkspaceMemberResponse } from "../services/planAiApi";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as FileSystem from "expo-file-system/legacy";
 import * as Sharing from "expo-sharing";
@@ -78,9 +78,14 @@ export default function ProfileScreen() {
               router.replace("/(auth)/login");
             } catch (err) {
               console.error("Failed to delete account", err);
+              // A 4xx carries the reason (for example, a workspace with other
+              // members that has to be transferred first).
+              const status = err instanceof HttpError ? err.status : undefined;
               Alert.alert(
-                "Error",
-                "Could not delete your account. Please try again later.",
+                "Could not delete your account",
+                status && status >= 400 && status < 500 && err instanceof Error && err.message
+                  ? err.message
+                  : "Please try again later.",
               );
               setIsDeleting(false);
             }

@@ -29,6 +29,10 @@ export default function DrawerLayout() {
   }, [user?.uid, api]);
   const showTrackers =
     activeWorkspace?.kind === 'PERSONAL' && personalStatus?.available !== false;
+  // The team report is for owners and admins. A personal workspace has no team.
+  const showTeamReport =
+    activeWorkspace?.kind !== 'PERSONAL' &&
+    (activeWorkspace?.role === 'OWNER' || activeWorkspace?.role === 'ADMIN');
 
   // Load subscription track to distinguish BYOK vs Managed plans.
   // Only BYOK workspaces need user-provided API keys.
@@ -183,6 +187,16 @@ export default function DrawerLayout() {
           drawerItemStyle: activeWorkspace?.kind === 'PERSONAL' ? { display: 'none' } : undefined,
           drawerIcon: ({ color, size }: { color: string; size: number }) => (
             <MaterialCommunityIcons name="clipboard-text-clock-outline" color={color} size={size} />
+          )
+        }}
+      />
+      <Drawer.Screen
+        name="team-report"
+        options={{
+          title: 'Team report',
+          drawerItemStyle: showTeamReport ? undefined : { display: 'none' },
+          drawerIcon: ({ color, size }: { color: string; size: number }) => (
+            <MaterialCommunityIcons name="account-group-outline" color={color} size={size} />
           )
         }}
       />

@@ -7,6 +7,8 @@ import { Task } from '../../services/planAiApi';
 import { useAuth } from '../../context/AuthContext';
 import { onMarkdownLinkPress, openWebUrl, webAppLink } from '../../utils/openWebUrl';
 import { reportUnexpected } from '../../utils/reportError';
+import { CommentThread } from '../../components/meeting/CommentThread';
+import { TaskSyncCard } from '../../components/meeting/TaskSyncCard';
 
 const WEB_APP_URL = process.env.EXPO_PUBLIC_PLAN_AI_WEB_URL ?? 'https://plan-ai.blueberrybytes.com';
 
@@ -20,6 +22,15 @@ export default function TaskDetailsScreen() {
   // anything.
   const [task, setTask] = useState<Task | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  // After a sync the task carries the new link, so it is read again.
+  const reloadTask = () => {
+    if (typeof id !== 'string' || typeof projectId !== 'string') return;
+    api
+      .getProjectTask(projectId, id)
+      .then(setTask)
+      .catch((e) => console.warn('Failed to reload task', e));
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -251,6 +262,8 @@ export default function TaskDetailsScreen() {
           </Card>
         ) : null}
 
+        <TaskSyncCard task={task} onSynced={reloadTask} />
+
         {/* Generated Assets */}
         {generatedAssets.length > 0 ? (
           <Card style={[styles.card, { backgroundColor: theme.colors.surface }]} mode="elevated" elevation={1}>
@@ -268,6 +281,12 @@ export default function TaskDetailsScreen() {
             </Card.Content>
           </Card>
         ) : null}
+
+        <Card style={[styles.card, { backgroundColor: theme.colors.surface }]} mode="elevated" elevation={1}>
+          <Card.Content>
+            <CommentThread target={{ taskId: task.id }} />
+          </Card.Content>
+        </Card>
       </ScrollView>
     </View>
   );

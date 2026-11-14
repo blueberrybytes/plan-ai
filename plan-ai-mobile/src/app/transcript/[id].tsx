@@ -22,6 +22,7 @@ import {
   Button,
   Menu,
   Chip,
+  Snackbar,
 } from "react-native-paper";
 import { useAuth } from "@/context/AuthContext";
 import Markdown from "react-native-markdown-display";
@@ -35,7 +36,19 @@ import { TwentyPushCard } from "../../components/TwentyPushCard";
 import SpeakerInsightsTab, {
   type SpeakerInsight,
 } from "../../components/SpeakerInsightsTab";
-import { HttpError, Transcript, type TranscriptAudio } from "@/services/planAiApi";
+import {
+  HttpError,
+  Transcript,
+  type TranscriptAudio,
+  type TranscriptExportFormat,
+  type TranscriptTranslation,
+} from "@/services/planAiApi";
+import { SendNotesDialog } from "../../components/meeting/SendNotesDialog";
+import { ClipDialog } from "../../components/meeting/ClipDialog";
+import { TranslateDialog } from "../../components/meeting/TranslateDialog";
+import { CommentThread } from "../../components/meeting/CommentThread";
+import { applyTranslation, fileSafeName } from "../../utils/meetingShare";
+import { translationLanguageName } from "../../utils/liveTranslation";
 import type { components } from "@/types/api";
 import {
   MeetingAudioBar,
@@ -97,6 +110,17 @@ export default function TranscriptViewScreen() {
   const [audio, setAudio] = useState<TranscriptAudio | null>(null);
   const [isDeletingAudio, setIsDeletingAudio] = useState(false);
   const playback = useMeetingPlayback(audio);
+
+  // Sharing and reading in another language. A translation is only shown on
+  // screen; the stored meeting is never replaced by it.
+  const [sendNotesOpen, setSendNotesOpen] = useState(false);
+  const [clipOpen, setClipOpen] = useState(false);
+  const [clipFrom, setClipFrom] = useState<number | null>(null);
+  const [translateOpen, setTranslateOpen] = useState(false);
+  const [translationLanguage, setTranslationLanguage] = useState("");
+  const [translation, setTranslation] = useState<TranscriptTranslation | null>(null);
+  const [isTranslating, setIsTranslating] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -217,6 +241,76 @@ export default function TranscriptViewScreen() {
     }
   };
 
+  const readIn = async (language: string) => {
+    if (!transcript) return;
+    setTranslationLanguage(language);
+    if (!language) {
+      setTranslation(null);
+      return;
+    }
+    setIsTranslating(true);
+    try {
+      setTranslation(await api.translateTranscript(transcript.id, language));
+    } catch (err) {
+      const status = err instanceof HttpError ? err.status : undefined;
+      const message = err instanceof Error ? err.message : "";
+      setNotice(
+        status === undefined
+          ? "No connection. The meeting was not translated."
+          : message.includes("MISSING_API_KEY")
+            ? "The workspace has no AI key for translation. An owner can add it in the web app."
+            : status === 413
+              ? "This meeting is too long to translate."
+              : status < 500 && message
+                ? message
+                : "The meeting could not be translated. Try again later.",
+      );
+      setTranslationLanguage("");
+      setTranslation(null);
+    } finally {
+      setIsTranslating(false);
+    }
+  };
+
+  const EXPORT_MIME: Record<TranscriptExportFormat, string> = {
+    srt: "application/x-subrip",
+    vtt: "text/vtt",
+    txt: "text/plain",
+  };
+
+  const handleExport = async (format: TranscriptExportFormat) => {
+    setMenuVisible(false);
+    if (!transcript) return;
+    try {
+      const content = await api.exportTranscript(transcript.id, format);
+      // Cache, not Documents: the copy is only for the share sheet.
+      const fileUri = `${FileSystem.cacheDirectory}${fileSafeName(transcript.title ?? "", "meeting")}.${format}`;
+      await FileSystem.writeAsStringAsync(fileUri, content, {
+        encoding: FileSystem.EncodingType.UTF8,
+      });
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(fileUri, { mimeType: EXPORT_MIME[format] });
+      } else {
+        setNotice("Sharing is not available on this device.");
+      }
+    } catch (err) {
+      const status = err instanceof HttpError ? err.status : undefined;
+      setNotice(
+        status === 409
+          ? "This meeting has no timed transcript, so it cannot be exported as subtitles."
+          : status === undefined
+            ? "No connection. The file was not exported."
+            : "The file could not be exported.",
+      );
+    }
+  };
+
+  const openClip = () => {
+    setMenuVisible(false);
+    setClipFrom(playback.currentTime || 0);
+    setClipOpen(true);
+  };
+
   const deleteAudio = async () => {
     if (!transcript) return;
     playback.pause();
@@ -252,6 +346,16 @@ export default function TranscriptViewScreen() {
     );
   };
 
+  // What the tabs show: the meeting, or its translation when one is picked.
+  const shown: Transcript | null =
+    transcript && translation
+      ? {
+          ...applyTranslation(transcript, translation),
+          summary: translation.summary || transcript.summary,
+        }
+      : transcript;
+  const hasTimedText = Array.isArray(transcript?.utterances) && transcript.utterances.length > 0;
+
   const processingStatus = transcript?.metadata?.processingStatus;
   // Treat "legacy" masked transcripts (completed-with-error-title + 0 tasks,
   // from before the backend threw on AI failure) as failed so they surface the
@@ -266,7 +370,7 @@ export default function TranscriptViewScreen() {
     processingStatus === "PENDING" || processingStatus === "PROCESSING";
 
   const renderSummaryTab = () => {
-    if (isFailed || !transcript?.summary) {
+    if (isFailed || !transcript || !shown?.summary) {
       return (
         <View style={styles.emptyContainer}>
           {isFailed ? (
@@ -381,7 +485,7 @@ export default function TranscriptViewScreen() {
             },
           }}
         >
-          {transcript.summary}
+          {shown.summary}
         </Markdown>
 
         <PostMeetingTasksPanel
@@ -404,7 +508,7 @@ export default function TranscriptViewScreen() {
   };
 
   const renderUtterancesTab = () => {
-    const utterances = transcript?.utterances as Utterance[] | null | undefined;
+    const utterances = shown?.utterances as Utterance[] | null | undefined;
     const principalSpeaker = transcript?.metadata?.principalSpeaker as
       | string
       | undefined;
@@ -489,7 +593,7 @@ export default function TranscriptViewScreen() {
 
     // Fallback for basic transcripts without utterances
     const rawText =
-      transcript?.transcript || "No transcript content available.";
+      shown?.transcript || "No transcript content available.";
     const blocks = rawText.split(/\n+/).filter(Boolean);
 
     // Check if the text has speaker labels in either desktop or mobile format
@@ -978,6 +1082,42 @@ export default function TranscriptViewScreen() {
             title="Save as File"
             leadingIcon="download"
           />
+          {transcript?.summary ? (
+            <Menu.Item
+              onPress={() => {
+                setMenuVisible(false);
+                setSendNotesOpen(true);
+              }}
+              title="Send notes by email"
+              leadingIcon="email-outline"
+            />
+          ) : null}
+          <Menu.Item
+            onPress={() => {
+              setMenuVisible(false);
+              setTranslateOpen(true);
+            }}
+            title="Read in another language"
+            leadingIcon="translate"
+            disabled={isTranslating}
+          />
+          {hasTimedText && (
+            <Menu.Item
+              onPress={() => void handleExport("srt")}
+              title="Export subtitles (SRT)"
+              leadingIcon="subtitles-outline"
+            />
+          )}
+          {hasTimedText && (
+            <Menu.Item
+              onPress={() => void handleExport("vtt")}
+              title="Export subtitles (VTT)"
+              leadingIcon="subtitles-outline"
+            />
+          )}
+          {playback.available && (
+            <Menu.Item onPress={openClip} title="Share a clip" leadingIcon="content-cut" />
+          )}
           {playback.available && (
             <Menu.Item
               onPress={confirmDeleteAudio}
@@ -1097,6 +1237,27 @@ export default function TranscriptViewScreen() {
               </View>
             );
           })()}
+          {(isTranslating || translation) && (
+            <View style={styles.translationBar}>
+              {isTranslating ? (
+                <>
+                  <ActivityIndicator size="small" />
+                  <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
+                    Translating to {translationLanguageName(translationLanguage)}. A long meeting takes a minute.
+                  </Text>
+                </>
+              ) : (
+                <>
+                  <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant, flex: 1 }}>
+                    Reading in {translationLanguageName(translationLanguage)}. Translated by AI.
+                  </Text>
+                  <Button compact onPress={() => void readIn("")}>
+                    Show original
+                  </Button>
+                </>
+              )}
+            </View>
+          )}
           <View style={styles.segmentContainer}>
             <SegmentedButtons
               value={activeTab}
@@ -1109,6 +1270,7 @@ export default function TranscriptViewScreen() {
                 ...(transcript?.metadata?.keyPoints && transcript.metadata.keyPoints.length > 0 ? [{ value: "keypoints", label: "Points" }] : []),
                 ...(transcript?.painPoints && transcript.painPoints.length > 0 ? [{ value: "painpoints", label: "Pain" }] : []),
                 { value: "utterances", label: "Transcript" },
+                { value: "comments", label: "Comments" },
                 ...(() => {
                   const meta = transcript?.metadata as TranscriptMetadata | null | undefined;
                   const pt = meta?.postMeetingTasks;
@@ -1135,6 +1297,13 @@ export default function TranscriptViewScreen() {
             {activeTab === "keypoints" && renderKeyPointsTab()}
             {activeTab === "painpoints" && renderPainPointsTab()}
             {activeTab === "utterances" && renderUtterancesTab()}
+            {activeTab === "comments" && transcript && (
+              <CommentThread
+                target={{ transcriptId: transcript.id }}
+                getCurrentTime={() => (playback.available ? playback.currentTime : null)}
+                onSeek={playback.available ? (s) => playback.playFrom(s, "mic") : undefined}
+              />
+            )}
             {activeTab === "errors" && (
               <View style={{ gap: 12, paddingBottom: 40 }}>
                 {(transcript?.metadata as TranscriptMetadata | null)?.errorMessage && (
@@ -1241,6 +1410,38 @@ export default function TranscriptViewScreen() {
           </ScrollView>
         </View>
       )}
+
+      {transcript && (
+        <>
+          <SendNotesDialog
+            visible={sendNotesOpen}
+            onDismiss={() => setSendNotesOpen(false)}
+            transcriptId={transcript.id}
+            metadata={transcript.metadata}
+            onSent={(summary) => {
+              setNotice(summary);
+              refetchTranscript();
+            }}
+          />
+          <ClipDialog
+            visible={clipOpen}
+            onDismiss={() => setClipOpen(false)}
+            transcriptId={transcript.id}
+            title={transcript.title || "Meeting"}
+            currentSeconds={clipFrom}
+            durationSeconds={playback.duration || transcript.durationSeconds}
+          />
+          <TranslateDialog
+            visible={translateOpen}
+            onDismiss={() => setTranslateOpen(false)}
+            value={translationLanguage}
+            onPick={(code) => void readIn(code)}
+          />
+        </>
+      )}
+      <Snackbar visible={!!notice} onDismiss={() => setNotice(null)} duration={6000}>
+        {notice ?? ""}
+      </Snackbar>
     </View>
   );
 }
@@ -1267,6 +1468,13 @@ const styles = StyleSheet.create({
   },
   segmentContainer: {
     padding: 16,
+  },
+  translationBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingTop: 12,
   },
   audioContainer: {
     paddingHorizontal: 16,

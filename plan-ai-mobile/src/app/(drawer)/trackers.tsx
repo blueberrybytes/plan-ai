@@ -53,10 +53,11 @@ import {
   unitOf,
   weekdayLetter,
 } from "../../utils/trackerFormat";
-import { openWebUrl } from "../../utils/openWebUrl";
 import { reportUnexpected } from "../../utils/reportError";
+import { PersonalConsentDialog } from "../../components/trackers/PersonalConsentDialog";
+import { PersonalSettingsDialog } from "../../components/trackers/PersonalSettingsDialog";
+import { TrackerFormModal } from "../../components/trackers/TrackerFormModal";
 
-const WEB_APP_URL = process.env.EXPO_PUBLIC_PLAN_AI_WEB_URL ?? "https://plan-ai.blueberrybytes.com";
 const MAX_TEXT = 2000;
 const CHART_DAYS = 7;
 const OFFLINE_TEXT = "No connection. Trackers need the network. Pull down to try again.";
@@ -78,10 +79,10 @@ function describeError(err: unknown): string {
     return "Add an OpenRouter key to your Personal workspace in the settings of the web app. The AI needs it to read what you write.";
   }
   if (err instanceof TrackerApiError && err.code === "personal_mode_required") {
-    return "Turn on personal mode in the web app first.";
+    return "Personal mode is off. Pull down to refresh and turn it on.";
   }
   if (err instanceof TrackerApiError && err.code === "consent_outdated") {
-    return "The consent text has changed. Read and accept it again in the web app.";
+    return "The consent text has changed. Pull down to refresh, then read and accept it again.";
   }
   return err instanceof Error ? err.message : "Something went wrong. Try again.";
 }
@@ -100,6 +101,10 @@ export default function TrackersScreen() {
   const [busy, setBusy] = useState<Set<string>>(new Set());
   const [inputs, setInputs] = useState<Record<string, string>>({});
   const [notice, setNotice] = useState<string | null>(null);
+  const [consentOpen, setConsentOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  // The form is open when set. A null tracker creates one. The key starts it fresh.
+  const [form, setForm] = useState<{ tracker: Tracker | null; key: number } | null>(null);
   // Client id per tracker for a value being added, so a retry is not counted twice.
   const addIds = useRef<Record<string, { value: number; id: string }>>({});
   const requestRef = useRef(0);
@@ -184,7 +189,7 @@ export default function TrackersScreen() {
         workspaceId,
       );
       if (res.skipped === "no_trackers") {
-        setNotice("You have no trackers yet. Create them in the web app.");
+        setNotice("Create a tracker first, then the AI can log to it.");
       } else if (res.entries.length === 0) {
         setNotice("Nothing to log was found in that text.");
       } else {
@@ -295,10 +300,10 @@ export default function TrackersScreen() {
           icon="shield-account-outline"
           text={
             status.consentOutdated
-              ? "The personal mode consent text has changed. Read and accept it again in the web app to keep using trackers."
-              : "Trackers use personal mode. Turn it on from the web app, then pull down to refresh."
+              ? "The text changed since you agreed. Trackers stay paused until you accept it again."
+              : "Personal mode is off. Trackers need your consent to store health data."
           }
-          action={{ label: "Open the web app", onPress: () => void openWebUrl(WEB_APP_URL) }}
+          action={{ label: "Read and accept", onPress: () => setConsentOpen(true) }}
         />
       );
     }
@@ -306,6 +311,14 @@ export default function TrackersScreen() {
   };
 
   const gate = renderGate();
+
+  const openForm = (tracker: Tracker | null) => setForm({ tracker, key: Date.now() });
+
+  const formDone = (message: string | null) => {
+    setForm(null);
+    if (message) setNotice(message);
+    void load();
+  };
 
   const renderProposal = (entry: TrackerEntry, trackers: Map<string, Tracker>, today: string) => {
     const tracker = trackers.get(entry.trackerId);
@@ -466,6 +479,12 @@ export default function TrackersScreen() {
               {summary}
             </Text>
           </View>
+          <IconButton
+            icon="pencil-outline"
+            size={20}
+            accessibilityLabel={`Edit ${tracker.name}`}
+            onPress={() => openForm(tracker)}
+          />
           {tracker.kind === "CHECK" &&
             (isBusy ? (
               <ActivityIndicator style={{ margin: 12 }} />
@@ -614,9 +633,18 @@ export default function TrackersScreen() {
         )}
 
         {data.trackers.length === 0 ? (
-          <Message icon="chart-line" text="No trackers yet. Create them in the web app, then pull down to refresh." />
+          <Message
+            icon="chart-line"
+            text="No trackers yet. Pick one to start. You can change it later."
+            action={{ label: "New tracker", onPress: () => openForm(null) }}
+          />
         ) : (
-          data.trackers.map((t) => renderTracker(t, data))
+          <>
+            {data.trackers.map((t) => renderTracker(t, data))}
+            <Button mode="outlined" icon="plus" style={{ marginTop: 4 }} onPress={() => openForm(null)}>
+              New tracker
+            </Button>
+          </>
         )}
 
         {hasCalories && (
@@ -633,7 +661,19 @@ export default function TrackersScreen() {
       style={[styles.container, { backgroundColor: theme.colors.background }]}
       behavior="padding"
     >
-      <ScreenHeader title="Trackers" showProfile={false} />
+      <ScreenHeader
+        title="Trackers"
+        showProfile={false}
+        rightComponent={
+          personalReady(status) ? (
+            <IconButton
+              icon="cog-outline"
+              accessibilityLabel="Personal space settings"
+              onPress={() => setSettingsOpen(true)}
+            />
+          ) : undefined
+        }
+      />
       <ScrollView
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={[styles.content, { paddingBottom: 32 + insets.bottom }]}
@@ -670,6 +710,30 @@ export default function TrackersScreen() {
           </>
         )}
       </ScrollView>
+
+      {status && status.available && (
+        <PersonalConsentDialog
+          visible={consentOpen}
+          status={status}
+          onClose={() => setConsentOpen(false)}
+          onEnabled={() => {
+            setConsentOpen(false);
+            void load({ force: true });
+          }}
+        />
+      )}
+      {status && personalReady(status) && (
+        <PersonalSettingsDialog visible={settingsOpen} status={status} onClose={() => setSettingsOpen(false)} />
+      )}
+      {form && workspaceId && (
+        <TrackerFormModal
+          key={form.key}
+          tracker={form.tracker}
+          workspaceId={workspaceId}
+          onClose={() => setForm(null)}
+          onDone={formDone}
+        />
+      )}
 
       <Snackbar visible={!!notice} onDismiss={() => setNotice(null)} duration={6000}>
         {notice ?? ""}

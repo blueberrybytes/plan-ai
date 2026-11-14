@@ -21,6 +21,7 @@ import {
   ActivityIndicator,
   Searchbar,
   Button,
+  IconButton,
 } from "react-native-paper";
 import { useAuth } from "../../context/AuthContext";
 import { ScreenHeader } from "../../components/ScreenHeader";
@@ -595,6 +596,17 @@ export default function DashboardScreen() {
               setIsLoading(true);
               fetchTranscripts();
             }}
+          />
+        }
+        rightComponent={
+          // Searches the whole workspace, not only the meetings below.
+          <IconButton
+            icon="magnify"
+            size={26}
+            iconColor={theme.colors.onSurface}
+            accessibilityLabel="Search the workspace"
+            onPress={() => router.push("/search" as Href)}
+            style={{ margin: 0 }}
           />
         }
       />
