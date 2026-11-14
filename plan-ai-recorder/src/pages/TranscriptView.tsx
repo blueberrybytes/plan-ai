@@ -30,7 +30,11 @@ import {
 } from "@mui/icons-material";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
-import type { Transcript, Task } from "../services/planAiApi";
+import type { Transcript, Task, TranscriptTranslation } from "../services/planAiApi";
+import TranscriptShareBar from "../components/transcript/TranscriptShareBar";
+import TranscriptTranslationBar from "../components/transcript/TranscriptTranslationBar";
+import CommentThread from "../components/comments/CommentThread";
+import { applyTranslation } from "../utils/transcriptTranslation";
 import ReactMarkdown from "react-markdown";
 import { markdownComponents } from "../utils/markdownComponents";
 import { parseSpeakerBlocks } from "../utils/speakerBlocks";
@@ -226,10 +230,15 @@ const formatTimestamp = (seconds?: number | null) => {
 
 const RenderTranscriptContent = ({
   transcript,
+  shown,
 }: {
   transcript: Transcript;
+  /** What the lines show: the transcript, or its translation. */
+  shown: Transcript;
 }) => {
   const playerRef = useRef<RecordingAudioPlayerHandle>(null);
+  const hasTimedText =
+    Array.isArray(transcript.utterances) && transcript.utterances.length > 0;
   const meta = (transcript.metadata ?? {}) as {
     bookmarks?: { atSeconds: number; note?: string }[];
     audioDeletedReason?: string;
@@ -262,7 +271,36 @@ const RenderTranscriptContent = ({
           </Box>
         </Box>
       )}
-      <TranscriptLines transcript={transcript} playerRef={playerRef} />
+      <TranscriptShareBar
+        transcriptId={transcript.id}
+        title={transcript.title}
+        durationSeconds={transcript.durationSeconds}
+        hasTimedText={hasTimedText}
+        hasText={!!transcript.transcript || hasTimedText}
+        playerRef={playerRef}
+      />
+      <TranscriptLines transcript={shown} playerRef={playerRef} />
+    </>
+  );
+};
+
+/** The comments of a meeting, with the player so a comment can point at a moment. */
+const MeetingCommentsTab = ({ transcript }: { transcript: Transcript }) => {
+  const playerRef = useRef<RecordingAudioPlayerHandle>(null);
+  const meta = (transcript.metadata ?? {}) as { audioDeletedReason?: string };
+  return (
+    <>
+      <RecordingAudioPlayer
+        ref={playerRef}
+        transcriptId={transcript.id}
+        durationHint={transcript.durationSeconds}
+        deletedReason={meta.audioDeletedReason}
+      />
+      <CommentThread
+        transcriptId={transcript.id}
+        getCurrentTime={() => playerRef.current?.getCurrentTime() ?? null}
+        onSeek={(seconds) => playerRef.current?.seek(seconds, "mic")}
+      />
     </>
   );
 };
@@ -453,6 +491,8 @@ const TranscriptView: React.FC = () => {
 
   const [transcript, setTranscript] = useState<Transcript | null>(null);
   const [sendNotesOpen, setSendNotesOpen] = useState(false);
+  // Only on screen: the stored meeting is never replaced by its translation.
+  const [translation, setTranslation] = useState<TranscriptTranslation | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [tabValue, setTabValue] = useState("summary");
@@ -819,6 +859,14 @@ const TranscriptView: React.FC = () => {
                   </Alert>
                 )}
                 <SyncBadges tasks={transcript.metadata?.postMeetingTasks} />
+                {(transcript.summary || transcript.transcript) && (
+                  <Box sx={{ mt: 2 }}>
+                    <TranscriptTranslationBar
+                      transcriptId={transcript.id}
+                      onChange={setTranslation}
+                    />
+                  </Box>
+                )}
                 {transcript.metadata?.processingStatus === "EXTRACTING_TASKS" && (
                   <Alert severity="info" sx={{ mb: 2, mt: 2 }}>
                     🤖 AI is currently extracting tasks from this transcript in the background. They will appear here shortly!
@@ -861,6 +909,7 @@ const TranscriptView: React.FC = () => {
                     value="transcript"
                     sx={{ fontWeight: 600 }}
                   />
+                  <Tab label="Comments" value="comments" sx={{ fontWeight: 600 }} />
                   {transcript.tasks && transcript.tasks.length > 0 && (
                     <Tab
                       label={`AI Tasks (${transcript.tasks.length})`}
@@ -913,7 +962,7 @@ const TranscriptView: React.FC = () => {
                       variant="body1"
                       sx={{ lineHeight: 1.6, fontWeight: 500 }}
                     >
-                      {transcript.summary}
+                      {translation?.summary || transcript.summary}
                     </Typography>
                   </Box>
                 )}
@@ -1016,7 +1065,16 @@ const TranscriptView: React.FC = () => {
 
                 {tabValue === "transcript" && (
                   <Box sx={{ mt: 2 }}>
-                    <RenderTranscriptContent transcript={transcript} />
+                    <RenderTranscriptContent
+                      transcript={transcript}
+                      shown={applyTranslation(transcript, translation)}
+                    />
+                  </Box>
+                )}
+
+                {tabValue === "comments" && (
+                  <Box sx={{ mt: 2 }}>
+                    <MeetingCommentsTab transcript={transcript} />
                   </Box>
                 )}
 

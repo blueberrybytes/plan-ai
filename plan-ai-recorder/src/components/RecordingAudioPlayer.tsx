@@ -34,6 +34,11 @@ export type AudioChannel = "mic" | "sys";
 export interface RecordingAudioPlayerHandle {
   /** Plays from `seconds` of the given file's own timeline. */
   seek: (seconds: number, channel: AudioChannel) => void;
+  /**
+   * Where the player is, in seconds of its clock (the mic file when there is
+   * one), or null when the meeting has no audio. Clips and comments use it.
+   */
+  getCurrentTime: () => number | null;
 }
 
 /** Which recorded file an utterance comes from (older rows carry no channel). */
@@ -188,6 +193,8 @@ const RecordingAudioPlayer = forwardRef<
         setBoth(masterTime);
         void play();
       },
+      getCurrentTime: () =>
+        (micRef.current ?? sysRef.current)?.currentTime ?? null,
     }),
     [offset, play, setBoth],
   );

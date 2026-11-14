@@ -34,6 +34,12 @@ export type TwentyCompanyItem = components["schemas"]["TwentyCompanyItem"];
 export type LiveChatDocument =
   components["schemas"]["LiveChatDocumentResponse"];
 export type UserResponse = components["schemas"]["UserResponse"];
+export type TranscriptTranslation =
+  components["schemas"]["TranscriptTranslationResult"];
+export type TranscriptExportFormat =
+  components["schemas"]["TranscriptExportFormatValue"];
+export type TranscriptClip = components["schemas"]["CreatedClip"];
+export type Comment = components["schemas"]["CommentResponse"];
 export type CreateStandaloneTranscriptBody =
   components["schemas"]["CreateStandaloneTranscriptBody"];
 export type SubscriptionStatusResponse =
@@ -414,6 +420,20 @@ export const createPlanAiApi = (
          * already saved instead of creating it twice.
          */
         clientSessionId?: string;
+        /**
+         * An audio file sent in slices with uploadRecordingPart: its upload
+         * id, how many slices, and the file name (the server keeps the format
+         * by its extension).
+         */
+        micUploadId?: string;
+        micPartCount?: number;
+        micFileName?: string;
+        /**
+         * "in_person" diarizes the whole mic file, with no "You" fallback.
+         * Sent for imported files, where one file holds every speaker.
+         * Recordings leave it out, as before.
+         */
+        recordingMode?: "in_person" | "remote";
         /** Moments marked during the meeting (seconds on the saved audio, pauses excluded). */
         bookmarks?: components["schemas"]["RecordingBookmark"][];
         /** The calendar event the meeting belongs to (title, attendees). */
@@ -481,6 +501,16 @@ export const createPlanAiApi = (
         }
         if (payload.calendarEvent) {
           formData.append("calendarEvent", JSON.stringify(payload.calendarEvent));
+        }
+        if (payload.micUploadId && payload.micPartCount) {
+          formData.append("micUploadId", payload.micUploadId);
+          formData.append("micPartCount", String(payload.micPartCount));
+        }
+        if (payload.micFileName) {
+          formData.append("micFileName", payload.micFileName);
+        }
+        if (payload.recordingMode) {
+          formData.append("recordingMode", payload.recordingMode);
         }
         if (payload.clientSessionId) {
           formData.append("clientSessionId", payload.clientSessionId);
@@ -827,6 +857,179 @@ export const createPlanAiApi = (
         console.warn("[planAiApi] getCurrentMeeting failed:", err);
         return null;
       }
+    },
+    // ── Imported audio files, sent in slices ──────────────────────────────
+
+    /**
+     * One slice of an imported audio file. The server overwrites a slice sent
+     * twice, so a failed slice is simply sent again.
+     */
+    async uploadRecordingPart(
+      uploadId: string,
+      index: number,
+      part: Blob,
+    ): Promise<void> {
+      const req = async (force: boolean) => {
+        const formData = new FormData();
+        formData.append("uploadId", uploadId);
+        formData.append("index", String(index));
+        formData.append("part", part, `part-${index}.bin`);
+        return safeFetch(
+          `${BASE_URL}/api/transcripts/recorder-upload/parts`,
+          { method: "POST", headers: await getUploadHeaders(force), body: formData },
+          true,
+          300000,
+        );
+      };
+      const res = await req(false);
+      await handleResponseWithRetry(res, () => req(true));
+    },
+
+    /** Drops the slices of an import the user cancelled. Never throws. */
+    async deleteRecordingParts(uploadId: string): Promise<void> {
+      try {
+        await safeFetch(
+          `${BASE_URL}/api/transcripts/recorder-upload/parts/${encodeURIComponent(uploadId)}`,
+          { method: "DELETE", headers: await getAuthHeaders(false) },
+          true,
+        );
+      } catch {
+        // leftover slices are deleted by the daily cleanup after 7 days
+      }
+    },
+
+    // ── Saved meeting: translate, export, clip ────────────────────────────
+
+    /**
+     * The transcript and summary in another language. The first call for a
+     * language translates and stores it; later calls return the stored copy.
+     */
+    async translateTranscript(
+      id: string,
+      language: string,
+    ): Promise<TranscriptTranslation> {
+      const req = async (force: boolean) =>
+        safeFetch(
+          `${BASE_URL}/api/transcripts/${encodeURIComponent(id)}/translate`,
+          {
+            method: "POST",
+            headers: await getAuthHeaders(force),
+            body: JSON.stringify({ language }),
+          },
+          true,
+          180000,
+        );
+      const res = await req(false);
+      return handleResponseWithRetry<TranscriptTranslation>(res, () => req(true));
+    },
+
+    /**
+     * The transcript as srt, vtt or txt. The body is the file itself, not
+     * JSON. A meeting without a timed transcript answers 409 for subtitles.
+     */
+    async exportTranscript(
+      id: string,
+      format: TranscriptExportFormat,
+    ): Promise<string> {
+      const req = async (force: boolean) =>
+        safeFetch(
+          `${BASE_URL}/api/transcripts/${encodeURIComponent(id)}/export?format=${format}`,
+          { headers: await getAuthHeaders(force) },
+          true,
+          60000,
+        );
+      let res = await req(false);
+      if (res.status === 401) res = await req(true);
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({ message: res.statusText }));
+        throw apiError(
+          (body as { message?: string }).message ?? `HTTP ${res.status}`,
+          res.status,
+        );
+      }
+      return res.text();
+    },
+
+    /** Cuts 1 to 300 seconds of the recording; the link works for 7 days. */
+    async createTranscriptClip(
+      id: string,
+      body: components["schemas"]["CreateTranscriptClipRequest"],
+    ): Promise<TranscriptClip> {
+      const req = async (force: boolean) =>
+        safeFetch(
+          `${BASE_URL}/api/transcripts/${encodeURIComponent(id)}/clip`,
+          {
+            method: "POST",
+            headers: await getAuthHeaders(force),
+            body: JSON.stringify(body),
+          },
+          true,
+          120000,
+        );
+      const res = await req(false);
+      return handleResponseWithRetry<TranscriptClip>(res, () => req(true));
+    },
+
+    // ── Comments on a meeting ─────────────────────────────────────────────
+
+    async listComments(transcriptId: string): Promise<Comment[]> {
+      const req = async (force: boolean) =>
+        safeFetch(
+          `${BASE_URL}/api/comments?transcriptId=${encodeURIComponent(transcriptId)}`,
+          { headers: await getAuthHeaders(force) },
+          true,
+        );
+      const res = await req(false);
+      const data = await handleResponseWithRetry<{ comments: Comment[] }>(res, () =>
+        req(true),
+      );
+      return data.comments ?? [];
+    },
+
+    /** Posts a comment. People named with @ get an email. */
+    async createComment(
+      body: components["schemas"]["CreateCommentRequest"],
+    ): Promise<Comment> {
+      const req = async (force: boolean) =>
+        safeFetch(
+          `${BASE_URL}/api/comments`,
+          {
+            method: "POST",
+            headers: await getAuthHeaders(force),
+            body: JSON.stringify(body),
+          },
+          true,
+        );
+      const res = await req(false);
+      return handleResponseWithRetry<Comment>(res, () => req(true));
+    },
+
+    /** Changes the text. Only the author. */
+    async updateComment(id: string, body: string): Promise<Comment> {
+      const req = async (force: boolean) =>
+        safeFetch(
+          `${BASE_URL}/api/comments/${encodeURIComponent(id)}`,
+          {
+            method: "PATCH",
+            headers: await getAuthHeaders(force),
+            body: JSON.stringify({ body }),
+          },
+          true,
+        );
+      const res = await req(false);
+      return handleResponseWithRetry<Comment>(res, () => req(true));
+    },
+
+    /** Its author, or an owner or admin of the workspace. */
+    async deleteComment(id: string): Promise<void> {
+      const req = async (force: boolean) =>
+        safeFetch(
+          `${BASE_URL}/api/comments/${encodeURIComponent(id)}`,
+          { method: "DELETE", headers: await getAuthHeaders(force) },
+          true,
+        );
+      const res = await req(false);
+      await handleResponseWithRetry(res, () => req(true));
     },
   };
 };

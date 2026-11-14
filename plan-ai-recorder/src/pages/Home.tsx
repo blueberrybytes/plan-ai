@@ -84,6 +84,7 @@ const meetingKey = (m: UnsavedTranscript) => m.sessionId ?? "legacy";
 import { DEEPGRAM_LANGUAGES, AUTO_LANGUAGE_OPTION } from "../utils/deepgramLanguages";
 import { PrivacyConsentDialog } from "../components/PrivacyConsentDialog";
 import WorkspaceSwitcher from "../components/WorkspaceSwitcher";
+import AudioImportButton from "../components/AudioImportButton";
 
 // Meetings already announced with a notification. Home remounts after every
 // recording, so this lives outside it, and in sessionStorage so a reload of
@@ -1608,6 +1609,12 @@ const Home: React.FC = () => {
             >
               Start Recording
             </Button>
+            <AudioImportButton
+              api={api}
+              language={language}
+              projectId={selectedProjectId}
+              onImported={() => void fetchData(true)}
+            />
             {hasCalendar === false && (
               <Typography
                 variant="caption"
