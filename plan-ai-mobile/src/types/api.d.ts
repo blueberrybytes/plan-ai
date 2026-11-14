@@ -1365,7 +1365,7 @@ export interface paths {
         get: operations["GetCurrentUser"];
         put?: never;
         post?: never;
-        delete?: never;
+        delete: operations["DeleteMe"];
         options?: never;
         head?: never;
         patch?: never;
@@ -3527,6 +3527,10 @@ export interface paths {
          * @description Delete your own user account and all associated data
          *     This endpoint allows users to delete their own account without specifying a userId
          *     The user ID is extracted from the authentication token
+         *
+         *     The HTTP status is always 200; the real outcome is in the body. The web
+         *     reads it from there. The apps call DELETE /api/session/me, which uses the
+         *     same code and sends the real HTTP status.
          */
         delete: operations["DeleteMyAccount"];
         options?: never;
@@ -9882,6 +9886,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["GenericResponse"];
+                };
+            };
+        };
+    };
+    DeleteMe: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_boolean_"];
                 };
             };
         };

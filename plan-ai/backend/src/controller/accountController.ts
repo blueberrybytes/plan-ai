@@ -232,73 +232,108 @@ export class AccountController extends Controller {
    * Delete your own user account and all associated data
    * This endpoint allows users to delete their own account without specifying a userId
    * The user ID is extracted from the authentication token
+   *
+   * The HTTP status is always 200; the real outcome is in the body. The web
+   * reads it from there. The apps call DELETE /api/session/me, which uses the
+   * same code and sends the real HTTP status.
    */
   @Security("ClientLevel")
   @Delete("self")
   public async deleteMyAccount(
     @Request() request: AuthenticatedRequest,
   ): Promise<ApiResponse<boolean>> {
-    try {
-      const firebaseUid = request.user?.uid;
+    return deleteOwnAccount(request);
+  }
+}
 
-      if (!firebaseUid) {
-        return {
-          status: 401,
-          data: false,
-          message: "User not authenticated",
-        };
-      }
+/**
+ * Deletes the signed-in user, their data and their Firebase account. The
+ * result carries the status (200, 401, 404, 409 when they own a workspace
+ * with other members, 500) without setting it on the response.
+ */
+export async function deleteOwnAccount(
+  request: AuthenticatedRequest,
+): Promise<ApiResponse<boolean>> {
+  try {
+    const firebaseUid = request.user?.uid;
 
-      // Find the user by Firebase UID
-      const userToDelete = await prisma.user.findFirst({
-        where: { firebaseUid },
-      });
-
-      if (!userToDelete) {
-        return {
-          status: 404,
-          data: false,
-          message: "User not found",
-        };
-      }
-
-      const userId = userToDelete.id;
-
-      // Meetings, files, vectors, voice profile and chat attachments, plus
-      // every workspace where they are the only member.
-      await deleteUserData(userId);
-      await recordAudit({
-        actor: { id: userId, email: userToDelete.email },
-        action: "user.deleted_self",
-        targetType: "user",
-        targetId: userId,
-        request,
-      });
-
-      // Delete the user from Firebase Auth
-      try {
-        await firebaseAdmin.auth().deleteUser(firebaseUid);
-      } catch (firebaseError) {
-        logger.error("Error deleting Firebase user:", firebaseError);
-        // Continue with the response even if Firebase deletion fails
-        // The database user is already deleted at this point
-      }
-
+    if (!firebaseUid) {
       return {
-        status: 200,
-        data: true,
-        message: "Your account and all associated data deleted successfully",
-      };
-    } catch (error) {
-      if (error instanceof AccountDeletionBlockedError) {
-        return { status: 409, data: false, message: error.message };
-      }
-      logger.error("Error deleting user account:", error);
-      return {
-        status: 500,
+        status: 401,
         data: false,
-        message: "Failed to delete your account",
+        message: "User not authenticated",
       };
     }
+
+    const userToDelete = await prisma.user.findFirst({
+      where: { firebaseUid },
+    });
+
+    if (!userToDelete) {
+      return {
+        status: 404,
+        data: false,
+        message: "User not found",
+      };
+    }
+
+    const userId = userToDelete.id;
+
+    // Meetings, files, vectors, voice profile and chat attachments, plus
+    // every workspace where they are the only member.
+    await deleteUserData(userId);
+    await recordAudit({
+      actor: { id: userId, email: userToDelete.email },
+      action: "user.deleted_self",
+      targetType: "user",
+      targetId: userId,
+      request,
+    });
+
+    // The database user is already gone, so a Firebase failure is logged
+    // and the deletion still counts as done.
+    try {
+      await firebaseAdmin.auth().deleteUser(firebaseUid);
+    } catch (firebaseError) {
+      logger.error("Error deleting Firebase user:", firebaseError);
+    }
+
+    return {
+      status: 200,
+      data: true,
+      message: "Your account and all associated data deleted successfully",
+    };
+  } catch (error) {
+    if (error instanceof AccountDeletionBlockedError) {
+      return { status: 409, data: false, message: error.message };
+    }
+    logger.error("Error deleting user account:", error);
+    return {
+      status: 500,
+      data: false,
+      message: "Failed to delete your account",
+    };
+  }
+}
+
+/**
+ * DELETE /api/session/me, the account deletion the mobile app and the desktop
+ * recorder have always called. It did not exist until 2026-11-14, so deleting
+ * an account from the apps failed with a 404. Installed versions start
+ * working without an update.
+ *
+ * Unlike account/self it sends the real HTTP status: the apps only look at
+ * it, and a refusal answered with 200 would sign the user out as if the
+ * account were gone.
+ */
+@Route("api/session")
+@Tags("Session")
+export class SessionAccountController extends Controller {
+  @Security("ClientLevel")
+  @Delete("me")
+  public async deleteMe(@Request() request: AuthenticatedRequest): Promise<ApiResponse<boolean>> {
+    const result = await deleteOwnAccount(request);
+    this.setStatus(result.status);
+    return result;
   }
 }

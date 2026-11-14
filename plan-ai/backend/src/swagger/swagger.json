@@ -15618,6 +15618,30 @@
 					}
 				],
 				"parameters": []
+			},
+			"delete": {
+				"operationId": "DeleteMe",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ApiResponse_boolean_"
+								}
+							}
+						}
+					}
+				},
+				"tags": [
+					"Session"
+				],
+				"security": [
+					{
+						"ClientLevel": []
+					}
+				],
+				"parameters": []
 			}
 		},
 		"/api/session/me/voice-profile": {
@@ -21060,7 +21084,7 @@
 						}
 					}
 				},
-				"description": "Delete your own user account and all associated data\nThis endpoint allows users to delete their own account without specifying a userId\nThe user ID is extracted from the authentication token",
+				"description": "Delete your own user account and all associated data\nThis endpoint allows users to delete their own account without specifying a userId\nThe user ID is extracted from the authentication token\n\nThe HTTP status is always 200; the real outcome is in the body. The web\nreads it from there. The apps call DELETE /api/session/me, which uses the\nsame code and sends the real HTTP status.",
 				"tags": [
 					"Account"
 				],
