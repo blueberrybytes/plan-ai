@@ -17,6 +17,7 @@ import {
   Typography,
 } from "@mui/material";
 import {
+  useCreateCourtesyWorkspaceMutation,
   useGetUserWorkspacesQuery,
   useSetWorkspaceCourtesyMutation,
 } from "../../store/apis/userApi";
@@ -35,6 +36,7 @@ interface Props {
 const UserCourtesyDialog: React.FC<Props> = ({ user, onClose }) => {
   const { data, isFetching, error } = useGetUserWorkspacesQuery(user?.id ?? "", { skip: !user });
   const [setCourtesy] = useSetWorkspaceCourtesyMutation();
+  const [createCourtesyWorkspace, { isLoading: creating }] = useCreateCourtesyWorkspaceMutation();
   const [savingId, setSavingId] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
   const workspaces = data?.data ?? [];
@@ -48,6 +50,18 @@ const UserCourtesyDialog: React.FC<Props> = ({ user, onClose }) => {
       setFailed(true);
     } finally {
       setSavingId(null);
+    }
+  };
+
+  // A user who signed up on the phone can be in no workspace at all. The
+  // admin then creates one for them with courtesy already on.
+  const createWorkspace = async () => {
+    if (!user) return;
+    setFailed(false);
+    try {
+      await createCourtesyWorkspace(user.id).unwrap();
+    } catch {
+      setFailed(true);
     }
   };
 
@@ -73,7 +87,15 @@ const UserCourtesyDialog: React.FC<Props> = ({ user, onClose }) => {
           </Box>
         )}
         {!isFetching && !error && workspaces.length === 0 && (
-          <Typography variant="body2">This user is not in any workspace yet.</Typography>
+          <Box>
+            <Typography variant="body2" sx={{ mb: 2 }}>
+              This user is not in any workspace yet. You can create one for them with courtesy
+              already on. They will own it and land in it the next time they open the app.
+            </Typography>
+            <Button variant="contained" onClick={() => void createWorkspace()} disabled={creating}>
+              {creating ? "Creating..." : "Create a courtesy workspace"}
+            </Button>
+          </Box>
         )}
 
         {workspaces.length > 0 && (

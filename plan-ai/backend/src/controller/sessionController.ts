@@ -42,6 +42,23 @@ const BACKEND_URL = rawBackendUrl.replace(/\/+$/, "");
 // Allowlist of registered redirect URIs (app deep link + Electron)
 const ALLOWED_MOBILE_REDIRECT_PREFIXES = ["planaimobile://", "blueberrybytes-recorder://"];
 
+
+/**
+ * Onboarding is done when the user has saved a UI theme AND belongs to a
+ * workspace. The theme alone was not enough: saving it from the web Profile
+ * page creates it too, and a user who signed up on the phone ended up inside
+ * the apps with no workspace at all. Nothing worked for them, and an admin
+ * could not give them courtesy access because there was no workspace to flag.
+ * Without a workspace they now go back to onboarding, which creates one.
+ */
+async function onboardingComplete(userId: string, hasTheme: boolean): Promise<boolean> {
+  if (!hasTheme) return false;
+  const membership = await prisma.workspaceMember.findFirst({
+    where: { userId },
+    select: { workspaceId: true },
+  });
+  return membership !== null;
+}
 interface UserResponse {
   id: string;
   firebaseUid: string;
@@ -276,7 +293,7 @@ export class SessionController {
         isAppleAccount: user.isAppleAccount,
         isMicrosoftAccount: user.isMicrosoftAccount,
         role: user.role,
-        hasCompletedOnboarding: customTheme !== null,
+        hasCompletedOnboarding: await onboardingComplete(user.id, customTheme !== null),
         hasCompletedHomeTour: user.hasCompletedHomeTour,
         hasVoiceProfile: user.hasVoiceProfile,
         voiceProfileUrl: await voiceProfileDisplayUrl(user.voiceProfileUrl),
@@ -346,7 +363,7 @@ export class SessionController {
         isAppleAccount: user.isAppleAccount,
         isMicrosoftAccount: user.isMicrosoftAccount,
         role: user.role,
-        hasCompletedOnboarding: user.customTheme !== null,
+        hasCompletedOnboarding: await onboardingComplete(user.id, user.customTheme !== null),
         hasCompletedHomeTour: user.hasCompletedHomeTour,
         hasVoiceProfile: user.hasVoiceProfile,
         voiceProfileUrl: await voiceProfileDisplayUrl(user.voiceProfileUrl),
@@ -422,7 +439,10 @@ export class SessionController {
         isAppleAccount: updatedUser.isAppleAccount,
         isMicrosoftAccount: updatedUser.isMicrosoftAccount,
         role: updatedUser.role,
-        hasCompletedOnboarding: updatedUser.customTheme !== null,
+        hasCompletedOnboarding: await onboardingComplete(
+          updatedUser.id,
+          updatedUser.customTheme !== null,
+        ),
         hasCompletedHomeTour: updatedUser.hasCompletedHomeTour,
         hasVoiceProfile: updatedUser.hasVoiceProfile,
         voiceProfileUrl: await voiceProfileDisplayUrl(updatedUser.voiceProfileUrl),
@@ -505,7 +525,10 @@ export class SessionController {
         isAppleAccount: updatedUser.isAppleAccount,
         isMicrosoftAccount: updatedUser.isMicrosoftAccount,
         role: updatedUser.role,
-        hasCompletedOnboarding: updatedUser.customTheme !== null,
+        hasCompletedOnboarding: await onboardingComplete(
+          updatedUser.id,
+          updatedUser.customTheme !== null,
+        ),
         hasCompletedHomeTour: updatedUser.hasCompletedHomeTour,
         hasVoiceProfile: updatedUser.hasVoiceProfile,
         voiceProfileUrl: await voiceProfileDisplayUrl(updatedUser.voiceProfileUrl),

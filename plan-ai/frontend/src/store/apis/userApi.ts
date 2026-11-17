@@ -80,6 +80,14 @@ export const userApi = createApi({
       // The user list shows who owns a courtesy workspace.
       invalidatesTags: ["User", "UserWorkspaces"],
     }),
+    // Platform admin: a courtesy workspace for a user who is in none yet.
+    createCourtesyWorkspace: builder.mutation<ApiResponseWorkspaceCourtesy, string>({
+      query: (userId) => ({
+        url: `/api/users/${userId}/courtesy-workspace`,
+        method: "POST",
+      }),
+      invalidatesTags: ["User", "UserWorkspaces"],
+    }),
   }),
 });
 
@@ -92,4 +100,5 @@ export const {
   useDeleteUserMutation,
   useGetUserWorkspacesQuery,
   useSetWorkspaceCourtesyMutation,
+  useCreateCourtesyWorkspaceMutation,
 } = userApi;

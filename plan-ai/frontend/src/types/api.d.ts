@@ -161,6 +161,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/users/{userId}/courtesy-workspace": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description Creates a courtesy workspace owned by a user who is in no workspace yet,
+         *     for someone who signed up on the phone and never finished onboarding.
+         *     Admin only. Refused with 409 when the user already has a workspace. The
+         *     creation is written to the new workspace's audit log.
+         */
+        post: operations["CreateCourtesyWorkspace"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/users/workspaces/{workspaceId}/courtesy": {
         parameters: {
             query?: never;
@@ -7347,6 +7369,28 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ApiResponse_AdminUserWorkspaceResponse-Array_"];
+                };
+            };
+        };
+    };
+    CreateCourtesyWorkspace: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ok */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_WorkspaceCourtesyResponse_"];
                 };
             };
         };

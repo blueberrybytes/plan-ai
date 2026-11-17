@@ -89,6 +89,38 @@ export async function setWorkspaceCourtesy(
   return { workspaceId, name: workspace.name, isCourtesy, changed };
 }
 
+export interface CreatedCourtesyWorkspace {
+  workspaceId: string;
+  name: string;
+}
+
+/**
+ * Creates a courtesy workspace owned by a user who is in no workspace at all,
+ * so the admin can give courtesy to someone who signed up on the phone and
+ * never went through onboarding. Refused when the user already has a
+ * workspace: then the admin flags that one instead of adding a second.
+ */
+export async function createCourtesyWorkspace(userId: string): Promise<CreatedCourtesyWorkspace> {
+  const user = await rawPrisma.user.findUnique({
+    where: { id: userId },
+    select: { id: true, name: true, _count: { select: { workspaceMembers: true } } },
+  });
+  if (!user) throw fail(404, "User not found");
+  if (user._count.workspaceMembers > 0) {
+    throw fail(409, "This user already has a workspace. Turn courtesy on for it instead.");
+  }
+  const name = `${user.name?.trim() || "Personal"} Workspace`;
+  const workspace = await rawPrisma.workspace.create({
+    data: {
+      name,
+      isCourtesy: true,
+      members: { create: { userId: user.id, role: "OWNER" } },
+    },
+    select: { id: true, name: true },
+  });
+  return { workspaceId: workspace.id, name: workspace.name };
+}
+
 /** How many courtesy workspaces each user owns. For the admin user list. */
 export async function courtesyCountByOwner(): Promise<Map<string, number>> {
   const rows = await rawPrisma.workspaceMember.groupBy({

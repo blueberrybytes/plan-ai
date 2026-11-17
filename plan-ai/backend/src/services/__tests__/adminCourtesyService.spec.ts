@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   db: {
     user: { findUnique: vi.fn() },
-    workspace: { findUnique: vi.fn(), update: vi.fn() },
+    workspace: { findUnique: vi.fn(), update: vi.fn(), create: vi.fn() },
     workspaceMember: { findMany: vi.fn(), groupBy: vi.fn() },
   } as any,
 }));
@@ -12,6 +12,7 @@ vi.mock("../../prisma/prismaClient", () => ({ rawPrisma: mocks.db, default: mock
 
 import {
   courtesyCountByOwner,
+  createCourtesyWorkspace,
   listUserWorkspaces,
   setWorkspaceCourtesy,
 } from "../adminCourtesyService";
@@ -97,5 +98,54 @@ describe("courtesyCountByOwner", () => {
       role: "OWNER",
       workspace: { isCourtesy: true },
     });
+  });
+});
+
+describe("createCourtesyWorkspace", () => {
+  it("answers 404 for a user that does not exist", async () => {
+    mocks.db.user.findUnique.mockResolvedValue(null);
+    await expect(createCourtesyWorkspace("nobody")).rejects.toMatchObject({ status: 404 });
+    expect(mocks.db.workspace.create).not.toHaveBeenCalled();
+  });
+
+  it("refuses with 409 when the user already has a workspace", async () => {
+    mocks.db.user.findUnique.mockResolvedValue({
+      id: "u1",
+      name: "Ana",
+      _count: { workspaceMembers: 1 },
+    });
+    await expect(createCourtesyWorkspace("u1")).rejects.toMatchObject({ status: 409 });
+    expect(mocks.db.workspace.create).not.toHaveBeenCalled();
+  });
+
+  it("creates a courtesy workspace the user owns", async () => {
+    mocks.db.user.findUnique.mockResolvedValue({
+      id: "u1",
+      name: "M. D",
+      _count: { workspaceMembers: 0 },
+    });
+    mocks.db.workspace.create.mockResolvedValue({ id: "w9", name: "M. D Workspace" });
+    const created = await createCourtesyWorkspace("u1");
+    expect(created).toEqual({ workspaceId: "w9", name: "M. D Workspace" });
+    expect(mocks.db.workspace.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: {
+          name: "M. D Workspace",
+          isCourtesy: true,
+          members: { create: { userId: "u1", role: "OWNER" } },
+        },
+      }),
+    );
+  });
+
+  it("names the workspace Personal when the user has no name", async () => {
+    mocks.db.user.findUnique.mockResolvedValue({
+      id: "u2",
+      name: null,
+      _count: { workspaceMembers: 0 },
+    });
+    mocks.db.workspace.create.mockResolvedValue({ id: "w10", name: "Personal Workspace" });
+    await createCourtesyWorkspace("u2");
+    expect(mocks.db.workspace.create.mock.calls[0][0].data.name).toBe("Personal Workspace");
   });
 });

@@ -21,6 +21,7 @@ import { ApiResponse, GenericResponse } from "./controllerTypes";
 import { firebaseAdmin, setUserRole } from "../firebase/firebaseAdmin";
 import {
   courtesyCountByOwner,
+  createCourtesyWorkspace,
   listUserWorkspaces,
   setWorkspaceCourtesy,
   type AdminUserWorkspace,
@@ -143,6 +144,47 @@ export class UserController extends Controller {
   ): Promise<ApiResponse<AdminUserWorkspaceResponse[]>> {
     try {
       return { status: 200, data: await listUserWorkspaces(userId) };
+    } catch (err) {
+      const status = (err as { status?: number })?.status;
+      if (typeof status === "number") this.setStatus(status);
+      throw err;
+    }
+  }
+
+  /**
+   * Creates a courtesy workspace owned by a user who is in no workspace yet,
+   * for someone who signed up on the phone and never finished onboarding.
+   * Admin only. Refused with 409 when the user already has a workspace. The
+   * creation is written to the new workspace's audit log.
+   */
+  @Post("/{userId}/courtesy-workspace")
+  @Security("AdminOnly")
+  public async createCourtesyWorkspace(
+    @Path() userId: string,
+    @Request() request: AuthenticatedRequest,
+  ): Promise<ApiResponse<WorkspaceCourtesyResponse>> {
+    try {
+      const created = await createCourtesyWorkspace(userId);
+      const admin = request.user?.uid
+        ? await prisma.user.findUnique({
+            where: { firebaseUid: request.user.uid },
+            select: { id: true, email: true },
+          })
+        : null;
+      await recordAudit({
+        workspaceId: created.workspaceId,
+        actor: admin ?? { email: request.user?.email ?? null },
+        action: "platform_admin.courtesy_changed",
+        targetType: "workspace",
+        targetId: created.workspaceId,
+        metadata: { courtesy: true, createdForUserId: userId },
+        request,
+      });
+      this.setStatus(201);
+      return {
+        status: 201,
+        data: { workspaceId: created.workspaceId, name: created.name, isCourtesy: true },
+      };
     } catch (err) {
       const status = (err as { status?: number })?.status;
       if (typeof status === "number") this.setStatus(status);
