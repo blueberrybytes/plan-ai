@@ -955,6 +955,7 @@ export default function RecordScreen() {
       });
 
       // Capture location asynchronously without blocking audio start.
+      recordingService.setMeetingLocation(null);
       (async () => {
         try {
           const { status } = await Location.requestForegroundPermissionsAsync();
@@ -962,11 +963,13 @@ export default function RecordScreen() {
             const loc = await Location.getCurrentPositionAsync({
               accuracy: Location.Accuracy.Balanced,
             });
-            setMeetingLocation({
+            const captured = {
               latitude: loc.coords.latitude,
               longitude: loc.coords.longitude,
               accuracy: loc.coords.accuracy,
-            });
+            };
+            setMeetingLocation(captured);
+            recordingService.setMeetingLocation(captured);
             console.log("📍 Location captured:", loc.coords);
           }
         } catch (e) {

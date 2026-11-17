@@ -99,6 +99,8 @@ export interface CreatedCourtesyWorkspace {
  * so the admin can give courtesy to someone who signed up on the phone and
  * never went through onboarding. Refused when the user already has a
  * workspace: then the admin flags that one instead of adding a second.
+ * Also saves an empty UI theme when the user has none, so onboarding counts
+ * as done and they land in the new workspace.
  */
 export async function createCourtesyWorkspace(userId: string): Promise<CreatedCourtesyWorkspace> {
   const user = await rawPrisma.user.findUnique({
@@ -117,6 +119,14 @@ export async function createCourtesyWorkspace(userId: string): Promise<CreatedCo
       members: { create: { userId: user.id, role: "OWNER" } },
     },
     select: { id: true, name: true },
+  });
+  // Onboarding counts as done with a UI theme and a workspace. An empty theme
+  // falls back to the default colours, and it lets the user straight into the
+  // apps instead of asking them to finish onboarding first.
+  await rawPrisma.customTheme.upsert({
+    where: { userId: user.id },
+    create: { userId: user.id },
+    update: {},
   });
   return { workspaceId: workspace.id, name: workspace.name };
 }

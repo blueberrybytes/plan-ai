@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
     user: { findUnique: vi.fn() },
     workspace: { findUnique: vi.fn(), update: vi.fn(), create: vi.fn() },
     workspaceMember: { findMany: vi.fn(), groupBy: vi.fn() },
+    customTheme: { upsert: vi.fn() },
   } as any,
 }));
 vi.mock("../../prisma/prismaClient", () => ({ rawPrisma: mocks.db, default: mocks.db }));
@@ -136,6 +137,12 @@ describe("createCourtesyWorkspace", () => {
         },
       }),
     );
+    // An empty UI theme, so onboarding counts as done.
+    expect(mocks.db.customTheme.upsert).toHaveBeenCalledWith({
+      where: { userId: "u1" },
+      create: { userId: "u1" },
+      update: {},
+    });
   });
 
   it("names the workspace Personal when the user has no name", async () => {

@@ -1,19 +1,10 @@
-import { useState } from "react";
 import { Redirect } from "expo-router";
 import { useAuth } from "../context/AuthContext";
-import { View, ActivityIndicator, Text } from "react-native";
-import { Button } from "react-native-paper";
+import { View, ActivityIndicator } from "react-native";
+import { FinishSetup } from "../components/FinishSetup";
 
 export default function Index() {
-  const {
-    user,
-    loading,
-    backendUser,
-    logout,
-    refreshBackendUser,
-    refreshWorkspaces,
-  } = useAuth();
-  const [refreshing, setRefreshing] = useState(false);
+  const { user, loading, backendUser } = useAuth();
 
   if (loading) {
     return (
@@ -28,54 +19,9 @@ export default function Index() {
     return <Redirect href={"/(auth)/login" as any} />;
   }
 
+  // Unfinished onboarding, or signed in with no workspace: set it up here.
   if (backendUser && !backendUser.hasCompletedOnboarding) {
-    const handleRefresh = async () => {
-      setRefreshing(true);
-      try {
-        await Promise.all([refreshBackendUser(), refreshWorkspaces()]);
-      } finally {
-        setRefreshing(false);
-      }
-    };
-    return (
-      <View
-        style={{
-          flex: 1,
-          justifyContent: "center",
-          alignItems: "center",
-          padding: 20,
-        }}
-      >
-        <Text style={{ fontSize: 24, fontWeight: "bold", marginBottom: 10 }}>
-          Almost there!
-        </Text>
-        <Text
-          style={{
-            fontSize: 16,
-            textAlign: "center",
-            color: "#666",
-            marginBottom: 24,
-            maxWidth: 360,
-          }}
-        >
-          Your account setup is incomplete. Please finish configuring your
-          workspace from your computer, then tap &quot;Refresh&quot; below.
-        </Text>
-        <View style={{ width: "100%", maxWidth: 280, gap: 12 }}>
-          <Button
-            mode="outlined"
-            onPress={handleRefresh}
-            loading={refreshing}
-            disabled={refreshing}
-          >
-            {refreshing ? "Checking..." : "I've Completed Setup"}
-          </Button>
-          <Button mode="text" onPress={() => logout()}>
-            Log Out
-          </Button>
-        </View>
-      </View>
-    );
+    return <FinishSetup />;
   }
 
   if (backendUser && !backendUser.hasVoiceProfile) {

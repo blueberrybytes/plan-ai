@@ -653,6 +653,7 @@ export const createPlanAiApi = (
       contextIds?: string[],
       projectIds?: string[],
       translateTo?: string,
+      workspaceId?: string | null,
     ): Promise<WebSocket> {
       const token = await getToken(false);
       if (!token) throw new Error("No auth token available");
@@ -675,7 +676,9 @@ export const createPlanAiApi = (
         wsUrl.searchParams.set("translateTo", translateTo);
       }
 
-      const wsId = getWorkspaceId();
+      // A recording passes the workspace it started in, so a reconnect after a
+      // workspace switch stays in the meeting's workspace.
+      const wsId = workspaceId || getWorkspaceId();
       if (wsId) {
         wsUrl.searchParams.set("workspaceId", wsId);
       }
@@ -703,6 +706,24 @@ export const createPlanAiApi = (
 
       const res = await req(false);
       return handleResponseWithRetry<SubscriptionStatusResponse>(res, () => req(true));
+    },
+
+    /**
+     * Finishes onboarding from the phone: saves the UI theme and, for someone
+     * who is in no workspace, creates theirs. The same call the web makes.
+     */
+    async completeOnboarding(
+      body: components["schemas"]["OnboardingCompleteRequest"],
+    ): Promise<void> {
+      const req = async (force: boolean) =>
+        safeFetch(`${BASE_URL}/api/onboarding/complete`, {
+          method: "POST",
+          headers: await getAuthHeaders(force),
+          body: JSON.stringify(body),
+        });
+
+      const res = await req(false);
+      await handleResponseWithRetry(res, () => req(true));
     },
 
     async deleteMyAccount(): Promise<void> {

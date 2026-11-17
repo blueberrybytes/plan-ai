@@ -105,6 +105,11 @@ export interface RecordingManifest {
   /** Calendar event the recording belongs to, when one was picked at the start. */
   calendarEvent?: MeetingCalendarEvent;
   /**
+   * Where the meeting was recorded, written as soon as the phone knows it, so
+   * a meeting recovered after the app died still uploads with its location.
+   */
+  location?: UploadRequest["location"];
+  /**
    * Name of the audio file in the session folder. Absent means "audio.wav"
    * (a recording). Imported files keep their extension, e.g. "imported.m4a".
    */
@@ -479,6 +484,41 @@ function rebuildManifest(id: string, dir: Directory): RecordingManifest | null {
     audioFileName: imported.name,
     importedFileName: imported.name,
   };
+}
+
+/**
+ * Writes the real sizes into a recorded WAV whose header still has the
+ * 0xFFFFFFFF placeholders from createSession. The uploader sends its own
+ * header, but a file exported from the phone is the raw file, and some players
+ * refuse a WAV with those sizes. Imported files and files whose header is
+ * already right are left alone. Never call it on the meeting being recorded.
+ */
+export function finalizeWavHeader(id: string, m?: RecordingManifest | null): void {
+  const manifest = m === undefined ? readManifest(id) : m;
+  if (isImported(manifest)) return;
+  const file = sessionAudioFileOf(id, manifest);
+  if (!file.exists || file.size <= WAV_HEADER_BYTES) return;
+  const handle = file.open();
+  try {
+    const header = handle.readBytes(WAV_HEADER_BYTES);
+    if (header.length < WAV_HEADER_BYTES) return;
+    const view = new DataView(header.buffer, header.byteOffset, header.length);
+    const riff = view.getUint32(4, true);
+    const data = view.getUint32(40, true);
+    if (riff !== 0xffffffff && data !== 0xffffffff) return;
+    const size = file.size;
+    const u32 = (n: number) => {
+      const b = new Uint8Array(4);
+      new DataView(b.buffer).setUint32(0, n, true);
+      return b;
+    };
+    handle.offset = 4;
+    handle.writeBytes(u32(size - 8));
+    handle.offset = 40;
+    handle.writeBytes(u32(size - WAV_HEADER_BYTES));
+  } finally {
+    handle.close();
+  }
 }
 
 /** Sample rate written in a WAV header (bytes 24 to 27), or null if unreadable. */

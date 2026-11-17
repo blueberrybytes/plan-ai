@@ -253,7 +253,7 @@ async function uploadOne(api: Api, sessionId: string): Promise<void> {
       taskStrategy: request.taskStrategy,
       taskCount: request.taskCount,
       skipAi: request.skipAi,
-      location: request.location,
+      location: request.location ?? m!.location,
       chatHistory: request.chatHistory,
       micUploadId: hasAudio ? sessionId : undefined,
       micPartCount: hasAudio ? partCount : undefined,

@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { View, TouchableOpacity, StyleSheet } from 'react-native';
+import { Alert, View, TouchableOpacity, StyleSheet } from 'react-native';
 import { useTheme, Text, Menu, IconButton } from 'react-native-paper';
 import { useAuth } from '../context/AuthContext';
+import { recordingService } from '../services/recordingService';
 
 interface WorkspaceSelectorProps {
   onWorkspaceChange: () => void;
@@ -47,6 +48,16 @@ export function WorkspaceSelector({ onWorkspaceChange }: WorkspaceSelectorProps)
         <Menu.Item 
           key={ws.id} 
           onPress={() => {
+            // The live transcript, summary and chat of a meeting belong to the
+            // workspace it started in. Switching mid-meeting would mix them.
+            if (ws.id !== activeWorkspaceId && recordingService.isMeetingActive()) {
+              setWorkspaceMenuVisible(false);
+              Alert.alert(
+                'Meeting in progress',
+                'Stop the meeting before switching workspace. It is saved to the workspace it started in.',
+              );
+              return;
+            }
             setActiveWorkspaceId(ws.id);
             setWorkspaceMenuVisible(false);
             onWorkspaceChange();

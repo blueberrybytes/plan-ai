@@ -21,6 +21,7 @@ import {
   newSessionId,
   updateManifest,
   type MeetingCalendarEvent,
+  type RecordingManifest,
   type RecordingBookmark,
 } from "./recordingSessions";
 import { liveTranslationStore } from "./liveTranslationStore";
@@ -52,6 +53,8 @@ export interface RecordingApi {
     contextIds: string[],
     projectIds?: string[],
     translateTo?: string,
+    /** The meeting's workspace. Without it the client's active workspace is used. */
+    workspaceId?: string | null,
   ) => Promise<WebSocket>;
 }
 
@@ -232,6 +235,12 @@ class RecordingService {
 
   private ws: WebSocket | null = null;
   private api: RecordingApi | null = null;
+  /**
+   * The workspace the meeting started in. Every reconnect uses it, so a
+   * reconnect after the user switched workspace does not transcribe with the
+   * other workspace's keys and usage.
+   */
+  private workspaceId: string | null = null;
 
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private reconnectAttempts = 0;
@@ -288,6 +297,20 @@ class RecordingService {
 
   /** True while a meeting is being recorded or is paused. */
   isMeetingActive = (): boolean => this.snapshot.isRecording || this.snapshot.isStarting;
+
+  /**
+   * Where the meeting happens. The screen captures it while the recording
+   * starts, so it can arrive before or after the session exists. It goes into
+   * the manifest either way: a meeting recovered after the app died keeps its
+   * location instead of losing it with the screen's state.
+   */
+  private location: RecordingManifest["location"] | null = null;
+
+  setMeetingLocation = (location: RecordingManifest["location"] | null): void => {
+    this.location = location;
+    const id = this.snapshot.sessionId;
+    if (id && location) safeUpdateManifest(id, { location });
+  };
 
   private set(patch: Partial<RecordingSnapshot>) {
     this.snapshot = { ...this.snapshot, ...patch };
@@ -397,6 +420,7 @@ class RecordingService {
         this.snapshot.contextIds,
         this.snapshot.projectId ? [this.snapshot.projectId] : undefined,
         translateTo || undefined,
+        this.workspaceId,
       );
       // Paused, stopped or replaced while the socket was being created.
       if (stale()) {
@@ -780,6 +804,7 @@ class RecordingService {
       }
 
       this.api = opts.api;
+      this.workspaceId = opts.workspaceId;
       await setAudioModeAsync({
         allowsRecording: true,
         playsInSilentMode: true,
@@ -803,6 +828,7 @@ class RecordingService {
         sampleRate: SAVED_SAMPLE_RATE,
         ...(opts.calendarEvent ? { calendarEvent: opts.calendarEvent } : {}),
       });
+      if (this.location) safeUpdateManifest(sessionId, { location: this.location });
       this.resampler = new Resampler24To16();
       this.savedSamples = 0;
       liveTranslationStore.resetLines();

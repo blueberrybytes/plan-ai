@@ -7,6 +7,7 @@ import {
   WAV_HEADER_BYTES,
   audioBytes,
   audioMimeTypeOf,
+  finalizeWavHeader,
   importTitleOf,
   isImported,
   sampleRateOf,
@@ -18,6 +19,7 @@ import {
   retryUpload,
   saveAndUpload,
 } from "../services/recordingUploader";
+import { recordingService } from "../services/recordingService";
 
 type Api = ReturnType<typeof createPlanAiApi>;
 
@@ -90,6 +92,10 @@ export function LocalRecordingCard({
       return;
     }
     try {
+      // A meeting cut short still has placeholder sizes in its WAV header.
+      if (recordingService.getSnapshot().sessionId !== id) {
+        finalizeWavHeader(id, manifest);
+      }
       await Sharing.shareAsync(sessionAudioFileOf(id, manifest).uri, {
         mimeType: audioMimeTypeOf(manifest),
         dialogTitle: "Export meeting audio",
