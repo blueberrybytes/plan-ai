@@ -37,10 +37,7 @@ import { usePreventRemove } from "@react-navigation/native";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { TwentyCompanyPicker } from "@/components/TwentyCompanyPicker";
-import {
-  requestRecordingPermissionsAsync,
-  setAudioModeAsync,
-} from "expo-audio";
+import { requestRecordingPermissionsAsync } from "expo-audio";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Project, Context, TwentyCompanyItem } from "@/services/planAiApi";
 import * as Location from "expo-location";
@@ -948,14 +945,27 @@ export default function RecordScreen() {
         alert("Microphone permission is required to record the meeting.");
         return;
       }
-      await setAudioModeAsync({
-        allowsRecording: true,
-        playsInSilentMode: true,
-        allowsBackgroundRecording: true,
-      });
-
-      // Capture location asynchronously without blocking audio start.
+      // recordingService.start() prepares the audio session itself, with a
+      // time limit. A second call here had none.
       recordingService.setMeetingLocation(null);
+
+      setPhase("recording");
+      saveLastLanguage(language);
+
+      // The session (microphone, websocket, foreground service and the
+      // session folder on disk) is owned by recordingService so it survives
+      // navigation, backgrounding, and screen close.
+      await recordingService.start({
+        language,
+        contextIds: selectedContextIds,
+        projectId: selectedProjectId,
+        workspaceId: activeWorkspaceId || null,
+        ownerUid: user?.uid ?? null,
+        calendarEvent: calendarEvent ?? undefined,
+        api: api as unknown as RecordingApi,
+      });
+      // Location is asked only once the recording runs. Asked before, its
+      // permission alert could overlap the start and leave it waiting.
       (async () => {
         try {
           const { status } = await Location.requestForegroundPermissionsAsync();
@@ -976,22 +986,6 @@ export default function RecordScreen() {
           console.warn("Failed to capture location:", e);
         }
       })();
-
-      setPhase("recording");
-      saveLastLanguage(language);
-
-      // The session (microphone, websocket, foreground service and the
-      // session folder on disk) is owned by recordingService so it survives
-      // navigation, backgrounding, and screen close.
-      await recordingService.start({
-        language,
-        contextIds: selectedContextIds,
-        projectId: selectedProjectId,
-        workspaceId: activeWorkspaceId || null,
-        ownerUid: user?.uid ?? null,
-        calendarEvent: calendarEvent ?? undefined,
-        api: api as unknown as RecordingApi,
-      });
     } catch (err) {
       console.error("Failed to start recording setup", err);
       Sentry.captureException(err, { tags: { source: "recording_start" } });

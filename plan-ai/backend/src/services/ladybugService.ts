@@ -126,6 +126,13 @@ class LadybugService {
     const { repoDir, userId, contextId, fileId, repoName } = opts;
     const t0 = Date.now();
     try {
+      // A repo can commit its own `.gitnexus/` folder (this monorepo does, with
+      // its .gitignore and group.yaml). gitnexus 1.6 refuses to write into a
+      // folder that holds data but no ownership metadata ("unowned"), so every
+      // resync of such a repo failed. The index is rebuilt here anyway: drop the
+      // copy that came with the tarball before anything else sees it.
+      fs.rmSync(path.join(repoDir, ".gitnexus"), { recursive: true, force: true });
+
       // GitHub tarballs carry no .git, and gitnexus refuses to analyze outside
       // a git repository — create a throwaway one.
       if (!fs.existsSync(path.join(repoDir, ".git"))) {

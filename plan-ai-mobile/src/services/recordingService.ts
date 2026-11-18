@@ -31,6 +31,26 @@ import {
   parseTranslationMessage,
 } from "../utils/liveTranslation";
 
+/** Longest wait for the phone's audio session before the start gives up. */
+const AUDIO_MODE_TIMEOUT_MS = 8000;
+
+/** Rejects with `message` when `promise` takes longer than `ms`. */
+function withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(message)), ms);
+    promise.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (err) => {
+        clearTimeout(timer);
+        reject(err);
+      },
+    );
+  });
+}
+
 // Using the global object so the foreground-service handle survives React
 // Native Fast Refresh (HMR) without being dropped.
 const g = global as { __resolveForegroundService?: (() => void) | null };
@@ -805,12 +825,22 @@ class RecordingService {
 
       this.api = opts.api;
       this.workspaceId = opts.workspaceId;
-      await setAudioModeAsync({
-        allowsRecording: true,
-        playsInSilentMode: true,
-        allowsBackgroundRecording: true,
-      });
-      await notifee.requestPermission().catch(() => undefined);
+      // Nothing awaited here may hang: the record button stays disabled until
+      // start() returns. A user on iOS tapped record and nothing happened,
+      // with the button greyed out, because start() never finished.
+      await withTimeout(
+        setAudioModeAsync({
+          allowsRecording: true,
+          playsInSilentMode: true,
+          allowsBackgroundRecording: true,
+        }),
+        AUDIO_MODE_TIMEOUT_MS,
+        "The phone's audio did not get ready. Close other apps that use the microphone and try again.",
+      );
+      // The notification permission is only needed for Android's foreground
+      // service, which asks for it itself. On iOS it was asked here at the same
+      // moment as the location permission, and waiting for an answer to an
+      // alert iOS may never show blocked the start.
       await this.startForegroundService();
 
       const sessionId = newSessionId();

@@ -65,11 +65,15 @@ except Exception as e:
     logger.error(f"Failed to load SpeechBrain model: {e}")
     verification_model = None
 
-async def convert_to_wav16k(raw_path: str, wav_path: str) -> None:
-    """Any format ffmpeg reads, to 16 kHz mono 16-bit WAV."""
+# Seconds of meeting audio /verify compares against the voice profile.
+VERIFY_MAX_SECONDS = 300
+
+async def convert_to_wav16k(raw_path: str, wav_path: str, max_seconds: int | None = None) -> None:
+    """Any format ffmpeg reads, to 16 kHz mono 16-bit WAV. `max_seconds` keeps only the start."""
+    limit = ["-t", str(max_seconds)] if max_seconds else []
     proc = await asyncio.create_subprocess_exec(
         "ffmpeg", "-y", "-i", raw_path,
-        "-ac", "1", "-ar", "16000", "-sample_fmt", "s16", wav_path,
+        "-ac", "1", "-ar", "16000", "-sample_fmt", "s16", *limit, wav_path,
         stdout=asyncio.subprocess.DEVNULL,
         stderr=asyncio.subprocess.DEVNULL,
     )
@@ -77,7 +81,7 @@ async def convert_to_wav16k(raw_path: str, wav_path: str) -> None:
     if proc.returncode != 0:
         raise Exception(f"ffmpeg conversion failed with code {proc.returncode}")
 
-async def download_file(url: str) -> str:
+async def download_file(url: str, max_seconds: int | None = None) -> str:
     raw_temp = tempfile.NamedTemporaryFile(delete=False)
     wav_temp = tempfile.NamedTemporaryFile(delete=False, suffix=".wav")
     # The backend sends signed URLs. The query string is the signature, a
@@ -96,7 +100,7 @@ async def download_file(url: str) -> str:
                         f.write(chunk)
         
         logger.info(f"Converting audio to 16kHz WAV format...")
-        await convert_to_wav16k(raw_temp.name, wav_temp.name)
+        await convert_to_wav16k(raw_temp.name, wav_temp.name, max_seconds)
         return wav_temp.name
     except Exception as e:
         reason = str(e).replace(url, safe_url)
@@ -130,7 +134,10 @@ async def verify(profile_url: str = Form(...), meeting_url: str = Form(...)):
     try:
         # Download files
         profile_path = await download_file(profile_url)
-        meeting_path = await download_file(meeting_url)
+        # Only the start of the meeting: a few minutes are enough to tell
+        # whether the voice matches. Comparing a whole hour took so long that
+        # uvicorn killed the worker and the backend got "other side closed".
+        meeting_path = await download_file(meeting_url, VERIFY_MAX_SECONDS)
 
         logger.info(f"Comparing {profile_path} against {meeting_path}...")
         # Run SpeechBrain inference in a thread with timeout to avoid blocking
