@@ -130,6 +130,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       "./plugins/with-adi-registration.js",
       "./plugins/with-notifee-microphone-service.js",
       "./plugins/with-no-backup-folders.js",
+      "./plugins/with-optional-portrait.js",
     ],
     experiments: {
       typedRoutes: true,
